@@ -1,0 +1,90 @@
+.checklist-block-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  group: true;
+}
+
+.checklist-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.checklist-checkbox.checked {
+  background: var(--text-main);
+  border-color: var(--text-main);
+  color: var(--bg-main);
+}
+
+.checklist-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  padding: 4px 0;
+  font-size: 14px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.checklist-input:focus {
+  border-bottom-color: var(--text-muted);
+}
+
+.checklist-input.checked {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.checklist-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 4px;
+}
+
+.checklist-item:hover .checklist-delete-btn {
+  opacity: 1;
+}
+
+.checklist-add-button {
+  width: 100%;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  background: transparent;
+  margin-top: 8px;
+}
+
+.checklist-add-button:hover {
+  border-color: var(--text-main);
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}

@@ -1,0 +1,82 @@
+.palette-block-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  overflow-y: auto;
+  cursor: default;
+}
+
+.palette-colors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.palette-color-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.palette-color-preview {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.palette-color-preview:hover {
+  transform: scale(1.05);
+  border-color: var(--text-main);
+}
+
+.palette-color-hex {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.palette-add-button {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 2px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.palette-add-button:hover {
+  border-color: var(--text-main);
+  color: var(--text-main);
+  background: rgba(128, 128, 128, 0.05);
+}
+
+.palette-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.palette-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

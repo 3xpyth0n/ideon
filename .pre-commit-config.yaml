@@ -1,0 +1,57 @@
+# Pre-commit hooks configuration for Ideon
+# Install: sudo apt install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # -------------------------
+  # Shell script linting
+  # -------------------------
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        files: \.(sh|bash)$
+
+  # -------------------------
+  # YAML validation
+  # -------------------------
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: [-d, "{extends: default, rules: {line-length: {max: 200}}}"]
+
+  # -------------------------
+  # Hygiene checks
+  # -------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.(md|rst)|package-lock.json|\.gitignore|\.dockerignore|LICENSE)$
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+
+  # -------------------------
+  # ESLint
+  # -------------------------
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: npx eslint --fix
+        language: system
+        types_or: [javascript, ts, tsx]
+        pass_filenames: true
+
+  # -------------------------
+  # Prettier
+  # -------------------------
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier

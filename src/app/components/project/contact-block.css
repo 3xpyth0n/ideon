@@ -1,0 +1,49 @@
+.contact-block-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.contact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.contact-field-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.contact-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.contact-input:focus {
+  border-bottom-color: var(--text-main);
+}
+
+.contact-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.3;
+}
+
+.contact-textarea {
+  min-height: 80px;
+  resize: none;
+  line-height: 1.5;
+}

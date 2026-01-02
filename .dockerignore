@@ -1,0 +1,44 @@
+node_modules/
+.next/
+dist/
+out/
+build/
+.cache/
+.turbo/
+.vercel/
+
+# Storage and databases
+storage/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor and system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Documentation and meta
+*.md
+LICENSE
+Dockerfile
+docker-compose.yml
+.dockerignore

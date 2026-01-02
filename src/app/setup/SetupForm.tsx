@@ -1,0 +1,162 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { setupAction } from "./setupActions";
+import { useI18n } from "@providers/I18nProvider";
+import { LanguageSelect } from "./components/LanguageSelect";
+import { Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Button } from "@components/ui/Button";
+import { toast } from "sonner";
+
+export function SetupForm() {
+  const { dict } = useI18n();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error(dict.common.invalidEmail);
+      setBusy(false);
+      return;
+    }
+
+    if (!username.trim()) {
+      toast.error(dict.common.usernameRequired);
+      setBusy(false);
+      return;
+    }
+
+    if (password !== confirm) {
+      toast.error(dict.common.passwordMismatch);
+      setBusy(false);
+      return;
+    }
+    const ok = await setupAction({ email, username, password });
+    setBusy(false);
+    if (ok) {
+      router.replace("/login?setupSuccess=true");
+      return;
+    }
+    toast.error(dict.common.errorInit);
+  };
+
+  if (!mounted) {
+    return (
+      <div className="auth-initializing-container">
+        <div className="auth-initializing-text">{dict.common.loading}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="auth-page">
+      {/* Top Left Logo */}
+      <div
+        className="auth-logo-container"
+        onClick={() => router.push("/login")}
+      >
+        <img src="/dark-icon.png" className="auth-logo-img" alt={dict.title} />
+      </div>
+
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1 className="auth-title">{dict.common.setupTitle}</h1>
+          <p className="auth-subtitle">{dict.common.setupSubtitle}</p>
+        </div>
+
+        <form onSubmit={onSubmit} noValidate className="auth-form">
+          <div className="auth-field">
+            <label className="auth-label">{dict.common.email}</label>
+            <input
+              className="auth-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={dict.common.emailPlaceholder}
+              required
+            />
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label">{dict.common.username}</label>
+            <input
+              className="auth-input"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={dict.common.usernamePlaceholder}
+              required
+            />
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label">{dict.common.password}</label>
+            <div className="auth-input-wrapper">
+              <input
+                className="auth-input auth-input-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((s) => !s)}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label">{dict.common.confirmPassword}</label>
+            <div className="auth-input-wrapper">
+              <input
+                className="auth-input auth-input-password"
+                type={showConfirm ? "text" : "password"}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirm((s) => !s)}
+                tabIndex={-1}
+              >
+                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="auth-actions">
+            <LanguageSelect />
+            <Button
+              disabled={busy}
+              type="submit"
+              className="btn-primary auth-submit-btn"
+            >
+              {busy ? dict.common.loading : dict.common.submit}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

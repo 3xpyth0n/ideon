@@ -1,0 +1,106 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Build and Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+      - name: Lint and Type-check
+        run: npm run check
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Generate Dynamic Config
+        run: |
+          # Find a free random port between 10000 and 60000
+          RANDOM_PORT=$(shuf -i 10000-60000 -n 1)
+          echo "APP_PORT=$RANDOM_PORT" >> $GITHUB_ENV
+
+          # Create isolated .env with random credentials
+          cat <<EOF > .env.ci
+          COMPOSE_PROJECT_NAME=ideon_ci_$(openssl rand -hex 4)
+          APP_PORT=$RANDOM_PORT
+          APP_URL=http://localhost:$RANDOM_PORT
+          DB_USER=ci_user_$(openssl rand -hex 4)
+          DB_PASS=ci_pass_$(openssl rand -hex 12)
+          DB_NAME=ci_db_$(openssl rand -hex 4)
+          SECRET_KEY=$(openssl rand -hex 32)
+          NODE_ENV=production
+          NEXT_TELEMETRY_DISABLED=1
+          EOF
+
+          # Create CI specific compose file (removes fixed container_name)
+          sed '/container_name:/d' docker-compose.yml > docker-compose.ci.yml
+
+      - name: Start Stack (Production Simulation)
+        run: docker compose -f docker-compose.ci.yml --env-file .env.ci up -d --build --wait
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.ci.yml --env-file .env.ci logs
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f docker-compose.ci.yml --env-file .env.ci down -v --rmi local
+
+  shellcheck:
+    name: Shell script linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run shellcheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: "."
+          format: gcc
+          severity: error
+          shell: bash
+
+  secret-scan:
+    name: Secret scanning
+    if: github.actor != 'nektos/act'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event_name == 'push' && github.event.before || (github.event_name == 'pull_request' && github.event.pull_request.base.sha || '') }}
+          head: ${{ github.event_name == 'push' && github.event.after || (github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'HEAD') }}

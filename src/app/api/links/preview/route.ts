@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import ogs from "open-graph-scraper";
+import { validateSafeUrl } from "@lib/ssrf";
 
 export async function POST(req: Request) {
   try {
@@ -9,8 +10,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
+    const targetUrl = url.startsWith("http") ? url : `https://${url}`;
+
+    // SSRF Protection: Validate DNS and IP before fetching
+    const isSafe = await validateSafeUrl(targetUrl);
+    if (!isSafe) {
+      return NextResponse.json(
+        { error: "Invalid or restricted URL" },
+        { status: 403 },
+      );
+    }
+
     const options = {
-      url: url.startsWith("http") ? url : `https://${url}`,
+      url: targetUrl,
       fetchOptions: {
         headers: {
           "user-agent":

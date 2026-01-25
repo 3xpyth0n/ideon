@@ -3,6 +3,7 @@ import { writeFile, readFile, unlink, mkdir } from "fs/promises";
 import { join } from "path";
 import { NextResponse } from "next/server";
 import { existsSync } from "fs";
+import { sanitizeFileName } from "@lib/file-utils";
 
 export const POST = projectAction(async (req, { project }) => {
   const formData = await req.formData();
@@ -26,12 +27,15 @@ export const POST = projectAction(async (req, { project }) => {
     await mkdir(projectStorageDir, { recursive: true });
   }
 
-  const filePath = join(projectStorageDir, file.name);
+  // Security: Sanitize filename to prevent directory traversal
+  const safeFileName = sanitizeFileName(file.name);
+  const filePath = join(projectStorageDir, safeFileName);
+
   await writeFile(filePath, buffer);
 
   return {
     success: true,
-    name: file.name,
+    name: safeFileName,
     size: file.size,
     type: file.type,
   };
@@ -39,11 +43,14 @@ export const POST = projectAction(async (req, { project }) => {
 
 export const GET = projectAction(async (req, { project }) => {
   const { searchParams } = new URL(req.url);
-  const fileName = searchParams.get("name");
+  const rawFileName = searchParams.get("name");
 
-  if (!fileName) {
+  if (!rawFileName) {
     throw { status: 400, message: "File name is required" };
   }
+
+  // Security: Sanitize filename to prevent reading arbitrary files
+  const fileName = sanitizeFileName(rawFileName);
 
   const filePath = join(
     process.cwd(),
@@ -95,11 +102,14 @@ export const GET = projectAction(async (req, { project }) => {
 
 export const DELETE = projectAction(async (req, { project }) => {
   const { searchParams } = new URL(req.url);
-  const fileName = searchParams.get("name");
+  const rawFileName = searchParams.get("name");
 
-  if (!fileName) {
+  if (!rawFileName) {
     throw { status: 400, message: "File name is required" };
   }
+
+  // Security: Sanitize filename to prevent deleting arbitrary files
+  const fileName = sanitizeFileName(rawFileName);
 
   const filePath = join(
     process.cwd(),

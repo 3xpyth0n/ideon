@@ -71,7 +71,17 @@ export async function proxy(req: NextRequest) {
   // Check for internal secret bypass (used by server-side fetch and temporal snapshots)
   const incomingSecret = req.headers.get("x-internal-secret");
   const internalSecret = getInternalSecret();
-  const isInternal = incomingSecret === internalSecret;
+  let isInternal = false;
+
+  // Security: Only allow internal secret from localhost
+  // If request comes from outside, strip the header effect
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ip = (req as any).ip || "127.0.0.1";
+  const isLocalhost = ip === "127.0.0.1" || ip === "::1";
+
+  if (incomingSecret === internalSecret && isLocalhost) {
+    isInternal = true;
+  }
 
   const isValidToken = isLoggedIn || isInternal;
 

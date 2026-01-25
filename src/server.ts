@@ -6,6 +6,7 @@ import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
 import { initDb } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
+import { validateWebsocketRequest } from "./app/lib/ws-auth";
 
 const require = createRequire(import.meta.url);
 const Y = require("yjs");
@@ -61,10 +62,25 @@ initDb()
     const wss = new WebSocketServer({ noServer: true });
     const nextUpgradeHandler = app.getUpgradeHandler();
 
-    server.on("upgrade", (request, socket, head) => {
+    server.on("upgrade", async (request, socket, head) => {
       const { pathname } = new URL(request.url!, `http://${hostname}:${port}`);
 
       if (pathname?.startsWith("/yjs")) {
+        const docName = pathname.split("/").pop() || "default";
+
+        // Security: Validate Authentication and Project Access
+        const isAuthorized = await validateWebsocketRequest(request, docName);
+
+        if (!isAuthorized) {
+          logger.warn(
+            { ip: request.socket.remoteAddress, docName },
+            "[WS Security] Blocked unauthorized connection attempt",
+          );
+          socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+
         wss.handleUpgrade(request, socket, head, (ws) => {
           wss.emit("connection", ws, request);
         });

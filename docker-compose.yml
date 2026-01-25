@@ -1,7 +1,7 @@
 services:
   ideon-app:
     build: .
-    image: ideon-app:latest
+    image: ghcr.io/3xpyth0n/ideon:latest
     container_name: ideon-app
     environment:
       - DB_HOST=ideon-db

@@ -30,7 +30,15 @@ export const POST = authenticatedAction(
       throw { status: 400, message: "File too large" };
     }
 
-    const fileExtension = file.name.split(".").pop();
+    // Securely determine extension from MIME type instead of trusting file name
+    const mimeToExt: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+    };
+    const fileExtension = mimeToExt[file.type] || "jpg";
+
     const fileName = `${userId}_${crypto
       .randomBytes(8)
       .toString("hex")}.${fileExtension}`;

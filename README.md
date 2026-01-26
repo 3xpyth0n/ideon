@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://www.theideon.com/images/ideon-text-logo.png" alt="Ideon logo" height="70" />
+  <img src="https://www.theideon.com/images/ideon-text-logo.png" alt="Ideon logo" height="100" />
 </p>
 
 <p align="center">

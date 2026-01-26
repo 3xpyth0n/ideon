@@ -49,7 +49,7 @@ export const GET = authenticatedAction(
     }
 
     if (!user) {
-      throw new Error("User not found");
+      throw { status: 401, message: "User not found" };
     }
 
     return user;

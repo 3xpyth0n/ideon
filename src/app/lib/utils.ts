@@ -76,7 +76,8 @@ export function stringToColor(str: string): string {
  * Returns a standard set of security headers including CSP and HSTS.
  */
 export function getSecurityHeaders(nonce: string) {
-  const isDev = process.env.NODE_ENV === "development";
+  const appUrl = process.env.APP_URL || "";
+  const isSecure = appUrl.startsWith("https://");
 
   const cspHeader = `
     default-src 'self';
@@ -84,13 +85,13 @@ export function getSecurityHeaders(nonce: string) {
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob: https:;
     font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;
-    connect-src 'self'${isDev ? " ws: wss:" : ""};
+    connect-src 'self' ws: wss:;
     frame-src 'self' https:;
     frame-ancestors 'none';
     base-uri 'self';
     form-action 'self';
     object-src 'none';
-    upgrade-insecure-requests;
+    ${isSecure ? "upgrade-insecure-requests;" : ""}
   `
     .replace(/\s{2,}/g, " ")
     .trim();
@@ -102,8 +103,12 @@ export function getSecurityHeaders(nonce: string) {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "X-XSS-Protection": "1; mode=block",
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
   };
+
+  if (isSecure) {
+    headers["Strict-Transport-Security"] =
+      "max-age=31536000; includeSubDomains; preload";
+  }
 
   return headers;
 }

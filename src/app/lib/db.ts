@@ -140,7 +140,12 @@ function getSqlite(): DatabaseDriver.Database {
   if (state.sqliteInstance) return state.sqliteInstance;
 
   const storageDir = getStorageDir();
-  const dbPath = path.resolve(storageDir, "dev.db");
+  // Allow overriding the database path via environment variable
+  const dbPath = process.env.SQLITE_PATH
+    ? path.resolve(process.cwd(), process.env.SQLITE_PATH)
+    : path.resolve(storageDir, "dev.db");
+
+  logger.info(`Using SQLite database at: ${dbPath}`);
 
   state.sqliteInstance = new DatabaseDriver(dbPath);
   state.sqliteInstance.pragma("journal_mode = WAL");

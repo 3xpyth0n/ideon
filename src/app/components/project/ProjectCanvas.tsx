@@ -190,7 +190,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       }/yjs`,
       `project-${initialProjectId}`,
       doc,
-      { connect: true },
+      { connect: true, params: {} },
     );
 
     const indexeddbProvider = new IndexeddbPersistence(

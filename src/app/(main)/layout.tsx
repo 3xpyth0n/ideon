@@ -1,18 +1,10 @@
 import { Sidebar } from "@components/Sidebar";
-import { auth } from "@auth";
-import { redirect } from "next/navigation";
 
 export default async function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactNode> {
-  const session = await auth();
-
-  if (!session) {
-    redirect("/login");
-  }
-
   return (
     <div className="app-container">
       <div className="bg-logo-container">

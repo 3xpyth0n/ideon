@@ -1,5 +1,4 @@
-import { decode } from "next-auth/jwt";
-import { parse } from "cookie";
+import { getToken } from "next-auth/jwt";
 import { getDb } from "./db";
 import { IncomingMessage } from "http";
 import { getAuthSecret } from "./crypto";
@@ -13,45 +12,31 @@ export async function validateWebsocketRequest(
   docName: string,
 ): Promise<boolean> {
   try {
-    const cookies = parse(req.headers.cookie || "");
-
-    // 1. Extract Session Token (Support Secure and Non-Secure)
-    // NextAuth v5 uses these cookie names by default
-    const secureCookieName = "__Secure-authjs.session-token";
-    const insecureCookieName = "authjs.session-token";
-
-    const token = cookies[secureCookieName] || cookies[insecureCookieName];
-
-    if (!token) {
-      return false;
-    }
-
-    // 2. Decode Token
-    // We must provide the salt that matches the cookie name
-    const salt = cookies[secureCookieName]
-      ? secureCookieName
-      : insecureCookieName;
-
-    const decoded = await decode({
-      token,
+    const token = await getToken({
+      req: {
+        headers: req.headers as unknown as Record<string, string>,
+      },
       secret: getAuthSecret(),
-      salt,
+      cookieName: "authjs.session-token",
+      salt: "authjs.session-token",
     });
 
-    if (!decoded || !decoded.sub) {
+    if (!token || !token.sub) {
       return false;
     }
 
-    const userId = decoded.sub;
+    const userId = token.sub;
 
-    // 3. Check Project Access
+    // docName comes in as "project-<uuid>" but DB stores just "<uuid>"
+    const projectId = docName.replace(/^project-/, "");
+
     const db = getDb();
 
     // Check if user is owner
     const project = await db
       .selectFrom("projects")
       .select("id")
-      .where("id", "=", docName)
+      .where("id", "=", projectId)
       .where("ownerId", "=", userId)
       .executeTakeFirst();
 
@@ -61,7 +46,7 @@ export async function validateWebsocketRequest(
     const collaborator = await db
       .selectFrom("projectCollaborators")
       .select("userId")
-      .where("projectId", "=", docName)
+      .where("projectId", "=", projectId)
       .where("userId", "=", userId)
       .executeTakeFirst();
 

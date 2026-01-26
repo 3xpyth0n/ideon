@@ -8,7 +8,7 @@ import {
   GraphState,
 } from "@lib/graph";
 import { uniqueById } from "@lib/utils";
-import { getGithubStats } from "@lib/github";
+import { getRepoStats } from "@lib/git-providers";
 import { z } from "zod";
 import * as crypto from "crypto";
 
@@ -107,7 +107,7 @@ export const POST = projectAction(
           if (blockType === "github") {
             const url = block.data?.content;
             if (url) {
-              const { stats } = await getGithubStats(url);
+              const { stats } = await getRepoStats(url);
               if (stats) {
                 // Metadata might be a JSON string or an object depending on where it comes from
                 let metadata = block.data.metadata;

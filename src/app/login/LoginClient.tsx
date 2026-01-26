@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useI18n } from "@providers/I18nProvider";
+import { useUser } from "@providers/UserProvider";
 import { LanguageSelect } from "@setup/components/LanguageSelect";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 
 export function LoginClient() {
   const { dict } = useI18n();
+  const { refreshUser } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
@@ -101,6 +103,7 @@ export function LoginClient() {
       return;
     }
 
+    await refreshUser();
     router.replace("/home");
   };
 

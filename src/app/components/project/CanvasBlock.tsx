@@ -19,6 +19,8 @@ import {
   X,
   Download,
   Github,
+  Gitlab,
+  GitGraph,
   Star,
   Tag,
   GitCommit,
@@ -116,12 +118,12 @@ export type BlockData = {
 
 interface GithubStats {
   stars: number;
-  forks: number;
   lastCommit: string;
   openIssues: number;
   openPulls: number;
   contributors: number;
   release: string;
+  provider?: "github" | "gitlab" | "gitea" | "forgejo";
 }
 
 interface BlockMetadata {
@@ -458,7 +460,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     [updateMetadata],
   );
 
-  const fetchGithubStats = useCallback(
+  const fetchGitStats = useCallback(
     async (url: string) => {
       if (!url) return;
 
@@ -507,7 +509,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       }
 
       try {
-        const response = await fetch("/api/github/stats", {
+        const response = await fetch("/api/git/stats", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: cleanedUrl }),
@@ -543,7 +545,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           setGithubError(dict.common.githubError);
         }
       } catch (error) {
-        console.error("Failed to fetch github stats:", error);
+        console.error("Failed to fetch git stats:", error);
         setGithubError(dict.common.githubError);
       } finally {
         setIsFetchingGithub(false);
@@ -569,7 +571,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     }
     if (isEditingGithub) {
       setIsEditingGithub(false);
-      if (content) fetchGithubStats(content);
+      if (content) fetchGitStats(content);
     }
     if (isEditingContact) {
       setIsEditingContact(false);
@@ -580,20 +582,20 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     isEditingContact,
     content,
     fetchLinkMetadata,
-    fetchGithubStats,
+    fetchGitStats,
   ]);
 
   useEffect(() => {
     if (blockType !== "github" || !content || isEditingGithub) return;
 
-    fetchGithubStats(content);
+    fetchGitStats(content);
 
     const interval = setInterval(() => {
-      fetchGithubStats(content);
+      fetchGitStats(content);
     }, 70000);
 
     return () => clearInterval(interval);
-  }, [blockType, content, isEditingGithub, fetchGithubStats]);
+  }, [blockType, content, isEditingGithub, fetchGitStats]);
 
   useEffect(() => {
     if (blockType !== "link" || !content || isEditingLink) return;
@@ -1111,12 +1113,18 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     }
 
     if (blockType === "github") {
+      const stats = metadata?.github?.lastStats;
+      const provider = stats?.provider || "github";
+
+      const pullsLabel =
+        provider === "gitlab" ? dict.common.mergeRequests : dict.common.pulls;
+
       const statsOptions = [
         { id: "stars", label: dict.common.stars, icon: Star },
         { id: "release", label: dict.common.release, icon: Tag },
         { id: "commit", label: dict.common.commit, icon: GitCommit },
         { id: "issues", label: dict.common.issues, icon: AlertCircle },
-        { id: "pulls", label: dict.common.pulls, icon: GitPullRequest },
+        { id: "pulls", label: pullsLabel, icon: GitPullRequest },
         { id: "contributors", label: dict.common.contributors, icon: Users },
       ];
 
@@ -1173,12 +1181,12 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                   setGithubError(null);
                 }}
                 onBlur={() => {
-                  if (content) fetchGithubStats(content);
+                  if (content) fetchGitStats(content);
                   setIsEditingGithub(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    if (content) fetchGithubStats(content);
+                    if (content) fetchGitStats(content);
                     setIsEditingGithub(false);
                   }
                 }}
@@ -1221,7 +1229,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         );
       }
 
-      const stats = metadata?.github?.lastStats;
       const enabledStats = metadata?.github?.enabledStats || [
         "stars",
         "release",
@@ -1232,6 +1239,13 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       ];
       const repoUrl = content;
       const repoName = repoUrl?.split("/").slice(-2).join("/");
+
+      const ProviderIcon =
+        provider === "gitlab"
+          ? Gitlab
+          : provider === "gitea" || provider === "forgejo"
+            ? GitGraph
+            : Github;
 
       return (
         <div
@@ -1245,10 +1259,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           }
         >
           <div className="github-header">
-            <Github size={20} className="github-logo" />
+            <ProviderIcon size={20} className="github-logo" />
             <div className="github-title-container">
               <h4 className="github-repo-name">
-                {repoName || "GitHub Repository"}
+                {repoName || dict.common.gitRepository}
               </h4>
               <span className="github-repo-url">{repoUrl}</span>
             </div>

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Support for self-hosted Git providers (GitLab, Gitea, Forgejo) in addition to GitHub. Auto-detection of Git provider based on URL.
+
 ## [0.1.0] - 2026-01-24
 
 ### Vision

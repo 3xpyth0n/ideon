@@ -42,6 +42,14 @@ done
 # -----------------------------------------------------------------------------
 # Helper Functions
 # -----------------------------------------------------------------------------
+sed_inplace() {
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        sed -i '' "$1" "$2"
+    else
+        sed -i "$1" "$2"
+    fi
+}
+
 print_banner() {
     echo -e "${BLUE}${BOLD}"
     echo " ██╗██████╗ ███████╗ ██████╗ ███╗   ██╗"
@@ -120,12 +128,12 @@ configure_smtp() {
         read -rp "From Email: " smtp_from_email
         read -rp "From Name: " smtp_from_name
 
-        sed -i "s|^SMTP_HOST=.*|SMTP_HOST=$smtp_host|" "$env_file"
-        sed -i "s|^SMTP_PORT=.*|SMTP_PORT=$smtp_port|" "$env_file"
-        sed -i "s|^SMTP_USER=.*|SMTP_USER=$smtp_user|" "$env_file"
-        sed -i "s|^SMTP_PASSWORD=.*|SMTP_PASSWORD=$smtp_pass|" "$env_file"
-        sed -i "s|^SMTP_FROM_EMAIL=.*|SMTP_FROM_EMAIL=$smtp_from_email|" "$env_file"
-        sed -i "s|^SMTP_FROM_NAME=.*|SMTP_FROM_NAME=$smtp_from_name|" "$env_file"
+        sed_inplace "s|^SMTP_HOST=.*|SMTP_HOST=$smtp_host|" "$env_file"
+        sed_inplace "s|^SMTP_PORT=.*|SMTP_PORT=$smtp_port|" "$env_file"
+        sed_inplace "s|^SMTP_USER=.*|SMTP_USER=$smtp_user|" "$env_file"
+        sed_inplace "s|^SMTP_PASSWORD=.*|SMTP_PASSWORD=$smtp_pass|" "$env_file"
+        sed_inplace "s|^SMTP_FROM_EMAIL=.*|SMTP_FROM_EMAIL=$smtp_from_email|" "$env_file"
+        sed_inplace "s|^SMTP_FROM_NAME=.*|SMTP_FROM_NAME=$smtp_from_name|" "$env_file"
 
         echo -e "${GREEN}SMTP settings updated.${NC}"
     else
@@ -148,7 +156,7 @@ fi
 
 check_prerequisites
 
-PROJECT_ROOT="$(dirname "$(realpath "$0")")"
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 SHOULD_CONFIGURE=true
 
 # -----------------------------------------------------------------------------

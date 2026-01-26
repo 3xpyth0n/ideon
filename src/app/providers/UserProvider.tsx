@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { signOut } from "next-auth/react";
 
 export interface UserProfile {
   id: string;
@@ -44,8 +45,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/account");
 
       if (res.status === 401) {
-        // Not authenticated
+        // Not authenticated or User not found
         setUser(null);
+
+        // Only redirect if we are NOT on a public page
+        const publicPaths = [
+          "/login",
+          "/register",
+          "/setup",
+          "/reset-password",
+        ];
+        const isPublic = publicPaths.some((p) =>
+          window.location.pathname.startsWith(p),
+        );
+
+        if (!isPublic) {
+          await signOut({ callbackUrl: "/login" });
+        }
         return;
       }
 

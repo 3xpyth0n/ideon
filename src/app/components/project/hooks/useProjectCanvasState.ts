@@ -770,9 +770,9 @@ export const useProjectCanvasState = (
 
       e.preventDefault();
 
-      // GitHub URL Detection
-      const githubRegex = /^https?:\/\/github\.com\/[\w-]+\/[\w.-]+/;
-      if (githubRegex.test(text)) {
+      // Git Provider Detection
+      const gitRegex = /^https?:\/\/(github\.com|gitlab\.com)\/[\w-]+\/[\w.-]+/;
+      if (gitRegex.test(text)) {
         graph.handleCreateBlock(pos, undefined, "github", text);
         return;
       }

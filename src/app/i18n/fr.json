@@ -334,6 +334,19 @@
     "addColor": "Ajouter une couleur",
     "hexPlaceholder": "Hex",
     "copiedToClipboard": "Copié dans le presse-papier",
-    "uploadError": "Échec du téléchargement"
+    "uploadError": "Échec du téléchargement",
+    "clientId": "ID Client",
+    "clientSecret": "Secret Client",
+    "tenantId": "ID Locataire (Tenant ID)",
+    "issuer": "Émetteur (Issuer URL)",
+    "redirectUri": "URI de Redirection",
+    "magicLinkDuration": "Durée de validité du lien (minutes)",
+    "magicLinkDurationPlaceholder": "Ex: 60",
+    "magicLinkEnvNotice": "Note : La configuration SMTP doit être définie dans les variables d'environnement.",
+    "callbackUrlNotice": "Vous devez ajouter cette URL de callback dans la configuration de votre fournisseur d'identité :",
+    "samlSpConfig": "Configuration SP (ACS URL)",
+    "samlSpEntityId": "ID Entité SP",
+    "samlIdpMetadataUrl": "URL des métadonnées IdP",
+    "samlRawMetadataXml": "Ou XML de métadonnées brut"
   }
 }

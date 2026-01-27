@@ -335,6 +335,19 @@
     "addColor": "Add Color",
     "hexPlaceholder": "Hex",
     "copiedToClipboard": "Copied to clipboard",
-    "uploadError": "Upload failed"
+    "uploadError": "Upload failed",
+    "clientId": "Client ID",
+    "clientSecret": "Client Secret",
+    "tenantId": "Tenant ID",
+    "issuer": "Issuer URL",
+    "redirectUri": "Redirect URI",
+    "magicLinkDuration": "Link Duration (minutes)",
+    "magicLinkDurationPlaceholder": "Ex: 60",
+    "magicLinkEnvNotice": "Note: SMTP configuration must be set in environment variables.",
+    "callbackUrlNotice": "You need to add this callback URL to your identity provider configuration:",
+    "samlSpConfig": "SP Configuration (ACS URL)",
+    "samlSpEntityId": "SP Entity ID",
+    "samlIdpMetadataUrl": "IdP Metadata URL",
+    "samlRawMetadataXml": "Or Raw Metadata XML"
   }
 }

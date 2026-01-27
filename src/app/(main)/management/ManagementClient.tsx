@@ -40,6 +40,7 @@ interface ProviderConfig {
   tenantId?: string;
   redirectUri?: string;
   expiresInMinutes?: number;
+  metadataUrl?: string;
 }
 
 interface AuthSettings {
@@ -523,9 +524,48 @@ function ProviderConfigModal({
   appUrl: string;
 }) {
   const [formData, setFormData] = useState<Partial<ProviderConfig>>(config);
+  const [metadataXml, setMetadataXml] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (provider === "saml") {
+      fetch("/api/management/auth/saml")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.connection) {
+            setFormData((prev) => ({
+              ...prev,
+              metadataUrl: data.connection.idpMetadata?.url,
+            }));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [provider]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (provider === "saml") {
+      try {
+        const res = await fetch("/api/management/auth/saml", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            metadataUrl: formData.metadataUrl,
+            metadataXml: metadataXml || undefined,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to save SAML config");
+        }
+      } catch (err) {
+        toast.error("Failed to save SAML configuration");
+        console.error(err);
+        return;
+      }
+    }
+
     onSave(formData);
   };
 
@@ -628,17 +668,52 @@ function ProviderConfigModal({
         )}
 
         {isSaml && (
-          <div className="form-group">
-            <label className="modal-label">{dict.common.issuer}</label>
-            <input
-              className="zen-input"
-              value={formData.issuer || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, issuer: e.target.value })
-              }
-              placeholder="https://idp.example.com/saml"
-            />
-          </div>
+          <>
+            <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
+              <div className="flex items-center gap-2 font-bold tracking-wider">
+                <Globe size={14} />
+                <span>{dict.common.samlSpConfig}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
+                  {appUrl}/api/auth/sso/saml
+                </code>
+              </div>
+              <div className="flex items-center gap-2 font-bold tracking-wider mt-2">
+                <Shield size={14} />
+                <span>{dict.common.samlSpEntityId}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
+                  https://saml.boxyhq.com
+                </code>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="modal-label">
+                {dict.common.samlIdpMetadataUrl}
+              </label>
+              <input
+                className="zen-input"
+                value={formData.metadataUrl || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, metadataUrl: e.target.value })
+                }
+                placeholder="https://idp.example.com/metadata.xml"
+              />
+            </div>
+            <div className="form-group">
+              <label className="modal-label">
+                {dict.common.samlRawMetadataXml}
+              </label>
+              <textarea
+                className="zen-input min-h-[100px] font-mono text-[10px]"
+                value={metadataXml}
+                onChange={(e) => setMetadataXml(e.target.value)}
+                placeholder="<EntityDescriptor ...>...</EntityDescriptor>"
+              />
+            </div>
+          </>
         )}
 
         {isMagicLink && (

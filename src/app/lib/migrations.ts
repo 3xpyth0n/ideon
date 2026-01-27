@@ -2,11 +2,13 @@ import { Migrator, MigrationProvider, Migration } from "kysely";
 import { getDb } from "./db";
 import { isBuildMode } from "./runtime";
 import * as initialMigration from "../db/migrations/01InitialSchema";
+import * as jacksonMigration from "../db/migrations/02JacksonStore";
 
 class StaticMigrationProvider implements MigrationProvider {
   async getMigrations(): Promise<Record<string, Migration>> {
     return {
       "01InitialSchema": initialMigration,
+      "02JacksonStore": jacksonMigration,
     };
   }
 }

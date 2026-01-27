@@ -4,6 +4,7 @@ import Nodemailer from "next-auth/providers/nodemailer";
 import Discord from "next-auth/providers/discord";
 import Google from "next-auth/providers/google";
 import Slack from "next-auth/providers/slack";
+import GitLab from "next-auth/providers/gitlab";
 import AzureAD from "next-auth/providers/azure-ad";
 import { getDb, getAuthProviders, getPool } from "@lib/db";
 import { getAuthSecret } from "@lib/crypto";
@@ -33,6 +34,7 @@ const getRateLimiter = () => {
         keyPrefix: "loginLimit",
         points: 5,
         duration: 60 * 15,
+        tableCreated: true, // Table is created by Kysely migrations
       });
     }
   }
@@ -216,12 +218,47 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         clientSecret: freshConfig.slack?.clientSecret,
         allowDangerousEmailAccountLinking: true,
       }),
+      GitLab({
+        clientId: freshConfig.gitlab?.clientId,
+        clientSecret: freshConfig.gitlab?.clientSecret,
+        allowDangerousEmailAccountLinking: true,
+      }),
       AzureAD({
         clientId: freshConfig.entra?.clientId,
         clientSecret: freshConfig.entra?.clientSecret,
         issuer: `https://login.microsoftonline.com/${freshConfig.entra?.tenantId}/v2.0`,
         allowDangerousEmailAccountLinking: true,
       }),
+      ...(freshConfig.saml?.enabled
+        ? [
+            {
+              id: "saml",
+              name: "SAML SSO",
+              type: "oidc" as const,
+              issuer: process.env.APP_URL
+                ? `${process.env.APP_URL}/api/oauth`
+                : "http://localhost:3000/api/oauth",
+              clientId: "tenant=default&product=ideon",
+              clientSecret: "dummy",
+              authorization: { params: { scope: "openid email profile" } },
+              checks: ["pkce", "state"] as ("pkce" | "state")[],
+              allowDangerousEmailAccountLinking: true,
+            },
+          ]
+        : []),
+      ...(freshConfig.oidc?.issuer
+        ? [
+            {
+              id: "oidc",
+              name: "OIDC",
+              type: "oidc" as const,
+              clientId: freshConfig.oidc?.clientId,
+              clientSecret: freshConfig.oidc?.clientSecret,
+              issuer: freshConfig.oidc?.issuer,
+              allowDangerousEmailAccountLinking: true,
+            },
+          ]
+        : []),
     ],
     callbacks: {
       async signIn({ user, account }) {

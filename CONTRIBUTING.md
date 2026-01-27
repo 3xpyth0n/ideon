@@ -50,7 +50,7 @@ If you need to test the production behavior or database migrations with Postgres
 2.  Create a new branch for your feature or fix.
 3.  Make your changes.
 
-4.  **Run Pre-commit Manually** (Optional but recommended):
+4.  **Run Pre-commit Manually** (Mandatory):
     You can run all checks on all files to verify your changes:
 
     ```bash

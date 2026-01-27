@@ -256,6 +256,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
               clientSecret: freshConfig.oidc?.clientSecret,
               issuer: freshConfig.oidc?.issuer,
               allowDangerousEmailAccountLinking: true,
+              authorization: { params: { scope: "openid email profile" } },
+              profile(profile: {
+                sub: string;
+                name?: string;
+                preferred_username?: string;
+                nickname?: string;
+                email?: string;
+                picture?: string;
+                avatar?: string;
+                avatar_url?: string;
+                [key: string]: unknown;
+              }) {
+                return {
+                  id: profile.sub,
+                  name:
+                    profile.name ||
+                    profile.preferred_username ||
+                    profile.nickname,
+                  email: profile.email,
+                  image:
+                    profile.picture || profile.avatar || profile.avatar_url,
+                };
+              },
             },
           ]
         : []),

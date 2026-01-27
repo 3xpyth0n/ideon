@@ -8,7 +8,6 @@ export const GET = adminAction(
     if (!user) throw new Error("Unauthorized");
 
     const jackson = await initJackson();
-    // Jackson might throw if no connection found? No, returns empty array.
     const connections = await jackson.apiController.getConnections({
       tenant: "default",
       product: "ideon",
@@ -30,34 +29,38 @@ export const POST = adminAction(
 
     const jackson = await initJackson();
 
-    // If updating, we can just overwrite.
-    // Jackson doesn't have a simple "upsert" for connection with same tenant/product if we don't know the clientID?
-    // Actually getConnections returns the current one.
     const connections = await jackson.apiController.getConnections({
       tenant: "default",
       product: "ideon",
     });
 
     if (connections.length > 0) {
-      // Update existing
-      // updateSAMLConnection expects clientID or tenant+product?
-      // It expects clientID and clientSecret usually, or we can use delete/create pattern to be sure.
       await jackson.apiController.deleteConnections({
         tenant: "default",
         product: "ideon",
       });
     }
 
-    // Create new
-    // @ts-expect-error - We might only have metadataUrl which Jackson supports but types require rawMetadata
-    await jackson.apiController.createSAMLConnection({
-      tenant: "default",
-      product: "ideon",
-      defaultRedirectUrl: process.env.APP_URL || "http://localhost:3000",
-      redirectUrl: process.env.APP_URL || "http://localhost:3000",
-      rawMetadata: metadataXml,
-      metadataUrl: metadataUrl,
-    });
+    if (metadataXml) {
+      await jackson.apiController.createSAMLConnection({
+        tenant: "default",
+        product: "ideon",
+        defaultRedirectUrl: process.env.APP_URL || "http://localhost:3000",
+        redirectUrl: process.env.APP_URL || "http://localhost:3000",
+        rawMetadata: metadataXml,
+      });
+    } else if (metadataUrl) {
+      await jackson.apiController.createSAMLConnection({
+        tenant: "default",
+        product: "ideon",
+        defaultRedirectUrl: process.env.APP_URL || "http://localhost:3000",
+        redirectUrl: process.env.APP_URL || "http://localhost:3000",
+        metadataUrl,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+    } else {
+      throw new Error("Missing metadata");
+    }
 
     return { success: true };
   },

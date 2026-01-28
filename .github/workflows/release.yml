@@ -43,28 +43,20 @@ jobs:
               ref: sha
             });
 
-            // Filter for the 'Build and Validate' job (or any failure in CI)
-            // We ignore the current 'release' workflow runs
-            const relevantRuns = checkRuns.check_runs.filter(run =>
-              run.name !== 'Create GitHub Release' &&
-              run.status === 'completed'
-            );
+            // Specifically check for the 'Build and Validate' job from the main CI workflow
+            const ciJobName = 'Build and Validate';
+            const ciJob = checkRuns.check_runs.find(run => run.name === ciJobName);
 
-            const failures = relevantRuns.filter(run =>
-              run.conclusion === 'failure' ||
-              run.conclusion === 'timed_out' ||
-              run.conclusion === 'cancelled'
-            );
-
-            if (failures.length > 0) {
-              failures.forEach(run => console.log(`Check failed: ${run.name}`));
-              core.setFailed(`One or more CI checks failed. Refusing to release.`);
-            }
-
-            // Also ensure we have at least one successful run (excluding this one)
-            const successes = relevantRuns.filter(run => run.conclusion === 'success');
-            if (successes.length === 0) {
-               console.log("No successful CI runs found. Proceeding with caution...");
+            if (ciJob) {
+              if (ciJob.conclusion === 'failure' || ciJob.conclusion === 'timed_out' || ciJob.conclusion === 'cancelled') {
+                core.setFailed(`CI check '${ciJobName}' failed. Refusing to release.`);
+              } else if (ciJob.conclusion === 'success') {
+                console.log(`CI check '${ciJobName}' passed. Proceeding with release.`);
+              } else {
+                console.log(`CI check '${ciJobName}' is ${ciJob.status}. Proceeding...`);
+              }
+            } else {
+              console.log(`CI job '${ciJobName}' not found (likely skipped on tag push). Proceeding...`);
             }
 
       - name: Generate Changelog

@@ -19,11 +19,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Check for concurrent tag
         id: check-tag
         run: |
-          git fetch --tags
+          git fetch --tags --force
           if [[ "${{ github.ref }}" == "refs/heads/main" ]] && git describe --exact-match --tags HEAD >/dev/null 2>&1; then
             echo "Skipping main build because a tag exists for this commit."
             echo "skip=true" >> $GITHUB_OUTPUT

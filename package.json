@@ -11,7 +11,7 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development NODE_OPTIONS='--max-old-space-size=8192' tsx src/server.ts",
+    "dev": "NODE_ENV=development NODE_OPTIONS='--max-old-space-size=8192' tsx watch src/server.ts",
     "build": "next build && tsup",
     "start": "NODE_OPTIONS='--max-old-space-size=8192' node dist/server.cjs",
     "check": "eslint . --max-warnings=0; tsc --noEmit",

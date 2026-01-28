@@ -13,6 +13,7 @@ export const GET = adminAction(
       .selectFrom("systemSettings")
       .select([
         "publicRegistrationEnabled",
+        "ssoRegistrationEnabled",
         "passwordLoginEnabled",
         "authProvidersJson",
       ])
@@ -22,6 +23,7 @@ export const GET = adminAction(
     if (!settings) {
       return {
         publicRegistrationEnabled: true,
+        ssoRegistrationEnabled: true,
         passwordLoginEnabled: true,
         authProviders: {},
       };
@@ -29,6 +31,7 @@ export const GET = adminAction(
 
     return {
       publicRegistrationEnabled: !!settings.publicRegistrationEnabled,
+      ssoRegistrationEnabled: !!settings.ssoRegistrationEnabled,
       passwordLoginEnabled: !!settings.passwordLoginEnabled,
       authProviders: JSON.parse(settings.authProvidersJson || "{}"),
       appUrl:
@@ -42,12 +45,17 @@ export const GET = adminAction(
 export const POST = adminAction(
   async (_req, { body, user }) => {
     if (!user) throw new Error("Unauthorized");
-    const { publicRegistrationEnabled, passwordLoginEnabled, authProviders } =
-      body as {
-        publicRegistrationEnabled: boolean;
-        passwordLoginEnabled: boolean;
-        authProviders: Record<string, unknown>;
-      };
+    const {
+      publicRegistrationEnabled,
+      ssoRegistrationEnabled,
+      passwordLoginEnabled,
+      authProviders,
+    } = body as {
+      publicRegistrationEnabled: boolean;
+      ssoRegistrationEnabled: boolean;
+      passwordLoginEnabled: boolean;
+      authProviders: Record<string, unknown>;
+    };
 
     // Validation
     if (passwordLoginEnabled === false) {
@@ -80,6 +88,7 @@ export const POST = adminAction(
         .updateTable("systemSettings")
         .set({
           publicRegistrationEnabled: publicRegistrationEnabled ? 1 : 0,
+          ssoRegistrationEnabled: ssoRegistrationEnabled ? 1 : 0,
           passwordLoginEnabled: passwordLoginEnabled ? 1 : 0,
           authProvidersJson: JSON.stringify(authProviders || {}),
         })
@@ -91,6 +100,7 @@ export const POST = adminAction(
         .values({
           id: crypto.randomUUID(),
           publicRegistrationEnabled: publicRegistrationEnabled ? 1 : 0,
+          ssoRegistrationEnabled: ssoRegistrationEnabled ? 1 : 0,
           passwordLoginEnabled: passwordLoginEnabled ? 1 : 0,
           authProvidersJson: JSON.stringify(authProviders || {}),
           installed: 1,

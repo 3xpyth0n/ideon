@@ -3,12 +3,14 @@ import { getDb } from "./db";
 import { isBuildMode } from "./runtime";
 import * as initialMigration from "../db/migrations/01InitialSchema";
 import * as jacksonMigration from "../db/migrations/02JacksonStore";
+import * as ssoRegistrationMigration from "../db/migrations/03AddSsoRegistration";
 
 class StaticMigrationProvider implements MigrationProvider {
   async getMigrations(): Promise<Record<string, Migration>> {
     return {
       "01InitialSchema": initialMigration,
       "02JacksonStore": jacksonMigration,
+      "03AddSsoRegistration": ssoRegistrationMigration,
     };
   }
 }

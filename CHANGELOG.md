@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Support for self-hosted Git providers (GitLab, Gitea, Forgejo) in addition to GitHub. Auto-detection of Git provider based on URL.
 - Enhanced OIDC compatibility: added support for multiple profile picture fields (`picture`, `avatar`, `avatar_url`) to handle diverse OIDC providers (e.g., Keycloak, Authentik).
+- Added option to authorize SSO and block public registration page separately.
 
 ## [0.1.0] - 2026-01-24
 

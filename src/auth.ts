@@ -105,7 +105,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
               .select("id")
               .where("email", "=", email)
               .where("acceptedAt", "is", null)
-              .where("expiresAt", ">", new Date())
+              .where(
+                "expiresAt",
+                ">",
+                new Date().toISOString() as unknown as Date,
+              )
               .executeTakeFirst();
 
             if (!invitation && !isPublicEnabled) {
@@ -285,63 +289,73 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
     ],
     callbacks: {
       async signIn({ user, account }) {
-        const headersList = await headers();
-        const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+        try {
+          const headersList = await headers();
+          const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
 
-        if (account?.provider === "credentials") return true;
-        if (!user.email) {
-          await logSecurityEvent("loginSSO:unknown", "failure", { ip });
+          if (account?.provider === "credentials") return true;
+          if (!user.email) {
+            await logSecurityEvent("loginSSO:unknown", "failure", { ip });
+            return false;
+          }
+
+          const email = user.email.toLowerCase();
+
+          const existingUser = await db
+            .selectFrom("users")
+            .selectAll()
+            .where("email", "=", email)
+            .executeTakeFirst();
+
+          if (existingUser) {
+            // User exists, clean up any pending invitations
+            await db
+              .deleteFrom("invitations")
+              .where("email", "=", email)
+              .execute();
+
+            await logSecurityEvent(`loginSSO:${account?.provider}`, "success", {
+              userId: existingUser.id,
+              ip,
+            });
+            return true;
+          }
+
+          // User does not exist, check registration conditions
+          const settings = await db
+            .selectFrom("systemSettings")
+            .select(["publicRegistrationEnabled", "ssoRegistrationEnabled"])
+            .executeTakeFirst();
+
+          const isPublicEnabled = settings?.publicRegistrationEnabled === 1;
+          const isSsoEnabled = settings?.ssoRegistrationEnabled === 1;
+
+          const invitation = await db
+            .selectFrom("invitations")
+            .selectAll()
+            .where("email", "=", email)
+            .where("acceptedAt", "is", null)
+            .where(
+              "expiresAt",
+              ">",
+              new Date().toISOString() as unknown as Date,
+            )
+            .orderBy("createdAt", "desc")
+            .executeTakeFirst();
+
+          if (!invitation && !isPublicEnabled && !isSsoEnabled) {
+            await logSecurityEvent(`loginSSO:${account?.provider}`, "failure", {
+              ip,
+            });
+            return "/login?error=registrationDisabled";
+          }
+
+          // Return true to allow NextAuth to proceed with Adapter's createUser
+          return true;
+        } catch (error) {
+          console.error("[Auth] SignIn error:", error);
           return false;
         }
-
-        const email = user.email.toLowerCase();
-
-        const existingUser = await db
-          .selectFrom("users")
-          .selectAll()
-          .where("email", "=", email)
-          .executeTakeFirst();
-
-        if (existingUser) {
-          // User exists, clean up any pending invitations
-          await db
-            .deleteFrom("invitations")
-            .where("email", "=", email)
-            .execute();
-
-          await logSecurityEvent(`loginSSO:${account?.provider}`, "success", {
-            userId: existingUser.id,
-            ip,
-          });
-          return true;
-        }
-
-        // User does not exist, check registration conditions
-        const settings = await db
-          .selectFrom("systemSettings")
-          .select("publicRegistrationEnabled")
-          .executeTakeFirst();
-
-        const isPublicEnabled = settings?.publicRegistrationEnabled === 1;
-
-        const invitation = await db
-          .selectFrom("invitations")
-          .selectAll()
-          .where("email", "=", email)
-          .where("acceptedAt", "is", null)
-          .where("expiresAt", ">", new Date())
-          .orderBy("createdAt", "desc")
-          .executeTakeFirst();
-
-        if (!invitation && !isPublicEnabled) {
-          await logSecurityEvent(`loginSSO:${account?.provider}`, "failure", {
-            ip,
-          });
-          return "/login?error=registrationDisabled";
-        }
-
-        // Return true to allow NextAuth to proceed with Adapter's createUser
-        return true;
       },
       async jwt({ token, user, account }) {
         if (user && account) {
@@ -387,6 +401,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
     },
     pages: {
       signIn: "/login",
+      error: "/login",
     },
     logger: {
       error(error) {

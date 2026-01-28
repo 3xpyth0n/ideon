@@ -41,6 +41,7 @@ export async function setupAction(input: Input): Promise<boolean> {
       id: settingsId,
       installed: 1,
       publicRegistrationEnabled: 0,
+      ssoRegistrationEnabled: 1,
       passwordLoginEnabled: 1,
       authProvidersJson: "{}",
       createdAt: new Date().toISOString(),

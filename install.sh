@@ -104,10 +104,10 @@ configure_env() {
     DB_PASS=$(openssl rand -base64 32)
 
     # Update .env file
-    sed -i "s|^APP_PORT=.*|APP_PORT=$port|" "$env_file"
-    sed -i "s|^APP_URL=.*|APP_URL=$url|" "$env_file"
-    sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" "$env_file"
-    sed -i "s|^DB_PASS=.*|DB_PASS=$DB_PASS|" "$env_file"
+    sed_inplace "s|^APP_PORT=.*|APP_PORT=$port|" "$env_file"
+    sed_inplace "s|^APP_URL=.*|APP_URL=$url|" "$env_file"
+    sed_inplace "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" "$env_file"
+    sed_inplace "s|^DB_PASS=.*|DB_PASS=$DB_PASS|" "$env_file"
 
     echo -e "${GREEN}Configuration complete.${NC}"
     echo -e "${GREEN}Secure keys generated.${NC}"

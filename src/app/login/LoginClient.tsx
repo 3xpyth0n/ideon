@@ -61,14 +61,17 @@ export function LoginClient() {
     const params = new URLSearchParams(window.location.search);
     const setupSuccess = params.get("setupSuccess") === "true";
     const regDisabled = params.get("error") === "registrationDisabled";
+    const accessDenied = params.get("error") === "AccessDenied";
 
     if (setupSuccess) {
       toast.success(dict.common.setupSuccess);
     } else if (regDisabled && !settings.publicRegistrationEnabled) {
       toast.error(dict.common.registrationDisabledError);
+    } else if (accessDenied) {
+      toast.error(dict.common.accessDenied || "Access Denied");
     }
 
-    if (setupSuccess || regDisabled) {
+    if (setupSuccess || regDisabled || accessDenied) {
       // Clear URL
       const url = new URL(window.location.href);
       url.searchParams.delete("setupSuccess");
@@ -79,6 +82,7 @@ export function LoginClient() {
     mounted,
     dict.common.setupSuccess,
     dict.common.registrationDisabledError,
+    dict.common.accessDenied,
     settings.publicRegistrationEnabled,
   ]);
 

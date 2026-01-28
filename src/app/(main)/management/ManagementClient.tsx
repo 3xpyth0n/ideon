@@ -45,6 +45,7 @@ interface ProviderConfig {
 
 interface AuthSettings {
   publicRegistrationEnabled: boolean;
+  ssoRegistrationEnabled: boolean;
   passwordLoginEnabled: boolean;
   authProviders: Record<ProviderKey, ProviderConfig>;
   appUrl?: string;
@@ -62,6 +63,7 @@ export function ManagementClient() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [settings, setSettings] = useState<AuthSettings>({
     publicRegistrationEnabled: true,
+    ssoRegistrationEnabled: true,
     passwordLoginEnabled: true,
     authProviders: {
       google: { enabled: false },
@@ -332,6 +334,37 @@ export function ManagementClient() {
                             ...settings,
                             publicRegistrationEnabled:
                               !settings.publicRegistrationEnabled,
+                          })
+                        }
+                        disabled={saving}
+                      >
+                        <div className="switch-thumb" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="setting-card">
+                    <div className="setting-info">
+                      <Shield size={24} className="setting-icon" />
+                      <div>
+                        <h3 className="setting-name">
+                          {dict.common.ssoRegistration}
+                        </h3>
+                        <p className="setting-description">
+                          {dict.common.ssoRegistrationDesc}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="setting-action">
+                      <button
+                        className={`zen-switch ${
+                          settings.ssoRegistrationEnabled ? "active" : ""
+                        }`}
+                        onClick={() =>
+                          handleSave({
+                            ...settings,
+                            ssoRegistrationEnabled:
+                              !settings.ssoRegistrationEnabled,
                           })
                         }
                         disabled={saving}

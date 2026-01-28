@@ -17,21 +17,21 @@ export function KyselyAdapter(): Adapter {
       // Check registration conditions and invitations
       const settings = await db
         .selectFrom("systemSettings")
-        .select("publicRegistrationEnabled")
+        .select("ssoRegistrationEnabled")
         .executeTakeFirst();
 
-      const isPublicEnabled = settings?.publicRegistrationEnabled === 1;
+      const isSsoEnabled = settings?.ssoRegistrationEnabled === 1;
 
       const invitation = await db
         .selectFrom("invitations")
         .selectAll()
         .where("email", "=", email)
         .where("acceptedAt", "is", null)
-        .where("expiresAt", ">", new Date())
+        .where("expiresAt", ">", new Date().toISOString() as unknown as Date)
         .orderBy("createdAt", "desc")
         .executeTakeFirst();
 
-      if (!invitation && !isPublicEnabled) {
+      if (!invitation && !isSsoEnabled) {
         await logSecurityEvent("register:blocked", "failure", { ip });
         throw new Error("Registration disabled");
       }

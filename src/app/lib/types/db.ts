@@ -123,13 +123,13 @@ export interface projectCollaboratorsTable {
 }
 
 export interface invitationsTable {
-  id: string;
+  id: Generated<string>;
   email: string;
   token: string;
-  role: string;
-  invitedBy: string;
-  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
   expiresAt: ColumnType<Date, Date | string | undefined, Date | string>;
+  invitedBy: string | null;
+  role: "superadmin" | "admin" | "member";
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
   acceptedAt: ColumnType<Date, Date | string | undefined, Date | string> | null;
 }
 
@@ -137,6 +137,7 @@ export interface systemSettingsTable {
   id: string;
   installed: number;
   publicRegistrationEnabled: number;
+  ssoRegistrationEnabled: number;
   passwordLoginEnabled: number;
   authProvidersJson: string;
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;

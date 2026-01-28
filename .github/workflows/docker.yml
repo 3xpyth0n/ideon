@@ -20,6 +20,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check for concurrent tag
+        id: check-tag
+        run: |
+          git fetch --tags
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] && git describe --exact-match --tags HEAD >/dev/null 2>&1; then
+            echo "Skipping main build because a tag exists for this commit."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -39,11 +50,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and push Docker image
+        if: steps.check-tag.outputs.skip != 'true'
         uses: docker/build-push-action@v5
         with:
           context: .

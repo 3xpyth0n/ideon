@@ -923,10 +923,12 @@ export const useProjectCanvasState = (
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (
-        (e.key === "Delete" || e.key === "Backspace") &&
-        !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)
-      ) {
+      const target = e.target as HTMLElement;
+      const isEditing =
+        ["INPUT", "TEXTAREA"].includes(target.tagName) ||
+        target.isContentEditable;
+
+      if ((e.key === "Delete" || e.key === "Backspace") && !isEditing) {
         const selectedBlocks = blocks.filter((n) => n.selected);
         const selectedLinks = links.filter((l) => l.selected);
 

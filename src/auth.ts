@@ -24,6 +24,9 @@ if (process.env.APP_URL && !process.env.AUTH_URL) {
 }
 
 // Rate limiter setup
+const DUMMY_ARGON2_HASH =
+  "$argon2id$v=19$m=65536,t=3,p=4$2Vo6IaF10U4U200538O6gg$vuvksS6sg2oy74zW1onxHlDktKp3p50fgVLwDCr2dH0";
+
 const getRateLimiter = () => {
   if (process.env.NODE_ENV === "production") {
     const pool = getPool();
@@ -135,22 +138,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           const headersList = await headers();
           const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
 
-          const rateLimiter = getRateLimiter();
-          try {
-            await rateLimiter.consume(ip);
-          } catch (err) {
-            // Check if it's a rate limiter rejection (not enough points)
-            if (err instanceof Error) {
-              console.error("RateLimiter Error:", err);
-            } else {
-              // It's a rate limit rejection
-              await logSecurityEvent("loginRatelimit", "failure", { ip });
-              throw new Error(
-                "Too many login attempts. Please try again later.",
-              );
-            }
-          }
-
           const parsed = z
             .object({
               identifier: z.string().nullable().optional(),
@@ -166,6 +153,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
 
           if (!identifier || !password) return null;
 
+          const rateLimiter = getRateLimiter();
+          try {
+            await rateLimiter.consume(`login:${identifier}`);
+          } catch (err) {
+            // Check if it's a rate limiter rejection (not enough points)
+            if (err instanceof Error) {
+              console.error("RateLimiter Error:", err);
+            } else {
+              // It's a rate limit rejection
+              await logSecurityEvent("loginRatelimit", "failure", {
+                ip,
+              });
+              throw new Error(
+                "Too many login attempts. Please try again later.",
+              );
+            }
+          }
+
           const user = await db
             .selectFrom("users")
             .selectAll()
@@ -178,6 +183,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
             .executeTakeFirst();
 
           if (!user || !user.passwordHash) {
+            // Verify dummy hash to prevent timing attacks
+            try {
+              await argon2.verify(DUMMY_ARGON2_HASH, password);
+            } catch {
+              // Ignore error from dummy verification
+            }
             await logSecurityEvent("loginPassword", "failure", { ip });
             throw new CredentialsSignin();
           }

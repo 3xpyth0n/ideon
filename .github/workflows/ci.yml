@@ -42,35 +42,55 @@ jobs:
 
       - name: Generate Dynamic Config
         run: |
-          # Find a free random port between 10000 and 60000
           RANDOM_PORT=$(shuf -i 10000-60000 -n 1)
           echo "APP_PORT=$RANDOM_PORT" >> $GITHUB_ENV
 
-          # Create isolated .env with random credentials
+          # Generate unique suffix
+          SUFFIX="ci_$(openssl rand -hex 8)"
+
+          # Set project name
+          echo "COMPOSE_PROJECT_NAME=ideon_$SUFFIX" >> $GITHUB_ENV
+
+          # Export DB credentials to GITHUB_ENV for Docker Compose interpolation
+          echo "DB_USER=ci_user" >> $GITHUB_ENV
+          echo "DB_PASS=ci_pass" >> $GITHUB_ENV
+          echo "DB_NAME=ci_db" >> $GITHUB_ENV
+
+          # Create isolated .env for app container
           cat <<EOF > .env.ci
-          COMPOSE_PROJECT_NAME=ideon_ci_$(openssl rand -hex 4)
+          COMPOSE_PROJECT_NAME=ideon_$SUFFIX
           APP_PORT=$RANDOM_PORT
           APP_URL=http://localhost:$RANDOM_PORT
-          DB_USER=ci_user_$(openssl rand -hex 4)
-          DB_PASS=ci_pass_$(openssl rand -hex 12)
-          DB_NAME=ci_db_$(openssl rand -hex 4)
-          SECRET_KEY=$(openssl rand -hex 32)
+          DB_USER=ci_user
+          DB_PASS=ci_pass
+          DB_NAME=ci_db
+          SECRET_KEY=ci_secret
           NODE_ENV=production
           NEXT_TELEMETRY_DISABLED=1
           EOF
 
-          # Create CI specific compose file (removes fixed container_name)
-          sed '/container_name:/d' docker-compose.yml > docker-compose.ci.yml
+          # Create CI compose file with unique volumes to guarantee fresh install
+          # We replace volume names and remove fixed container names
+          sed -e "s/ideon-app-data/ideon-app-data-$SUFFIX/g" \
+              -e "s/ideon-db-data/ideon-db-data-$SUFFIX/g" \
+              -e '/container_name:/d' \
+              docker-compose.yml > docker-compose.ci.yml
 
       - name: Start Stack (Production Simulation)
+        env:
+          ENV_FILE: .env.ci
         run: docker compose -f docker-compose.ci.yml --env-file .env.ci up -d --build --wait
 
       - name: Show logs on failure
         if: failure()
+        env:
+          ENV_FILE: .env.ci
         run: docker compose -f docker-compose.ci.yml --env-file .env.ci logs
 
       - name: Teardown
         if: always()
+        env:
+          ENV_FILE: .env.ci
         run: docker compose -f docker-compose.ci.yml --env-file .env.ci down -v --rmi local
 
   shellcheck:

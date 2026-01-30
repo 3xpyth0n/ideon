@@ -3,15 +3,10 @@ services:
     build: .
     image: ghcr.io/3xpyth0n/ideon:latest
     container_name: ideon-app
+    env_file:
+      - ${ENV_FILE:-.env}
     environment:
       - DB_HOST=ideon-db
-      - DB_PORT=5432
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
-      - DB_NAME=${DB_NAME}
-      - APP_PORT=${APP_PORT:-3000}
-      - APP_URL=${APP_URL}
-      - SECRET_KEY=${SECRET_KEY}
     depends_on:
       ideon-db:
         condition: service_healthy

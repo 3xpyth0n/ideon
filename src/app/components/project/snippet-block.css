@@ -64,9 +64,8 @@
   position: sticky;
   left: 0;
   z-index: 10;
-   background-color: var(--bg-island); /* Match card background to hide scrolling text */
- }
-
+  background-color: var(--bg-island);
+}
 
 .block-type-snippet {
   --block-border-color: var(--border);

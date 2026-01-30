@@ -1,9 +1,9 @@
 "use client";
 
-import { EditorContent, useEditor, EditorContext } from '@tiptap/react'
-import { BubbleMenu } from '@tiptap/react/menus'
-import StarterKit from '@tiptap/starter-kit'
-import React, { useEffect, useState } from 'react'
+import { EditorContent, useEditor, EditorContext } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
+import StarterKit from "@tiptap/starter-kit";
+import React, { useEffect, useState } from "react";
 import { Markdown } from "tiptap-markdown";
 import BubbleMenuExtension from "@tiptap/extension-bubble-menu";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -62,12 +62,13 @@ const MarkdownEditor = ({
     editable: !isReadOnly,
     editorProps: {
       attributes: {
-        class:
-          `prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[100px] ${className}`,
+        class: `prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[100px] ${className}`,
       },
     },
     onUpdate: ({ editor }) => {
-      const markdown = (editor.storage as unknown as MarkdownStorage).markdown.getMarkdown();
+      const markdown = (
+        editor.storage as unknown as MarkdownStorage
+      ).markdown.getMarkdown();
       onChange?.(markdown);
     },
     onFocus: () => {
@@ -83,7 +84,9 @@ const MarkdownEditor = ({
   // Sync content updates from outside (e.g. Yjs updates)
   useEffect(() => {
     if (editor && content !== undefined) {
-      const currentMarkdown = (editor.storage as unknown as MarkdownStorage).markdown.getMarkdown();
+      const currentMarkdown = (
+        editor.storage as unknown as MarkdownStorage
+      ).markdown.getMarkdown();
       if (content !== currentMarkdown) {
         if (!editor.isFocused || editor.isEmpty) {
           editor.commands.setContent(content);
@@ -104,15 +107,21 @@ const MarkdownEditor = ({
   }
 
   return (
-    <div className={`markdown-editor-container relative w-full h-full ${className.includes("prosemirror-full-height") ? "prosemirror-full-height" : ""}`}>
+    <div
+      className={`markdown-editor-container relative w-full h-full ${
+        className.includes("prosemirror-full-height")
+          ? "prosemirror-full-height"
+          : ""
+      }`}
+    >
       <EditorContext.Provider value={{ editor }}>
         {editor && (
           <BubbleMenu
             editor={editor}
             pluginKey="bubbleMenu"
             shouldShow={({ editor }) => {
-               // Only show if selection is not empty and editor is editable
-               return !editor.state.selection.empty && editor.isEditable;
+              // Only show if selection is not empty and editor is editable
+              return !editor.state.selection.empty && editor.isEditable;
             }}
           >
             <div className="bubble-menu">
@@ -141,22 +150,34 @@ const MarkdownEditor = ({
               <div className="tiptap-bubble-menu-separator" />
 
               <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                className={editor.isActive("heading", { level: 1 }) ? "is-active" : ""}
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 1 }).run()
+                }
+                className={
+                  editor.isActive("heading", { level: 1 }) ? "is-active" : ""
+                }
                 title="Heading 1"
               >
                 <Heading1 size={14} />
               </button>
               <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                className={editor.isActive("heading", { level: 2 }) ? "is-active" : ""}
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 2 }).run()
+                }
+                className={
+                  editor.isActive("heading", { level: 2 }) ? "is-active" : ""
+                }
                 title="Heading 2"
               >
                 <Heading2 size={14} />
               </button>
               <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                className={editor.isActive("heading", { level: 3 }) ? "is-active" : ""}
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 3 }).run()
+                }
+                className={
+                  editor.isActive("heading", { level: 3 }) ? "is-active" : ""
+                }
                 title="Heading 3"
               >
                 <Heading3 size={14} />

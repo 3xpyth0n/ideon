@@ -64,17 +64,17 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newTitle = e.target.value;
       setTitle(newTitle);
-      
+
       data.onContentChange?.(
         id,
         data.content || "",
         new Date().toISOString(),
         data.lastEditor,
         data.metadata ? JSON.stringify(data.metadata) : undefined,
-        newTitle
+        newTitle,
       );
     },
-    [id, data]
+    [id, data],
   );
 
   const formatDate = (isoString: string) => {
@@ -109,7 +109,14 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         title,
       );
     },
-    [id, data.onContentChange, data.lastEditor, data.metadata, title, syncToYjs],
+    [
+      id,
+      data.onContentChange,
+      data.lastEditor,
+      data.metadata,
+      title,
+      syncToYjs,
+    ],
   );
 
   return (

@@ -28,8 +28,10 @@ export async function sendEmail({
   const secure = port === 465;
   const fromName = process.env.SMTP_FROM_NAME || "Ideon";
 
-  if (!fromEmail || !user || !pass) {
-    console.warn("SMTP settings not configured in .env");
+  if (!host || !fromEmail || !user || !pass) {
+    console.warn(
+      `SMTP settings missing: host=${!!host}, user=${!!user}, pass=${!!pass}, from=${!!fromEmail}`,
+    );
     return false;
   }
 

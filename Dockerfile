@@ -1,9 +1,9 @@
 FROM node:24.11-alpine AS deps
-RUN apk add --no-cache curl libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
-
+# Mount cache to speed up subsequent builds
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 FROM node:24.11-alpine AS builder
 WORKDIR /app
@@ -12,19 +12,19 @@ COPY . .
 ENV NODE_ENV=production
 RUN IS_NEXT_BUILD=1 npm run build
 
-
 FROM node:24.11-alpine AS prod-deps
-RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
+# Reuse built modules from deps and prune dev dependencies
+COPY --from=deps /app/node_modules ./node_modules
+RUN npm prune --omit=dev
 
 FROM node:24.11-alpine AS runner
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NODE_OPTIONS='--max-old-space-size=8192'
 ENV HOSTNAME="0.0.0.0"
 
 RUN apk add --no-cache curl
@@ -42,4 +42,5 @@ COPY --from=builder /app/package.json ./package.json
 USER appuser
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+# Run node directly for better signal handling
+CMD ["node", "dist/server.cjs"]

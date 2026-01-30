@@ -1,9 +1,15 @@
 "use client";
 
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useEffect, useMemo } from "react";
 import * as Y from "yjs";
-import { Code, Lock } from "lucide-react";
+import { Code, Lock, Brush, Copy } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { format } from "prettier/standalone";
+import type { Plugin } from "prettier";
+import * as parserBabel from "prettier/plugins/babel";
+import * as parserEstree from "prettier/plugins/estree";
+import * as parserPostcss from "prettier/plugins/postcss";
+import { toast } from "sonner";
 import {
   Handle,
   Position,
@@ -25,6 +31,7 @@ import "prismjs/themes/prism-tomorrow.css"; // Dark theme
 import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import { Select, SelectOption } from "../ui/Select";
+import "./snippet-block.css";
 
 type SnippetBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -42,6 +49,28 @@ const LANGUAGE_OPTIONS: SelectOption[] = [
 const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
+
+  const edges = getEdges();
+  const isLeftTargetConnected = edges.some(
+    (e) =>
+      e.target === id &&
+      (e.targetHandle === "left" || e.targetHandle === "left-target"),
+  );
+  const isLeftSourceConnected = edges.some(
+    (e) =>
+      e.source === id &&
+      (e.sourceHandle === "left" || e.sourceHandle === "left-source"),
+  );
+  const isRightTargetConnected = edges.some(
+    (e) =>
+      e.target === id &&
+      (e.targetHandle === "right" || e.targetHandle === "right-target"),
+  );
+  const isRightSourceConnected = edges.some(
+    (e) =>
+      e.source === id &&
+      (e.sourceHandle === "right" || e.sourceHandle === "right-source"),
+  );
 
   const [code, setCode] = useState(data.content || "");
   const [language, setLanguage] = useState(
@@ -172,6 +201,55 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
   };
 
+  const handleFormat = useCallback(async () => {
+    try {
+      let parser = "";
+      let plugins: Plugin[] = [];
+
+      switch (language) {
+        case "javascript":
+          parser = "babel";
+          plugins = [parserBabel, parserEstree];
+          break;
+        case "typescript":
+          parser = "babel-ts";
+          plugins = [parserBabel, parserEstree];
+          break;
+        case "css":
+          parser = "css";
+          plugins = [parserPostcss];
+          break;
+        case "json":
+          parser = "json";
+          plugins = [parserBabel, parserEstree];
+          break;
+        default:
+          return;
+      }
+
+      if (!parser) return;
+
+      const formatted = await format(code, {
+        parser,
+        plugins,
+        printWidth: 80,
+        tabWidth: 2,
+        semi: true,
+        singleQuote: false,
+      });
+
+      handleCodeChange(formatted);
+      toast.success(dict.common.codeFormatted || "Code formatted");
+    } catch (_err) {
+      toast.error(dict.common.formatError || "Formatting failed");
+    }
+  }, [code, language, handleCodeChange, dict]);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(code);
+    toast.success(dict.common.copiedToClipboard || "Copied to clipboard");
+  }, [code, dict]);
+
   const handleResize = useCallback(
     (
       _evt: unknown,
@@ -227,18 +305,10 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     [data, id],
   );
 
-  const edges = getEdges();
-  const isLeftConnected = edges.some(
-    (e) =>
-      (e.target === id &&
-        (e.targetHandle === "left" || e.targetHandle === "left-target")) ||
-      (e.source === id && e.sourceHandle === "left"),
-  );
-  const isRightConnected = edges.some(
-    (e) =>
-      (e.source === id && e.sourceHandle === "right") ||
-      (e.target === id &&
-        (e.targetHandle === "right" || e.targetHandle === "right-target")),
+  const lineCount = useMemo(() => code.split("\n").length, [code]);
+  const lines = useMemo(
+    () => Array.from({ length: lineCount }, (_, i) => i + 1),
+    [lineCount],
   );
 
   return (
@@ -246,7 +316,11 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       className={`block-card block-type-snippet ${selected ? "selected" : ""} ${
         isBeingMoved ? "is-moving" : ""
       } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0`}
-      style={{ "--block-border-color": borderColor } as React.CSSProperties}
+      style={
+        isBeingMoved
+          ? ({ "--block-border-color": borderColor } as React.CSSProperties)
+          : undefined
+      }
     >
       <NodeResizer
         minWidth={250}
@@ -266,31 +340,59 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             {dict.common.blockTypeSnippet || "Snippet"}
           </span>
         </div>
-        <Select
-          value={language}
-          options={LANGUAGE_OPTIONS}
-          onChange={handleLanguageChange}
-          align="right"
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopy}
+            className="snippet-format-button"
+            title={dict.common.copyCode || "Copy Code"}
+          >
+            <Copy size={14} />
+          </button>
+          {language !== "text" && language !== "python" && (
+            <button
+              onClick={handleFormat}
+              className="snippet-format-button"
+              title={dict.common.formatCode || "Format code"}
+            >
+              <Brush size={14} />
+            </button>
+          )}
+          <Select
+            value={language}
+            options={LANGUAGE_OPTIONS}
+            onChange={handleLanguageChange}
+            align="right"
+          />
+        </div>
       </div>
 
       <div className="block-content flex-1 flex flex-col min-h-0 relative overflow-hidden bg-transparent nodrag">
-        <Editor
-          value={code}
-          onValueChange={handleCodeChange}
-          highlight={(code) =>
-            highlight(code, languages[language] || languages.text, language)
-          }
-          padding={16}
-          className="font-mono text-sm"
-          style={{
-            fontFamily: '"Fira code", "Fira Mono", monospace',
-            fontSize: 14,
-            backgroundColor: "transparent",
-            minHeight: "100%",
+        <div
+          className="snippet-block-container"
+          onMouseDown={(e) => {
+            // Prevent focus loss when clicking the scrollbar
+            // The scrollbar is part of the container, so e.target === e.currentTarget
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+            }
           }}
-          disabled={isReadOnly}
-        />
+        >
+          <div className="snippet-line-numbers">
+            {lines.map((i) => (
+              <div key={i}>{i}</div>
+            ))}
+          </div>
+          <Editor
+            value={code}
+            onValueChange={handleCodeChange}
+            highlight={(code) =>
+              highlight(code, languages[language] || languages.text, language)
+            }
+            padding={16}
+            className="font-mono text-sm snippet-block-editor"
+            disabled={isReadOnly}
+          />
+        </div>
       </div>
 
       <div className="block-author-container mt-2 pt-3 px-4 pb-3">
@@ -307,23 +409,44 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         </div>
       </div>
 
+      {/* Handles - Left Side */}
+      <Handle
+        id="left-target"
+        type="target"
+        position={Position.Left}
+        isConnectable={true}
+        className="block-handle block-handle-left !z-50 !top-[40%]"
+      >
+        {!isLeftTargetConnected && <div className="handle-dot" />}
+      </Handle>
       <Handle
         id="left"
         type="source"
         position={Position.Left}
         isConnectable={true}
-        className="block-handle block-handle-left !z-50"
+        className="block-handle block-handle-left !z-50 !top-[60%]"
       >
-        {!isLeftConnected && <div className="handle-dot" />}
+        {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
+
+      {/* Handles - Right Side */}
       <Handle
         id="right"
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="block-handle block-handle-right !z-50"
+        className="block-handle block-handle-right !z-50 !top-[40%]"
       >
-        {!isRightConnected && <div className="handle-dot" />}
+        {!isRightSourceConnected && <div className="handle-dot" />}
+      </Handle>
+      <Handle
+        id="right-target"
+        type="target"
+        position={Position.Right}
+        isConnectable={true}
+        className="block-handle block-handle-right !z-50 !top-[60%]"
+      >
+        {!isRightTargetConnected && <div className="handle-dot" />}
       </Handle>
     </div>
   );

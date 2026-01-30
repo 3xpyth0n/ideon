@@ -1,0 +1,94 @@
+.snippet-block-editor {
+  font-family: "Fira code", "Fira Mono", monospace;
+  font-size: 14px;
+  background-color: transparent;
+  min-height: 100%;
+  line-height: 1.5 !important;
+  flex: 1;
+  overflow: visible !important;
+}
+
+.snippet-block-editor textarea,
+.snippet-block-editor pre {
+  white-space: pre !important;
+  overflow-wrap: normal !important;
+}
+
+.snippet-block-container {
+  display: flex;
+  height: 100%;
+  overflow: auto;
+  position: relative;
+  /* Custom scrollbar for webkit */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  align-items: flex-start;
+  transition: scrollbar-color 0.2s ease;
+}
+
+.snippet-block-container:focus-within {
+  scrollbar-color: var(--border) transparent;
+}
+
+.snippet-block-container::-webkit-scrollbar {
+  width: 4px !important;
+  height: 4px !important;
+}
+
+.snippet-block-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.snippet-block-container::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.snippet-block-container:focus-within::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+}
+
+.snippet-line-numbers {
+  font-family: "Fira code", "Fira Mono", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  padding-top: 16px; /* Match Editor padding */
+  padding-bottom: 16px;
+  padding-left: 12px;
+  padding-right: 12px;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.3);
+  user-select: none;
+  min-height: 100%;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+   background-color: var(--bg-island); /* Match card background to hide scrolling text */
+ }
+
+
+.block-type-snippet {
+  --block-border-color: var(--border);
+}
+
+.snippet-format-button {
+  position: relative;
+  z-index: 10;
+  padding: 6px;
+  border-radius: 6px;
+  color: #ffffff;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.snippet-format-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}

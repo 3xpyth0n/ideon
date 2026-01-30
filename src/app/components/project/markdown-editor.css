@@ -1,0 +1,137 @@
+.markdown-editor-container {
+  cursor: text !important;
+}
+
+.markdown-editor-container .ProseMirror {
+  outline: none !important;
+  cursor: text !important;
+}
+
+.markdown-editor-container.prosemirror-full-height .ProseMirror {
+  height: 100%;
+  min-height: 100%;
+}
+
+.markdown-editor-container .ProseMirror p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Typography Defaults for the Editor */
+.markdown-editor-container .ProseMirror h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  line-height: 1.2;
+}
+
+.markdown-editor-container .ProseMirror h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  line-height: 1.2;
+}
+
+.markdown-editor-container .ProseMirror h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  line-height: 1.2;
+}
+
+.markdown-editor-container .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-editor-container .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-editor-container .ProseMirror p {
+  margin-bottom: 0.5em;
+  line-height: 1.5;
+}
+
+.markdown-editor-container .ProseMirror blockquote {
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  padding-left: 1em;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* Link Styles */
+.markdown-editor-container .ProseMirror a {
+  color: var(--accent, #3b82f6);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Tiptap Bubble Menu Styles (matching context-menu) */
+.tiptap-bubble-menu,
+.bubble-menu {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 99999; /* High z-index to ensure visibility */
+  animation: context-menu-fade-in 0.15s ease-out;
+}
+
+.tiptap-bubble-menu-item,
+.bubble-menu button {
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.tiptap-bubble-menu-item:hover,
+.bubble-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tiptap-bubble-menu-item.is-active,
+.bubble-menu button.is-active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.tiptap-bubble-menu-separator {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+}
+
+@keyframes context-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

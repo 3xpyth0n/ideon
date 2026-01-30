@@ -1,7 +1,5 @@
 import { Node, Edge } from "@xyflow/react";
 import {
-  CORE_BLOCK_X,
-  CORE_BLOCK_Y,
   CORE_BLOCK_WIDTH,
   CORE_BLOCK_HEIGHT,
   LAYOUT_HORIZONTAL_SPACING,
@@ -31,8 +29,13 @@ export const getLayoutedElements = <TData extends Record<string, unknown>>(
   const coreBlock = blocks.find((b) => b.type === "core");
   if (!coreBlock) return { blocks, links };
 
-  const coreCenterX = CORE_BLOCK_X + CORE_BLOCK_WIDTH / 2;
-  const coreCenterY = CORE_BLOCK_Y + CORE_BLOCK_HEIGHT / 2;
+  const coreWidth =
+    coreBlock.measured?.width ?? coreBlock.width ?? CORE_BLOCK_WIDTH;
+  const coreHeight =
+    coreBlock.measured?.height ?? coreBlock.height ?? CORE_BLOCK_HEIGHT;
+
+  const coreCenterX = coreBlock.position.x + coreWidth / 2;
+  const coreCenterY = coreBlock.position.y + coreHeight / 2;
 
   const blockMap = new Map<string, LayoutBlock>();
   blocks.forEach((b) => {
@@ -40,10 +43,10 @@ export const getLayoutedElements = <TData extends Record<string, unknown>>(
     blockMap.set(b.id, {
       id: b.id,
       width: isCore
-        ? CORE_BLOCK_WIDTH
+        ? coreWidth
         : b.measured?.width ?? b.width ?? DEFAULT_BLOCK_WIDTH,
       height: isCore
-        ? CORE_BLOCK_HEIGHT
+        ? coreHeight
         : b.measured?.height ?? b.height ?? DEFAULT_BLOCK_HEIGHT,
       children: [],
       level: 0,
@@ -158,10 +161,7 @@ export const getLayoutedElements = <TData extends Record<string, unknown>>(
   let currentLeftY = coreCenterY - leftTotalHeight / 2;
   leftGroup.forEach((block) => {
     const startX =
-      coreCenterX -
-      CORE_BLOCK_WIDTH / 2 -
-      LAYOUT_HORIZONTAL_SPACING -
-      block.width;
+      coreCenterX - coreWidth / 2 - LAYOUT_HORIZONTAL_SPACING - block.width;
     positionBlock(block, startX, currentLeftY);
     currentLeftY += block.totalSubtreeHeight! + LAYOUT_VERTICAL_GAP;
   });
@@ -171,21 +171,60 @@ export const getLayoutedElements = <TData extends Record<string, unknown>>(
     (rightGroup.length - 1) * LAYOUT_VERTICAL_GAP;
   let currentRightY = coreCenterY - rightTotalHeight / 2;
   rightGroup.forEach((block) => {
-    const startX =
-      coreCenterX + CORE_BLOCK_WIDTH / 2 + LAYOUT_HORIZONTAL_SPACING;
+    const startX = coreCenterX + coreWidth / 2 + LAYOUT_HORIZONTAL_SPACING;
     positionBlock(block, startX, currentRightY);
     currentRightY += block.totalSubtreeHeight! + LAYOUT_VERTICAL_GAP;
   });
+
+  // Calculate the bottom-most Y coordinate of the main tree
+  let treeBottomY = coreCenterY + coreHeight / 2;
+  visited.forEach((blockId) => {
+    const layoutBlock = blockMap.get(blockId);
+    if (layoutBlock && layoutBlock.y !== undefined) {
+      const bottom = layoutBlock.y + layoutBlock.height;
+      if (bottom > treeBottomY) {
+        treeBottomY = bottom;
+      }
+    }
+  });
+
+  // Identify isolated blocks (not in visited set and no connections)
+  const isolatedBlocks: LayoutBlock[] = [];
+  blocks.forEach((block) => {
+    if (!visited.has(block.id) && block.type !== "core") {
+      const isConnected = links.some(
+        (l) => l.source === block.id || l.target === block.id,
+      );
+      if (!isConnected) {
+        const layoutBlock = blockMap.get(block.id);
+        if (layoutBlock) isolatedBlocks.push(layoutBlock);
+      }
+    }
+  });
+
+  // Position isolated blocks
+  if (isolatedBlocks.length > 0) {
+    const spacing = LAYOUT_HORIZONTAL_SPACING;
+    const totalWidth =
+      isolatedBlocks.reduce((acc, b) => acc + b.width, 0) +
+      (isolatedBlocks.length - 1) * spacing;
+
+    let startX = coreCenterX - totalWidth / 2;
+    const startY = treeBottomY + 150;
+
+    isolatedBlocks.forEach((block) => {
+      block.x = startX;
+      block.y = startY;
+      startX += block.width + spacing;
+    });
+  }
 
   const layoutedBlocks = blocks.map((block) => {
     const layoutBlock = blockMap.get(block.id);
     if (block.type === "core" || !layoutBlock || layoutBlock.x === undefined) {
       return {
         ...block,
-        position:
-          block.type === "core"
-            ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
-            : block.position,
+        position: block.type === "core" ? block.position : block.position,
       };
     }
 
@@ -205,12 +244,21 @@ export const getLayoutedElements = <TData extends Record<string, unknown>>(
 
     if (!sourceLayoutBlock || !targetLayoutBlock) return link;
 
-    const side = targetLayoutBlock.side;
+    if (
+      sourceLayoutBlock.x === undefined ||
+      targetLayoutBlock.x === undefined
+    ) {
+      return link;
+    }
+
+    const sourceCenter = sourceLayoutBlock.x + sourceLayoutBlock.width / 2;
+    const targetCenter = targetLayoutBlock.x + targetLayoutBlock.width / 2;
+    const isSourceLeft = sourceCenter < targetCenter;
 
     return {
       ...link,
-      sourceHandle: side === "left" ? "left" : "right",
-      targetHandle: side === "left" ? "right" : "left",
+      sourceHandle: isSourceLeft ? "right" : "left",
+      targetHandle: isSourceLeft ? "left-target" : "right-target",
     };
   });
 

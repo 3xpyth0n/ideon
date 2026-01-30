@@ -1,0 +1,5 @@
+/* Core Block Resizer Customization */
+.core-resizer-handle.top.left {
+  display: none !important;
+  pointer-events: none !important;
+}

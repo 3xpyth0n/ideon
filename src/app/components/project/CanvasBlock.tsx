@@ -1,5 +1,12 @@
 "use client";
-import { memo, useState, useEffect, useRef, useCallback } from "react";
+import {
+  memo,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  ComponentProps,
+} from "react";
 import {
   Handle,
   Position,
@@ -38,7 +45,7 @@ import {
   FileSpreadsheet,
   Loader2,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import MarkdownEditor from "./MarkdownEditor";
 import { createPortal } from "react-dom";
 import { useI18n } from "@providers/I18nProvider";
 import getCaretCoordinates from "textarea-caret";
@@ -50,6 +57,9 @@ import ContactBlock from "./ContactBlock";
 import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
+import ProjectCoreBlock from "./ProjectCoreBlock";
+
+import NoteBlock from "./NoteBlock";
 
 export type BlockData = {
   title?: string;
@@ -70,6 +80,7 @@ export type BlockData = {
     | "video"
     | "snippet"
     | "checklist";
+  label?: string;
   metadata?: string;
   isLocked?: boolean;
   isPreviewMode?: boolean;
@@ -269,20 +280,54 @@ const RemoteCursor = ({
 };
 
 const CanvasBlockComponent = (props: CanvasBlockProps) => {
-  const { id, data, selected } = props;
+  const { id, data, selected, type } = props;
   const { dict, lang } = useI18n();
-  const { setNodes, getNode, getEdges } = useReactFlow();
-
+  const blockType = data.blockType;
+  const [title, setTitle] = useState(data.title || "");
   const isLocked = data.isLocked;
   const isPreviewMode = data.isPreviewMode;
-  const ownerId = data.ownerId;
-  const projectOwnerId = data.projectOwnerId;
   const initialProjectId = data.initialProjectId;
-  const currentUser = data.currentUser;
-  const blockType = data.blockType || "text";
 
-  const [title, setTitle] = useState(data.title || "");
-  const [content, setContent] = useState(data.content || "");
+  const currentUser = data.currentUser;
+  const projectOwnerId = data.projectOwnerId;
+  const ownerId = data.ownerId;
+  const { setNodes, getNode, getEdges } = useReactFlow();
+  const [content, setContent] = useState(data.content);
+
+  useEffect(() => {
+    if (data.title !== undefined) setTitle(data.title);
+  }, [data.title]);
+
+  // Render specialized blocks
+  if ((type as string) === "core") {
+    return (
+      <ProjectCoreBlock
+        {...(props as unknown as ComponentProps<typeof ProjectCoreBlock>)}
+      />
+    );
+  }
+
+  if (type === "text") {
+    return (
+      <NoteBlock {...(props as unknown as ComponentProps<typeof NoteBlock>)} />
+    );
+  }
+
+  if (type === "checklist") {
+    return (
+      <ChecklistBlock
+        {...(props as unknown as ComponentProps<typeof ChecklistBlock>)}
+      />
+    );
+  }
+
+  if (type === "contact") {
+    return (
+      <ContactBlock
+        {...(props as unknown as ComponentProps<typeof ContactBlock>)}
+      />
+    );
+  }
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLink, setIsEditingLink] = useState(false);
   const [isEditingGithub, setIsEditingGithub] = useState(false);
@@ -659,17 +704,25 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   }, [isEditingLink, isEditingGithub, isEditingContact, exitEditMode]);
 
   const edges = getEdges();
-  const isLeftConnected = edges.some(
+  const isLeftTargetConnected = edges.some(
     (e) =>
-      (e.target === id &&
-        (e.targetHandle === "left" || e.targetHandle === "left-target")) ||
-      (e.source === id && e.sourceHandle === "left"),
+      e.target === id &&
+      (e.targetHandle === "left" || e.targetHandle === "left-target"),
   );
-  const isRightConnected = edges.some(
+  const isLeftSourceConnected = edges.some(
     (e) =>
-      (e.source === id && e.sourceHandle === "right") ||
-      (e.target === id &&
-        (e.targetHandle === "right" || e.targetHandle === "right-target")),
+      e.source === id &&
+      (e.sourceHandle === "left" || e.sourceHandle === "left-source"),
+  );
+  const isRightTargetConnected = edges.some(
+    (e) =>
+      e.target === id &&
+      (e.targetHandle === "right" || e.targetHandle === "right-target"),
+  );
+  const isRightSourceConnected = edges.some(
+    (e) =>
+      e.source === id &&
+      (e.sourceHandle === "right" || e.sourceHandle === "right-source"),
   );
 
   const typingUsers = data.typingUsers;
@@ -1579,7 +1632,11 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             onClick={() => !isReadOnly && setIsEditing(true)}
           >
             {content ? (
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <MarkdownEditor
+                content={content}
+                isReadOnly={true}
+                className="block-description whitespace-pre-wrap relative cursor-text h-full w-full markdown-content"
+              />
             ) : (
               <span className="opacity-30 italic">
                 {dict.common.contentPlaceholder || "Start noting..."}
@@ -1725,22 +1782,41 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
       {/* Connection Handles */}
       <Handle
+        id="left-target"
+        type="target"
+        position={Position.Left}
+        isConnectable={true}
+        className="block-handle block-handle-left !z-50 !top-[40%]"
+      >
+        {!isLeftTargetConnected && <div className="handle-dot" />}
+      </Handle>
+      <Handle
         id="left"
         type="source"
         position={Position.Left}
         isConnectable={true}
-        className="block-handle block-handle-left !z-50"
+        className="block-handle block-handle-left !z-50 !top-[60%]"
       >
-        {!isLeftConnected && <div className="handle-dot" />}
+        {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
+
       <Handle
         id="right"
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="block-handle block-handle-right !z-50"
+        className="block-handle block-handle-right !z-50 !top-[40%]"
       >
-        {!isRightConnected && <div className="handle-dot" />}
+        {!isRightSourceConnected && <div className="handle-dot" />}
+      </Handle>
+      <Handle
+        id="right-target"
+        type="target"
+        position={Position.Right}
+        isConnectable={true}
+        className="block-handle block-handle-right !z-50 !top-[60%]"
+      >
+        {!isRightTargetConnected && <div className="handle-dot" />}
       </Handle>
 
       {/* Lightbox Portal */}

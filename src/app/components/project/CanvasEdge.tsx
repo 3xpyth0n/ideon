@@ -25,9 +25,7 @@ export default function CanvasEdge({
     sourcePosition: sourcePosition || Position.Right,
     targetX,
     targetY,
-    targetPosition:
-      targetPosition ||
-      (sourcePosition === Position.Left ? Position.Right : Position.Left),
+    targetPosition: targetPosition || Position.Left,
   });
 
   const weight = (data?.weight as number) || 0;

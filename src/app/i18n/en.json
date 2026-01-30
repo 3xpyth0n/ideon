@@ -351,6 +351,10 @@
     "samlSpConfig": "SP Configuration (ACS URL)",
     "samlSpEntityId": "SP Entity ID",
     "samlIdpMetadataUrl": "IdP Metadata URL",
-    "samlRawMetadataXml": "Or Raw Metadata XML"
+    "samlRawMetadataXml": "Or Raw Metadata XML",
+    "formatCode": "Format Code",
+    "copyCode": "Copy Code",
+    "codeFormatted": "Code formatted successfully",
+    "formatError": "Failed to format code"
   }
 }

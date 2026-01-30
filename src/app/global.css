@@ -1475,9 +1475,8 @@ input:-webkit-autofill:active {
 
 /* Core Node Styles */
 .core-block {
-  min-width: var(--core-block-width);
-  min-height: var(--core-block-height);
-  height: auto !important;
+  width: 100%;
+  height: 100%;
   background: var(--bg-page);
   color: var(--text-main);
   border: 2px solid var(--border);
@@ -1485,6 +1484,7 @@ input:-webkit-autofill:active {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: default !important;
+  box-sizing: border-box;
 }
 
 .core-block.selected {
@@ -5069,4 +5069,37 @@ input:-webkit-autofill:active {
   to {
     stroke-dashoffset: 0;
   }
+}
+
+/* React Flow Resizer Custom Styles */
+.resizer-line {
+  opacity: 0;
+}
+
+.selected .resizer-line {
+  opacity: 1;
+}
+
+.resizer-handle {
+  width: 40px !important;
+  height: 40px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 50%;
+  z-index: 9999 !important;
+  position: absolute;
+}
+
+.react-flow__resize-control.line {
+  border-color: var(--accent);
+}
+
+.react-flow__resize-control.handle {
+  background: transparent !important;
+  border: none !important;
+}
+
+.react-flow__node-core .react-flow__resize-control.handle.top.left {
+  display: none !important;
+  pointer-events: none !important;
 }

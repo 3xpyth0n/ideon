@@ -43,7 +43,7 @@ import {
   useCallback,
 } from "react";
 import {
-  Brush,
+  BrushCleaning,
   Plus,
   Minus,
   Maximize,
@@ -276,6 +276,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onBlockDrag,
     onBlockDragStop,
     onConnect,
+    onConnectStart,
     handleDeleteBlock: _handleDeleteBlock,
     handleToggleLock,
     handleTransferBlock,
@@ -518,6 +519,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
           onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
           onConnect={isPreviewMode ? undefined : onConnect}
+          onConnectStart={isPreviewMode ? undefined : onConnectStart}
           onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
           isValidConnection={isValidConnection}
           onPointerMove={onPointerMove}
@@ -722,7 +724,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               title={dict.common.cleanupLayout}
               disabled={isPreviewMode}
             >
-              <Brush className={isPreviewMode ? "opacity-50" : ""} />
+              <BrushCleaning className={isPreviewMode ? "opacity-50" : ""} />
             </ControlButton>
             <ControlButton
               onClick={() => !isPreviewMode && setIsImportModalOpen(true)}

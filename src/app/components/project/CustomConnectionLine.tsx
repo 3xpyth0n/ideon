@@ -18,9 +18,7 @@ export const CustomConnectionLine = ({
     sourcePosition: fromPosition || Position.Right,
     targetX: toX,
     targetY: toY,
-    targetPosition:
-      toPosition ||
-      (fromPosition === Position.Left ? Position.Right : Position.Left),
+    targetPosition: toPosition || Position.Left,
   });
 
   return (

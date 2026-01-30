@@ -1,9 +1,19 @@
 "use client";
 
 import { memo, useState, useEffect, useCallback, useRef } from "react";
-import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
+import {
+  Handle,
+  Position,
+  type NodeProps,
+  type Node,
+  NodeResizer,
+  ResizeParams,
+  useReactFlow,
+} from "@xyflow/react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockData } from "./CanvasBlock";
+import MarkdownEditor from "./MarkdownEditor";
+import { CORE_BLOCK_WIDTH, CORE_BLOCK_HEIGHT } from "./utils/constants";
 
 export type ProjectCoreBlockProps = NodeProps<Node<BlockData, "core">>;
 
@@ -12,16 +22,10 @@ const ProjectCoreBlock = memo(
     const { dict } = useI18n();
     const [title, setTitle] = useState(data.content || "");
     const [description, setDescription] = useState("");
-    const descriptionRef = useRef<HTMLTextAreaElement>(null);
-    const CHAR_LIMIT = 1000;
-
-    // Auto-expand description field
-    useEffect(() => {
-      if (descriptionRef.current) {
-        descriptionRef.current.style.height = "auto";
-        descriptionRef.current.style.height = `${descriptionRef.current.scrollHeight}px`;
-      }
-    }, [description]);
+    const lastDimensions = useRef({
+      width: CORE_BLOCK_WIDTH,
+      height: CORE_BLOCK_HEIGHT,
+    });
 
     // Sync title and description from data
     useEffect(() => {
@@ -65,10 +69,7 @@ const ProjectCoreBlock = memo(
     );
 
     const handleDescriptionChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newDesc = e.target.value;
-        if (newDesc.length > CHAR_LIMIT) return;
-
+      (newDesc: string) => {
         setDescription(newDesc);
 
         const meta = { description: newDesc };
@@ -83,62 +84,110 @@ const ProjectCoreBlock = memo(
       [id, data.onContentChange, data.lastEditor, title],
     );
 
+    const { setNodes } = useReactFlow();
+
+    const handleResize = useCallback(
+      (_event: unknown, params: ResizeParams) => {
+        const { width, height } = params;
+        lastDimensions.current = { width, height };
+
+        setNodes((nodes) =>
+          nodes.map((node) => {
+            if (node.id === id) {
+              return {
+                ...node,
+                position: {
+                  x: -width / 2,
+                  y: -height / 2,
+                },
+                width,
+                height,
+              };
+            }
+            return node;
+          }),
+        );
+      },
+      [id, setNodes],
+    );
+
     return (
-      <div
-        className={`core-block relative w-full transition-colors ${
-          selected ? "selected" : ""
-        } flex flex-col p-12`}
-      >
-        <div className="flex-1 flex flex-col gap-6 justify-center items-center text-center max-w-2xl mx-auto w-full">
-          <div className="space-y-2 w-full">
-            <div className="text-tiny uppercase tracking-[0.3em] opacity-30 font-bold mb-4">
-              {dict.common.blockTypeCore || "Project Core"}
-            </div>
-            <input
-              value={title}
-              onChange={handleTitleChange}
-              className="core-title-input text-7xl font-black text-center focus:outline-none placeholder:opacity-10 tracking-tighter leading-none"
-              placeholder={dict.common.title}
-              disabled={data.isPreviewMode}
-            />
-          </div>
-
-          <div className="w-32 h-px bg-current opacity-20 my-8" />
-
-          <div className="relative w-full">
-            <textarea
-              ref={descriptionRef}
-              value={description}
-              onChange={handleDescriptionChange}
-              className="core-description-input text-xl text-center focus:outline-none resize-none placeholder:opacity-20 leading-relaxed font-light italic overflow-hidden"
-              placeholder={dict.common.description}
-              disabled={data.isPreviewMode}
-            />
-
-            {description.length > 0 && (
-              <div className="absolute -bottom-6 right-0 text-[10px] font-bold uppercase tracking-widest opacity-20">
-                {description.length} / {CHAR_LIMIT}
+      <>
+        <NodeResizer
+          isVisible={selected && !data.isPreviewMode}
+          minWidth={300}
+          minHeight={200}
+          handleClassName="core-resizer-handle"
+          handleStyle={{
+            width: 20,
+            height: 20,
+            borderRadius: "50%",
+            backgroundColor: "transparent",
+            border: "none",
+            zIndex: 9999,
+          }}
+          lineStyle={{
+            border: "none",
+          }}
+          onResize={handleResize}
+        />
+        <div
+          className={`core-block relative w-full h-full transition-colors ${
+            selected ? "selected" : ""
+          } flex flex-col p-12`}
+          style={{ boxSizing: "border-box" }}
+        >
+          <div className="flex-1 flex flex-col gap-6 justify-center items-center text-center max-w-2xl mx-auto w-full h-full overflow-hidden">
+            <div className="space-y-2 w-full shrink-0">
+              <div className="text-tiny uppercase tracking-[0.3em] opacity-30 font-bold mb-4">
+                {dict.common.blockTypeCore || "Project Core"}
               </div>
-            )}
-          </div>
-        </div>
+              <input
+                value={title}
+                onChange={handleTitleChange}
+                className="core-title-input text-7xl font-black text-center focus:outline-none placeholder:opacity-10 tracking-tighter leading-none bg-transparent w-full nodrag"
+                placeholder={dict.common.title}
+                disabled={data.isPreviewMode}
+              />
+            </div>
 
-        {/* Handles for connections (2.A) */}
-        <Handle
-          id="left"
-          type="source"
-          position={Position.Left}
-          isConnectable={true}
-          className="block-handle block-handle-left !z-50"
-        />
-        <Handle
-          id="right"
-          type="source"
-          position={Position.Right}
-          isConnectable={true}
-          className="block-handle block-handle-right !z-50"
-        />
-      </div>
+            <div className="w-32 h-px bg-current opacity-20 my-8 shrink-0" />
+
+            <div
+              className="relative w-full flex-1 min-h-0 overflow-hidden flex flex-col justify-center cursor-text nodrag"
+              onClick={() =>
+                document
+                  .querySelector(".core-block .ProseMirror")
+                  ?.dispatchEvent(new Event("focus"))
+              }
+            >
+              <MarkdownEditor
+                content={description}
+                onChange={handleDescriptionChange}
+                isReadOnly={data.isPreviewMode}
+                placeholder={dict.common.description}
+                className="text-center text-xl font-light leading-relaxed [&_p]:text-center [&_p]:w-full"
+              />
+            </div>
+          </div>
+
+          {/* Handles for connections (2.A) */}
+          <Handle
+            id="left"
+            type="source"
+            position={Position.Left}
+            isConnectable={true}
+            className="block-handle block-handle-left !z-50"
+          />
+          <Handle
+            id="right"
+            type="source"
+            position={Position.Right}
+            isConnectable={true}
+            className="block-handle block-handle-right !z-50"
+          />
+        </div>
+      </>
     );
   },
 );

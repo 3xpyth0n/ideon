@@ -33,7 +33,12 @@ function deriveKey(info: string, length: number = 32): string {
 }
 
 export function getAuthSecret(): string {
-  return deriveKey("auth-secret");
+  const secret = deriveKey("auth-secret");
+  // Ensure AUTH_SECRET is set in the environment for libraries that rely on it
+  if (!process.env.AUTH_SECRET) {
+    process.env.AUTH_SECRET = secret;
+  }
+  return secret;
 }
 
 export function getInternalSecret(): string {

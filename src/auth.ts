@@ -67,7 +67,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           httpOnly: true,
           sameSite: "lax",
           path: "/",
-          secure: process.env.NODE_ENV === "production",
+          secure:
+            process.env.NODE_ENV === "production" &&
+            process.env.APP_URL?.startsWith("https"),
         },
       },
     },
@@ -165,9 +167,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
               await logSecurityEvent("loginRatelimit", "failure", {
                 ip,
               });
-              throw new Error(
-                "Too many login attempts. Please try again later.",
-              );
+              // Use CredentialsSignin to avoid CallbackRouteError (500)
+              throw new CredentialsSignin("too_many_requests");
             }
           }
 

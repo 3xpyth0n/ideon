@@ -20,7 +20,7 @@ const { LeveldbPersistence } = require("y-leveldb");
 
 const dev = process.env.NODE_ENV === "development";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
-const port = parseInt(process.env.APP_PORT || "3000", 10);
+const port = parseInt(process.env.PORT || process.env.APP_PORT || "3000", 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 

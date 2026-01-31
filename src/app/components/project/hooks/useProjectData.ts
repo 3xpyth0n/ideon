@@ -5,7 +5,6 @@ import { useI18n } from "@providers/I18nProvider";
 import { useRouter } from "next/navigation";
 import { uniqueById } from "@lib/utils";
 import { BlockData } from "../CanvasBlock";
-import { getLayoutedElements } from "../utils/canvasLayout";
 
 interface UseProjectDataProps {
   initialProjectId?: string;
@@ -107,10 +106,8 @@ export const useProjectData = ({
     (newBlocks: Node<BlockData>[], newLinks: Edge[]) => {
       const allBlocks = [...blocks, ...newBlocks];
       const allLinks = [...links, ...newLinks];
-      const { blocks: layoutedBlocks, links: layoutedLinks } =
-        getLayoutedElements(allBlocks, allLinks, "LR");
-      setBlocks(layoutedBlocks);
-      setLinks(layoutedLinks);
+      setBlocks(allBlocks);
+      setLinks(allLinks);
     },
     [blocks, links, setBlocks, setLinks],
   );

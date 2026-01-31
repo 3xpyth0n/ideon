@@ -194,26 +194,21 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   );
 
   const edges = getEdges();
-  const isLeftTargetConnected = edges.some(
-    (e) =>
-      e.target === id &&
-      (e.targetHandle === "left" || e.targetHandle === "left-target"),
-  );
-  const isLeftSourceConnected = edges.some(
-    (e) =>
-      e.source === id &&
-      (e.sourceHandle === "left" || e.sourceHandle === "left-source"),
-  );
-  const isRightTargetConnected = edges.some(
-    (e) =>
-      e.target === id &&
-      (e.targetHandle === "right" || e.targetHandle === "right-target"),
-  );
-  const isRightSourceConnected = edges.some(
-    (e) =>
-      e.source === id &&
-      (e.sourceHandle === "right" || e.sourceHandle === "right-source"),
-  );
+  const isHandleConnected = (handleId: string) =>
+    edges.some(
+      (e) =>
+        (e.source === id && e.sourceHandle === handleId) ||
+        (e.target === id && e.targetHandle === handleId),
+    );
+
+  const isLeftTargetConnected = isHandleConnected("left-target");
+  const isLeftSourceConnected = isHandleConnected("left");
+  const isRightTargetConnected = isHandleConnected("right-target");
+  const isRightSourceConnected = isHandleConnected("right");
+  const isTopTargetConnected = isHandleConnected("top-target");
+  const isTopSourceConnected = isHandleConnected("top");
+  const isBottomTargetConnected = isHandleConnected("bottom-target");
+  const isBottomSourceConnected = isHandleConnected("bottom");
 
   return (
     <div
@@ -301,9 +296,10 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         </div>
       </div>
 
+      {/* Handles - Left Side */}
       <Handle
         id="left-target"
-        type="target"
+        type="source"
         position={Position.Left}
         isConnectable={true}
         className="block-handle block-handle-left !z-50 !top-[40%]"
@@ -320,6 +316,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
 
+      {/* Handles - Right Side */}
       <Handle
         id="right"
         type="source"
@@ -331,12 +328,52 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       </Handle>
       <Handle
         id="right-target"
-        type="target"
+        type="source"
         position={Position.Right}
         isConnectable={true}
         className="block-handle block-handle-right !z-50 !top-[60%]"
       >
         {!isRightTargetConnected && <div className="handle-dot" />}
+      </Handle>
+
+      {/* Handles - Top Side */}
+      <Handle
+        id="top-target"
+        type="source"
+        position={Position.Top}
+        isConnectable={true}
+        className="block-handle block-handle-top !z-50 !left-[40%]"
+      >
+        {!isTopTargetConnected && <div className="handle-dot" />}
+      </Handle>
+      <Handle
+        id="top"
+        type="source"
+        position={Position.Top}
+        isConnectable={true}
+        className="block-handle block-handle-top !z-50 !left-[60%]"
+      >
+        {!isTopSourceConnected && <div className="handle-dot" />}
+      </Handle>
+
+      {/* Handles - Bottom Side */}
+      <Handle
+        id="bottom"
+        type="source"
+        position={Position.Bottom}
+        isConnectable={true}
+        className="block-handle block-handle-bottom !z-50 !left-[60%]"
+      >
+        {!isBottomSourceConnected && <div className="handle-dot" />}
+      </Handle>
+      <Handle
+        id="bottom-target"
+        type="source"
+        position={Position.Bottom}
+        isConnectable={true}
+        className="block-handle block-handle-bottom !z-50 !left-[40%]"
+      >
+        {!isBottomTargetConnected && <div className="handle-dot" />}
       </Handle>
     </div>
   );

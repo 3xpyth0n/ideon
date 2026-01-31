@@ -84,7 +84,20 @@ const ProjectCoreBlock = memo(
       [id, data.onContentChange, data.lastEditor, title],
     );
 
-    const { setNodes } = useReactFlow();
+    const { setNodes, getEdges } = useReactFlow();
+
+    const edges = getEdges();
+    const isHandleConnected = (handleId: string) =>
+      edges.some(
+        (e) =>
+          (e.source === id && e.sourceHandle === handleId) ||
+          (e.target === id && e.targetHandle === handleId),
+      );
+
+    const isLeftConnected = isHandleConnected("left");
+    const isRightConnected = isHandleConnected("right");
+    const isTopConnected = isHandleConnected("top");
+    const isBottomConnected = isHandleConnected("bottom");
 
     const handleResize = useCallback(
       (_event: unknown, params: ResizeParams) => {
@@ -178,14 +191,36 @@ const ProjectCoreBlock = memo(
             position={Position.Left}
             isConnectable={true}
             className="block-handle block-handle-left !z-50"
-          />
+          >
+            {!isLeftConnected && <div className="handle-dot" />}
+          </Handle>
           <Handle
             id="right"
             type="source"
             position={Position.Right}
             isConnectable={true}
             className="block-handle block-handle-right !z-50"
-          />
+          >
+            {!isRightConnected && <div className="handle-dot" />}
+          </Handle>
+          <Handle
+            id="top"
+            type="source"
+            position={Position.Top}
+            isConnectable={true}
+            className="block-handle block-handle-top !z-50"
+          >
+            {!isTopConnected && <div className="handle-dot" />}
+          </Handle>
+          <Handle
+            id="bottom"
+            type="source"
+            position={Position.Bottom}
+            isConnectable={true}
+            className="block-handle block-handle-bottom !z-50"
+          >
+            {!isBottomConnected && <div className="handle-dot" />}
+          </Handle>
         </div>
       </>
     );

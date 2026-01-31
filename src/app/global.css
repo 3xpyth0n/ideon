@@ -1781,29 +1781,32 @@ input:-webkit-autofill:active {
   gap: 128px;
 }
 
+.mb-0 {
+  margin-bottom: 0px !important;
+}
 .mb-1 {
-  margin-bottom: 4px;
+  margin-bottom: 4px !important;
 }
 .mb-2 {
-  margin-bottom: 8px;
+  margin-bottom: 8px !important;
 }
 .mb-4 {
-  margin-bottom: 16px;
+  margin-bottom: 16px !important;
 }
 .mb-6 {
-  margin-bottom: 24px;
+  margin-bottom: 24px !important;
 }
 .mb-8 {
-  margin-bottom: 32px;
+  margin-bottom: 32px !important;
 }
 .mb-10 {
-  margin-bottom: 40px;
+  margin-bottom: 40px !important;
 }
 .mb-12 {
-  margin-bottom: 48px;
+  margin-bottom: 48px !important;
 }
 .mb-24 {
-  margin-bottom: 96px;
+  margin-bottom: 96px !important;
 }
 
 .mt-2 {
@@ -3027,7 +3030,7 @@ input:-webkit-autofill:active {
 .zoom-indicator {
   position: absolute;
   bottom: 38px;
-  right: 210px;
+  right: 165px;
   height: 36px;
   padding: 0 12px;
   display: flex;
@@ -4620,6 +4623,18 @@ input:-webkit-autofill:active {
   right: 0 !important;
 }
 
+.block-handle-top {
+  top: 0 !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.block-handle-bottom {
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translate(-50%, 50%) !important;
+}
+
 /* Create the interaction zone and visual dot */
 .block-handle::after {
   content: "";
@@ -4638,6 +4653,22 @@ input:-webkit-autofill:active {
   right: -64px;
 }
 
+.block-handle-top::after {
+  top: -64px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 64px;
+  width: 40px;
+}
+
+.block-handle-bottom::after {
+  bottom: -64px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 64px;
+  width: 40px;
+}
+
 .handle-dot {
   position: absolute;
   width: 4px;
@@ -4648,11 +4679,19 @@ input:-webkit-autofill:active {
 }
 
 .block-handle-left .handle-dot {
-  left: -32px;
+  left: -8px;
 }
 
 .block-handle-right .handle-dot {
-  right: -32px;
+  right: -8px;
+}
+
+.block-handle-top .handle-dot {
+  top: -6px;
+}
+
+.block-handle-bottom .handle-dot {
+  bottom: -6px;
 }
 
 [data-theme="dark"] .block-card {

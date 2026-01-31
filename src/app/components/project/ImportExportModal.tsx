@@ -379,10 +379,10 @@ export function ImportExportModal({
                   <FileJson className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                 </div>
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900 dark:text-white text-sm">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm mb-2">
                     {dict.common.importExport}
                   </p>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  <p className="text-gray-500 dark:text-gray-400 text-xs mb-2">
                     JSON •{" "}
                     {dict.common.blocksCount.replace(
                       "{count}",

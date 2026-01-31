@@ -43,11 +43,11 @@ import {
   useCallback,
 } from "react";
 import {
-  BrushCleaning,
   Plus,
   Minus,
   Maximize,
   FileCode,
+  ArrowDownUp,
   ArrowLeft,
   Check,
   RefreshCw,
@@ -276,7 +276,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onBlockDrag,
     onBlockDragStop,
     onConnect,
-    onConnectStart,
     handleDeleteBlock: _handleDeleteBlock,
     handleToggleLock,
     handleTransferBlock,
@@ -293,7 +292,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onBlockClick,
     onLinkClick,
     handleCreateBlock,
-    onLayout,
     activeUsers,
     shareCursor,
     setShareCursor,
@@ -519,7 +517,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
           onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
           onConnect={isPreviewMode ? undefined : onConnect}
-          onConnectStart={isPreviewMode ? undefined : onConnectStart}
           onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
           isValidConnection={isValidConnection}
           onPointerMove={onPointerMove}
@@ -720,18 +717,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               <Maximize />
             </ControlButton>
             <ControlButton
-              onClick={() => !isPreviewMode && onLayout("LR")}
-              title={dict.common.cleanupLayout}
-              disabled={isPreviewMode}
-            >
-              <BrushCleaning className={isPreviewMode ? "opacity-50" : ""} />
-            </ControlButton>
-            <ControlButton
               onClick={() => !isPreviewMode && setIsImportModalOpen(true)}
               title={dict.common.importExport}
               disabled={isPreviewMode}
             >
-              <FileCode className={isPreviewMode ? "opacity-50" : ""} />
+              <ArrowDownUp className={isPreviewMode ? "opacity-50" : ""} />
             </ControlButton>
           </Controls>
 

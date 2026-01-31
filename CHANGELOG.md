@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added Prettier integration in Snippet Blocks for automatic code formatting.
 - Added Tiptap bubble menu for text formatting (bold, italic, etc.) to assist users unfamiliar with Markdown.
+- Added support for top and bottom connectors on blocks to allow more flexible flow layouts.
 
 - Support for self-hosted Git providers (GitLab, Gitea, Forgejo) in addition to GitHub. Auto-detection of Git provider based on URL.
 - Enhanced OIDC compatibility: added support for multiple profile picture fields (`picture`, `avatar`, `avatar_url`) to handle diverse OIDC providers (e.g., Keycloak, Authentik).

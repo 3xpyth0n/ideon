@@ -9,11 +9,9 @@ import {
   addEdge,
   applyNodeChanges,
   applyEdgeChanges,
-  type OnConnectStart,
 } from "@xyflow/react";
 import { UserPresence } from "./useProjectCanvasState";
 import { BlockData } from "../CanvasBlock";
-import { getLayoutedElements } from "../utils/canvasLayout";
 import {
   DEFAULT_BLOCK_WIDTH,
   DEFAULT_BLOCK_HEIGHT,
@@ -234,85 +232,25 @@ export const useProjectCanvasGraph = ({
     [deleteLinks, setLinks],
   );
 
-  const dragStartRef = React.useRef<{
-    nodeId: string | null;
-    handleId: string | null;
-  } | null>(null);
-
-  const onConnectStart: OnConnectStart = useCallback((_, params) => {
-    dragStartRef.current = {
-      nodeId: params.nodeId,
-      handleId: params.handleId,
-    };
-  }, []);
-
   const onConnect = useCallback(
     (params: Connection) => {
       if (!params.source || !params.target) return;
 
-      // 1. Determine Source and Target based on Drag Start (User Intent)
-      let finalSource = params.source;
-      let finalTarget = params.target;
-
-      if (dragStartRef.current) {
-        if (dragStartRef.current.nodeId === params.target) {
-          finalSource = params.target;
-          finalTarget = params.source;
-        } else {
-          finalSource = params.source;
-          finalTarget = params.target;
-        }
-      }
-
-      // Reset drag start ref
-      dragStartRef.current = null;
-
-      // 2. Get Nodes to calculate geometry
-      const sourceBlock = blocks.find((b) => b.id === finalSource);
-      const targetBlock = blocks.find((b) => b.id === finalTarget);
-
-      if (!sourceBlock || !targetBlock) return;
+      const targetBlock = blocks.find((b) => b.id === params.target);
       // Strict enforcement: Core blocks cannot be targets
-      if (targetBlock.type === "core") return;
-
-      // 3. Determine Best Handles based on Geometry (Auto-Snap)
-      const sourceWidth =
-        sourceBlock.measured?.width || sourceBlock.width || DEFAULT_BLOCK_WIDTH;
-      const targetWidth =
-        targetBlock.measured?.width || targetBlock.width || DEFAULT_BLOCK_WIDTH;
-
-      const sourceCenter = sourceBlock.position.x + sourceWidth / 2;
-      const targetCenter = targetBlock.position.x + targetWidth / 2;
-
-      const isSourceLeft = sourceCenter < targetCenter;
-
-      // Enforce: Source -> Target (Left to Right or Right to Left)
-      const finalSourceHandle = isSourceLeft ? "right" : "left";
-      const finalTargetHandle = isSourceLeft ? "left-target" : "right-target";
+      if (targetBlock?.type === "core") return;
 
       const link: Edge = {
         ...params,
-        source: finalSource,
-        target: finalTarget,
-        sourceHandle: finalSourceHandle,
-        targetHandle: finalTargetHandle,
+        id: `e${params.source}-${params.target}`,
         type: "connection",
-        animated: false,
-        id: crypto.randomUUID(),
         markerEnd: "connection-arrow",
-        data: {},
+        data: { label: "" },
       };
 
-      // Immediate UI update
       setLinks((lks) => addEdge(link, lks || []));
-
-      // Persist to Yjs and DB
-      applyMutation({
-        intent: "Created new connection",
-        linksUpdate: (lks) => addEdge(link, lks || []),
-      });
     },
-    [applyMutation, setLinks, blocks],
+    [setLinks, blocks],
   );
 
   const onBlockDragStart = useCallback(
@@ -384,57 +322,12 @@ export const useProjectCanvasGraph = ({
         position: adjustedPos,
       };
 
-      // Update connected links handles
-      const affectedLinks = links.filter(
-        (l) => l.source === block.id || l.target === block.id,
-      );
-
-      const updatedLinks = links.map((link) => {
-        if (link.source !== block.id && link.target !== block.id) return link;
-
-        const otherId = link.source === block.id ? link.target : link.source;
-        const otherBlock = blocks.find((b) => b.id === otherId);
-        if (!otherBlock) return link;
-
-        const isSource = link.source === block.id;
-        const sourceBlock = isSource ? adjustedBlock : otherBlock;
-        const targetBlock = isSource ? otherBlock : adjustedBlock;
-
-        const sourceWidth =
-          sourceBlock.measured?.width ||
-          sourceBlock.width ||
-          DEFAULT_BLOCK_WIDTH;
-        const targetWidth =
-          targetBlock.measured?.width ||
-          targetBlock.width ||
-          DEFAULT_BLOCK_WIDTH;
-
-        const sourceCenter = sourceBlock.position.x + sourceWidth / 2;
-        const targetCenter = targetBlock.position.x + targetWidth / 2;
-        const isSourceLeft = sourceCenter < targetCenter;
-
-        const sourceHandle = isSourceLeft ? "right" : "left";
-        const targetHandle = isSourceLeft ? "left-target" : "right-target";
-
-        return {
-          ...link,
-          sourceHandle,
-          targetHandle,
-        };
-      });
-
-      // Optimistic link update
-      if (affectedLinks.length > 0) {
-        setLinks(updatedLinks);
-      }
-
       applyMutation({
         intent: "Moved block",
         blocksUpdate: (blocks) =>
           blocks.map((b) =>
             b.id === block.id ? (adjustedBlock as Node<BlockData>) : b,
           ),
-        linksUpdate: affectedLinks.length > 0 ? () => updatedLinks : undefined,
       });
     },
     [applyMutation, updateMyPresence, links, blocks, setLinks],
@@ -554,17 +447,6 @@ export const useProjectCanvasGraph = ({
       });
     },
     [applyMutation, blocks],
-  );
-
-  const onLayout = useCallback(
-    (direction: string) => {
-      const { blocks: layoutedBlocks, links: layoutedLinks } =
-        getLayoutedElements(blocks, links, direction);
-
-      setBlocks(layoutedBlocks);
-      setLinks(layoutedLinks);
-    },
-    [blocks, links, setBlocks, setLinks],
   );
 
   const onBlockContextMenu = useCallback(
@@ -804,14 +686,12 @@ export const useProjectCanvasGraph = ({
     onBlocksChange,
     onLinksChange,
     onConnect,
-    onConnectStart,
     onBlockDragStart,
     onBlockDrag,
     onBlockDragStop,
     onContentChange,
     onResizeCallback,
     onResizeEndCallback,
-    onLayout,
     onBlockContextMenu,
     onPaneContextMenu,
     handleCreateBlock,

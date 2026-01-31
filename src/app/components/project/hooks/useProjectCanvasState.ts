@@ -1004,7 +1004,6 @@ export const useProjectCanvasState = (
     onBlockDrag: graph.onBlockDrag,
     onBlockDragStop: graph.onBlockDragStop,
     onConnect: graph.onConnect,
-    onConnectStart: graph.onConnectStart,
     handleDeleteBlock: graph.handleDeleteBlock,
     handleToggleLock: (blockId: string) => {
       const block = blocks.find((b) => b.id === blockId);
@@ -1079,7 +1078,6 @@ export const useProjectCanvasState = (
     onBlockClick: () => setContextMenu(null),
     onLinkClick: () => setContextMenu(null),
     handleCreateBlock: graph.handleCreateBlock,
-    onLayout: graph.onLayout,
     activeUsers: rt.activeUsers,
     shareCursor,
     setShareCursor,

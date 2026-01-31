@@ -5,8 +5,6 @@ services:
     container_name: ideon-app
     env_file:
       - ${ENV_FILE:-.env}
-    environment:
-      - DB_HOST=ideon-db
     depends_on:
       ideon-db:
         condition: service_healthy

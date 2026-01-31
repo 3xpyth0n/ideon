@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { getAvatarUrl } from "@lib/utils";
 
 export default function AccountPage() {
-  const { dict, lang, setLang } = useI18n();
+  const { dict, lang, setLang, availableLanguages } = useI18n();
   const { user, refreshUser } = useUser();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -166,7 +166,8 @@ export default function AccountPage() {
                   <div className="flex items-center gap-3">
                     <Globe size={14} className="opacity-40" />
                     <span className="text-xs font-medium">
-                      {lang === "en" ? dict.common.langEn : dict.common.langFr}
+                      {availableLanguages.find((l) => l.code === lang)?.label ||
+                        lang}
                     </span>
                   </div>
                   <ChevronDown
@@ -178,30 +179,23 @@ export default function AccountPage() {
                 </button>
                 {isLangOpen && (
                   <div className="select-dropdown rounded-none overflow-hidden mt-2 border-border/10 bg-background/80 backdrop-blur-xl shadow-2xl">
-                    <button
-                      onClick={() => {
-                        setLang("en");
-                        setIsLangOpen(false);
-                      }}
-                      className="select-option py-3 px-4"
-                    >
-                      <span className="text-xs">{dict.common.langEn}</span>
-                      {lang === "en" && (
-                        <Check size={10} className="text-text-main" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setLang("fr");
-                        setIsLangOpen(false);
-                      }}
-                      className="select-option py-3 px-4 border-t border-border/5"
-                    >
-                      <span className="text-xs">{dict.common.langFr}</span>
-                      {lang === "fr" && (
-                        <Check size={10} className="text-text-main" />
-                      )}
-                    </button>
+                    {availableLanguages.map((l, index) => (
+                      <button
+                        key={l.code}
+                        onClick={() => {
+                          setLang(l.code);
+                          setIsLangOpen(false);
+                        }}
+                        className={`select-option py-3 px-4 ${
+                          index > 0 ? "border-t border-border/5" : ""
+                        }`}
+                      >
+                        <span className="text-xs">{l.label}</span>
+                        {lang === l.code && (
+                          <Check size={10} className="text-text-main" />
+                        )}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>

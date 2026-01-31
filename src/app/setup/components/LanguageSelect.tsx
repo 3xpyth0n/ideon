@@ -3,15 +3,11 @@ import { useState } from "react";
 import { useI18n } from "@providers/I18nProvider";
 import { ChevronDown, Languages } from "lucide-react";
 
-const options = [
-  { value: "en", label: "English" },
-  { value: "fr", label: "Français" },
-];
-
 export function LanguageSelect() {
-  const { lang, setLang } = useI18n();
+  const { lang, setLang, availableLanguages } = useI18n();
   const [open, setOpen] = useState(false);
-  const current = options.find((o) => o.value === lang) || options[0];
+  const current =
+    availableLanguages.find((o) => o.code === lang) || availableLanguages[0];
 
   return (
     <div className="lang-select-container">
@@ -21,7 +17,7 @@ export function LanguageSelect() {
         className={`lang-select-trigger ${open ? "open" : ""}`}
       >
         <Languages size={16} />
-        {current.label}
+        {current?.label || lang}
         <ChevronDown size={14} className="chevron" />
       </button>
 
@@ -29,15 +25,15 @@ export function LanguageSelect() {
         <>
           <div className="fixed-overlay" onClick={() => setOpen(false)} />
           <div className="lang-select-dropdown">
-            {options.map((o) => (
+            {availableLanguages.map((o) => (
               <button
-                key={o.value}
+                key={o.code}
                 onClick={() => {
-                  setLang(o.value);
+                  setLang(o.code);
                   setOpen(false);
                 }}
                 className={`lang-select-option ${
-                  o.value === lang ? "active" : ""
+                  o.code === lang ? "active" : ""
                 }`}
               >
                 {o.label}

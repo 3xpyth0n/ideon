@@ -8,8 +8,7 @@ import { Toaster } from "sonner";
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
-import en from "@i18n/en.json";
-import fr from "@i18n/fr.json";
+import { loadDictionaries } from "@i18n/loader";
 
 import { runMigrations } from "@lib/migrations";
 
@@ -25,7 +24,8 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const cookieStore = await cookies();
   const lang = cookieStore.get("ideonLang")?.value || "en";
-  const dict = lang === "fr" ? fr : en;
+  const dictionaries = await loadDictionaries();
+  const dict = dictionaries[lang] || dictionaries["en"];
 
   return {
     title: APP_NAME,
@@ -67,6 +67,7 @@ export default async function RootLayout({
     cookieStore.get("sidebarCollapsed")?.value === "true";
   const headerList = await headers();
   const nonce = headerList.get("x-nonce") || undefined;
+  const dictionaries = await loadDictionaries();
 
   return (
     <html
@@ -84,7 +85,7 @@ export default async function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider>
-          <I18nProvider>
+          <I18nProvider dictionaries={dictionaries} initialLang={lang}>
             <ConfigProvider>
               <UserProvider>
                 {children}

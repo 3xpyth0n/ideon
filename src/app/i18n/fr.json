@@ -1,4 +1,5 @@
 {
+  "__label": "Français",
   "title": "Ideon",
   "subtitle": "Visual Project OS",
   "auth": {
@@ -15,22 +16,12 @@
     "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères"
   },
   "common": {
-    "confirmPassword": "Confirmer le mot de passe",
     "refresh": "Actualiser",
     "done": "Terminé",
     "add": "Ajouter",
     "addTask": "Ajouter une tâche",
     "taskPlaceholder": "Tâche...",
     "noVideo": "Aucune URL vidéo valide",
-    "newContact": "Nouveau Contact",
-    "newVideo": "Nouvelle Vidéo",
-    "newSnippet": "Nouveau Snippet",
-    "newChecklist": "Nouvelle Liste",
-    "newBlock": "Nouvelle Note",
-    "newLink": "Nouveau Lien",
-    "newFile": "Nouveau Fichier",
-    "newGithub": "Nouveau GitHub",
-    "newPalette": "Nouvelle Palette",
     "save": "Enregistrer",
     "cancel": "Annuler",
     "delete": "Supprimer",

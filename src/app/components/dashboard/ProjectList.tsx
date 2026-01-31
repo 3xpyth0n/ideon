@@ -68,7 +68,7 @@ export function ProjectList() {
                 {dict.common.overview}
               </h1>
             </div>
-            <p className="zen-subtitle text-sm opacity-40 mb-0">
+            <p className="zen-subtitle text-sm opacity-40 mb-4">
               {dict.common.manageProjects}
             </p>
           </div>

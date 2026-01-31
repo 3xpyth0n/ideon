@@ -78,6 +78,27 @@ If you need to test the production behavior or database migrations with Postgres
 - **No inline styles** allowed (use CSS modules or global CSS).
 - **No hardcoded strings** in the UI (use i18n dictionaries).
 
+## Adding a New Language
+
+Ideon supports dynamic language loading. To add a new language:
+
+1.  Create a new JSON file in `src/app/i18n/` (e.g., `es.json` for Spanish).
+2.  Add the `__label` key at the root of the JSON object. This is the name that will appear in the language selector.
+3.  Add all required translation keys (copy the structure from `en.json`).
+
+**Example `es.json`:**
+
+```json
+{
+  "__label": "Español",
+  "title": "Ideon",
+  "subtitle": "...",
+  ...
+}
+```
+
+The application will automatically detect the new file and add it to the language selection menu. No code changes are required.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the project's **AGPLv3 License**.

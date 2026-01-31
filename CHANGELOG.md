@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added dynamic language loading system: new languages can now be added simply by dropping a JSON file into the i18n directory.
 - Added Prettier integration in Snippet Blocks for automatic code formatting.
 - Added Tiptap bubble menu for text formatting (bold, italic, etc.) to assist users unfamiliar with Markdown.
 - Added support for top and bottom connectors on blocks to allow more flexible flow layouts.

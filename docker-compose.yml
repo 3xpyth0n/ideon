@@ -1,6 +1,5 @@
 services:
   ideon-app:
-    build: .
     image: ghcr.io/3xpyth0n/ideon:latest
     container_name: ideon-app
     env_file:

@@ -882,6 +882,7 @@ export const useProjectCanvasState = (
       if (yBlocks.size > 0) {
         isInitialized.current = true;
         lastProjectId.current = initialProjectId;
+        io.fetchProjectMetadata();
         return;
       }
 
@@ -889,7 +890,14 @@ export const useProjectCanvasState = (
       lastProjectId.current = initialProjectId;
       io.fetchGraph();
     }
-  }, [initialProjectId, io.fetchGraph, yBlocks, yContents, isLocalSynced]);
+  }, [
+    initialProjectId,
+    io.fetchGraph,
+    io.fetchProjectMetadata,
+    yBlocks,
+    yContents,
+    isLocalSynced,
+  ]);
 
   const handleFitView = useCallback(() => {
     const selectedBlocks = blocks.filter((n) => n.selected);

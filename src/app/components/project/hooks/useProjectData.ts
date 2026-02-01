@@ -102,6 +102,21 @@ export const useProjectData = ({
     ],
   );
 
+  const fetchProjectMetadata = useCallback(async () => {
+    if (!initialProjectId || initialProjectId === "undefined") return;
+    try {
+      const res = await fetch(`/api/projects/${initialProjectId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.project?.ownerId) {
+          setProjectOwnerId(data.project.ownerId);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch project metadata", error);
+    }
+  }, [initialProjectId, setProjectOwnerId]);
+
   const handleImport = useCallback(
     (newBlocks: Node<BlockData>[], newLinks: Edge[]) => {
       const allBlocks = [...blocks, ...newBlocks];
@@ -187,6 +202,7 @@ export const useProjectData = ({
 
   return {
     fetchGraph,
+    fetchProjectMetadata,
     handleImport,
     handlePreview,
     handleApplyState,

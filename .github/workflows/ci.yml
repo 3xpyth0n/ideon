@@ -74,6 +74,7 @@ jobs:
           sed -e "s/ideon-app-data/ideon-app-data-$SUFFIX/g" \
               -e "s/ideon-db-data/ideon-db-data-$SUFFIX/g" \
               -e '/container_name:/d' \
+              -e "s|image: ghcr.io/3xpyth0n/ideon:latest|build: .|g" \
               docker-compose.yml > docker-compose.ci.yml
 
       - name: Start Stack (Production Simulation)

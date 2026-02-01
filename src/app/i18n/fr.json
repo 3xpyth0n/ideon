@@ -127,7 +127,7 @@
     "dropzone": "Glissez-déposez un fichier JSON ici, ou cliquez pour parcourir",
     "dropzoneActive": "Déposez le fichier maintenant",
     "blocksCountFull": "{count} blocs",
-    "importExportDescription": "Importez ou exportez les données de votre projet au format JSON ou résumé Markdown.",
+    "importExportDescription": "Importez ou exportez les données de votre projet au format JSON.",
     "management": "Gestion",
     "authentication": "Authentification",
     "securityAudit": "Audit de Sécurité",

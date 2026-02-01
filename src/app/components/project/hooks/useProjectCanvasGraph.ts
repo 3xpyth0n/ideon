@@ -10,6 +10,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from "@xyflow/react";
+import { v4 as uuidv4 } from "uuid";
 import { UserPresence } from "./useProjectCanvasState";
 import { BlockData } from "../CanvasBlock";
 import {
@@ -552,7 +553,7 @@ export const useProjectCanvasGraph = ({
         },
       );
 
-      const newBlockId = crypto.randomUUID();
+      const newBlockId = uuidv4();
       const newBlock: Node<BlockData> = {
         id: newBlockId,
         type: blockType,
@@ -594,7 +595,7 @@ export const useProjectCanvasGraph = ({
           const targetY = position.y + DEFAULT_BLOCK_HEIGHT * 0.5;
 
           const newLink: Edge = {
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             source: connectFromId,
             target: newBlockId,
             type: "connection",

@@ -5,7 +5,6 @@ import { authConfig } from "./auth.config";
 
 const { auth } = NextAuth({
   ...authConfig,
-  secret: process.env.AUTH_SECRET || process.env.SECRET_KEY,
 });
 
 export async function proxy(req: NextRequest) {

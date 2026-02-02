@@ -153,11 +153,47 @@ function getSqlite(): DatabaseDriver.Database {
   return state.sqliteInstance;
 }
 
+function ensureInitialized() {
+  if (state.dbInstance) return;
+
+  if (!state.isInitialized) {
+    const { DB_HOST, DB_NAME, DB_USER, DB_PASS } = process.env;
+
+    if (shouldUseSqlite()) {
+      initializeSqlite("Auto-initializing SQLite connection");
+    } else if (DB_HOST && DB_NAME && DB_USER && DB_PASS) {
+      logger.info("Auto-initializing PostgreSQL connection in getDb");
+      state.poolInstance = new pg.Pool(getPostgresConfig());
+      state.activeType = "postgres";
+      state.isInitialized = true;
+    } else {
+      logger.info("Auto-initializing SQLite connection in getDb");
+      state.activeType = "sqlite";
+      state.isInitialized = true;
+    }
+  }
+
+  if (state.activeType === "postgres" && state.poolInstance) {
+    state.dbInstance = new Kysely<database>({
+      dialect: new PostgresDialect({
+        pool: state.poolInstance,
+      }),
+    });
+  } else if (state.activeType === "sqlite") {
+    state.dbInstance = new Kysely<database>({
+      dialect: new SqliteDialect({
+        database: getSqlite(),
+      }),
+    });
+  }
+}
+
 export async function withAuthenticatedSession<T>(
   userId: string,
   callback: (tx: Kysely<database>) => Promise<T>,
+  dbOverride?: Kysely<database>,
 ): Promise<T> {
-  const db = getDb();
+  const db = dbOverride || getDb();
 
   // If we are using SQLite, we don't need to set the session variable (no RLS)
   if (state.activeType === "sqlite") {
@@ -176,6 +212,14 @@ export async function withAuthenticatedSession<T>(
   });
 }
 
+export function getGlobalDb(): Kysely<database> {
+  ensureInitialized();
+  if (!state.dbInstance) {
+    throw new Error("Database failed to initialize");
+  }
+  return state.dbInstance;
+}
+
 export function getDb(): Kysely<database> {
   const tx = dbStore.getStore();
   if (tx) {
@@ -185,30 +229,10 @@ export function getDb(): Kysely<database> {
   if (state.dbInstance) return state.dbInstance;
 
   // Fallback if getDb is called before initDb (e.g. in Next.js worker)
-  if (!state.isInitialized) {
-    const { DB_HOST, DB_NAME, DB_USER, DB_PASS } = process.env;
+  ensureInitialized();
 
-    if (shouldUseSqlite()) {
-      initializeSqlite("Auto-initializing SQLite connection");
-    } else if (DB_HOST && DB_NAME && DB_USER && DB_PASS) {
-      logger.info("Auto-initializing PostgreSQL connection in getDb");
-      state.poolInstance = new pg.Pool(getPostgresConfig());
-      state.activeType = "postgres";
-      state.isInitialized = true;
-    } else {
-      logger.info("Auto-initializing SQLite connection in getDb");
-      state.activeType = "sqlite";
-      state.isInitialized = true;
-    }
-  }
-
-  const dialect =
-    state.activeType === "sqlite"
-      ? new SqliteDialect({ database: getSqlite() })
-      : new PostgresDialect({ pool: state.poolInstance! });
-
-  state.dbInstance = new Kysely<database>({ dialect });
-  return state.dbInstance;
+  if (state.dbInstance) return state.dbInstance;
+  throw new Error("Database failed to initialize");
 }
 
 export interface AuthProviderConfig {

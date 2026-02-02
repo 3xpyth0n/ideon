@@ -57,7 +57,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
   return {
     ...authConfig,
     trustHost: true,
-    secret: process.env.AUTH_SECRET || process.env.SECRET_KEY,
     adapter: KyselyAdapter(),
     providers: [
       Nodemailer({

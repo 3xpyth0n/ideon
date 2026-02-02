@@ -65,7 +65,7 @@ export function LoginClient() {
 
     if (setupSuccess) {
       toast.success(dict.common.setupSuccess);
-    } else if (regDisabled && !settings.publicRegistrationEnabled) {
+    } else if (regDisabled) {
       toast.error(dict.common.registrationDisabledError);
     } else if (accessDenied) {
       toast.error(dict.common.accessDenied || "Access Denied");
@@ -83,7 +83,6 @@ export function LoginClient() {
     dict.common.setupSuccess,
     dict.common.registrationDisabledError,
     dict.common.accessDenied,
-    settings.publicRegistrationEnabled,
   ]);
 
   const onSubmit = async (e: React.FormEvent) => {

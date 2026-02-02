@@ -72,10 +72,6 @@ initDb()
         const isAuthorized = await validateWebsocketRequest(request, docName);
 
         if (!isAuthorized) {
-          logger.warn(
-            { ip: request.socket.remoteAddress, docName },
-            "[WS Security] Blocked unauthorized connection attempt",
-          );
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
           socket.destroy();
           return;

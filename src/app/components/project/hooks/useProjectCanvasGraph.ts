@@ -458,33 +458,6 @@ export const useProjectCanvasGraph = ({
         return;
       }
 
-      // Special handling for GitHub blocks: right-click enters edit mode directly
-      if (
-        (block.data as BlockData)?.blockType === "github" ||
-        (block.data as BlockData)?.blockType === "link"
-      ) {
-        // We set a special signal in blocks to trigger editing in CanvasBlock
-        setBlocks((blocks) =>
-          blocks.map((b) =>
-            b.id === block.id
-              ? {
-                  ...b,
-                  selected: true,
-                  data: {
-                    ...b.data,
-                    isEditingGithub:
-                      (block.data as BlockData)?.blockType === "github",
-                    isEditingLink:
-                      (block.data as BlockData)?.blockType === "link",
-                  },
-                }
-              : b,
-          ),
-        );
-        setContextMenu(null);
-        return;
-      }
-
       setContextMenu({
         id: block.id,
         type: "block",

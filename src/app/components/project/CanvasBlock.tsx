@@ -1133,6 +1133,33 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     syncToYjs("");
   };
 
+  const handleContentContextMenu = (e: React.MouseEvent) => {
+    if (isReadOnly) return;
+
+    if (
+      blockType === "link" ||
+      blockType === "github" ||
+      blockType === "contact"
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Ensure node is selected so exitEditMode isn't triggered by useEffect
+      if (!selected) {
+        setNodes((nds) =>
+          nds.map((n) => ({
+            ...n,
+            selected: n.id === id,
+          })),
+        );
+      }
+
+      if (blockType === "link") setIsEditingLink(true);
+      if (blockType === "github") setIsEditingGithub(true);
+      if (blockType === "contact") setIsEditingContact(true);
+    }
+  };
+
   const renderContent = () => {
     if (blockType === "palette") {
       return <PaletteBlock {...props} isReadOnly={isReadOnly} />;
@@ -1140,11 +1167,13 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
     if (blockType === "contact") {
       return (
-        <ContactBlock
-          {...props}
-          isReadOnly={isReadOnly}
-          isEditing={isEditingContact}
-        />
+        <div className="h-full w-full" onContextMenu={handleContentContextMenu}>
+          <ContactBlock
+            {...props}
+            isReadOnly={isReadOnly}
+            isEditing={isEditingContact}
+          />
+        </div>
       );
     }
 
@@ -1298,6 +1327,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       return (
         <div
           className="github-widget"
+          onContextMenu={handleContentContextMenu}
           onClick={() =>
             repoUrl &&
             window.open(
@@ -1426,6 +1456,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       return (
         <div
           className="block-link-widget flex-1 flex flex-col min-h-0 overflow-hidden rounded bg-white/5 transition-colors cursor-pointer"
+          onContextMenu={handleContentContextMenu}
           onClick={() =>
             content &&
             window.open(
@@ -1664,20 +1695,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     );
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    if (
-      (blockType === "link" ||
-        blockType === "github" ||
-        blockType === "contact") &&
-      !isReadOnly
-    ) {
-      e.preventDefault();
-      if (blockType === "link") setIsEditingLink(true);
-      if (blockType === "github") setIsEditingGithub(true);
-      if (blockType === "contact") setIsEditingContact(true);
-    }
-  };
-
   return (
     <div
       ref={blockRef}
@@ -1688,7 +1705,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onContextMenu={handleContextMenu}
       style={
         {
           "--block-border-color": borderColor,

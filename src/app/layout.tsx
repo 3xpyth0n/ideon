@@ -8,9 +8,11 @@ import { Toaster } from "sonner";
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { loadDictionaries } from "@i18n/loader";
 
 import { runMigrations } from "@lib/migrations";
+import { isSystemInstalled } from "@lib/db";
 
 const APP_NAME = "Ideon";
 
@@ -67,6 +69,26 @@ export default async function RootLayout({
     cookieStore.get("sidebarCollapsed")?.value === "true";
   const headerList = await headers();
   const nonce = headerList.get("x-nonce") || undefined;
+  const pathname = headerList.get("x-pathname") || "/";
+
+  // System installation check (Server-side)
+  const isSetupComplete = await isSystemInstalled();
+
+  // Redirect logic based on installation status
+  // We skip API routes and internal Next.js paths
+  if (
+    !pathname.startsWith("/api") &&
+    !pathname.startsWith("/_next") &&
+    !pathname.includes(".")
+  ) {
+    if (!isSetupComplete && !pathname.startsWith("/setup")) {
+      redirect("/setup");
+    }
+    if (isSetupComplete && pathname.startsWith("/setup")) {
+      redirect("/home");
+    }
+  }
+
   const dictionaries = await loadDictionaries();
 
   return (
@@ -86,7 +108,7 @@ export default async function RootLayout({
       <body suppressHydrationWarning>
         <ThemeProvider>
           <I18nProvider dictionaries={dictionaries} initialLang={lang}>
-            <ConfigProvider>
+            <ConfigProvider isSetupComplete={isSetupComplete}>
               <UserProvider>
                 {children}
                 <Toaster

@@ -41,10 +41,6 @@ export function getAuthSecret(): string {
   return secret;
 }
 
-export function getInternalSecret(): string {
-  return deriveKey("internal-bypass");
-}
-
 export function getEncryptionKey(): string {
   return deriveKey("encryption-key");
 }

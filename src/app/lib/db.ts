@@ -247,6 +247,24 @@ export async function getAuthProviders(): Promise<
 }
 
 /**
+ * Checks if the system is installed by verifying if a superadmin exists.
+ */
+export async function isSystemInstalled(): Promise<boolean> {
+  try {
+    const db = getDb();
+    const row = await db
+      .selectFrom("users")
+      .select(({ fn }) => fn.count<number>("id").as("c"))
+      .where("role", "=", "superadmin")
+      .executeTakeFirst();
+    return Number(row?.c || 0) > 0;
+  } catch (error) {
+    logger.error({ error }, "Failed to check system installation status");
+    return false;
+  }
+}
+
+/**
  * Executes a callback within a transaction.
  * If the provided db instance is already a transaction, it reuses it.
  * Otherwise, it creates a new transaction.

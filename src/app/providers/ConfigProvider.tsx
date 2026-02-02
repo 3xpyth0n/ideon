@@ -16,26 +16,20 @@ const ConfigContext = createContext<ConfigContextType>({
   loading: true,
 });
 
-export function ConfigProvider({ children }: { children: React.ReactNode }) {
-  const [config, setConfig] = useState<AppConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+export function ConfigProvider({
+  children,
+  isSetupComplete,
+}: {
+  children: React.ReactNode;
+  isSetupComplete: boolean;
+}) {
+  const [config, setConfig] = useState<AppConfig | null>({ isSetupComplete });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    async function fetchConfig() {
-      try {
-        const res = await fetch("/api/config");
-        if (res.ok) {
-          const data = await res.json();
-          setConfig(data);
-        }
-      } catch (err) {
-        console.error("ConfigProvider: Failed to load config", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchConfig();
-  }, []);
+    setConfig({ isSetupComplete });
+    setLoading(false);
+  }, [isSetupComplete]);
 
   return (
     <ConfigContext.Provider value={{ config, loading }}>

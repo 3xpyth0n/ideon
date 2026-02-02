@@ -7,7 +7,6 @@ import Slack from "next-auth/providers/slack";
 import GitLab from "next-auth/providers/gitlab";
 import AzureAD from "next-auth/providers/azure-ad";
 import { getDb, getAuthProviders, getPool } from "@lib/db";
-import { getAuthSecret } from "@lib/crypto";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 import * as argon2 from "argon2";
@@ -48,31 +47,18 @@ const getRateLimiter = () => {
   });
 };
 
+import { authConfig } from "./auth.config";
+
 // Auth configuration
 export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
   const freshConfig = await getAuthProviders();
   const db = getDb();
 
   return {
+    ...authConfig,
     trustHost: true,
-    secret: getAuthSecret(),
+    secret: process.env.AUTH_SECRET || process.env.SECRET_KEY,
     adapter: KyselyAdapter(),
-    session: {
-      strategy: "jwt",
-    },
-    cookies: {
-      sessionToken: {
-        name: `authjs.session-token`,
-        options: {
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-          secure:
-            process.env.NODE_ENV === "production" &&
-            process.env.APP_URL?.startsWith("https"),
-        },
-      },
-    },
     providers: [
       Nodemailer({
         server: {

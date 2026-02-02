@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getAuthUser, AuthUser } from "@auth";
-import { getInternalSecret } from "./crypto";
 import { getDb, withAuthenticatedSession } from "./db";
 import { Selectable } from "kysely";
 import { projectsTable } from "./types/db";
@@ -40,15 +39,9 @@ export function authenticatedAction<T, B = unknown>(
       // Await params as they can be a Promise in Next.js 15+
       const resolvedParams = await params;
 
-      // Check for internal secret bypass first
-      const internalSecret = req.headers.get("x-internal-secret");
-      const envSecret = getInternalSecret();
-      const isInternal = internalSecret && internalSecret === envSecret;
+      const user = await getAuthUser();
 
-      // Only attempt to get user if not an internal bypass
-      const user = isInternal ? null : await getAuthUser();
-
-      if (!user && !isInternal && options?.requireUser !== false) {
+      if (!user && options?.requireUser !== false) {
         throw { status: 401, message: "Unauthorized" };
       }
 

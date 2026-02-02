@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-02-02
+
+### Security
+
+- Removed `INTERNAL_SECRET` environment variable and legacy key derivation logic to prevent potential authentication bypass.
+
+### Fixed
+
+- Fixed `MIDDLEWARE_INVOCATION_FAILED` error on Edge Runtime (Vercel) by removing Node.js-specific dependencies from middleware.
+- Resolved system setup check failures by moving verification logic from client-side to server-side layout.
+
 ## [0.2.0] - 2026-02-01
 
 ### Added

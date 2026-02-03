@@ -100,8 +100,8 @@ configure_env() {
     cp "$PROJECT_ROOT/env.example" "$env_file"
 
     # Generate secrets
-    SECRET_KEY=$(openssl rand -hex 32)
-    DB_PASS=$(openssl rand -base64 32)
+    SECRET_KEY="$(openssl rand -hex 32)"
+    DB_PASS="$(openssl rand -base64 32)"
 
     # Update .env file
     sed_inplace "s|^APP_PORT=.*|APP_PORT=$port|" "$env_file"

@@ -46,6 +46,8 @@ jobs:
         run: npm run test
 
       - name: Build application
+        env:
+          IS_NEXT_BUILD: "1"
         run: npm run build
 
       - name: Generate Dynamic Config

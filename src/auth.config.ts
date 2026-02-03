@@ -1,15 +1,13 @@
 import type { NextAuthConfig } from "next-auth";
 
-const secret =
-  process.env.AUTH_SECRET ||
-  process.env.SECRET_KEY ||
-  (process.env.NODE_ENV === "development"
-    ? "dev-secret-key-1234567890"
-    : undefined);
+const secret = process.env.SECRET_KEY || process.env.AUTH_SECRET;
 
-if (!secret && process.env.NODE_ENV !== "production") {
-  console.warn(
-    "⚠️ [Auth] No secret found in environment (AUTH_SECRET or SECRET_KEY). Session decryption will fail.",
+// During build time (Next.js static generation), it's acceptable to not have the secret.
+const isBuild = process.env.IS_NEXT_BUILD === "1";
+
+if (!secret && !isBuild) {
+  throw new Error(
+    "CRITICAL: SECRET_KEY or AUTH_SECRET environment variable must be set. Application cannot start without a valid secret.",
   );
 }
 

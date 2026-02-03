@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-02-03
+
+### Security
+
+- Fixed Server-Side Request Forgery (SSRF) vulnerability in the link metadata service by implementing strict URL validation and blocking private IP ranges.
+- Enforced mandatory `SECRET_KEY` or `AUTH_SECRET` environment variables. The application will now fail to start if no secret is configured, preventing insecure deployments.
+
+### Fixed
+
+- Fixed metadata fetching for bare domains (e.g., `google.com`) by automatically normalizing URLs to use HTTPS.
+
 ## [0.2.3] - 2026-02-03
 
 ### Fixed

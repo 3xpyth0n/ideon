@@ -346,6 +346,7 @@
     "formatCode": "Format Code",
     "copyCode": "Copy Code",
     "codeFormatted": "Code formatted successfully",
-    "formatError": "Failed to format code"
+    "formatError": "Failed to format code",
+    "rightClickToEdit": "Right-click to edit"
   }
 }

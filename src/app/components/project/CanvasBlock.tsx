@@ -1167,12 +1167,22 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
     if (blockType === "contact") {
       return (
-        <div className="h-full w-full" onContextMenu={handleContentContextMenu}>
+        <div
+          className="h-full w-full relative group"
+          onContextMenu={handleContentContextMenu}
+        >
           <ContactBlock
             {...props}
             isReadOnly={isReadOnly}
             isEditing={isEditingContact}
           />
+          {!isReadOnly && !isEditingContact && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <span className="canvas-context-badge">
+                {dict.common.rightClickToEdit}
+              </span>
+            </div>
+          )}
         </div>
       );
     }
@@ -1326,7 +1336,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
       return (
         <div
-          className="github-widget"
+          className="github-widget group relative"
           onContextMenu={handleContentContextMenu}
           onClick={() =>
             repoUrl &&
@@ -1336,6 +1346,13 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             )
           }
         >
+          {!isReadOnly && !isEditingGithub && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <span className="canvas-context-badge">
+                {dict.common.rightClickToEdit}
+              </span>
+            </div>
+          )}
           <div className="github-header">
             <ProviderIcon size={20} className="github-logo" />
             <div className="github-title-container">
@@ -1455,7 +1472,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
       return (
         <div
-          className="block-link-widget flex-1 flex flex-col min-h-0 overflow-hidden rounded bg-white/5 transition-colors cursor-pointer"
+          className="block-link-widget flex-1 flex flex-col min-h-0 overflow-hidden rounded bg-white/5 transition-colors cursor-pointer group relative"
           onContextMenu={handleContentContextMenu}
           onClick={() =>
             content &&
@@ -1465,6 +1482,13 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             )
           }
         >
+          {!isReadOnly && !isEditingLink && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <span className="canvas-context-badge">
+                {dict.common.rightClickToEdit}
+              </span>
+            </div>
+          )}
           {metadata?.image ? (
             <div className="block-link-preview w-full aspect-video overflow-hidden relative flex-shrink-0">
               <img

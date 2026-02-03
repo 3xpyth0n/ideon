@@ -78,6 +78,16 @@ Just state, structure, and history.
 
 ---
 
+## Demo Application
+
+You can try Ideon without any setup using our hosted demo:
+
+- **URL**: https://demo.theideon.com
+- **Username**: `ideon-demo`
+- **Password**: `ideon-demo`
+
+---
+
 ## Requirements
 
 - Docker

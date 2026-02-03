@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-02-03
+
+### Fixed
+
+- Fixed CI/CD workflow to prevent incomplete Docker builds on documentation changes (#18)
+- Quoted OpenSSL string generation to prevent escape character issues during setup
+
+### Added
+
+- Added a hover badge on git, link, and contact blocks to make editing more discoverable and intuitive
+
 ## [0.2.2] - 2026-02-02
 
 ### Fixed

@@ -23,6 +23,18 @@ jobs:
   validate:
     name: Build and Validate
     runs-on: ubuntu-latest
+    env:
+      IS_NEXT_BUILD: "1"
+      DB_USER: ci_user
+      DB_PASS: ci_pass
+      DB_NAME: ci_db
+      SECRET_KEY: ci_secret_key_fixed
+      NEXT_TELEMETRY_DISABLED: 1
+      APP_PORT: 60000
+      APP_URL: http://localhost:60000
+      COMPOSE_PROJECT_NAME: ideon_ci
+      ENV_FILE: .env.ci
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -30,7 +42,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
 
       - name: Install dependencies
@@ -46,57 +58,32 @@ jobs:
         run: npm run test
 
       - name: Build application
-        env:
-          IS_NEXT_BUILD: "1"
         run: npm run build
 
-      - name: Generate Dynamic Config
+      - name: Setup CI Environment
         run: |
-          RANDOM_PORT=$(shuf -i 10000-60000 -n 1)
-          echo "APP_PORT=$RANDOM_PORT" >> $GITHUB_ENV
+          # Ensure NODE_ENV is production for the runtime simulation
+          export NODE_ENV=production
 
-          # Generate unique suffix
-          SUFFIX="ci_$(openssl rand -hex 8)"
+          # Create env file from current environment (filtered to relevant vars)
+          printenv | grep -E '^(COMPOSE|APP|DB|SECRET|NODE|NEXT)_' > .env.ci
 
-          # Set project name
-          echo "COMPOSE_PROJECT_NAME=ideon_$SUFFIX" >> $GITHUB_ENV
-
-          # Export DB credentials to GITHUB_ENV for Docker Compose interpolation
-          echo "DB_USER=ci_user" >> $GITHUB_ENV
-          echo "DB_PASS=ci_pass" >> $GITHUB_ENV
-          echo "DB_NAME=ci_db" >> $GITHUB_ENV
-
-          # Create isolated .env for app container
-          cat <<EOF > .env.ci
-          COMPOSE_PROJECT_NAME=ideon_$SUFFIX
-          APP_PORT=$RANDOM_PORT
-          APP_URL=http://localhost:$RANDOM_PORT
-          DB_USER=ci_user
-          DB_PASS=ci_pass
-          DB_NAME=ci_db
-          SECRET_KEY=ci_secret
-          NODE_ENV=production
-          NEXT_TELEMETRY_DISABLED=1
-          EOF
-
-          # Create CI compose file with unique volumes to guarantee fresh install
-          # We replace volume names and remove fixed container names
-          sed -e "s/ideon-app-data/ideon-app-data-$SUFFIX/g" \
-              -e "s/ideon-db-data/ideon-db-data-$SUFFIX/g" \
+          # Configure Docker Compose for CI:
+          # 1. Switch from pre-built image to local build
+          # 2. Remove fixed container names to avoid conflicts
+          # 3. Suffix volumes with run ID to ensure fresh data for each run
+          sed -e "s|image: ghcr.io/3xpyth0n/ideon:latest|build: .|g" \
               -e '/container_name:/d' \
-              -e "s|image: ghcr.io/3xpyth0n/ideon:latest|build: .|g" \
+              -e "s/ideon-app-data/ideon-app-data-${{ github.run_id }}/g" \
+              -e "s/ideon-db-data/ideon-db-data-${{ github.run_id }}/g" \
               docker-compose.yml > docker-compose.ci.yml
 
       - name: Start Stack (Production Simulation)
-        env:
-          ENV_FILE: .env.ci
-        run: docker compose -f docker-compose.ci.yml --env-file .env.ci up -d --build --wait
+        run: docker compose -f docker-compose.ci.yml up -d --build --wait
 
       - name: Show logs on failure
         if: failure()
-        env:
-          ENV_FILE: .env.ci
-        run: docker compose -f docker-compose.ci.yml --env-file .env.ci logs
+        run: docker compose -f docker-compose.ci.yml logs
 
       - name: Teardown
         if: always()
@@ -112,7 +99,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run shellcheck
-        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
+        uses: ludeeus/action-shellcheck@2.0.0
         with:
           scandir: "."
           format: gcc
@@ -121,7 +108,6 @@ jobs:
 
   secret-scan:
     name: Secret scanning
-    if: github.actor != 'nektos/act'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -130,7 +116,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@94fdf01214232715294e27e66eab2a6dad568d21 # v3.92.5
+        uses: trufflesecurity/trufflehog@v3.92.5
         with:
           path: ./
           base: ${{ github.event_name == 'push' && github.event.before || (github.event_name == 'pull_request' && github.event.pull_request.base.sha || '') }}

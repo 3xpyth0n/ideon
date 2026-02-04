@@ -30,8 +30,10 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
       if (!data.yText) return;
       if (data.yText.toString() === text) return;
 
-      data.yText.delete(0, data.yText.length);
-      data.yText.insert(0, text);
+      data.yText.doc?.transact(() => {
+        data.yText?.delete(0, data.yText.length);
+        data.yText?.insert(0, text);
+      }, data.yText.doc.clientID);
     },
     [data.yText],
   );
@@ -237,64 +239,66 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
-        <div className="flex items-center gap-2">
-          <Video size={16} />
-          <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-            {dict.common.blockTypeVideo || "Video"}
-          </span>
+      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
+        <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
+          <div className="flex items-center gap-2">
+            <Video size={16} />
+            <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+              {dict.common.blockTypeVideo || "Video"}
+            </span>
+          </div>
+          {!isReadOnly && (
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="text-[10px] opacity-50 hover:opacity-100 uppercase font-bold tracking-wider"
+            >
+              {isEditing
+                ? dict.common.done || "Done"
+                : dict.common.edit || "Edit"}
+            </button>
+          )}
         </div>
-        {!isReadOnly && (
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="text-[10px] opacity-50 hover:opacity-100 uppercase font-bold tracking-wider"
-          >
-            {isEditing
-              ? dict.common.done || "Done"
-              : dict.common.edit || "Edit"}
-          </button>
-        )}
-      </div>
 
-      <div className="block-content flex-1 flex flex-col min-h-0 relative">
-        {isEditing ? (
-          <div className="flex items-center justify-center h-full w-full px-4">
-            <input
-              type="text"
-              value={url}
-              onChange={handleUrlChange}
-              placeholder="Paste YouTube or Loom URL..."
-              className="link-input nodrag"
-              readOnly={isReadOnly}
-              autoFocus
-            />
-          </div>
-        ) : embedUrl ? (
-          <div className="w-full h-full bg-black/20">
-            <iframe
-              src={embedUrl}
-              frameBorder="0"
-              allowFullScreen
-              className="w-full h-full pointer-events-auto"
-              style={{ pointerEvents: selected ? "none" : "auto" }}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full opacity-30 italic">
-            {dict.common.noVideo || "No valid video URL"}
-          </div>
-        )}
-      </div>
+        <div className="block-content flex-1 flex flex-col min-h-0 relative">
+          {isEditing ? (
+            <div className="flex items-center justify-center h-full w-full px-4">
+              <input
+                type="text"
+                value={url}
+                onChange={handleUrlChange}
+                placeholder="Paste YouTube or Loom URL..."
+                className="link-input nodrag"
+                readOnly={isReadOnly}
+                autoFocus
+              />
+            </div>
+          ) : embedUrl ? (
+            <div className="w-full h-full bg-black/20">
+              <iframe
+                src={embedUrl}
+                frameBorder="0"
+                allowFullScreen
+                className="w-full h-full pointer-events-auto"
+                style={{ pointerEvents: selected ? "none" : "auto" }}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full opacity-30 italic">
+              {dict.common.noVideo || "No valid video URL"}
+            </div>
+          )}
+        </div>
 
-      <div className="block-author-container mt-2 pt-3 px-4 pb-3">
-        <div className="flex items-center justify-between w-full text-tiny opacity-40">
-          <div className="block-timestamp">
-            {formatDate(data.updatedAt || "")}
-          </div>
-          <div className="block-author-info flex items-center gap-1.5">
-            {isLocked && <Lock size={10} className="block-lock-icon" />}
-            <div className="author-name">
-              {(data.authorName || dict.common.anonymous).toLowerCase()}
+        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+          <div className="flex items-center justify-between w-full text-tiny opacity-40">
+            <div className="block-timestamp">
+              {formatDate(data.updatedAt || "")}
+            </div>
+            <div className="block-author-info flex items-center gap-1.5">
+              {isLocked && <Lock size={10} className="block-lock-icon" />}
+              <div className="author-name">
+                {(data.authorName || dict.common.anonymous).toLowerCase()}
+              </div>
             </div>
           </div>
         </div>

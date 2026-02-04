@@ -82,7 +82,7 @@ export function getSecurityHeaders(nonce: string) {
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'unsafe-eval';
-    style-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline' fonts.googleapis.com;
     img-src 'self' data: blob: https:;
     font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;
     connect-src 'self' ws: wss:;

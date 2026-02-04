@@ -16,6 +16,8 @@
     "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères"
   },
   "common": {
+    "undo": "Annuler",
+    "redo": "Rétablir",
     "refresh": "Actualiser",
     "done": "Terminé",
     "add": "Ajouter",
@@ -269,6 +271,7 @@
     "usersSubtitle": "Gérez les collaborateurs de votre projet",
     "deleteBlockWarning": "Êtes-vous sûr de vouloir supprimer ce bloc ?",
     "deleteBlocksWarning": "Êtes-vous sûr de vouloir supprimer ces {count} blocs ?",
+    "dontAskAgain": "Ne plus demander",
     "locked": "Verrouillé",
     "unlocked": "Déverrouillé",
     "lock": "Verrouiller",

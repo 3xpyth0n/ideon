@@ -230,67 +230,71 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
-        <div className="flex items-center gap-2">
-          <Check size={16} />
-          <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-            {dict.common.blockTypeChecklist || "Checklist"}
-          </span>
-        </div>
-      </div>
-
-      <div className="block-content flex-1 flex flex-col min-h-0">
-        <div className="checklist-block-container nowheel nodrag h-full">
-          {items.map((item) => (
-            <div key={item.id} className="checklist-item">
-              <button
-                className={`checklist-checkbox ${
-                  item.checked ? "checked" : ""
-                }`}
-                onClick={() => !isReadOnly && handleToggleItem(item.id)}
-              >
-                {item.checked && <Check size={10} strokeWidth={4} />}
-              </button>
-              <input
-                type="text"
-                value={item.text}
-                onChange={(e) => handleChangeItemText(item.id, e.target.value)}
-                className={`checklist-input ${item.checked ? "checked" : ""}`}
-                placeholder={dict.common.taskPlaceholder || "Task..."}
-                readOnly={isReadOnly}
-              />
-              {!isReadOnly && (
-                <button
-                  className="checklist-delete-btn"
-                  onClick={() => handleDeleteItem(item.id)}
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
-            </div>
-          ))}
-
-          {!isReadOnly && (
-            <button
-              className="checklist-add-button"
-              onClick={handleAddItem}
-              title={dict.common.addTask || "Add task"}
-            >
-              <Plus size={16} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="block-author-container mt-2 pt-3 px-4 pb-3">
-        <div className="flex items-center justify-between w-full text-tiny opacity-40">
-          <div className="block-timestamp">
-            {formatDate(data.updatedAt || "")}
+      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
+        <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
+          <div className="flex items-center gap-2">
+            <Check size={16} />
+            <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+              {dict.common.blockTypeChecklist || "Checklist"}
+            </span>
           </div>
-          <div className="block-author-info flex items-center gap-1.5">
-            {isLocked && <Lock size={10} className="block-lock-icon" />}
-            <div className="author-name">
-              {(data.authorName || dict.common.anonymous).toLowerCase()}
+        </div>
+
+        <div className="block-content flex-1 flex flex-col min-h-0">
+          <div className="checklist-block-container nowheel nodrag h-full">
+            {items.map((item) => (
+              <div key={item.id} className="checklist-item">
+                <button
+                  className={`checklist-checkbox ${
+                    item.checked ? "checked" : ""
+                  }`}
+                  onClick={() => !isReadOnly && handleToggleItem(item.id)}
+                >
+                  {item.checked && <Check size={10} strokeWidth={4} />}
+                </button>
+                <input
+                  type="text"
+                  value={item.text}
+                  onChange={(e) =>
+                    handleChangeItemText(item.id, e.target.value)
+                  }
+                  className={`checklist-input ${item.checked ? "checked" : ""}`}
+                  placeholder={dict.common.taskPlaceholder || "Task..."}
+                  readOnly={isReadOnly}
+                />
+                {!isReadOnly && (
+                  <button
+                    className="checklist-delete-btn"
+                    onClick={() => handleDeleteItem(item.id)}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {!isReadOnly && (
+              <button
+                className="checklist-add-button"
+                onClick={handleAddItem}
+                title={dict.common.addTask || "Add task"}
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+          <div className="flex items-center justify-between w-full text-tiny opacity-40">
+            <div className="block-timestamp">
+              {formatDate(data.updatedAt || "")}
+            </div>
+            <div className="block-author-info flex items-center gap-1.5">
+              {isLocked && <Lock size={10} className="block-lock-icon" />}
+              <div className="author-name">
+                {(data.authorName || dict.common.anonymous).toLowerCase()}
+              </div>
             </div>
           </div>
         </div>

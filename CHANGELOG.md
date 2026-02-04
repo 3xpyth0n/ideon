@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-02-04
+
+### Added
+
+- Implemented **Undo/Redo** system with keyboard shortcuts (Ctrl+Z/Y) and UI controls.
+- Added "Don't ask again" option to the block deletion confirmation modal, allowing users to skip future confirmations.
+- Added `Tab` shortcut for creating child blocks. Pressing Tab on a selected block now creates a connected child block in the appropriate direction.
+
 ## [0.2.4] - 2026-02-03
 
 ### Security

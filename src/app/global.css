@@ -1186,7 +1186,6 @@ input:-webkit-autofill:active {
 /* Block File Thumbnail */
 .block-file-thumbnail {
   position: relative;
-  height: 3rem;
   border-radius: 0.25rem;
   overflow: hidden;
   cursor: zoom-in;
@@ -3030,7 +3029,7 @@ input:-webkit-autofill:active {
 .zoom-indicator {
   position: absolute;
   bottom: 38px;
-  right: 165px;
+  right: 235px;
   height: 36px;
   padding: 0 12px;
   display: flex;
@@ -5166,4 +5165,21 @@ input:-webkit-autofill:active {
 
 [data-theme="dark"] .canvas-context-badge {
   background-color: rgba(10, 10, 10, 0.85);
+}
+
+/* React Flow Controls Override */
+.react-flow__controls-button:disabled {
+  background-color: #e5e5e5 !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .react-flow__controls-button:disabled {
+  background-color: #262626 !important;
+}
+
+/* Fix for Lucide icons inside React Flow controls appearing filled */
+.react-flow__controls-button svg {
+  fill: none !important;
+  stroke: currentColor;
 }

@@ -7,9 +7,14 @@ import * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
 import { useProjectCanvasGraph } from "./useProjectCanvasGraph";
 import { useProjectCanvasRealtime } from "./useProjectCanvasRealtime";
+import { useUndoRedo } from "./useUndoRedo";
 import { useProjectData } from "./useProjectData";
 import { BlockData } from "../CanvasBlock";
-import { CORE_BLOCK_X, CORE_BLOCK_Y } from "../utils/constants";
+import {
+  CORE_BLOCK_X,
+  CORE_BLOCK_Y,
+  DEFAULT_BLOCK_WIDTH,
+} from "../utils/constants";
 import { generateStateHash } from "../utils/hash";
 
 const cleanBlockDataForSync = (
@@ -78,6 +83,14 @@ export const useProjectCanvasState = (
   const lastProjectId = useRef<string | null>(null);
   const lastSnapshotHash = useRef<string | null>(null);
 
+  const { undo, redo, canUndo, canRedo, clear } = useUndoRedo(
+    yBlocks?.doc || null,
+    yBlocks,
+    yLinks,
+    yContents,
+    isPreviewMode,
+  );
+
   useEffect(() => {
     if (!yBlocks || !yLinks || !yContents || isPreviewMode) return;
 
@@ -85,7 +98,8 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Node<BlockData>>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local) return;
+      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+        return;
 
       const changes: Array<{
         key: string;
@@ -152,7 +166,8 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Edge>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local) return;
+      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+        return;
 
       const changes: Array<{
         key: string;
@@ -196,7 +211,8 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Y.Text>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local) return;
+      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+        return;
 
       const keys = Array.from(event.keysChanged);
 
@@ -347,7 +363,7 @@ export const useProjectCanvasState = (
                 yBlocks.set(block.id, cleanBlockToSync as Node<BlockData>);
               }
             });
-          });
+          }, yBlocks.doc.clientID);
         }
 
         return nextBlocks;
@@ -365,7 +381,7 @@ export const useProjectCanvasState = (
           yBlocks.delete(id);
           yContents.delete(id);
         });
-      });
+      }, yBlocks.doc.clientID);
 
       setBlocksState((prev) => prev.filter((n) => !ids.includes(n.id)));
     },
@@ -393,7 +409,7 @@ export const useProjectCanvasState = (
                 yLinks.set(link.id, linkToSync as Edge);
               }
             });
-          });
+          }, yLinks.doc.clientID);
         }
 
         return nextLinks;
@@ -410,7 +426,7 @@ export const useProjectCanvasState = (
         ids.forEach((id) => {
           yLinks.delete(id);
         });
-      });
+      }, yLinks.doc.clientID);
 
       setLinksState((prev) => prev.filter((l) => !ids.includes(l.id)));
     },
@@ -459,9 +475,11 @@ export const useProjectCanvasState = (
           const { selected, ...linkToSync } = link;
           yLinks.set(link.id, linkToSync as Edge);
         });
-      });
+      }, yBlocks.doc.clientID);
+
+      clear();
     },
-    [yBlocks, yLinks, yContents],
+    [yBlocks, yLinks, yContents, clear],
   );
 
   const [isLoading, setIsLoading] = useState(false);
@@ -936,11 +954,29 @@ export const useProjectCanvasState = (
         ["INPUT", "TEXTAREA"].includes(target.tagName) ||
         target.isContentEditable;
 
+      // Undo/Redo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !isEditing) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "y" && !isEditing) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
       if ((e.key === "Delete" || e.key === "Backspace") && !isEditing) {
         const selectedBlocks = blocks.filter((n) => n.selected);
         const selectedLinks = links.filter((l) => l.selected);
 
         if (selectedBlocks.length > 0) {
+          // Check for "Don't ask again" preference
+          const skipConfirm =
+            typeof window !== "undefined" &&
+            localStorage.getItem("ideon_skip_delete_confirm") === "true";
+
           const cannotDelete = selectedBlocks.some((n) => {
             const isOwner =
               currentUser?.id && n.data?.ownerId === currentUser.id;
@@ -953,11 +989,40 @@ export const useProjectCanvasState = (
             toast.error(dict.common.cannotDeleteBlock);
             return;
           }
-          setBlocksToDelete(selectedBlocks.map((n) => n.id));
+
+          if (skipConfirm) {
+            graph.handleDeleteBlock(selectedBlocks.map((n) => n.id));
+          } else {
+            setBlocksToDelete(selectedBlocks.map((n) => n.id));
+          }
         } else if (selectedLinks.length > 0) {
           graph.onLinksChange(
             selectedLinks.map((l) => ({ id: l.id, type: "remove" })),
           );
+        }
+      }
+
+      // Handle Tab to create child block
+      if (e.key === "Tab" && !isEditing) {
+        e.preventDefault();
+        const selectedBlocks = blocks.filter((n) => n.selected);
+
+        if (selectedBlocks.length === 1) {
+          const parentBlock = selectedBlocks[0];
+          // Determine direction based on parent's position relative to Core Block
+          const isRightSide = parentBlock.position.x > CORE_BLOCK_X;
+
+          // Calculate offset based on parent width to avoid overlap
+          const parentWidth = parentBlock.width || DEFAULT_BLOCK_WIDTH;
+          const gap = 150;
+          const offset = parentWidth + gap;
+
+          const newPos = {
+            x: parentBlock.position.x + (isRightSide ? offset : -offset),
+            y: parentBlock.position.y,
+          };
+
+          graph.handleCreateBlock(newPos, parentBlock.id, "text");
         }
       }
     },
@@ -1090,5 +1155,9 @@ export const useProjectCanvasState = (
     shareCursor,
     setShareCursor,
     projectOwnerId,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   };
 };

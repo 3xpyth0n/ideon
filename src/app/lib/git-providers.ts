@@ -74,12 +74,18 @@ async function fetchGithub(
     const repoData = await repoRes.json();
     const releaseData = releaseRes.ok ? await releaseRes.json() : null;
     const commitData = commitRes.ok ? await commitRes.json() : [];
+    const pullsData = pullsRes.ok ? await pullsRes.json() : [];
+    const contributorsData = contributorsRes.ok
+      ? await contributorsRes.json()
+      : [];
 
-    const getCountFromHeader = (res: Response) => {
+    const getCount = (res: Response, data: unknown[]) => {
       const link = res.headers.get("link");
-      if (!link) return res.ok ? 1 : 0;
-      const match = link.match(/&page=(\d+)>; rel="last"/);
-      return match ? parseInt(match[1]) : res.ok ? 1 : 0;
+      if (link) {
+        const match = link.match(/&page=(\d+)>; rel="last"/);
+        if (match) return parseInt(match[1]);
+      }
+      return Array.isArray(data) ? data.length : 0;
     };
 
     return {
@@ -88,8 +94,8 @@ async function fetchGithub(
         release: releaseData?.tag_name || "N/A",
         lastCommit: commitData[0]?.commit?.author?.date || "N/A",
         openIssues: repoData.open_issues_count,
-        openPulls: getCountFromHeader(pullsRes),
-        contributors: getCountFromHeader(contributorsRes),
+        openPulls: getCount(pullsRes, pullsData),
+        contributors: getCount(contributorsRes, contributorsData),
         provider: "github",
         repoUrl: url,
       },

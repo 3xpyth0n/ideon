@@ -128,43 +128,47 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           selected ? "selected" : ""
         } flex flex-col !bg-transparent !p-0`}
       >
-        <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
-          <div className="flex items-center gap-2">
-            <FileText size={16} />
-            <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-              {dict.common.blockTypeText || "Note"}
-            </span>
+        <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
+          <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
+            <div className="flex items-center gap-2">
+              <FileText size={16} />
+              <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+                {dict.common.blockTypeText || "Note"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 opacity-50">
+              <input
+                value={title}
+                onChange={handleTitleChange}
+                className="block-title text-[10px] font-bold tracking-widest text-right focus:opacity-100 transition-opacity bg-transparent outline-none placeholder:opacity-50"
+                placeholder={dict.common.title || "..."}
+                disabled={data.isPreviewMode}
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2 opacity-50">
-            <input
-              value={title}
-              onChange={handleTitleChange}
-              className="block-title text-[10px] font-bold tracking-widest text-right focus:opacity-100 transition-opacity bg-transparent outline-none placeholder:opacity-50"
-              placeholder={dict.common.title || "..."}
-              disabled={data.isPreviewMode}
+
+          <div className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag cursor-text">
+            <MarkdownEditor
+              content={data.content}
+              onChange={handleContentChange}
+              isReadOnly={data.isPreviewMode}
+              placeholder=""
+              className="text-base prosemirror-full-height"
             />
           </div>
-        </div>
 
-        <div className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag cursor-text">
-          <MarkdownEditor
-            content={data.content}
-            onChange={handleContentChange}
-            isReadOnly={data.isPreviewMode}
-            placeholder=""
-            className="text-base prosemirror-full-height"
-          />
-        </div>
-
-        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
-          <div className="flex items-center justify-between w-full text-tiny opacity-40">
-            <div className="block-timestamp">
-              {formatDate(data.updatedAt || "")}
-            </div>
-            <div className="block-author-info flex items-center gap-1.5">
-              {data.isLocked && <Lock size={10} className="block-lock-icon" />}
-              <div className="author-name">
-                {(data.authorName || dict.common.anonymous).toLowerCase()}
+          <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+            <div className="flex items-center justify-between w-full text-tiny opacity-40">
+              <div className="block-timestamp">
+                {formatDate(data.updatedAt || "")}
+              </div>
+              <div className="block-author-info flex items-center gap-1.5">
+                {data.isLocked && (
+                  <Lock size={10} className="block-lock-icon" />
+                )}
+                <div className="author-name">
+                  {(data.authorName || dict.common.anonymous).toLowerCase()}
+                </div>
               </div>
             </div>
           </div>

@@ -19,8 +19,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setTheme(initialTheme);
     }
 
-    // Une fois que React est hydraté, on peut autoriser les transitions
-    // mais on attend un petit peu pour être sûr que le premier rendu est fini
     setTimeout(() => {
       root.removeAttribute("data-no-transition");
     }, 100);
@@ -35,8 +33,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-theme", theme);
-    // On utilise setProperty pour éviter les violations CSP style-src 'self'
-    // car modifier .style.colorScheme directement est parfois considéré comme du style inline
     root.style.setProperty("color-scheme", theme);
   }, [theme]);
 

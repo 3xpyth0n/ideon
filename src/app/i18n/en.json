@@ -16,6 +16,8 @@
     "passwordTooShort": "Password must be at least 8 characters"
   },
   "common": {
+    "undo": "Undo",
+    "redo": "Redo",
     "refresh": "Refresh",
     "done": "Done",
     "add": "Add",
@@ -270,6 +272,7 @@
     "usersSubtitle": "Manage your project's collaborative workforce",
     "deleteBlockWarning": "Are you sure you want to delete this block?",
     "deleteBlocksWarning": "Are you sure you want to delete these {count} blocks?",
+    "dontAskAgain": "Don't ask again",
     "locked": "Locked",
     "unlocked": "Unlocked",
     "lock": "Lock",

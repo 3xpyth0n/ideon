@@ -13,7 +13,6 @@ import {
   useViewport,
   Node,
   Edge,
-  type OnConnectEnd,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -59,6 +58,8 @@ import {
   User,
   Video,
   ListTodo,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { ImportExportModal } from "./ImportExportModal";
 import { DecisionHistory } from "./DecisionHistory";
@@ -296,6 +297,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     shareCursor,
     setShareCursor,
     projectOwnerId,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useProjectCanvasState(
     initialProjectId,
     currentUser,
@@ -306,12 +311,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     isLocalSynced,
   );
 
-  const onConnectEnd: OnConnectEnd = useCallback((_event, _connectionState) => {
-    // Logic for creating a node when dropping a connection in the void is disabled
-    // Connection only works when dropped on an existing handle
-  }, []);
-
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   const commands = useMemo<Command[]>(() => {
     if (isPreviewMode) return [];
@@ -517,7 +518,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
           onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
           onConnect={isPreviewMode ? undefined : onConnect}
-          onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
           isValidConnection={isValidConnection}
           onPointerMove={onPointerMove}
           onPointerLeave={onPointerLeave}
@@ -707,6 +707,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             showFitView={false}
             position="bottom-right"
           >
+            <ControlButton
+              onClick={undo}
+              disabled={!canUndo || isPreviewMode}
+              title={dict.common.undo || "Undo"}
+            >
+              <Undo2 />
+            </ControlButton>
+            <ControlButton
+              onClick={redo}
+              disabled={!canRedo || isPreviewMode}
+              title={dict.common.redo || "Redo"}
+            >
+              <Redo2 />
+            </ControlButton>
             <ControlButton onClick={handleZoomIn} title={dict.common.zoomIn}>
               <Plus />
             </ControlButton>
@@ -857,7 +871,17 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                           <button
                             onClick={() => {
                               if (contextMenuBlock) {
-                                setBlockToDelete(contextMenuBlock.id);
+                                const skipConfirm =
+                                  typeof window !== "undefined" &&
+                                  localStorage.getItem(
+                                    "ideon_skip_delete_confirm",
+                                  ) === "true";
+
+                                if (skipConfirm) {
+                                  _handleDeleteBlock(contextMenuBlock.id);
+                                } else {
+                                  setBlockToDelete(contextMenuBlock.id);
+                                }
                                 setContextMenu(null);
                               }
                             }}
@@ -938,6 +962,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 )
               : dict.common.deleteBlockWarning}
           </p>
+
+          <div className="flex items-center gap-2 mt-4 mb-2">
+            <input
+              type="checkbox"
+              id="dont-ask-again"
+              checked={dontAskAgain}
+              onChange={(e) => setDontAskAgain(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="dont-ask-again" className="text-sm opacity-80">
+              {dict.common.dontAskAgain}
+            </label>
+          </div>
+
           <div className="flex justify-end gap-3">
             <Button
               onClick={() => {
@@ -948,7 +986,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             >
               {dict.common.cancel}
             </Button>
-            <Button onClick={confirmDelete} className="btn-danger">
+            <Button
+              onClick={() => {
+                if (dontAskAgain) {
+                  localStorage.setItem("ideon_skip_delete_confirm", "true");
+                }
+                confirmDelete();
+              }}
+              className="btn-danger"
+            >
               {dict.common.delete}
             </Button>
           </div>

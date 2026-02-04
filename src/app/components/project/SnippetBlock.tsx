@@ -77,8 +77,10 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       if (!data.yText) return;
       if (data.yText.toString() === text) return;
 
-      data.yText.delete(0, data.yText.length);
-      data.yText.insert(0, text);
+      data.yText.doc?.transact(() => {
+        data.yText?.delete(0, data.yText.length);
+        data.yText?.insert(0, text);
+      }, data.yText.doc.clientID);
     },
     [data.yText],
   );
@@ -328,77 +330,79 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
-        <div className="flex items-center gap-2">
-          <Code size={16} />
-          <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-            {dict.common.blockTypeSnippet || "Snippet"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleCopy}
-            className="snippet-format-button"
-            title={dict.common.copyCode || "Copy Code"}
-          >
-            <Copy size={14} />
-          </button>
-          {language !== "text" && language !== "python" && (
+      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
+        <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
+          <div className="flex items-center gap-2">
+            <Code size={16} />
+            <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+              {dict.common.blockTypeSnippet || "Snippet"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleFormat}
+              onClick={handleCopy}
               className="snippet-format-button"
-              title={dict.common.formatCode || "Format code"}
+              title={dict.common.copyCode || "Copy Code"}
             >
-              <Brush size={14} />
+              <Copy size={14} />
             </button>
-          )}
-          <Select
-            value={language}
-            options={LANGUAGE_OPTIONS}
-            onChange={handleLanguageChange}
-            align="right"
-          />
-        </div>
-      </div>
-
-      <div className="block-content flex-1 flex flex-col min-h-0 relative overflow-hidden bg-transparent nodrag">
-        <div
-          className="snippet-block-container"
-          onMouseDown={(e) => {
-            // Prevent focus loss when clicking the scrollbar
-            // The scrollbar is part of the container, so e.target === e.currentTarget
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-            }
-          }}
-        >
-          <div className="snippet-line-numbers">
-            {lines.map((i) => (
-              <div key={i}>{i}</div>
-            ))}
+            {language !== "text" && language !== "python" && (
+              <button
+                onClick={handleFormat}
+                className="snippet-format-button"
+                title={dict.common.formatCode || "Format code"}
+              >
+                <Brush size={14} />
+              </button>
+            )}
+            <Select
+              value={language}
+              options={LANGUAGE_OPTIONS}
+              onChange={handleLanguageChange}
+              align="right"
+            />
           </div>
-          <Editor
-            value={code}
-            onValueChange={handleCodeChange}
-            highlight={(code) =>
-              highlight(code, languages[language] || languages.text, language)
-            }
-            padding={16}
-            className="font-mono text-sm snippet-block-editor"
-            disabled={isReadOnly}
-          />
         </div>
-      </div>
 
-      <div className="block-author-container mt-2 pt-3 px-4 pb-3">
-        <div className="flex items-center justify-between w-full text-tiny opacity-40">
-          <div className="block-timestamp">
-            {formatDate(data.updatedAt || "")}
+        <div className="block-content flex-1 flex flex-col min-h-0 relative overflow-hidden bg-transparent nodrag">
+          <div
+            className="snippet-block-container"
+            onMouseDown={(e) => {
+              // Prevent focus loss when clicking the scrollbar
+              // The scrollbar is part of the container, so e.target === e.currentTarget
+              if (e.target === e.currentTarget) {
+                e.preventDefault();
+              }
+            }}
+          >
+            <div className="snippet-line-numbers">
+              {lines.map((i) => (
+                <div key={i}>{i}</div>
+              ))}
+            </div>
+            <Editor
+              value={code}
+              onValueChange={handleCodeChange}
+              highlight={(code) =>
+                highlight(code, languages[language] || languages.text, language)
+              }
+              padding={16}
+              className="font-mono text-sm snippet-block-editor"
+              disabled={isReadOnly}
+            />
           </div>
-          <div className="block-author-info flex items-center gap-1.5">
-            {isLocked && <Lock size={10} className="block-lock-icon" />}
-            <div className="author-name">
-              {(data.authorName || dict.common.anonymous).toLowerCase()}
+        </div>
+
+        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+          <div className="flex items-center justify-between w-full text-tiny opacity-40">
+            <div className="block-timestamp">
+              {formatDate(data.updatedAt || "")}
+            </div>
+            <div className="block-author-info flex items-center gap-1.5">
+              {isLocked && <Lock size={10} className="block-lock-icon" />}
+              <div className="author-name">
+                {(data.authorName || dict.common.anonymous).toLowerCase()}
+              </div>
             </div>
           </div>
         </div>

@@ -136,11 +136,11 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                 {dict.common.blockTypeText || "Note"}
               </span>
             </div>
-            <div className="flex items-center gap-2 opacity-50">
+            <div className="flex items-center gap-2">
               <input
                 value={title}
                 onChange={handleTitleChange}
-                className="block-title text-[10px] font-bold tracking-widest text-right focus:opacity-100 transition-opacity bg-transparent outline-none placeholder:opacity-50"
+                className="block-title"
                 placeholder={dict.common.title || "..."}
                 disabled={data.isPreviewMode}
               />

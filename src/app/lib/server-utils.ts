@@ -130,12 +130,16 @@ export function authenticatedAction<T, B = unknown>(
       }
 
       const status = (error as { status?: number })?.status || 500;
-      const message =
+      const isExplicitError =
+        typeof (error as { status?: number })?.status === "number";
+
+      let message =
         (error as { message?: string })?.message ||
         (status === 500 ? "Internal Server Error" : "Error");
 
-      if (status === 500) {
+      if (status === 500 && !isExplicitError) {
         console.error("[API Error]:", error);
+        message = "Internal Server Error";
       }
 
       return NextResponse.json({ error: message }, { status });

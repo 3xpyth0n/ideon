@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
+import { memo, useState, useCallback, useMemo, useEffect } from "react";
 import { Check, Plus, Trash2, Lock } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import {
@@ -28,6 +28,13 @@ interface ChecklistItem {
 const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
+  const [title, setTitle] = useState(data.title || "");
+
+  useEffect(() => {
+    if (data.title !== undefined && data.title !== title) {
+      setTitle(data.title);
+    }
+  }, [data.title]);
 
   const items: ChecklistItem[] = useMemo(() => {
     if (!data.metadata) return [];
@@ -56,6 +63,28 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      const now = new Date().toISOString();
+      const editor =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.common.anonymous;
+
+      data.onContentChange?.(
+        id,
+        data.content,
+        now,
+        editor,
+        data.metadata,
+        newTitle,
+      );
+    },
+    [id, data, currentUser, dict],
+  );
+
   const updateItems = useCallback(
     (newItems: ChecklistItem[]) => {
       const now = new Date().toISOString();
@@ -75,10 +104,10 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         now,
         editor,
         JSON.stringify({ ...meta, items: newItems }),
-        data.title,
+        title,
       );
     },
-    [id, data, currentUser, dict],
+    [id, data, currentUser, dict, title],
   );
 
   const handleAddItem = useCallback(() => {
@@ -237,6 +266,15 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
               {dict.common.blockTypeChecklist || "Checklist"}
             </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={title}
+              onChange={handleTitleChange}
+              className="block-title"
+              placeholder="..."
+              readOnly={isReadOnly}
+            />
           </div>
         </div>
 

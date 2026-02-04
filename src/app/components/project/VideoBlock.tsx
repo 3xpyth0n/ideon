@@ -23,6 +23,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
   const [url, setUrl] = useState(data.content || "");
+  const [title, setTitle] = useState(data.title || "");
   const [isEditing, setIsEditing] = useState(false);
 
   const syncToYjs = useCallback(
@@ -44,6 +45,13 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
       setUrl(data.content);
     }
   }, [data.content]);
+
+  // Sync title
+  useEffect(() => {
+    if (data.title !== undefined && data.title !== title) {
+      setTitle(data.title);
+    }
+  }, [data.title]);
 
   useEffect(() => {
     const yText = data.yText;
@@ -81,6 +89,28 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      const now = new Date().toISOString();
+      const editor =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.common.anonymous;
+
+      data.onContentChange?.(
+        id,
+        data.content,
+        now,
+        editor,
+        data.metadata,
+        newTitle,
+      );
+    },
+    [id, data, currentUser, dict],
+  );
+
   const handleUrlChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newUrl = e.target.value;
@@ -93,16 +123,9 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         currentUser?.username ||
         dict.common.anonymous;
 
-      data.onContentChange?.(
-        id,
-        newUrl,
-        now,
-        editor,
-        data.metadata,
-        data.title,
-      );
+      data.onContentChange?.(id, newUrl, now, editor, data.metadata, title);
     },
-    [id, data, currentUser, dict, syncToYjs],
+    [id, data, currentUser, dict, syncToYjs, title],
   );
 
   const formatDate = (isoString: string) => {
@@ -247,16 +270,25 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
               {dict.common.blockTypeVideo || "Video"}
             </span>
           </div>
-          {!isReadOnly && (
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="text-[10px] opacity-50 hover:opacity-100 uppercase font-bold tracking-wider"
-            >
-              {isEditing
-                ? dict.common.done || "Done"
-                : dict.common.edit || "Edit"}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <input
+              value={title}
+              onChange={handleTitleChange}
+              className="block-title"
+              placeholder="..."
+              readOnly={isReadOnly}
+            />
+            {!isReadOnly && (
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className="text-[10px] opacity-50 hover:opacity-100 uppercase font-bold tracking-wider"
+              >
+                {isEditing
+                  ? dict.common.done || "Done"
+                  : dict.common.edit || "Edit"}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="block-content flex-1 flex flex-col min-h-0 relative">

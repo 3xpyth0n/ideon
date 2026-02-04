@@ -23,22 +23,30 @@ export const POST = projectAction(async (req, { project }) => {
     `project-${project.id}`,
   );
 
-  if (!existsSync(projectStorageDir)) {
-    await mkdir(projectStorageDir, { recursive: true });
+  try {
+    if (!existsSync(projectStorageDir)) {
+      await mkdir(projectStorageDir, { recursive: true });
+    }
+
+    // Security: Sanitize filename to prevent directory traversal
+    const safeFileName = sanitizeFileName(file.name);
+    const filePath = join(projectStorageDir, safeFileName);
+
+    await writeFile(filePath, buffer);
+
+    return {
+      success: true,
+      name: safeFileName,
+      size: file.size,
+      type: file.type,
+    };
+  } catch (error) {
+    console.error("File upload error:", error);
+    throw {
+      status: 500,
+      message: "File upload error.",
+    };
   }
-
-  // Security: Sanitize filename to prevent directory traversal
-  const safeFileName = sanitizeFileName(file.name);
-  const filePath = join(projectStorageDir, safeFileName);
-
-  await writeFile(filePath, buffer);
-
-  return {
-    success: true,
-    name: safeFileName,
-    size: file.size,
-    type: file.type,
-  };
 });
 
 export const GET = projectAction(async (req, { project }) => {

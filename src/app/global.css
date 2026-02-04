@@ -4793,6 +4793,7 @@ input:-webkit-autofill:active {
   background: transparent;
   font-size: 18px;
   font-weight: 700;
+  text-align: right;
   outline: none;
   border: none;
   border-bottom: 1px solid #f3f4f6;

@@ -1810,11 +1810,11 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             )}
 
             {blockType !== "file" && (
-              <div className="flex items-center gap-2 opacity-50">
+              <div className="flex items-center gap-2">
                 <input
                   value={title}
                   onChange={handleTitleChange}
-                  className="block-title text-[10px] font-bold tracking-widest text-right focus:opacity-100 transition-opacity"
+                  className="block-title"
                   placeholder="..."
                   readOnly={isReadOnly}
                 />

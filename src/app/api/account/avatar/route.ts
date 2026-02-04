@@ -45,7 +45,19 @@ export const POST = authenticatedAction(
     const uploadDir = join(process.cwd(), "storage", "avatars");
     const filePath = join(uploadDir, fileName);
 
-    await writeFile(filePath, buffer);
+    try {
+      // Ensure directory exists
+      const { mkdir } = await import("fs/promises");
+      await mkdir(uploadDir, { recursive: true });
+
+      await writeFile(filePath, buffer);
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      throw {
+        status: 500,
+        message: "Avatar upload error.",
+      };
+    }
 
     const avatarUrl = `/api/avatar/${fileName}`;
 

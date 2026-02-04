@@ -68,6 +68,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const isBottomSourceConnected = isHandleConnected("bottom");
 
   const [code, setCode] = useState(data.content || "");
+  const [title, setTitle] = useState(data.title || "");
   const [language, setLanguage] = useState(
     data.metadata ? JSON.parse(data.metadata).language : "javascript",
   );
@@ -91,6 +92,13 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       setCode(data.content);
     }
   }, [data.content]);
+
+  // Sync title
+  useEffect(() => {
+    if (data.title !== undefined && data.title !== title) {
+      setTitle(data.title);
+    }
+  }, [data.title]);
 
   useEffect(() => {
     const yText = data.yText;
@@ -135,6 +143,28 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      const now = new Date().toISOString();
+      const editor =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.common.anonymous;
+
+      data.onContentChange?.(
+        id,
+        data.content,
+        now,
+        editor,
+        data.metadata,
+        newTitle,
+      );
+    },
+    [id, data, currentUser, dict],
+  );
+
   const handleCodeChange = useCallback(
     (newCode: string) => {
       setCode(newCode);
@@ -151,10 +181,10 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         now,
         editor,
         JSON.stringify({ language }),
-        data.title,
+        title,
       );
     },
-    [id, data, currentUser, dict, language, syncToYjs],
+    [id, data, currentUser, dict, language, syncToYjs, title],
   );
 
   const handleLanguageChange = useCallback(
@@ -172,10 +202,10 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         now,
         editor,
         JSON.stringify({ language: newLang }),
-        data.title,
+        title,
       );
     },
-    [id, data, currentUser, dict, code],
+    [id, data, currentUser, dict, code, title],
   );
 
   const formatDate = (isoString: string) => {
@@ -339,6 +369,13 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              value={title}
+              onChange={handleTitleChange}
+              className="block-title mr-2"
+              placeholder="..."
+              readOnly={isReadOnly}
+            />
             <button
               onClick={handleCopy}
               className="snippet-format-button"

@@ -8,7 +8,7 @@ export const useUndoRedo = (
   yBlocks: Y.Map<Node<BlockData>> | null,
   yLinks: Y.Map<Edge> | null,
   yContents: Y.Map<Y.Text> | null,
-  isPreviewMode: boolean = false
+  isPreviewMode: boolean = false,
 ) => {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -24,13 +24,10 @@ export const useUndoRedo = (
     }
 
     // Initialize UndoManager tracking blocks, links and contents
-    const manager = new Y.UndoManager(
-      [yBlocks, yLinks, yContents],
-      {
-        trackedOrigins: new Set([yDoc.clientID]),
-        captureTimeout: 500,
-      }
-    );
+    const manager = new Y.UndoManager([yBlocks, yLinks, yContents], {
+      trackedOrigins: new Set([yDoc.clientID]),
+      captureTimeout: 500,
+    });
 
     setUndoManager(manager);
 

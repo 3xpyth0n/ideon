@@ -112,3 +112,42 @@ export function getSecurityHeaders(nonce: string) {
 
   return headers;
 }
+
+export function safeJson<T>(input: string | null | undefined, fallback: T): T {
+  if (!input) return fallback;
+  try {
+    return JSON.parse(input) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+const RECENT_PROJECTS_KEY = "ideon_recent_projects";
+const MAX_RECENT_PROJECTS = 5;
+
+export function getRecentProjects(): string[] {
+  if (typeof window === "undefined") return [];
+  const stored = localStorage.getItem(RECENT_PROJECTS_KEY);
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addRecentProject(projectId: string) {
+  if (typeof window === "undefined") return;
+  const current = getRecentProjects();
+  const updated = [
+    projectId,
+    ...current.filter((id) => id !== projectId),
+  ].slice(0, MAX_RECENT_PROJECTS);
+  localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(updated));
+}
+
+export function clearRecentProjects() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(RECENT_PROJECTS_KEY);
+}

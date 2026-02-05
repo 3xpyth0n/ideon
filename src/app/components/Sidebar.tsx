@@ -10,6 +10,11 @@ import {
   Settings,
   ChevronDown,
   House,
+  User,
+  Clock,
+  Star,
+  Trash2,
+  Share2,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
@@ -18,6 +23,7 @@ import { useTheme } from "@providers/ThemeProvider";
 import { useState, useEffect } from "react";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
+import { useSearchParams } from "next/navigation";
 
 export function Sidebar() {
   const { dict } = useI18n();
@@ -25,6 +31,8 @@ export function Sidebar() {
   const { user } = useUser();
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentView = searchParams.get("view");
 
   // Removed redundant fetchUser useEffect, using UserProvider instead
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -32,6 +40,7 @@ export function Sidebar() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const [managementExpanded, setManagementExpanded] = useState(false);
+  const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [currentHash, setCurrentHash] = useState("");
 
   useEffect(() => {
@@ -114,16 +123,91 @@ export function Sidebar() {
 
         <nav className="nav-section pointer-events-none">
           <div className="nav-group pointer-events-none">
-            <Link
-              href="/home"
-              className={`nav-item pointer-events-auto ${
-                pathname === "/home" ? "active" : ""
-              }`}
-              title={isCollapsed ? dict.common.home : ""}
-            >
-              <House size={20} />
-              {!isCollapsed && <span>{dict.common.home}</span>}
-            </Link>
+            <div className="nav-group-collapsible pointer-events-auto">
+              <div
+                className={`nav-item flex items-stretch p-0 overflow-hidden ${
+                  pathname === "/home" && !currentView ? "active" : ""
+                }`}
+              >
+                <Link
+                  href="/home"
+                  className="flex-1 flex items-center gap-3 px-3 py-2 text-inherit no-underline"
+                  title={isCollapsed ? dict.common.home : ""}
+                >
+                  <House size={20} />
+                  {!isCollapsed && <span>{dict.common.home}</span>}
+                </Link>
+                {!isCollapsed && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setProjectsExpanded(!projectsExpanded);
+                    }}
+                    className={`px-2 flex items-center justify-center hover:bg-white/5 transition-colors ${
+                      projectsExpanded ? "expanded" : ""
+                    }`}
+                  >
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${
+                        projectsExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                )}
+              </div>
+              {!isCollapsed && projectsExpanded && (
+                <div className="nav-sub-group">
+                  <Link
+                    href="/home?view=my-projects"
+                    className={`nav-sub-item ${
+                      currentView === "my-projects" ? "active" : ""
+                    }`}
+                  >
+                    <User size={16} />
+                    <span>{dict.common.myProjects || "My Projects"}</span>
+                  </Link>
+                  <Link
+                    href="/home?view=shared"
+                    className={`nav-sub-item ${
+                      currentView === "shared" ? "active" : ""
+                    }`}
+                  >
+                    <Share2 size={16} />
+                    <span>{dict.common.sharedWithMe || "Shared"}</span>
+                  </Link>
+                  <Link
+                    href="/home?view=recent"
+                    className={`nav-sub-item ${
+                      currentView === "recent" ? "active" : ""
+                    }`}
+                  >
+                    <Clock size={16} />
+                    <span>{dict.common.recent || "Recent"}</span>
+                  </Link>
+                  <Link
+                    href="/home?view=starred"
+                    className={`nav-sub-item ${
+                      currentView === "starred" ? "active" : ""
+                    }`}
+                  >
+                    <Star size={16} />
+                    <span>{dict.common.starred || "Starred"}</span>
+                  </Link>
+                  <Link
+                    href="/home?view=trash"
+                    className={`nav-sub-item ${
+                      currentView === "trash" ? "active" : ""
+                    }`}
+                  >
+                    <Trash2 size={16} />
+                    <span>{dict.common.trash || "Trash"}</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {(user?.role === "superadmin" || user?.role === "admin") && (
               <Link
                 href="/users"

@@ -348,6 +348,24 @@
     "copyCode": "Copia Codice",
     "codeFormatted": "Codice formattato con successo",
     "formatError": "Impossibile formattare il codice",
-    "rightClickToEdit": "Clic destro per modificare"
+    "rightClickToEdit": "Clic destro per modificare",
+    "myProjects": "I Miei Progetti",
+    "projects": "Progetti",
+    "sharedWithMe": "Condivisi con Me",
+    "recent": "Progetti Recenti",
+    "starred": "Progetti Preferiti",
+    "trash": "Cestino",
+    "emptyTrash": "Il cestino è vuoto",
+    "deletePermanently": "Elimina definitivamente",
+    "restoreProject": "Ripristina progetto",
+    "projectRestored": "Progetto ripristinato",
+    "projectStarred": "Progetto aggiunto ai preferiti",
+    "projectUnstarred": "Progetto rimosso dai preferiti",
+    "emptyMyProjects": "Non hai ancora creato nessun progetto",
+    "emptyShared": "Nessun progetto condiviso con te",
+    "emptyRecent": "Non hai aperto nessun progetto di recente",
+    "emptyStarred": "Non hai ancora preferiti",
+    "permanentDeleteDescription": "Questa azione non può essere annullata.",
+    "restore": "Ripristina"
   }
 }

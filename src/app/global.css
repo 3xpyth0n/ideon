@@ -5184,3 +5184,30 @@ input:-webkit-autofill:active {
   fill: none !important;
   stroke: currentColor;
 }
+
+/* Utilities */
+.hover\:underline:hover {
+  text-decoration: underline;
+}
+
+.text-inherit {
+  color: inherit !important;
+}
+
+.no-underline {
+  text-decoration: none !important;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}

@@ -14,6 +14,9 @@ export type Project = Selectable<projectsTable>;
 export type NewProject = Insertable<projectsTable>;
 export type ProjectUpdate = Updateable<projectsTable>;
 
+export type ProjectStar = Selectable<projectStarsTable>;
+export type NewProjectStar = Insertable<projectStarsTable>;
+
 export type Block = Selectable<blocksTable>;
 export type NewBlock = Insertable<blocksTable>;
 export type BlockUpdate = Updateable<blocksTable>;
@@ -46,6 +49,18 @@ export interface projectsTable {
   currentStateId: string | null; // Tip of the temporal history
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
   updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
+  deletedAt: ColumnType<Date, Date | string | undefined, Date | string> | null;
+  lastOpenedAt: ColumnType<
+    Date,
+    Date | string | undefined,
+    Date | string
+  > | null;
+}
+
+export interface projectStarsTable {
+  projectId: string;
+  userId: string;
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface temporalStatesTable {
@@ -191,6 +206,7 @@ export interface rateLimitsTable {
 export interface database {
   users: usersTable;
   projects: projectsTable;
+  projectStars: projectStarsTable;
   projectCollaborators: projectCollaboratorsTable;
   blocks: blocksTable;
   links: linksTable;

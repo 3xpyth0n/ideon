@@ -13,18 +13,30 @@ const createProjectSchema = z.object({
 });
 
 export const GET = authenticatedAction(
-  async (_req, { user }) => {
+  async (req, { user }) => {
     if (!user) throw new Error("Unauthorized");
     const db = getDb();
+    const url = new URL(req.url);
+    const view = url.searchParams.get("view") || "all";
+    const ids = url.searchParams.get("ids")?.split(",").filter(Boolean);
 
-    const projects = await db
+    let query = db
       .selectFrom("projects")
+      .leftJoin("projectStars", (join) =>
+        join
+          .onRef("projectStars.projectId", "=", "projects.id")
+          .on("projectStars.userId", "=", user.id),
+      )
       .select([
         "projects.id as id",
         "projects.name as name",
         "projects.description as description",
         "projects.updatedAt as updatedAt",
         "projects.ownerId as ownerId",
+        "projects.deletedAt as deletedAt",
+        sql<number>`CASE WHEN "projectStars"."projectId" IS NOT NULL THEN 1 ELSE 0 END`.as(
+          "isStarred",
+        ),
         (eb) =>
           eb
             .selectFrom("projectCollaborators")
@@ -32,8 +44,47 @@ export const GET = authenticatedAction(
             .whereRef("projectCollaborators.projectId", "=", "projects.id")
             .whereRef("projectCollaborators.userId", "!=", "projects.ownerId")
             .as("collaboratorCount"),
-      ])
-      .where((eb) =>
+      ]);
+
+    // Apply View Filters
+    if (view === "trash") {
+      // Trash view: Only show soft-deleted projects owned by the user
+      query = query
+        .where("projects.deletedAt", "is not", null)
+        .where("projects.ownerId", "=", user.id);
+    } else {
+      // Default views: Exclude soft-deleted projects
+      query = query.where("projects.deletedAt", "is", null);
+
+      if (view === "my-projects") {
+        query = query.where("projects.ownerId", "=", user.id);
+      } else if (view === "shared") {
+        query = query
+          .where("projects.ownerId", "!=", user.id)
+          .where((eb) =>
+            eb.exists(
+              eb
+                .selectFrom("projectCollaborators")
+                .select("projectCollaborators.userId")
+                .whereRef("projectId", "=", "projects.id")
+                .where("userId", "=", user.id),
+            ),
+          );
+      } else if (view === "starred") {
+        query = query.where("projectStars.projectId", "is not", null);
+      } else if (view === "recent" && ids && ids.length > 0) {
+        query = query.where("projects.id", "in", ids);
+      } else if (view === "recent" && (!ids || ids.length === 0)) {
+        // If recent view but no IDs provided, return empty list
+        return [];
+      }
+    }
+
+    // Access Control: User must be owner or collaborator
+    // This applies to all views except when specific ownership is already enforced (like trash/my-projects)
+    // but enforcing it globally is safer.
+    if (view !== "my-projects" && view !== "trash") {
+      query = query.where((eb) =>
         eb.or([
           eb("projects.ownerId", "=", user.id),
           eb(
@@ -45,7 +96,10 @@ export const GET = authenticatedAction(
               .where("userId", "=", user.id),
           ),
         ]),
-      )
+      );
+    }
+
+    const projects = await query
       .orderBy("projects.updatedAt", "desc")
       .execute();
 

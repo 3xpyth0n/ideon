@@ -6,6 +6,8 @@ import * as jacksonMigration from "../db/migrations/02JacksonStore";
 import * as ssoRegistrationMigration from "../db/migrations/03AddSsoRegistration";
 import * as fixProjectRlsMigration from "../db/migrations/04FixProjectRls";
 import * as fixRlsRecursionMigration from "../db/migrations/05FixRlsRecursion";
+import * as addProjectOrganizationMigration from "../db/migrations/06AddProjectOrganization";
+import * as addLastOpenedAtMigration from "../db/migrations/07AddLastOpenedAt";
 
 class StaticMigrationProvider implements MigrationProvider {
   async getMigrations(): Promise<Record<string, Migration>> {
@@ -15,6 +17,8 @@ class StaticMigrationProvider implements MigrationProvider {
       "03AddSsoRegistration": ssoRegistrationMigration,
       "04FixProjectRls": fixProjectRlsMigration,
       "05FixRlsRecursion": fixRlsRecursionMigration,
+      "06AddProjectOrganization": addProjectOrganizationMigration,
+      "07AddLastOpenedAt": addLastOpenedAtMigration,
     };
   }
 }

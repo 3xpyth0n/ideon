@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-02-05
+
+### Added
+
+- **New Dashboard Navigation**: Introduced a unified "Home" section with collapsible views for streamlined access.
+- **New Project Views**:
+  - **My Projects**: Displays only the projects owned by you.
+  - **Shared with me**: Dedicated view for projects shared with you as a collaborator.
+  - **Starred**: Mark important projects as favorites for instant access.
+  - **Recent**: Automatically tracks and lists your most recently opened projects.
+  - **Trash**: Safe deletion workflow with options to restore or permanently delete projects.
+
 ## [0.2.5] - 2026-02-04
 
 ### Added

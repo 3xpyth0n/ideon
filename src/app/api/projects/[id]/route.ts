@@ -7,49 +7,150 @@ export const GET = projectAction(async (_req, { project }) => {
   return { project };
 });
 
-export const PATCH = projectAction(async (_req, { project, body }) => {
-  const { name, description } = body as { name: string; description?: string };
-
-  if (!name) {
-    throw { status: 400, message: "Name is required" };
-  }
+export const PATCH = projectAction(async (_req, { project, user, body }) => {
+  const { name, description, isStarred, deletedAt } = body as {
+    name?: string;
+    description?: string;
+    isStarred?: boolean;
+    deletedAt?: string | null;
+  };
 
   const db = getDb();
 
-  await db
-    .updateTable("projects")
-    .set({
-      name,
-      description: description || null,
-      updatedAt: new Date().toISOString(),
-    })
-    .where("id", "=", project.id)
-    .execute();
+  // Handle Star Toggle (User specific)
+  if (typeof isStarred === "boolean") {
+    if (isStarred) {
+      await db
+        .insertInto("projectStars")
+        .values({
+          projectId: project.id,
+          userId: user.id,
+        })
+        .onConflict((oc) => oc.doNothing())
+        .execute();
+    } else {
+      await db
+        .deleteFrom("projectStars")
+        .where("projectId", "=", project.id)
+        .where("userId", "=", user.id)
+        .execute();
+    }
+  }
 
-  const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
-  await logSecurityEvent("projectUpdate", "success", {
-    userId: project.ownerId,
-    ip,
-  });
+  // Handle Restore (deletedAt: null)
+  if (deletedAt === null) {
+    // Only owner can restore
+    if (project.ownerId !== user.id) {
+      throw { status: 403, message: "Only owner can restore project" };
+    }
+    await db
+      .updateTable("projects")
+      .set({ deletedAt: null })
+      .where("id", "=", project.id)
+      .execute();
+  }
+
+  // Handle Name/Description Update
+  if (name || description !== undefined) {
+    if (name && name.length < 1) {
+      throw { status: 400, message: "Name is required" };
+    }
+    await db
+      .updateTable("projects")
+      .set({
+        ...(name ? { name } : {}),
+        ...(description !== undefined
+          ? { description: description || null }
+          : {}),
+        updatedAt: new Date().toISOString(),
+      })
+      .where("id", "=", project.id)
+      .execute();
+
+    const headersList = await headers();
+    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    await logSecurityEvent("projectUpdate", "success", {
+      userId: user.id,
+      ip,
+    });
+  }
 
   return { success: true };
 });
 
-export const DELETE = projectAction(async (_req, { project, user }) => {
+export const DELETE = projectAction(async (req, { project, user }) => {
   const db = getDb();
+  const url = new URL(req.url);
+  const permanent = url.searchParams.get("permanent") === "true";
 
-  // Use a transaction to ensure clean deletion
-  await runTransaction(db, async (trx) => {
-    await trx.deleteFrom("projects").where("id", "=", project.id).execute();
-  });
+  // Only owner can delete
+  if (project.ownerId !== user.id) {
+    throw { status: 403, message: "Only owner can delete project" };
+  }
 
-  const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
-  await logSecurityEvent("projectDelete", "success", {
-    userId: user.id,
-    ip,
-  });
+  if (permanent) {
+    // Hard Delete
+    await runTransaction(db, async (trx) => {
+
+      // Delete related data manually to be safe (or if no cascade)
+      await trx
+        .deleteFrom("projectCollaborators")
+        .where("projectId", "=", project.id)
+        .execute();
+      await trx
+        .deleteFrom("projectStars")
+        .where("projectId", "=", project.id)
+        .execute();
+
+      await trx
+        .deleteFrom("blockSnapshots")
+        .where(
+          "blockId",
+          "in",
+          trx
+            .selectFrom("blocks")
+            .select("id")
+            .where("projectId", "=", project.id),
+        )
+        .execute();
+
+      await trx
+        .deleteFrom("blocks")
+        .where("projectId", "=", project.id)
+        .execute();
+      await trx
+        .deleteFrom("links")
+        .where("projectId", "=", project.id)
+        .execute();
+      await trx
+        .deleteFrom("temporalStates")
+        .where("projectId", "=", project.id)
+        .execute();
+
+      await trx.deleteFrom("projects").where("id", "=", project.id).execute();
+    });
+
+    const headersList = await headers();
+    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    await logSecurityEvent("projectPermanentDelete", "success", {
+      userId: user.id,
+      ip,
+    });
+  } else {
+    // Soft Delete
+    await db
+      .updateTable("projects")
+      .set({ deletedAt: new Date().toISOString() })
+      .where("id", "=", project.id)
+      .execute();
+
+    const headersList = await headers();
+    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    await logSecurityEvent("projectSoftDelete", "success", {
+      userId: user.id,
+      ip,
+    });
+  }
 
   return { success: true };
 });

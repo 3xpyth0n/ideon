@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { addRecentProject } from "@lib/utils";
 
 const ProjectCanvas = dynamic(
   () => import("@components/project/ProjectCanvas"),
@@ -23,6 +24,12 @@ export default function ProjectPage() {
   useEffect(() => {
     if (!id || id === "undefined") {
       router.push("/home");
+    } else {
+      addRecentProject(id);
+      // Track server-side last opened
+      fetch(`/api/projects/${id}/open`, { method: "POST" }).catch(
+        console.error,
+      );
     }
   }, [id, router]);
 

@@ -49,6 +49,20 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     }
   }, [data.metadata]);
 
+  const { total, completed, percentage, status } = useMemo(() => {
+    const total = items.length;
+    const completed = items.filter((item) => item.checked).length;
+    const percentage = total > 0 ? (completed / total) * 100 : 0;
+
+    let status = "empty";
+    if (total === 0) status = "empty";
+    else if (percentage === 100) status = "complete";
+    else if (percentage > 0) status = "in-progress";
+    else status = "not-started";
+
+    return { total, completed, percentage, status };
+  }, [items]);
+
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
@@ -243,10 +257,20 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     <div
       className={`block-card block-type-checklist ${
         selected ? "selected" : ""
-      } ${isBeingMoved ? "is-moving" : ""} ${
-        isReadOnly ? "read-only" : ""
+      } ${isBeingMoved ? "is-moving" : ""} ${isReadOnly ? "read-only" : ""} ${
+        total > 0 ? "has-progress" : ""
       } flex flex-col !p-0`}
-      style={{ "--block-border-color": borderColor } as React.CSSProperties}
+      style={
+        {
+          "--block-border-color": borderColor,
+          "--checklist-accent-color":
+            percentage === 100
+              ? "var(--accent)"
+              : percentage > 0
+                ? "var(--warning)"
+                : "var(--border)",
+        } as React.CSSProperties
+      }
     >
       <NodeResizer
         minWidth={250}
@@ -266,6 +290,17 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
               {dict.common.blockTypeChecklist || "Checklist"}
             </span>
+            {total > 0 && (
+              <div
+                className={`checklist-progress-badge checklist-progress-${status}`}
+              >
+                {status === "complete"
+                  ? dict.common.checklistComplete
+                  : dict.common.checklistProgress
+                      .replace("{completed}", completed.toString())
+                      .replace("{total}", total.toString())}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -277,6 +312,19 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             />
           </div>
         </div>
+
+        {total > 0 && (
+          <div className="checklist-progress-bar">
+            <div
+              className="checklist-progress-fill"
+              style={{
+                width: `${percentage}%`,
+                backgroundColor:
+                  percentage === 100 ? "var(--accent)" : "var(--warning)",
+              }}
+            />
+          </div>
+        )}
 
         <div className="block-content flex-1 flex flex-col min-h-0">
           <div className="checklist-block-container nowheel nodrag h-full">

@@ -88,3 +88,64 @@
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* Progress Indicator Styles */
+.checklist-progress-badge {
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.checklist-progress-complete {
+  background: rgba(0, 66, 37, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.checklist-progress-in-progress {
+  background: rgba(242, 201, 76, 0.1);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.checklist-progress-empty,
+.checklist-progress-not-started {
+  opacity: 0.3;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.block-type-checklist.has-progress {
+  transition: border-color 0.2s ease;
+}
+
+.block-type-checklist.has-progress:hover,
+.block-type-checklist.has-progress.selected {
+  border-color: var(--checklist-accent-color, var(--border));
+}
+
+.checklist-progress-bar {
+  height: 2px;
+  width: 100%;
+  background: var(--bg-muted);
+  overflow: hidden;
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.block-type-checklist.has-progress .checklist-progress-bar {
+  opacity: 0.5;
+}
+
+.checklist-progress-fill {
+  height: 100%;
+  transition:
+    width 0.3s ease,
+    background-color 0.3s ease;
+}

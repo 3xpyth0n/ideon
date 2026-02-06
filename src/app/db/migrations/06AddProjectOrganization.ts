@@ -48,7 +48,9 @@ export async function down(db: Kysely<database>): Promise<void> {
     .catch(() => false);
 
   if (isPostgres) {
-    await sql`DROP POLICY IF EXISTS project_stars_isolation ON "projectStars"`.execute(db);
+    await sql`DROP POLICY IF EXISTS project_stars_isolation ON "projectStars"`.execute(
+      db,
+    );
   }
 
   await db.schema.dropTable("projectStars").execute();

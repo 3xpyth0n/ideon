@@ -91,7 +91,6 @@ export const DELETE = projectAction(async (req, { project, user }) => {
   if (permanent) {
     // Hard Delete
     await runTransaction(db, async (trx) => {
-
       // Delete related data manually to be safe (or if no cascade)
       await trx
         .deleteFrom("projectCollaborators")

@@ -366,6 +366,9 @@
     "emptyRecent": "Non hai aperto nessun progetto di recente",
     "emptyStarred": "Non hai ancora preferiti",
     "permanentDeleteDescription": "Questa azione non può essere annullata.",
-    "restore": "Ripristina"
+    "restore": "Ripristina",
+    "checklistProgress": "{completed} / {total}",
+    "checklistEmpty": "Nessuna attività",
+    "checklistComplete": "Completato"
   }
 }

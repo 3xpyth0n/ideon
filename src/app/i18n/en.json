@@ -367,6 +367,9 @@
     "copyCode": "Copy Code",
     "codeFormatted": "Code formatted successfully",
     "formatError": "Failed to format code",
-    "rightClickToEdit": "Right-click to edit"
+    "rightClickToEdit": "Right-click to edit",
+    "checklistProgress": "{completed} / {total}",
+    "checklistEmpty": "No tasks",
+    "checklistComplete": "Complete"
   }
 }

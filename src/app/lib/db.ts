@@ -3,8 +3,8 @@ import {
   SqliteDialect,
   PostgresDialect,
   Selectable,
-  sql,
   Transaction,
+  sql,
 } from "kysely";
 import DatabaseDriver from "better-sqlite3";
 import pg from "pg";
@@ -15,8 +15,6 @@ import { logger } from "./logger";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export type TemporalState = Selectable<temporalStatesTable>;
-
-const dbStore = new AsyncLocalStorage<Kysely<database>>();
 
 pg.types.setTypeParser(20, (val) => parseInt(val, 10));
 pg.types.setTypeParser(1700, (val) => parseFloat(val));
@@ -45,13 +43,16 @@ if (!globalWithDb._dbState) {
 
 const state = globalWithDb._dbState!;
 
+// AsyncLocalStorage to share transaction context for RLS
+const dbStore = new AsyncLocalStorage<Kysely<database>>();
+
 function getStorageDir() {
   const storageDir = path.resolve(process.cwd(), "storage");
   if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
   return storageDir;
 }
 
-function getPostgresConfig() {
+export function getPostgresConfig() {
   const { DB_HOST, DB_NAME, DB_USER, DB_PASS, DB_PORT, DB_SSL } = process.env;
   return {
     host: DB_HOST,
@@ -66,7 +67,14 @@ function getPostgresConfig() {
   };
 }
 
-function shouldUseSqlite() {
+export function getSqlitePath() {
+  const storageDir = getStorageDir();
+  return process.env.SQLITE_PATH
+    ? path.resolve(process.cwd(), process.env.SQLITE_PATH)
+    : path.resolve(storageDir, "dev.db");
+}
+
+export function shouldUseSqlite() {
   const { NODE_ENV } = process.env;
   return NODE_ENV === "development";
 }
@@ -139,12 +147,7 @@ export function getPool(): pg.Pool | null {
 function getSqlite(): DatabaseDriver.Database {
   if (state.sqliteInstance) return state.sqliteInstance;
 
-  const storageDir = getStorageDir();
-  // Allow overriding the database path via environment variable
-  const dbPath = process.env.SQLITE_PATH
-    ? path.resolve(process.cwd(), process.env.SQLITE_PATH)
-    : path.resolve(storageDir, "dev.db");
-
+  const dbPath = getSqlitePath();
   logger.info(`Using SQLite database at: ${dbPath}`);
 
   state.sqliteInstance = new DatabaseDriver(dbPath);
@@ -213,18 +216,13 @@ export async function withAuthenticatedSession<T>(
 }
 
 export function getGlobalDb(): Kysely<database> {
-  ensureInitialized();
-  if (!state.dbInstance) {
-    throw new Error("Database failed to initialize");
-  }
-  return state.dbInstance;
+  return getDb();
 }
 
 export function getDb(): Kysely<database> {
-  const tx = dbStore.getStore();
-  if (tx) {
-    return tx as unknown as Kysely<database>;
-  }
+  // Check if we are inside a transaction context (RLS)
+  const storeDb = dbStore.getStore();
+  if (storeDb) return storeDb;
 
   if (state.dbInstance) return state.dbInstance;
 

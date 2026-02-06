@@ -71,13 +71,7 @@ import {
   useProjectCanvasState,
   UserPresence,
 } from "./hooks/useProjectCanvasState";
-import {
-  CORE_BLOCK_WIDTH as _CORE_BLOCK_WIDTH,
-  CORE_BLOCK_HEIGHT as _CORE_BLOCK_HEIGHT,
-  DEFAULT_BLOCK_WIDTH as _DEFAULT_BLOCK_WIDTH,
-  DEFAULT_BLOCK_HEIGHT as _DEFAULT_BLOCK_HEIGHT,
-  DEFAULT_VIEWPORT,
-} from "./utils/constants";
+import { DEFAULT_VIEWPORT } from "./utils/constants";
 
 const FIXED_EXTENT: [[number, number], [number, number]] = [
   [-5000, -4000],

@@ -2,6 +2,10 @@
   "__label": "English",
   "title": "Ideon",
   "subtitle": "Visual Project OS",
+  "system": {
+    "updateAvailable": "Update available: {version}",
+    "upToDate": "App is up to date"
+  },
   "auth": {
     "failedToFetchSettings": "Failed to fetch settings",
     "forgotPassword": "Forgot Password?",

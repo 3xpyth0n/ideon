@@ -24,8 +24,13 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { useSearchParams } from "next/navigation";
+import { VersionBadge } from "./VersionBadge";
 
-export function Sidebar() {
+interface SidebarProps {
+  currentVersion?: string;
+}
+
+export function Sidebar({ currentVersion = "0.0.0" }: SidebarProps) {
   const { dict } = useI18n();
   const { theme, setTheme } = useTheme();
   const { user } = useUser();
@@ -116,7 +121,10 @@ export function Sidebar() {
               />
             </div>
             {!isCollapsed && (
-              <span className="sidebar-logo-text">{dict.title}</span>
+              <>
+                <span className="sidebar-logo-text">{dict.title}</span>
+                <VersionBadge currentVersion={currentVersion} />
+              </>
             )}
           </div>
         </div>

@@ -1,6 +1,10 @@
 {
   "__label": "Italiano",
   "subtitle": "Visual Project OS",
+  "system": {
+    "updateAvailable": "Aggiornamento disponibile: {version}",
+    "upToDate": "L'applicazione è aggiornata"
+  },
   "auth": {
     "failedToFetchSettings": "Impossibile recuperare le impostazioni",
     "forgotPassword": "Password dimenticata?",

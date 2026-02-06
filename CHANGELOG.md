@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2026-02-06
+
+### Added
+
+- **Checklist Progress**: Added visual progress tracking to checklist blocks with dynamic color indicators to easily monitor task completion.
+- **Application Version Tracking**: Added a new system directly in the sidebar to monitor your current application version and instantly check for available updates.
+
 ## [0.2.6] - 2026-02-05
 
 ### Added

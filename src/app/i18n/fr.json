@@ -2,6 +2,10 @@
   "__label": "Français",
   "title": "Ideon",
   "subtitle": "Visual Project OS",
+  "system": {
+    "updateAvailable": "Mise à jour disponible : {version}",
+    "upToDate": "L'application est à jour"
+  },
   "auth": {
     "failedToFetchSettings": "Échec de la récupération des paramètres",
     "forgotPassword": "Mot de passe oublié ?",

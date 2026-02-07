@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2026-02-07
+
+### Added
+
+- Miscellaneous bug fixes and performance improvements.
+
 ## [0.2.7] - 2026-02-06
 
 ### Added

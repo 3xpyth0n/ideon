@@ -458,6 +458,18 @@ export const useProjectCanvasGraph = ({
         return;
       }
 
+      // Ensure the block is selected when right-clicked
+      setBlocks((prevBlocks) => {
+        const isAlreadySelected = prevBlocks.find((b) => b.id === block.id)
+          ?.selected;
+        if (isAlreadySelected) return prevBlocks;
+
+        return prevBlocks.map((b) => ({
+          ...b,
+          selected: b.id === block.id,
+        }));
+      });
+
       setContextMenu({
         id: block.id,
         type: "block",

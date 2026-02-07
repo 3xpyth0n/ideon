@@ -20,6 +20,8 @@
     "passwordTooShort": "Password must be at least 8 characters"
   },
   "common": {
+    "onboardingHint": "Paste a GitHub URL, Figma link, or Image to start",
+    "coreBlockPlaceholder": "Paste a link or drop an image to get started...",
     "myProjects": "My Projects",
     "sharedWithMe": "Shared with Me",
     "recent": "Recent Projects",

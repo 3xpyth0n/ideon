@@ -1,6 +1,8 @@
 import { Sidebar } from "@components/Sidebar";
 import { promises as fs } from "fs";
 import path from "path";
+import { cookies } from "next/headers";
+import { getAuthUser } from "@auth";
 
 async function getVersion() {
   try {
@@ -20,6 +22,10 @@ export default async function MainLayout({
   children: React.ReactNode;
 }): Promise<React.ReactNode> {
   const version = await getVersion();
+  const cookieStore = await cookies();
+  const sidebarCollapsed =
+    cookieStore.get("sidebarCollapsed")?.value === "true";
+  const user = await getAuthUser();
 
   return (
     <div className="app-container">
@@ -37,7 +43,11 @@ export default async function MainLayout({
           aria-hidden="true"
         />
       </div>
-      <Sidebar currentVersion={version} />
+      <Sidebar
+        currentVersion={version}
+        initialCollapsed={sidebarCollapsed}
+        userRole={user?.role}
+      />
       <main className="main-island">
         {/* Debug: Layout is rendering */}
         {children}

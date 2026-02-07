@@ -19,6 +19,8 @@
     "passwordTooShort": "La password deve essere lunga almeno 8 caratteri"
   },
   "common": {
+    "onboardingHint": "Incolla un URL GitHub, un link Figma o un'Immagine per iniziare",
+    "coreBlockPlaceholder": "Incolla un link o trascina un'immagine per iniziare...",
     "undo": "Annulla",
     "redo": "Ripristina",
     "refresh": "Aggiorna",

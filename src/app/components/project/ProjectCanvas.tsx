@@ -60,6 +60,7 @@ import {
   ListTodo,
   Undo2,
   Redo2,
+  Figma,
 } from "lucide-react";
 import { ImportExportModal } from "./ImportExportModal";
 import { DecisionHistory } from "./DecisionHistory";
@@ -295,6 +296,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     redo,
     canUndo,
     canRedo,
+    hasSeenOnboarding,
   } = useProjectCanvasState(
     initialProjectId,
     currentUser,
@@ -468,6 +470,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     return blocks.find((n: Node<BlockData>) => n.id === contextMenu.id);
   }, [contextMenu?.id, blocks]);
 
+  const isCoreOnly = useMemo(() => {
+    return blocks.length === 1 && blocks[0].type === "core";
+  }, [blocks]);
+
   return (
     <>
       <svg
@@ -566,6 +572,28 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             color="var(--text-muted)"
             className="opacity-20"
           />
+          {!hasSeenOnboarding && isCoreOnly && !isPreviewMode && (
+            <Panel
+              position="bottom-center"
+              className="onboarding-panel"
+              role="status"
+              aria-label="Magic Paste Onboarding Hint"
+            >
+              <div className="onboarding-content">
+                <div className="onboarding-icons">
+                  <Github size={20} />
+                  <div className="separator" />
+                  <Figma size={20} />
+                  <div className="separator" />
+                  <FileIcon size={20} />
+                </div>
+                <div className="onboarding-text">
+                  <h3>Magic Paste</h3>
+                  <p>{dict.common.onboardingHint}</p>
+                </div>
+              </div>
+            </Panel>
+          )}
           <Panel position="top-left" className="!m-6" style={{ zIndex: 2000 }}>
             {!isPreviewMode && (
               <div className="flex items-center gap-3">
@@ -587,7 +615,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
           <Panel
             position="top-right"
-            className="flex items-center gap-4 !m-6"
+            className="flex items-center gap-2 !m-6"
             style={{ zIndex: 2000 }}
           >
             {isPreviewMode && (
@@ -626,38 +654,40 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             )}
 
             <div className="flex items-center gap-2">
-              <div className="flex gap-2 mr-2">
-                {activeUsers.map((u) => (
-                  <div
-                    key={u.id}
-                    className="user-presence-item relative flex-shrink-0"
-                  >
+              {!isPreviewMode && (
+                <div className="flex gap-2 mr-2">
+                  {activeUsers.map((u) => (
                     <div
-                      className="user-presence-avatar"
-                      style={{ borderColor: u.color || "#000" }}
+                      key={u.id}
+                      className="user-presence-item relative flex-shrink-0"
                     >
-                      <img
-                        src={getAvatarUrl(u.avatarUrl, u.username)}
-                        alt={u.displayName || u.username}
-                        className="user-presence-avatar-img"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
+                      <div
+                        className="user-presence-avatar"
+                        style={{ borderColor: u.color || "#000" }}
+                      >
+                        <img
+                          src={getAvatarUrl(u.avatarUrl, u.username)}
+                          alt={u.displayName || u.username}
+                          className="user-presence-avatar-img"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
 
-                    <div
-                      className="user-presence-tooltip"
-                      style={
-                        {
-                          "--user-color": u.color || "#000",
-                        } as React.CSSProperties
-                      }
-                    >
-                      {u.displayName || u.username}
-                      <div className="user-presence-tooltip-arrow" />
+                      <div
+                        className="user-presence-tooltip"
+                        style={
+                          {
+                            "--user-color": u.color || "#000",
+                          } as React.CSSProperties
+                        }
+                      >
+                        {u.displayName || u.username}
+                        <div className="user-presence-tooltip-arrow" />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Button
                   onClick={() => setIsInviteModalOpen(true)}

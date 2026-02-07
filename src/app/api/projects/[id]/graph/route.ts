@@ -56,7 +56,9 @@ export const GET = projectAction(async (_req, { project, user }) => {
         height: 480,
         ownerId: project.ownerId,
         content: project.name,
-        metadata: JSON.stringify({ description: project.description || "" }),
+        metadata: JSON.stringify({
+          description: project.description || "",
+        }),
         data: JSON.stringify({ blockType: "core", isLocked: false }),
         createdAt: nowString,
         updatedAt: nowString,
@@ -75,7 +77,9 @@ export const GET = projectAction(async (_req, { project, user }) => {
       selected: 0,
       content: project.name,
       data: JSON.stringify({ blockType: "core", isLocked: false }),
-      metadata: JSON.stringify({ description: project.description || "" }),
+      metadata: JSON.stringify({
+        description: project.description || "",
+      }),
       ownerId: project.ownerId,
       updatedAt: now,
       authorName: user.username || "System", // Fallback

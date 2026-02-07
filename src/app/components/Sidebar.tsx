@@ -28,9 +28,15 @@ import { VersionBadge } from "./VersionBadge";
 
 interface SidebarProps {
   currentVersion?: string;
+  initialCollapsed?: boolean;
+  userRole?: string;
 }
 
-export function Sidebar({ currentVersion = "0.0.0" }: SidebarProps) {
+export function Sidebar({
+  currentVersion = "0.0.0",
+  initialCollapsed = false,
+  userRole,
+}: SidebarProps) {
   const { dict } = useI18n();
   const { theme, setTheme } = useTheme();
   const { user } = useUser();
@@ -39,9 +45,13 @@ export function Sidebar({ currentVersion = "0.0.0" }: SidebarProps) {
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view");
 
+  const effectiveRole = user?.role || userRole;
+  const isAdminOrSuper =
+    effectiveRole === "admin" || effectiveRole === "superadmin";
+
   // Removed redundant fetchUser useEffect, using UserProvider instead
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const [managementExpanded, setManagementExpanded] = useState(false);
@@ -216,7 +226,7 @@ export function Sidebar({ currentVersion = "0.0.0" }: SidebarProps) {
               )}
             </div>
 
-            {(user?.role === "superadmin" || user?.role === "admin") && (
+            {isAdminOrSuper && (
               <Link
                 href="/users"
                 className={`nav-item pointer-events-auto ${
@@ -228,7 +238,7 @@ export function Sidebar({ currentVersion = "0.0.0" }: SidebarProps) {
                 {!isCollapsed && <span>{dict.common.team}</span>}
               </Link>
             )}
-            {(user?.role === "superadmin" || user?.role === "admin") && (
+            {isAdminOrSuper && (
               <div className="nav-group-collapsible pointer-events-auto">
                 <button
                   onClick={() => {

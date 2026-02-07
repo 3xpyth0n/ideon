@@ -9,6 +9,7 @@ import {
   NodeResizer,
   ResizeParams,
   useReactFlow,
+  useStore,
 } from "@xyflow/react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockData } from "./CanvasBlock";
@@ -99,6 +100,12 @@ const ProjectCoreBlock = memo(
     const isTopConnected = isHandleConnected("top");
     const isBottomConnected = isHandleConnected("bottom");
 
+    const nodeCount = useStore((s) => s.nodeLookup.size);
+    const placeholder =
+      description === "" && nodeCount === 1
+        ? dict.common.coreBlockPlaceholder
+        : dict.common.description;
+
     const handleResize = useCallback(
       (_event: unknown, params: ResizeParams) => {
         const { width, height } = params;
@@ -178,7 +185,7 @@ const ProjectCoreBlock = memo(
                 content={description}
                 onChange={handleDescriptionChange}
                 isReadOnly={data.isPreviewMode}
-                placeholder={dict.common.description}
+                placeholder={placeholder}
                 className="text-center text-xl font-light leading-relaxed [&_p]:text-center [&_p]:w-full"
               />
             </div>

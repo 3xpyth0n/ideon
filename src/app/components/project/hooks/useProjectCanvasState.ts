@@ -68,6 +68,18 @@ export const useProjectCanvasState = (
   const [isPreviewMode, setIsPreviewModeState] = useState(false);
   const isPreviewModeRef = useRef(false);
 
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("ideon-onboarding-seen") === "true";
+  });
+
+  const markOnboardingSeen = useCallback(() => {
+    setHasSeenOnboarding(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ideon-onboarding-seen", "true");
+    }
+  }, []);
+
   const setIsPreviewMode = useCallback(
     (value: boolean | ((prev: boolean) => boolean)) => {
       setIsPreviewModeState((prev) => {
@@ -281,25 +293,13 @@ export const useProjectCanvasState = (
       isInitialized.current = true;
 
       // Auto-center on core block if it exists
-      const coreBlock = initialBlocks.find((n) => n.type === "core");
-      if (coreBlock) {
-        setTimeout(() => {
-          // With core block centered at (0,0), viewport x/y must be half of screen width/height to center it
-          setViewport(
-            {
-              x: typeof window !== "undefined" ? window.innerWidth / 2 : 0,
-              y: typeof window !== "undefined" ? window.innerHeight / 2 : 0,
-              zoom: 1,
-            },
-            { duration: 800 },
-          );
-        }, 100);
-      } else {
+      setTimeout(() => {
         fitView({
           duration: 800,
-          padding: 0.2,
+          maxZoom: 1,
+          padding: 0.3,
         });
-      }
+      }, 100);
     }
 
     return () => {
@@ -690,6 +690,18 @@ export const useProjectCanvasState = (
     contextMenu,
   });
 
+  const handleCreateBlockWrapper = useCallback(
+    (
+      ...args: Parameters<typeof graph.handleCreateBlock>
+    ): ReturnType<typeof graph.handleCreateBlock> => {
+      if (!hasSeenOnboarding) {
+        markOnboardingSeen();
+      }
+      return graph.handleCreateBlock(...args);
+    },
+    [graph.handleCreateBlock, hasSeenOnboarding, markOnboardingSeen],
+  );
+
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       // 1. Guard: Check if focused element is an input or textarea
@@ -726,7 +738,7 @@ export const useProjectCanvasState = (
           tempUrl: tempUrl,
         };
 
-        const blockId = graph.handleCreateBlock(
+        const blockId = handleCreateBlockWrapper(
           pos,
           undefined,
           "file",
@@ -791,24 +803,40 @@ export const useProjectCanvasState = (
       // Git Provider Detection
       const gitRegex = /^https?:\/\/(github\.com|gitlab\.com)\/[\w-]+\/[\w.-]+/;
       if (gitRegex.test(text)) {
-        graph.handleCreateBlock(pos, undefined, "github", text);
+        handleCreateBlockWrapper(pos, undefined, "github", text);
         return;
       }
 
       // Generic URL Detection (Figma, etc.)
       const urlRegex = /^https?:\/\//;
       if (urlRegex.test(text)) {
-        graph.handleCreateBlock(pos, undefined, "link", text);
+        handleCreateBlockWrapper(pos, undefined, "link", text);
         return;
       }
 
       // Fallback: Text Block
-      graph.handleCreateBlock(pos, undefined, "text", text);
+      handleCreateBlockWrapper(pos, undefined, "text", text);
     };
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [graph, initialProjectId, dict, setBlocks, screenToFlowPosition]);
+  }, [
+    handleCreateBlockWrapper,
+    initialProjectId,
+    dict,
+    setBlocks,
+    screenToFlowPosition,
+  ]);
+
+  // Effect to mark onboarding as seen if non-core blocks exist (e.g. from load or import)
+  useEffect(() => {
+    if (hasSeenOnboarding) return;
+
+    const hasNonCoreContent = blocks.some((b) => b.type !== "core");
+    if (hasNonCoreContent) {
+      markOnboardingSeen();
+    }
+  }, [blocks, hasSeenOnboarding, markOnboardingSeen]);
 
   const io = useProjectData({
     initialProjectId,
@@ -901,6 +929,16 @@ export const useProjectCanvasState = (
         isInitialized.current = true;
         lastProjectId.current = initialProjectId;
         io.fetchProjectMetadata();
+
+        // Fit view on load/refresh
+        setTimeout(() => {
+          fitView({
+            duration: 800,
+            maxZoom: 1,
+            padding: 0.2,
+          });
+        }, 100);
+
         return;
       }
 
@@ -924,7 +962,7 @@ export const useProjectCanvasState = (
         nodes: selectedBlocks,
         duration: 800,
         maxZoom: 2,
-        padding: 0.35,
+        padding: 0.3,
       });
     else if (blocks.length === 0)
       setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
@@ -932,7 +970,7 @@ export const useProjectCanvasState = (
       fitView({
         duration: 800,
         maxZoom: 1,
-        padding: 0.3,
+        padding: 0.2,
       });
   }, [blocks, fitView, setViewport]);
 
@@ -1170,7 +1208,7 @@ export const useProjectCanvasState = (
     onPaneClick: () => setContextMenu(null),
     onBlockClick: () => setContextMenu(null),
     onLinkClick: () => setContextMenu(null),
-    handleCreateBlock: graph.handleCreateBlock,
+    handleCreateBlock: handleCreateBlockWrapper,
     activeUsers: rt.activeUsers,
     shareCursor,
     setShareCursor,
@@ -1179,5 +1217,7 @@ export const useProjectCanvasState = (
     redo,
     canUndo,
     canRedo,
+    hasSeenOnboarding,
+    markOnboardingSeen,
   };
 };

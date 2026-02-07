@@ -1144,19 +1144,26 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // Ensure node is selected so exitEditMode isn't triggered by useEffect
-      if (!selected) {
-        setNodes((nds) =>
-          nds.map((n) => ({
-            ...n,
-            selected: n.id === id,
-          })),
-        );
-      }
-
-      if (blockType === "link") setIsEditingLink(true);
-      if (blockType === "github") setIsEditingGithub(true);
-      if (blockType === "contact") setIsEditingContact(true);
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === id) {
+            return {
+              ...n,
+              selected: true,
+              data: {
+                ...n.data,
+                isEditingLink:
+                  blockType === "link" ? true : n.data.isEditingLink,
+                isEditingGithub:
+                  blockType === "github" ? true : n.data.isEditingGithub,
+                isEditingContact:
+                  blockType === "contact" ? true : n.data.isEditingContact,
+              },
+            };
+          }
+          return { ...n, selected: false };
+        }),
+      );
     }
   };
 

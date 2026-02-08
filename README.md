@@ -103,27 +103,21 @@ If you can run containers, you can run Ideon.
 
 The easiest way to install Ideon with a production-ready PostgreSQL database is using the automated installer.
 
-1.  **Clone the repository**:
+1.  **Run the installer**:
 
     ```bash
-    git clone https://github.com/3xpyth0n/ideon
-    cd ideon
-    ```
-
-2.  **Run the installer**:
-
-    ```bash
-    ./install.sh
+    curl -fsSL https://install.theideon.com | sh
     ```
 
     This script will:
 
     - Check for necessary requirements (Docker, OpenSSL).
+    - Download `docker-compose.yml`.
     - Generate secure secrets and configuration files.
     - Set up the environment.
     - Launch the application and database containers.
 
-3.  **Access Ideon**:
+2.  **Access Ideon**:
     Open your browser at `http://localhost:3000` (or the URL you configured).
 
 ---

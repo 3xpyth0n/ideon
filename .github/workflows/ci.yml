@@ -91,21 +91,6 @@ jobs:
           ENV_FILE: .env.ci
         run: docker compose -f docker-compose.ci.yml --env-file .env.ci down -v --rmi local
 
-  shellcheck:
-    name: Shell script linting
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Run shellcheck
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          scandir: "."
-          format: gcc
-          severity: error
-          shell: bash
-
   secret-scan:
     name: Secret scanning
     runs-on: ubuntu-latest

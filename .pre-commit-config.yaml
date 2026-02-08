@@ -4,15 +4,6 @@
 
 repos:
   # -------------------------
-  # Shell script linting
-  # -------------------------
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.6
-    hooks:
-      - id: shellcheck
-        files: \.(sh|bash)$
-
-  # -------------------------
   # YAML validation
   # -------------------------
   - repo: https://github.com/adrienverge/yamllint

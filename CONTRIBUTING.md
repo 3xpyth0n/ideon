@@ -28,9 +28,16 @@ This is the recommended way to work on the codebase. It uses a local SQLite file
 
 If you need to test the production behavior or database migrations with Postgres:
 
-1.  Use the `install.sh` script to set up the environment and Docker containers:
+1.  **Configure the environment**:
+
     ```bash
-    ./install.sh
+    cp env.example .env
+    # Edit .env and ensure SECRET_KEY is set (e.g. using openssl rand -hex 32)
+    ```
+
+2.  **Start the services**:
+    ```bash
+    docker compose up -d
     ```
 
 ## Development Workflow

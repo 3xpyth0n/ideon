@@ -8,7 +8,6 @@ import {
   GraphState,
 } from "@lib/graph";
 import { uniqueById } from "@lib/utils";
-import { getRepoStats } from "@lib/git-providers";
 import { z } from "zod";
 import * as crypto from "crypto";
 
@@ -98,43 +97,6 @@ export const POST = projectAction(
       const snapshotId = crypto.randomUUID();
       const uniqueBlocks = uniqueById(inputBlocks || []);
       const uniqueLinks = uniqueById(inputLinks || []);
-
-      // Update GitHub stats for all github blocks to ensure history is accurate
-      await Promise.all(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        uniqueBlocks.map(async (block: any) => {
-          const blockType = block.data?.blockType || block.type;
-          if (blockType === "github") {
-            const url = block.data?.content;
-            if (url) {
-              const { stats } = await getRepoStats(url);
-              if (stats) {
-                // Metadata might be a JSON string or an object depending on where it comes from
-                let metadata = block.data.metadata;
-                if (typeof metadata === "string") {
-                  try {
-                    metadata = JSON.parse(metadata);
-                  } catch (_e) {
-                    metadata = {};
-                  }
-                }
-                if (!metadata || typeof metadata !== "object") metadata = {};
-
-                // Initialize github property if missing
-                if (!metadata.github) metadata.github = {};
-
-                // Update stats
-                metadata.github.lastStats = stats;
-                metadata.github.lastFetched = new Date().toISOString();
-                metadata.github.url = url;
-
-                // Re-assign to block.data
-                block.data.metadata = metadata;
-              }
-            }
-          }
-        }),
-      );
 
       // Security check: deletions and ownership transfers
       const existingBlocks = await db

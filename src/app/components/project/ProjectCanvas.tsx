@@ -61,9 +61,11 @@ import {
   Undo2,
   Redo2,
   Figma,
+  Share2,
 } from "lucide-react";
 import { ImportExportModal } from "./ImportExportModal";
 import { DecisionHistory } from "./DecisionHistory";
+import { ShareModal } from "./ShareModal";
 import { CommandPalette, type Command } from "./CommandPalette";
 
 import { Modal } from "@components/ui/Modal";
@@ -309,6 +311,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const commands = useMemo<Command[]>(() => {
     if (isPreviewMode) return [];
@@ -474,6 +477,16 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     return blocks.length === 1 && blocks[0].type === "core";
   }, [blocks]);
 
+  const blocksWithPreview = useMemo(() => {
+    return blocks.map((block) => ({
+      ...block,
+      data: {
+        ...block.data,
+        isPreviewMode,
+      },
+    }));
+  }, [blocks, isPreviewMode]);
+
   return (
     <>
       <svg
@@ -499,7 +512,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         </defs>
       </svg>
       <div
-        className="project-canvas-container"
+        className={`project-canvas-container ${
+          isPreviewMode ? "preview-mode" : ""
+        }`}
         onKeyDown={onKeyDown}
         tabIndex={0}
       >
@@ -510,7 +525,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         )}
 
         <ReactFlow
-          nodes={blocks}
+          nodes={blocksWithPreview}
           edges={links}
           onNodesChange={isPreviewMode ? undefined : onBlocksChange}
           onEdgesChange={isPreviewMode ? undefined : onLinksChange}
@@ -544,6 +559,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           nodesDraggable={!isPreviewMode}
           nodesConnectable={!isPreviewMode}
           elementsSelectable={!isPreviewMode}
+          edgesReconnectable={!isPreviewMode}
           panOnScroll
           panOnDrag={true}
           multiSelectionKeyCode="Control"
@@ -696,6 +712,16 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 >
                   {dict.common.invite.toUpperCase()}
                 </Button>
+                {currentUser?.id === projectOwnerId && (
+                  <Button
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="btn-secondary !px-3"
+                    disabled={isPreviewMode}
+                    title={dict.common.share || "Share"}
+                  >
+                    <Share2 size={16} />
+                  </Button>
+                )}
                 <DecisionHistory
                   projectId={initialProjectId!}
                   onPreview={handlePreview}
@@ -932,6 +958,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
           projectId={initialProjectId!}
+        />
+
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          projectId={initialProjectId!}
+          isOwner={currentUser?.id === projectOwnerId}
         />
 
         {transferBlock && (

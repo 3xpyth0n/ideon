@@ -376,6 +376,17 @@
     "rightClickToEdit": "Right-click to edit",
     "checklistProgress": "{completed} / {total}",
     "checklistEmpty": "No tasks",
-    "checklistComplete": "Complete"
+    "checklistComplete": "Complete",
+    "share": "Share",
+    "shareProject": "Share Project",
+    "shareSubtitle": "Share this project via a public link",
+    "shareEnabled": "Enable public link",
+    "publicLinkActive": "Anyone with the link can view",
+    "publicLinkInactive": "Only you can access this project",
+    "shareLink": "Public Link",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "regenerate": "Regenerate Link",
+    "regenerateConfirm": "Are you sure? The old link will stop working."
   }
 }

@@ -60,6 +60,7 @@ import ChecklistBlock from "./ChecklistBlock";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 
 import NoteBlock from "./NoteBlock";
+import { getRepoStats } from "@lib/client/git-providers";
 
 export type BlockData = {
   title?: string;
@@ -554,14 +555,9 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       }
 
       try {
-        const response = await fetch("/api/git/stats", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: cleanedUrl }),
-        });
-        if (response.ok) {
-          const result = await response.json();
+        const { stats: result, error } = await getRepoStats(cleanedUrl);
 
+        if (result) {
           // Deep check if stats actually changed before updating metadata
           const statsChanged =
             JSON.stringify(result) !==
@@ -587,6 +583,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             });
           }
         } else {
+          console.error("Git stats error:", error);
           setGithubError(dict.common.githubError);
         }
       } catch (error) {
@@ -730,6 +727,9 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
+  // Force strict non-connectable in preview mode
+  const isConnectable = !isReadOnly && !isPreviewMode;
+
   useEffect(() => {
     if (data.title !== undefined && data.title !== title) {
       setTitle(data.title);
@@ -814,8 +814,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
   useEffect(() => {
+    if (data.isPreviewMode) return;
+
     const yText = data.yText;
-    if (!yText) return;
+    if (!yText || typeof yText.observe !== "function") return;
 
     // We don't want to overwrite local state if we're currently editing
     if (isEditing || isEditingLink) return;
@@ -833,7 +835,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
     yText.observe(observer);
     return () => yText.unobserve(observer);
-  }, [data.yText, isEditing, isEditingLink]);
+  }, [data.yText, isEditing, isEditingLink, data.isPreviewMode]);
 
   useEffect(() => {
     if (isEditing && contentRef.current) {
@@ -1854,8 +1856,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="left-target"
         type="source"
         position={Position.Left}
-        isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[40%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-left !z-50 !top-[40%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isLeftTargetConnected && <div className="handle-dot" />}
       </Handle>
@@ -1863,8 +1867,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="left"
         type="source"
         position={Position.Left}
-        isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[60%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-left !z-50 !top-[60%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -1873,8 +1879,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="right"
         type="source"
         position={Position.Right}
-        isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[40%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-right !z-50 !top-[40%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -1882,8 +1890,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="right-target"
         type="source"
         position={Position.Right}
-        isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[60%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-right !z-50 !top-[60%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isRightTargetConnected && <div className="handle-dot" />}
       </Handle>
@@ -1892,8 +1902,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="top-target"
         type="source"
         position={Position.Top}
-        isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[40%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-top !z-50 !left-[40%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isTopTargetConnected && <div className="handle-dot" />}
       </Handle>
@@ -1901,8 +1913,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="top"
         type="source"
         position={Position.Top}
-        isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[60%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-top !z-50 !left-[60%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isTopSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -1911,8 +1925,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="bottom"
         type="source"
         position={Position.Bottom}
-        isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[60%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-bottom !z-50 !left-[40%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -1920,8 +1936,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         id="bottom-target"
         type="source"
         position={Position.Bottom}
-        isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[40%]"
+        isConnectable={isConnectable}
+        className={`block-handle block-handle-bottom !z-50 !left-[60%] ${
+          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        }`}
       >
         {!isBottomTargetConnected && <div className="handle-dot" />}
       </Handle>

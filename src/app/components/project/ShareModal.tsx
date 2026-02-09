@@ -1,0 +1,197 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useI18n } from "@providers/I18nProvider";
+import { Modal } from "@components/ui/Modal";
+import { Button } from "@components/ui/Button";
+import { Copy, RefreshCw, Check, Globe, Lock } from "lucide-react";
+import { toast } from "sonner";
+
+interface ShareModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId: string;
+  isOwner: boolean;
+}
+
+export function ShareModal({
+  isOpen,
+  onClose,
+  projectId,
+  isOwner,
+}: ShareModalProps) {
+  const { dict } = useI18n();
+  const [loading, setLoading] = useState(false);
+  const [shareEnabled, setShareEnabled] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && projectId) {
+      fetchShareSettings();
+    }
+  }, [isOpen, projectId]);
+
+  const fetchShareSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/share`);
+      if (res.ok) {
+        const data = await res.json();
+        setShareEnabled(data.shareEnabled);
+        setShareUrl(data.shareUrl);
+      }
+    } catch (error) {
+      console.error("Failed to fetch share settings", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleShare = async () => {
+    setLoading(true);
+    try {
+      // If enabling and no URL exists, generate one first
+      if (!shareEnabled && !shareUrl) {
+        const res = await fetch(`/api/projects/${projectId}/share`, {
+          method: "POST",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setShareUrl(data.shareUrl);
+          setShareEnabled(true);
+        }
+      } else {
+        // Just toggle
+        const res = await fetch(`/api/projects/${projectId}/share`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: !shareEnabled }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setShareEnabled(data.shareEnabled);
+        }
+      }
+    } catch (_) {
+      toast.error(dict.common.error || "Error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (
+      !confirm(
+        dict.common.regenerateConfirm ||
+          "Are you sure? Old link will stop working.",
+      )
+    )
+      return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/share`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShareUrl(data.shareUrl);
+        setShareEnabled(true);
+        toast.success(dict.common.success || "Success");
+      }
+    } catch (_) {
+      toast.error(dict.common.error || "Error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (shareUrl) {
+      navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success(dict.common.copied || "Copied!");
+    }
+  };
+
+  if (!isOwner) return null;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={dict.common.shareProject || "Share Project"}
+      subtitle={
+        dict.common.shareSubtitle || "Share this project via a public link"
+      }
+    >
+      <div className="space-y-6 share-modal-custom-layout">
+        <div className="flex items-center justify-between p-4 border rounded-lg dark:border-white/10">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-full ${
+                shareEnabled
+                  ? "bg-green-500/10 text-green-500"
+                  : "bg-gray-500/10 text-gray-500"
+              }`}
+            >
+              {shareEnabled ? <Globe size={20} /> : <Lock size={20} />}
+            </div>
+            <div className="text-group">
+              <h3>{dict.common.shareEnabled || "Enable public link"}</h3>
+              <p>
+                {shareEnabled
+                  ? dict.common.publicLinkActive ||
+                    "Anyone with the link can view"
+                  : dict.common.publicLinkInactive ||
+                    "Only you can access this project"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center self-center">
+            <button
+              className={`zen-switch ${shareEnabled ? "active" : ""}`}
+              onClick={handleToggleShare}
+              disabled={loading}
+            >
+              <div className="switch-thumb" />
+            </button>
+          </div>
+        </div>
+
+        {shareEnabled && shareUrl && (
+          <div className="animate-in fade-in slide-in-from-top-2">
+            <label className="input-label">
+              {dict.common.shareLink || "Public Link"}
+            </label>
+            <div className="flex gap-2 items-center">
+              <input readOnly value={shareUrl} className="custom-input" />
+              <Button
+                onClick={handleCopy}
+                className="btn-secondary"
+                title={dict.common.copy || "Copy"}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+              </Button>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={handleRegenerate}
+                variant="primary"
+                disabled={loading}
+              >
+                <RefreshCw
+                  size={12}
+                  className={`mr-2 ${loading ? "animate-spin" : ""}`}
+                />
+                {dict.common.regenerate || "Regenerate Link"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}

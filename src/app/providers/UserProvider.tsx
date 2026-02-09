@@ -40,6 +40,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchUser = useCallback(async () => {
+    // Skip fetching user on public share routes to prevent unnecessary 401/403 calls
+    if (window.location.pathname.startsWith("/share/")) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await fetch("/api/account");
@@ -50,6 +56,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
         // Only redirect if we are NOT on a public page
         const publicPaths = [
+          "/share/",
           "/login",
           "/register",
           "/setup",

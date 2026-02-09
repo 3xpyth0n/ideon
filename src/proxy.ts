@@ -59,6 +59,7 @@ export async function proxy(req: NextRequest) {
 
   // Authentication Check
   const publicPaths = [
+    "/share",
     "/login",
     "/setup",
     "/register",

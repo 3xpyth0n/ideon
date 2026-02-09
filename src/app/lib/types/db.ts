@@ -55,6 +55,9 @@ export interface projectsTable {
     Date | string | undefined,
     Date | string
   > | null;
+  shareToken: string | null;
+  shareEnabled: number | null; // 0 or 1
+  shareCreatedAt: string | null;
 }
 
 export interface projectStarsTable {

@@ -5395,3 +5395,41 @@ input:-webkit-autofill:active {
     transform: scale(1);
   }
 }
+
+/* Preview Mode (Share Mode) Restrictions */
+.preview-mode .react-flow__handle,
+.preview-mode .block-handle {
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+.preview-mode .react-flow__edgeupdater {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.preview-mode .react-flow__node,
+.preview-mode .react-flow__edge {
+  cursor: default !important;
+}
+
+.preview-mode .react-flow__pane {
+  cursor: grab !important;
+  cursor: -webkit-grab !important;
+}
+
+.preview-mode .react-flow__pane:active {
+  cursor: grabbing !important;
+  cursor: -webkit-grabbing !important;
+}
+
+/* Force block-card content to have default cursor in preview mode */
+.preview-mode .block-card * {
+  cursor: default !important;
+}
+
+/* Allow scrolling in content if needed */
+.preview-mode .block-content,
+.preview-mode .markdown-content {
+  pointer-events: auto !important;
+}

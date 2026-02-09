@@ -1,6 +1,3 @@
-import { randomUUID } from "crypto";
-import { getDb } from "./db";
-
 export type GitProvider = "github" | "gitlab" | "gitea" | "forgejo";
 
 export interface RepoStats {
@@ -32,10 +29,6 @@ async function fetchGithub(
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
   };
-
-  if (process.env.GITHUB_TOKEN) {
-    headers["Authorization"] = `token ${process.env.GITHUB_TOKEN}`;
-  }
 
   try {
     const [repoRes, releaseRes, commitRes, pullsRes, contributorsRes] =
@@ -74,19 +67,25 @@ async function fetchGithub(
     const repoData = await repoRes.json();
     const releaseData = releaseRes.ok ? await releaseRes.json() : null;
     const commitData = commitRes.ok ? await commitRes.json() : [];
+
+    const getCount = (res: Response, data: unknown[]) => {
+      // If we have data, we have at least that many.
+      // Check Link header for "last" page.
+      const link = res.headers.get("link");
+      if (link) {
+        const match = link.match(/page=(\d+)&[^>]*>; rel="last"/);
+        if (match) {
+          return parseInt(match[1], 10);
+        }
+      }
+      // If no link header, it means we are on the only page.
+      return Array.isArray(data) ? data.length : 0;
+    };
+
     const pullsData = pullsRes.ok ? await pullsRes.json() : [];
     const contributorsData = contributorsRes.ok
       ? await contributorsRes.json()
       : [];
-
-    const getCount = (res: Response, data: unknown[]) => {
-      const link = res.headers.get("link");
-      if (link) {
-        const match = link.match(/&page=(\d+)>; rel="last"/);
-        if (match) return parseInt(match[1]);
-      }
-      return Array.isArray(data) ? data.length : 0;
-    };
 
     return {
       stats: {
@@ -121,7 +120,7 @@ async function fetchGitlab(
         fetch(baseUrl),
         fetch(`${baseUrl}/releases?per_page=1`),
         fetch(`${baseUrl}/repository/commits?per_page=1`),
-        fetch(`${baseUrl}/merge_requests?state=opened&per_page=1`), // Just to check existence/count if headers
+        fetch(`${baseUrl}/merge_requests?state=opened&per_page=1`),
         fetch(`${baseUrl}/repository/contributors?per_page=1`),
       ]);
 
@@ -136,26 +135,19 @@ async function fetchGitlab(
     const releasesData = releasesRes.ok ? await releasesRes.json() : [];
     const commitsData = commitsRes.ok ? await commitsRes.json() : [];
 
-    // GitLab exposes counts in headers x-total or x-total-pages usually, but basic plan:
-    // For MRs and Contributors, we might need a separate call or rely on projectData if available.
-    // projectData often has star_count, forks_count, etc.
-
-    // GitLab pagination headers: x-total
     const getCountFromHeader = (res: Response) => {
       const total = res.headers.get("x-total");
       if (total) return parseInt(total, 10);
-      // Fallback if no header (some instances disable it for perf)
-      return 0; // Better handling might be needed
+      return 0;
     };
 
-    // Note: 'open_issues_count' is in projectData
     return {
       stats: {
         stars: projectData.star_count,
         release: releasesData[0]?.tag_name || "N/A",
         lastCommit: commitsData[0]?.created_at || "N/A",
         openIssues: projectData.open_issues_count || 0,
-        openPulls: getCountFromHeader(mrsRes), // MRs
+        openPulls: getCountFromHeader(mrsRes),
         contributors: getCountFromHeader(contributorsRes),
         provider: "gitlab",
         repoUrl: url,
@@ -182,7 +174,7 @@ async function fetchGitea(
         fetch(`${baseUrl}/releases?limit=1`),
         fetch(`${baseUrl}/commits?limit=1`),
         fetch(`${baseUrl}/pulls?state=open&limit=1`),
-        fetch(`${baseUrl}/contributors?limit=1`), // Gitea might not support this fully on all versions
+        fetch(`${baseUrl}/contributors?limit=1`),
       ]);
 
     if (!repoRes.ok) {
@@ -196,7 +188,6 @@ async function fetchGitea(
     const releaseData = releaseRes.ok ? await releaseRes.json() : [];
     const commitsData = commitsRes.ok ? await commitsRes.json() : [];
 
-    // Gitea uses X-Total-Count header
     const getCountFromHeader = (res: Response) => {
       const total = res.headers.get("x-total-count");
       if (total) return parseInt(total, 10);
@@ -211,7 +202,7 @@ async function fetchGitea(
         openIssues: repoData.open_issues_count,
         openPulls: repoData.open_pr_counter || getCountFromHeader(pullsRes),
         contributors: getCountFromHeader(contributorsRes),
-        provider: "gitea", // Or forgejo, functionally same API
+        provider: "gitea",
         repoUrl: url,
       },
     };
@@ -232,7 +223,6 @@ export async function getRepoStats(url: string): Promise<FetchResult> {
   let repo = "";
   let host = "";
 
-  // 1. Try to detect provider
   const githubMatch = cleanUrl.match(
     /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)/,
   );
@@ -251,7 +241,6 @@ export async function getRepoStats(url: string): Promise<FetchResult> {
     repo = gitlabMatch[2];
     host = "gitlab.com";
   } else {
-    // Self-hosted detection
     try {
       const u = new URL(
         cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`,
@@ -267,64 +256,16 @@ export async function getRepoStats(url: string): Promise<FetchResult> {
     }
   }
 
-  const db = getDb();
-  // Check Cache
-  const cached = await db
-    .selectFrom("githubRepoStats")
-    .select(["id", "data", "fetchedAt"])
-    .where("url", "=", cleanUrl)
-    .orderBy("fetchedAt", "desc")
-    .executeTakeFirst();
-
-  if (cached) {
-    const fetchedAt = new Date(cached.fetchedAt).getTime();
-    const now = Date.now();
-    if (now - fetchedAt < 70000) {
-      return { stats: JSON.parse(cached.data) };
-    }
-  }
-
-  let result: FetchResult = { error: "Unknown provider" };
-
   if (provider === "github") {
-    result = await fetchGithub(owner, repo, cleanUrl);
+    return fetchGithub(owner, repo, cleanUrl);
   } else if (provider === "gitlab") {
-    result = await fetchGitlab(host, owner, repo, cleanUrl);
+    return fetchGitlab(host, owner, repo, cleanUrl);
   } else {
     // Try probing for self-hosted
-    // 1. Try Gitea/Forgejo
-    result = await fetchGitea(host, owner, repo, cleanUrl);
+    let result = await fetchGitea(host, owner, repo, cleanUrl);
     if (result.error && result.status === 404) {
-      // 2. Try GitLab
       result = await fetchGitlab(host, owner, repo, cleanUrl);
     }
+    return result;
   }
-
-  if (result.stats) {
-    const statsStr = JSON.stringify(result.stats);
-    if (cached) {
-      await db
-        .updateTable("githubRepoStats")
-        .set({ fetchedAt: new Date().toISOString(), data: statsStr })
-        .where("id", "=", cached.id)
-        .execute();
-    } else {
-      await db
-        .insertInto("githubRepoStats")
-        .values({
-          id: randomUUID(),
-          url: cleanUrl,
-          owner,
-          repo,
-          data: statsStr,
-          fetchedAt: new Date().toISOString(),
-        })
-        .execute();
-    }
-  } else if (cached) {
-    // Return cached data if fetch failed (e.g. rate limit or temporary network issue)
-    return { stats: JSON.parse(cached.data) };
-  }
-
-  return result;
 }

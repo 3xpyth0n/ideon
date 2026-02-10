@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import { validateSafeUrl } from "@lib/ssrf";
+import { safeFetch } from "@lib/ssrf";
 import { getDb } from "@lib/db";
 import { nanoid } from "nanoid";
 
@@ -15,34 +15,17 @@ export interface LinkMetadata {
  * Fetches OpenGraph metadata for a given URL.
  */
 export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
-  // Normalize URL to ensure it has a scheme and is well-formed
-  const normalizedInput = url.startsWith("http") ? url : `https://${url}`;
+  // Normalize URL to ensure it has a scheme
+  const targetUrl = url.startsWith("http") ? url : `https://${url}`;
 
   try {
-    const normalizedUrl = new URL(normalizedInput);
-
-    // Enforce allowed protocols and presence of a hostname
-    if (
-      (normalizedUrl.protocol !== "http:" && normalizedUrl.protocol !== "https:") ||
-      !normalizedUrl.hostname
-    ) {
-      throw new Error("Invalid or restricted URL");
-    }
-
-    const targetUrl = normalizedUrl.toString();
-
-    const isSafe = await validateSafeUrl(targetUrl);
-    if (!isSafe) {
-      throw new Error("Invalid or restricted URL");
-    }
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-    const response = await fetch(targetUrl, {
+    const response = await safeFetch(targetUrl, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Ideon/0.1.0 (Link Preview)",
+        "User-Agent": "IdeonBot/1.0",
       },
     });
 
@@ -83,7 +66,9 @@ export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
       title,
       description,
       image,
-      favicon: `https://www.google.com/s2/favicons?domain=${normalizedUrl.hostname}&sz=64`,
+      favicon: `https://www.google.com/s2/favicons?domain=${
+        new URL(targetUrl).hostname
+      }&sz=64`,
       url: targetUrl,
     };
   } catch (error) {
@@ -92,16 +77,13 @@ export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
     // Attempt to extract hostname safely for the fallback favicon
     let hostname = "";
     try {
-      const fallbackUrl = url.startsWith("http") ? new URL(url) : new URL(`https://${url}`);
-      hostname = fallbackUrl.hostname;
+      hostname = new URL(targetUrl).hostname;
     } catch {
-      // If even the fallback URL is invalid, leave hostname empty
-    const fallbackTargetUrl = url.startsWith("http") ? url : `https://${url}`;
-
+      // If even targetUrl is invalid, leave hostname empty
     }
 
     return {
-      url: fallbackTargetUrl,
+      url: targetUrl,
       favicon: hostname
         ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
         : undefined,

@@ -1592,7 +1592,9 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
       const domain = getDomain(content);
       const faviconUrl = domain
-        ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+        ? `/api/proxy/image?url=${encodeURIComponent(
+            `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+          )}`
         : null;
 
       return (
@@ -1617,7 +1619,9 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           {metadata?.image && !previewImageError ? (
             <div className="block-link-preview w-full aspect-video overflow-hidden relative flex-shrink-0">
               <img
-                src={metadata.image}
+                src={`/api/proxy/image?url=${encodeURIComponent(
+                  metadata.image,
+                )}`}
                 alt={metadata.title || "Link preview"}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"

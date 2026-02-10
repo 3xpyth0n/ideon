@@ -75,3 +75,44 @@ function isPrivateIP(ip: string): boolean {
 
   return false;
 }
+
+/**
+ * Performs a fetch request with SSRF protection by manually handling redirects
+ * and validating the URL at each step.
+ */
+export async function safeFetch(
+  url: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  let currentUrl = url;
+  const maxRedirects = 5;
+  let redirectCount = 0;
+
+  while (redirectCount < maxRedirects) {
+    const isSafe = await validateSafeUrl(currentUrl);
+    if (!isSafe) {
+      throw new Error("Invalid or restricted URL detected");
+    }
+
+    const response = await fetch(currentUrl, {
+      ...options,
+      redirect: "manual",
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new Error("Redirect response missing Location header");
+      }
+
+      // Resolve relative URLs against the current URL
+      currentUrl = new URL(location, currentUrl).toString();
+      redirectCount++;
+      continue;
+    }
+
+    return response;
+  }
+
+  throw new Error(`Too many redirects (max: ${maxRedirects})`);
+}

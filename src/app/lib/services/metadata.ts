@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import { validateSafeUrl } from "@lib/ssrf";
+import { safeFetch } from "@lib/ssrf";
 import { getDb } from "@lib/db";
 import { nanoid } from "nanoid";
 
@@ -19,18 +19,13 @@ export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
   const targetUrl = url.startsWith("http") ? url : `https://${url}`;
 
   try {
-    const isSafe = await validateSafeUrl(targetUrl);
-    if (!isSafe) {
-      throw new Error("Invalid or restricted URL");
-    }
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-    const response = await fetch(targetUrl, {
+    const response = await safeFetch(targetUrl, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Ideon/0.1.0 (Link Preview)",
+        "User-Agent": "IdeonBot/1.0",
       },
     });
 

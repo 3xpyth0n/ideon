@@ -31,6 +31,10 @@ export type BlockUpdate = Updateable<blocksTable>;
 export type Link = Selectable<linksTable>;
 export type NewLink = Insertable<linksTable>;
 
+export type LinkPreview = Selectable<linkPreviewsTable>;
+export type NewLinkPreview = Insertable<linkPreviewsTable>;
+export type LinkPreviewUpdate = Updateable<linkPreviewsTable>;
+
 export type ProjectCollaborator = Selectable<projectCollaboratorsTable>;
 export type NewProjectCollaborator = Insertable<projectCollaboratorsTable>;
 
@@ -155,6 +159,16 @@ export interface linksTable {
   updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+export interface linkPreviewsTable {
+  id: Generated<string>;
+  blockId: string;
+  url: string;
+  title: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  fetchedAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 export interface blockSnapshotsTable {
   id: Generated<string>;
   blockId: string;
@@ -261,6 +275,7 @@ export interface database {
   temporalStates: temporalStatesTable;
   rateLimits: rateLimitsTable;
   githubRepoStats: githubRepoStatsTable;
+  linkPreviews: linkPreviewsTable;
 }
 
 export interface githubRepoStatsTable {

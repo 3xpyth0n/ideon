@@ -159,8 +159,6 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
 
       if (res.ok) {
         const data = await res.json();
-        // Update invitations list with new token/expiry if needed,
-        // but fetchData is simpler and ensures consistency
         fetchData();
 
         // Show the fallback UI with the new URL in case email fails

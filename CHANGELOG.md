@@ -13,6 +13,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Project organization using folders
 - Full project export as a single image
 
+### Fixed
+
+- Resolved an issue where opening large projects could cause the application to crash.
+
 ## [0.2.8] - 2026-02-07
 
 ### Added

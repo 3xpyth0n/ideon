@@ -350,6 +350,13 @@ export const useProjectCanvasState = (
               };
 
               const existing = yBlocks.get(block.id);
+              const isSummaryUpdate = !!cleanBlockToSync.data?.isSummary;
+              const isExistingDetailed = existing && !existing.data?.isSummary;
+
+              if (isSummaryUpdate && isExistingDetailed) {
+                return;
+              }
+
               const hasChanged =
                 !existing ||
                 existing.position.x !== cleanBlockToSync.position.x ||
@@ -837,6 +844,11 @@ export const useProjectCanvasState = (
     }
   }, [blocks, hasSeenOnboarding, markOnboardingSeen]);
 
+  const blocksRef = useRef(blocks);
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
+
   const io = useProjectData({
     initialProjectId,
     blocks,
@@ -852,6 +864,53 @@ export const useProjectCanvasState = (
     setProjectOwnerId,
     handleExitPreview,
   });
+
+  const checkVisibleBlocks = useCallback(
+    (viewport: { x: number; y: number; zoom: number }) => {
+      if (typeof window === "undefined") return;
+
+      const visibleIds: string[] = [];
+      const vx = -viewport.x / viewport.zoom;
+      const vy = -viewport.y / viewport.zoom;
+      const vw = window.innerWidth / viewport.zoom;
+      const vh = window.innerHeight / viewport.zoom;
+
+      // Expand viewport slightly to pre-load
+      const margin = 500;
+      const rect = {
+        x: vx - margin,
+        y: vy - margin,
+        w: vw + margin * 2,
+        h: vh + margin * 2,
+      };
+
+      blocksRef.current.forEach((b) => {
+        if (b.data?.isSummary) {
+          if (
+            b.position.x < rect.x + rect.w &&
+            b.position.x + (b.width || DEFAULT_BLOCK_WIDTH) > rect.x &&
+            b.position.y < rect.y + rect.h &&
+            b.position.y + (b.height || 100) > rect.y // approx height if missing
+          ) {
+            visibleIds.push(b.id);
+          }
+        }
+      });
+
+      if (visibleIds.length > 0) {
+        io.fetchBlockDetails(visibleIds);
+      }
+    },
+    [io.fetchBlockDetails],
+  );
+
+  const debouncedCheckVisibleBlocks = useMemo(() => {
+    let timeout: NodeJS.Timeout;
+    return (v: { x: number; y: number; zoom: number }) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => checkVisibleBlocks(v), 300);
+    };
+  }, [checkVisibleBlocks]);
 
   const blocksWithPresence = useMemo(() => {
     const processedBlocks = blocks.map((block) => {
@@ -922,8 +981,6 @@ export const useProjectCanvasState = (
       yContents &&
       isLocalSynced
     ) {
-      // If we already have blocks in Yjs (e.g. from IndexedDB or WebSocket),
-      // we assume this is the latest draft and do NOT overwrite it with the snapshot.
       if (yBlocks.size > 0) {
         isInitialized.current = true;
         lastProjectId.current = initialProjectId;
@@ -987,13 +1044,18 @@ export const useProjectCanvasState = (
   const onViewportChange = useCallback(
     (v: { x: number; y: number; zoom: number }) => {
       setZoom(Math.round(v.zoom * 100));
+      debouncedCheckVisibleBlocks(v);
     },
-    [],
+    [debouncedCheckVisibleBlocks],
   );
 
-  const onMove = useCallback(() => {
-    setZoom(Math.round(getZoom() * 100));
-  }, [getZoom]);
+  const onMove = useCallback(
+    (_e: unknown, v: { x: number; y: number; zoom: number }) => {
+      setZoom(Math.round(getZoom() * 100));
+      if (v) debouncedCheckVisibleBlocks(v);
+    },
+    [getZoom, debouncedCheckVisibleBlocks],
+  );
 
   const handleToggleLock = useCallback(
     (blockId: string) => {

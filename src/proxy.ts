@@ -98,7 +98,6 @@ export async function proxy(req: NextRequest) {
   const isProtected = !isPublic;
 
   // 1. If authenticated, prevent access to Guest-Only routes (login, register)
-  // Note: /setup is handled by Layout now
   const guestOnlyPaths = ["/login", "/register"];
   if (isLoggedIn && guestOnlyPaths.some((p) => pathname.startsWith(p))) {
     return applySecurityHeaders(NextResponse.redirect(getRedirectUrl("/home")));

@@ -64,8 +64,6 @@ export function KyselyAdapter(): Adapter {
       const userColor = stringToColor(chosenUsername);
       const newUserId = crypto.randomUUID();
 
-      // Insert user and update invitation in transaction
-      // Note: Kysely transaction returns the result of the callback
       await db.transaction().execute(async (trx) => {
         await trx
           .insertInto("users")
@@ -185,8 +183,6 @@ export function KyselyAdapter(): Adapter {
     },
 
     async createSession({ sessionToken, userId, expires }) {
-      // Not using database sessions (JWT strategy)
-      // But implementing this for completeness if switched to database strategy
       const id = crypto.randomUUID();
       await db
         .insertInto("sessions")

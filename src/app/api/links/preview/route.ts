@@ -18,7 +18,6 @@ export async function POST(req: Request) {
     });
   } catch (_error) {
     // Silence 429/403/500 errors to prevent frontend retries and console noise
-    // Just return empty metadata so the frontend falls back to displaying the URL
     return NextResponse.json({
       title: "",
       description: "",

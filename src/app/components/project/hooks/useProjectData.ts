@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import { Node, Edge, useReactFlow } from "@xyflow/react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
@@ -24,6 +24,12 @@ interface UseProjectDataProps {
   handleExitPreview: () => void;
 }
 
+interface BlockResponse {
+  id: string;
+  data: BlockData;
+  [key: string]: unknown;
+}
+
 export const useProjectData = ({
   initialProjectId,
   blocks,
@@ -42,13 +48,17 @@ export const useProjectData = ({
   const { dict } = useI18n();
   const router = useRouter();
   const { fitView, setViewport } = useReactFlow();
+  const loadedBlockIds = useRef<Set<string>>(new Set());
 
   const fetchGraph = useCallback(
     async (isExplicitApply = false) => {
       if (!initialProjectId || initialProjectId === "undefined") return;
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/projects/${initialProjectId}/graph`);
+        // Fetch summary mode first to get structure quickly
+        const res = await fetch(
+          `/api/projects/${initialProjectId}/graph?mode=summary`,
+        );
         if (!res.ok) {
           if (res.status === 403 || res.status === 404) {
             toast.error(
@@ -76,6 +86,9 @@ export const useProjectData = ({
           setLinks(newLinks);
         }
 
+        // Initialize loadedBlockIds (mostly empty in summary mode)
+        loadedBlockIds.current.clear();
+
         setProjectOwnerId(data.projectOwnerId || null);
         isInitialized.current = true;
         setTimeout(() => {
@@ -100,6 +113,59 @@ export const useProjectData = ({
       setIsLoading,
       isInitialized,
     ],
+  );
+
+  const fetchBlockDetails = useCallback(
+    async (ids: string[]) => {
+      if (!initialProjectId || initialProjectId === "undefined") return;
+
+      const idsToFetch = ids.filter((id) => !loadedBlockIds.current.has(id));
+      if (idsToFetch.length === 0) return;
+
+      // Mark as loaded immediately to prevent duplicate fetches
+      idsToFetch.forEach((id) => loadedBlockIds.current.add(id));
+
+      // Chunk requests
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < idsToFetch.length; i += CHUNK_SIZE) {
+        const chunk = idsToFetch.slice(i, i + CHUNK_SIZE);
+        try {
+          const res = await fetch(
+            `/api/projects/${initialProjectId}/graph?ids=${chunk.join(",")}`,
+          );
+          if (!res.ok) continue;
+          const data = await res.json();
+          const newBlocks = (data.blocks || []) as BlockResponse[];
+
+          setBlocks((currentBlocks) => {
+            const newBlocksMap = new Map(newBlocks.map((b) => [b.id, b]));
+            return currentBlocks.map((b) => {
+              const newBlock = newBlocksMap.get(b.id);
+              if (newBlock) {
+                return {
+                  ...newBlock,
+                  id: b.id, // Ensure id is present
+                  selected: b.selected,
+                  position: b.position, // Keep current position
+                  width: b.width,
+                  height: b.height,
+                  data: {
+                    ...newBlock.data,
+                    isSummary: false,
+                  },
+                } as Node<BlockData>;
+              }
+              return b;
+            });
+          });
+        } catch (error) {
+          console.error("Failed to fetch block details", error);
+          // Allow retrying on error
+          chunk.forEach((id) => loadedBlockIds.current.delete(id));
+        }
+      }
+    },
+    [initialProjectId, setBlocks],
   );
 
   const fetchProjectMetadata = useCallback(async () => {
@@ -195,5 +261,6 @@ export const useProjectData = ({
     fetchProjectMetadata,
     handlePreview,
     handleApplyState,
+    fetchBlockDetails,
   };
 };

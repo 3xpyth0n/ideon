@@ -1,6 +1,7 @@
 import { Node, Edge } from "@xyflow/react";
 import { getDb, runTransaction } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
+import { logger } from "@lib/logger";
 import {
   transformBlock,
   transformLink,
@@ -12,10 +13,83 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-export const GET = projectAction(async (_req, { project, user }) => {
+export const GET = projectAction(async (req, { project, user }) => {
+  const startTime = Date.now();
   const db = getDb();
+  const url = new URL(req.url);
+  const mode = url.searchParams.get("mode") || "full";
+  const offset = parseInt(url.searchParams.get("offset") || "0");
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500);
+  const viewport = {
+    x1: parseFloat(url.searchParams.get("x1") || "-Infinity"),
+    y1: parseFloat(url.searchParams.get("y1") || "-Infinity"),
+    x2: parseFloat(url.searchParams.get("x2") || "Infinity"),
+    y2: parseFloat(url.searchParams.get("y2") || "Infinity"),
+  };
 
-  const blocks = await db
+  logger.info(
+    {
+      mode,
+      offset,
+      limit,
+      viewport: mode === "viewport" ? viewport : "N/A",
+    },
+    `[GraphAPI] Fetching graph for project ${project.id}`,
+  );
+
+  // SUMMARY MODE: Return lightweight block structure (positions only)
+  if (mode === "summary") {
+    const blocks = await db
+      .selectFrom("blocks")
+      .select([
+        "id",
+        "blockType",
+        "positionX",
+        "positionY",
+        "width",
+        "height",
+        "selected",
+      ])
+      .where("projectId", "=", project.id)
+      .execute();
+
+    if (blocks.length === 0) {
+      // Fall through to full logic if empty, to trigger repair
+    } else {
+      // Return minimal nodes for React Flow
+      const summaryNodes = blocks.map((b) => ({
+        id: b.id,
+        type: b.blockType,
+        position: { x: b.positionX, y: b.positionY },
+        data: {
+          // Minimal data to prevent crashes
+          blockType: b.blockType,
+          isLocked: false,
+          isSummary: true, // Flag for frontend to know it needs details
+        },
+        width: b.width,
+        height: b.height,
+        selected: Boolean(b.selected),
+      }));
+
+      // We also need links in summary mode to show connections
+      const links = await db
+        .selectFrom("links")
+        .selectAll()
+        .where("projectId", "=", project.id)
+        .execute();
+
+      return {
+        blocks: summaryNodes,
+        links: links.map((l) => transformLink(l)),
+        projectOwnerId: project.ownerId,
+        currentStateId: project.currentStateId,
+      };
+    }
+  }
+
+  // FULL or VIEWPORT MODE
+  let query = db
     .selectFrom("blocks")
     .leftJoin("users", "users.id", "blocks.ownerId")
     .select([
@@ -34,11 +108,45 @@ export const GET = projectAction(async (_req, { project, user }) => {
       "users.username as authorName",
       "users.color as authorColor",
     ])
-    .where("blocks.projectId", "=", project.id)
-    .execute();
+    .where("blocks.projectId", "=", project.id);
 
-  // SELF-REPAIR: If no blocks found, assume corruption or failed creation and restore Core Block
-  if (blocks.length === 0) {
+  // Apply viewport filtering if provided
+  if (
+    mode === "viewport" &&
+    isFinite(viewport.x1) &&
+    isFinite(viewport.y1) &&
+    isFinite(viewport.x2) &&
+    isFinite(viewport.y2)
+  ) {
+    query = query
+      .where("blocks.positionX", "<", viewport.x2)
+      .where("blocks.positionY", "<", viewport.y2)
+      .where((eb) =>
+        eb.and([
+          eb("blocks.positionX", ">", viewport.x1 - 1000),
+          eb("blocks.positionX", "<", viewport.x2),
+          eb("blocks.positionY", ">", viewport.y1 - 1000),
+          eb("blocks.positionY", "<", viewport.y2),
+        ]),
+      );
+  } else {
+    const ids = url.searchParams.get("ids");
+    if (ids) {
+      const idList = ids.split(",");
+      query = query.where("blocks.id", "in", idList);
+    } else {
+      query = query.limit(limit).offset(offset);
+    }
+  }
+
+  const blocks = (await query.execute()) as unknown as DbBlock[];
+
+  if (
+    blocks.length === 0 &&
+    mode === "full" &&
+    offset === 0 &&
+    !url.searchParams.get("ids")
+  ) {
     const now = new Date();
     const nowString = now.toISOString();
     const coreBlockId = crypto.randomUUID();
@@ -82,19 +190,32 @@ export const GET = projectAction(async (_req, { project, user }) => {
       }),
       ownerId: project.ownerId,
       updatedAt: now,
+      createdAt: now,
       authorName: user.username || "System", // Fallback
       authorColor: user.color || null,
-    });
+    } as DbBlock);
   }
 
-  const links = await db
-    .selectFrom("links")
-    .selectAll()
-    .where("projectId", "=", project.id)
-    .execute();
+  // Fetch links only on initial load
+  let links: Record<string, unknown>[] = [];
+  if (offset === 0 && !url.searchParams.get("ids")) {
+    links = await db
+      .selectFrom("links")
+      .selectAll()
+      .where("projectId", "=", project.id)
+      .execute();
+  }
+
+  logger.info(
+    {
+      blockCount: blocks.length,
+      linkCount: links.length,
+    },
+    `[GraphAPI] Request completed in ${Date.now() - startTime}ms`,
+  );
 
   return {
-    blocks: blocks.map((b) => transformBlock(b as unknown as DbBlock)),
+    blocks: blocks.map((b) => transformBlock(b)),
     links: links.map((l) => transformLink(l)),
     projectOwnerId: project.ownerId,
     currentStateId: project.currentStateId,

@@ -206,7 +206,6 @@ export async function withAuthenticatedSession<T>(
   // For Postgres, we start a transaction and set the session variable
   return db.transaction().execute(async (tx) => {
     // Set the session variable for RLS
-    // The third argument 'true' makes it a local setting (transaction-scoped)
     await sql`SELECT set_config('app.current_user_id', ${userId}, true)`.execute(
       tx,
     );

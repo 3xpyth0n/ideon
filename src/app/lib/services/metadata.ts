@@ -1,5 +1,7 @@
 import { parse } from "node-html-parser";
 import { validateSafeUrl } from "@lib/ssrf";
+import { getDb } from "@lib/db";
+import { nanoid } from "nanoid";
 
 export interface LinkMetadata {
   title?: string;
@@ -91,5 +93,57 @@ export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
         ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
         : undefined,
     };
+  }
+}
+
+export async function getLinkPreview(blockId: string) {
+  const db = getDb();
+  return db
+    .selectFrom("linkPreviews")
+    .selectAll()
+    .where("blockId", "=", blockId)
+    .executeTakeFirst();
+}
+
+export async function saveLinkPreview(
+  blockId: string,
+  url: string,
+  metadata: Partial<LinkMetadata>,
+) {
+  const db = getDb();
+  const now = new Date();
+
+  // Check if exists
+  const existing = await db
+    .selectFrom("linkPreviews")
+    .select("id")
+    .where("blockId", "=", blockId)
+    .executeTakeFirst();
+
+  if (existing) {
+    await db
+      .updateTable("linkPreviews")
+      .set({
+        url,
+        title: metadata.title || null,
+        description: metadata.description || null,
+        imageUrl: metadata.image || null,
+        fetchedAt: now,
+      })
+      .where("id", "=", existing.id)
+      .execute();
+  } else {
+    await db
+      .insertInto("linkPreviews")
+      .values({
+        id: nanoid(),
+        blockId,
+        url,
+        title: metadata.title || null,
+        description: metadata.description || null,
+        imageUrl: metadata.image || null,
+        fetchedAt: now,
+      })
+      .execute();
   }
 }

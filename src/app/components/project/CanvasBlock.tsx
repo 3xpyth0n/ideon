@@ -84,6 +84,7 @@ export type BlockData = {
   label?: string;
   metadata?: string;
   isLocked?: boolean;
+  isSummary?: boolean;
   isPreviewMode?: boolean;
   isEditingLink?: boolean;
   isEditingGithub?: boolean;
@@ -280,6 +281,64 @@ const RemoteCursor = ({
   );
 };
 
+const getBlockLabel = (type: string) => {
+  switch (type) {
+    case "text":
+      return "Text";
+    case "link":
+      return "Link";
+    case "file":
+      return "File";
+    case "core":
+      return "Project";
+    case "github":
+      return "GitHub";
+    case "palette":
+      return "Palette";
+    case "contact":
+      return "Contact";
+    case "video":
+      return "Video";
+    case "snippet":
+      return "Snippet";
+    case "checklist":
+      return "Checklist";
+    case "note":
+      return "Note";
+    default:
+      return "Block";
+  }
+};
+
+const getBlockIconComponent = (type: string) => {
+  switch (type) {
+    case "text":
+      return FileText;
+    case "link":
+      return LinkIcon;
+    case "file":
+      return FileIcon;
+    case "core":
+      return Globe;
+    case "github":
+      return Github;
+    case "palette":
+      return Palette;
+    case "contact":
+      return User;
+    case "video":
+      return FileVideo;
+    case "snippet":
+      return FileCode;
+    case "checklist":
+      return Check;
+    case "note":
+      return FileText;
+    default:
+      return FileText;
+  }
+};
+
 const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const { id, data, selected, type, width, height } = props;
   const { dict, lang } = useI18n();
@@ -294,10 +353,85 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const ownerId = data.ownerId;
   const { setNodes, getNode, getEdges } = useReactFlow();
   const [content, setContent] = useState(data.content);
+  const Icon = getBlockIconComponent(blockType);
 
   useEffect(() => {
     if (data.title !== undefined) setTitle(data.title);
   }, [data.title]);
+
+  // Render loading state for summary blocks
+  if (data.isSummary) {
+    return (
+      <div
+        className="react-flow__node-default rounded-lg border border-border bg-card shadow-sm flex items-center justify-center relative transition-opacity duration-300"
+        style={{
+          width: width || DEFAULT_BLOCK_WIDTH,
+          height: height || 100,
+        }}
+      >
+        <div className="flex flex-col items-center gap-3 text-muted-foreground animate-pulse">
+          <div className="rounded-full bg-muted p-3">
+            <Icon className="h-6 w-6 opacity-50" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span className="text-xs font-medium opacity-70">
+              Loading {getBlockLabel(blockType)}...
+            </span>
+          </div>
+        </div>
+        {/* Hidden handles to maintain connections */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left-target"
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left"
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="target"
+          position={Position.Right}
+          id="right-target"
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="top-target"
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Top}
+          id="top"
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="target"
+          position={Position.Bottom}
+          id="bottom-target"
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          style={{ opacity: 0 }}
+        />
+      </div>
+    );
+  }
 
   // Render specialized blocks
   if ((type as string) === "core") {
@@ -456,8 +590,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     async (url: string) => {
       if (!url) return;
 
-      // Simple regex to validate domain format (e.g. example.com)
-      // Allow http/https optional, domain required, TLD required (2+ chars)
+      // Validate domain format (http optional, domain + TLD required)
       const URL_REGEX = new RegExp(
         "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)/?$",
         "i",
@@ -495,9 +628,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         });
         if (res.ok) {
           const ogData = await res.json();
-          // If we got empty data, it counts as a try.
-          // If we have retried enough, the next call will hit the limit.
-          // We update metadata regardless to ensure UI reflects the attempt (even if empty)
+          // Count empty data as a try and update UI
           updateMetadata({
             ...metadataRef.current,
             title: ogData.title,
@@ -1069,29 +1200,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     },
     [id, data, getNode],
   );
-
-  const getBlockIcon = () => {
-    switch (blockType) {
-      case "link":
-        return <LinkIcon size={14} className="block-type-icon link" />;
-      case "file":
-        return <FileIcon size={14} className="block-type-icon file" />;
-      case "github":
-        return <Github size={14} className="block-type-icon github" />;
-      case "palette":
-        return <Palette size={14} className="block-type-icon palette" />;
-      case "contact":
-        return <User size={14} className="block-type-icon contact" />;
-      case "video":
-        return <FileVideo size={14} className="block-type-icon video" />;
-      case "snippet":
-        return <FileCode size={14} className="block-type-icon snippet" />;
-      case "checklist":
-        return <Check size={14} className="block-type-icon checklist" />;
-      default:
-        return <FileText size={14} className="block-type-icon text" />;
-    }
-  };
 
   const getDomain = (url: string) => {
     try {
@@ -1801,7 +1909,12 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
         <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
           <div className="flex items-center gap-2">
-            {getBlockIcon()}
+            <Icon
+              size={14}
+              className={`block-type-icon ${
+                blockType === "text" || !blockType ? "text" : blockType
+              }`}
+            />
             <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
               {dict.common[
                 `blockType${blockType.charAt(0).toUpperCase()}${blockType.slice(

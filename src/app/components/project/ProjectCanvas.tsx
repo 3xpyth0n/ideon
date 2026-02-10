@@ -27,6 +27,7 @@ import ChecklistBlock from "./ChecklistBlock";
 import CanvasEdge from "./CanvasEdge";
 import { InviteUserModal } from "./InviteUserModal";
 import { TransferBlockModal } from "./TransferBlockModal";
+import { ProjectCanvasErrorBoundary } from "./ProjectCanvasErrorBoundary";
 import { useI18n } from "@providers/I18nProvider";
 import { Button } from "@components/ui/Button";
 import * as Y from "yjs";
@@ -1041,8 +1042,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
 export default function ProjectCanvas(props: ProjectCanvasProps) {
   return (
-    <ReactFlowProvider>
-      <ProjectCanvasContent {...props} />
-    </ReactFlowProvider>
+    <ProjectCanvasErrorBoundary>
+      <ReactFlowProvider>
+        <ProjectCanvasContent {...props} />
+      </ReactFlowProvider>
+    </ProjectCanvasErrorBoundary>
   );
 }

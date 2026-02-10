@@ -101,7 +101,6 @@ initDb()
         const doc = docs.get(docName);
         if (doc && doc.conns.size === 0) {
           // If this was the last connection, destroy the doc and remove from map
-          // Increased timeout to 10 minutes to reduce reload frequency
           setTimeout(async () => {
             const currentDoc = docs.get(docName);
             if (currentDoc && currentDoc.conns.size === 0) {

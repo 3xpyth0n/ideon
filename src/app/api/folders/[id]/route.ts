@@ -20,7 +20,6 @@ export const GET = authenticatedAction(
 
     const db = getDb();
 
-    // Validate UUID format manually if needed, or rely on DB query returning nothing
     // Simple regex check for UUID to be safe
     if (
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(

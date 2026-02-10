@@ -3,12 +3,16 @@ import { ProjectList } from "@components/dashboard/ProjectList";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; folderId?: string }>;
 }) {
-  const { view } = await searchParams;
+  const { view, folderId } = await searchParams;
   return (
     <div className="island-content">
-      <ProjectList view={view} />
+      <ProjectList
+        key={`${view || "all"}-${folderId || "root"}`}
+        view={view}
+        folderId={folderId}
+      />
     </div>
   );
 }

@@ -167,7 +167,7 @@ export function ShareModal({
               {dict.common.shareLink || "Public Link"}
             </label>
             <div className="flex gap-2 items-center">
-              <input readOnly value={shareUrl} className="custom-input" />
+              <input readOnly value={shareUrl} className="zen-input" />
               <Button
                 onClick={handleCopy}
                 className="btn-secondary"

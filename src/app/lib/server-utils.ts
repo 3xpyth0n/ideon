@@ -196,7 +196,35 @@ export function projectAction<T, B = unknown>(
         .executeTakeFirst();
 
       if (!collaborator) {
-        throw { status: 403, message: "Forbidden" };
+        // Check folder inheritance
+        let hasFolderAccess = false;
+
+        if (project.folderId) {
+          const folderAccess = await db
+            .selectFrom("folders")
+            .select("id")
+            .where("id", "=", project.folderId)
+            .where((eb) =>
+              eb.or([
+                eb("ownerId", "=", user.id),
+                eb(
+                  "id",
+                  "in",
+                  eb
+                    .selectFrom("folderCollaborators")
+                    .select("folderId")
+                    .where("userId", "=", user.id),
+                ),
+              ]),
+            )
+            .executeTakeFirst();
+
+          if (folderAccess) hasFolderAccess = true;
+        }
+
+        if (!hasFolderAccess) {
+          throw { status: 403, message: "Forbidden" };
+        }
       }
     }
 

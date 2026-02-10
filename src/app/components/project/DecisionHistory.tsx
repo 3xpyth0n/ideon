@@ -351,6 +351,7 @@ export function DecisionHistory({
                         <div className="flex items-center justify-between gap-2 mt-0.5">
                           {editingStateId === state.id ? (
                             <input
+                              className="zen-input text-[10px] text-foreground bg-background border border-primary/50 rounded px-1 w-full outline-none"
                               type="text"
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
@@ -372,7 +373,6 @@ export function DecisionHistory({
                               }}
                               onClick={(e) => e.stopPropagation()}
                               autoFocus
-                              className="text-[10px] text-foreground bg-background border border-primary/50 rounded px-1 w-full outline-none"
                             />
                           ) : (
                             <span className="text-[10px] text-muted-foreground truncate opacity-70">

@@ -9,6 +9,9 @@ import * as fixRlsRecursionMigration from "../db/migrations/05FixRlsRecursion";
 import * as addProjectOrganizationMigration from "../db/migrations/06AddProjectOrganization";
 import * as addLastOpenedAtMigration from "../db/migrations/07AddLastOpenedAt";
 import * as addProjectShareLinkMigration from "../db/migrations/08AddProjectShareLink";
+import * as foldersMigration from "../db/migrations/09Folders";
+import * as addFolderStarredMigration from "../db/migrations/10AddFolderStarred";
+import * as addFolderDeletedAtMigration from "../db/migrations/11AddFolderDeletedAt";
 
 class StaticMigrationProvider implements MigrationProvider {
   async getMigrations(): Promise<Record<string, Migration>> {
@@ -21,6 +24,9 @@ class StaticMigrationProvider implements MigrationProvider {
       "06AddProjectOrganization": addProjectOrganizationMigration,
       "07AddLastOpenedAt": addLastOpenedAtMigration,
       "08AddProjectShareLink": addProjectShareLinkMigration,
+      "09Folders": foldersMigration,
+      "10AddFolderStarred": addFolderStarredMigration,
+      "11AddFolderDeletedAt": addFolderDeletedAtMigration,
     };
   }
 }

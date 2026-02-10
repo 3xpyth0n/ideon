@@ -117,16 +117,6 @@ export const useProjectData = ({
     }
   }, [initialProjectId, setProjectOwnerId]);
 
-  const handleImport = useCallback(
-    (newBlocks: Node<BlockData>[], newLinks: Edge[]) => {
-      const allBlocks = [...blocks, ...newBlocks];
-      const allLinks = [...links, ...newLinks];
-      setBlocks(allBlocks);
-      setLinks(allLinks);
-    },
-    [blocks, links, setBlocks, setLinks],
-  );
-
   const handlePreview = useCallback(
     async (stateId: string | null) => {
       if (!stateId) {
@@ -203,7 +193,6 @@ export const useProjectData = ({
   return {
     fetchGraph,
     fetchProjectMetadata,
-    handleImport,
     handlePreview,
     handleApplyState,
   };

@@ -20,12 +20,13 @@
     "passwordTooShort": "Password must be at least 8 characters"
   },
   "common": {
+    "projectAccess": "Project Access",
     "onboardingHint": "Paste a GitHub URL, Figma link, or Image to start",
     "coreBlockPlaceholder": "Paste a link or drop an image to get started...",
     "myProjects": "My Projects",
     "sharedWithMe": "Shared with Me",
-    "recent": "Recent Projects",
-    "starred": "Starred Projects",
+    "recent": "Recent",
+    "starred": "Starred",
     "trash": "Trash",
     "emptyTrash": "Trash is empty",
     "deletePermanently": "Delete Permanently",

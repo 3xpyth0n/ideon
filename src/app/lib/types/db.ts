@@ -14,6 +14,13 @@ export type Project = Selectable<projectsTable>;
 export type NewProject = Insertable<projectsTable>;
 export type ProjectUpdate = Updateable<projectsTable>;
 
+export type Folder = Selectable<foldersTable>;
+export type NewFolder = Insertable<foldersTable>;
+export type FolderUpdate = Updateable<foldersTable>;
+
+export type FolderCollaborator = Selectable<folderCollaboratorsTable>;
+export type NewFolderCollaborator = Insertable<folderCollaboratorsTable>;
+
 export type ProjectStar = Selectable<projectStarsTable>;
 export type NewProjectStar = Insertable<projectStarsTable>;
 
@@ -41,23 +48,50 @@ export interface usersTable {
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+export interface foldersTable {
+  id: Generated<string>;
+  name: string;
+  ownerId: string;
+  isStarred: ColumnType<number, number | undefined, number>;
+  deletedAt: ColumnType<
+    Date | null,
+    Date | string | null | undefined,
+    Date | string | null
+  >;
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
+  updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+export interface folderCollaboratorsTable {
+  folderId: string;
+  userId: string;
+  role: "owner" | "admin" | "editor" | "viewer";
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 export interface projectsTable {
   id: Generated<string>;
   name: string;
   description: string | null;
   ownerId: string;
-  currentStateId: string | null; // Tip of the temporal history
+  folderId: string | null;
+  currentStateId: string | null;
+  shareToken: string | null;
+  shareEnabled: number | null; // 0 or 1
+  shareCreatedAt: ColumnType<
+    Date,
+    Date | string | undefined,
+    Date | string
+  > | null;
+  deletedAt: ColumnType<Date, Date | string | undefined, Date | string> | null;
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
   updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
-  deletedAt: ColumnType<Date, Date | string | undefined, Date | string> | null;
+  acceptedAt: ColumnType<Date, Date | string | undefined, Date | string> | null;
   lastOpenedAt: ColumnType<
     Date,
     Date | string | undefined,
     Date | string
   > | null;
-  shareToken: string | null;
-  shareEnabled: number | null; // 0 or 1
-  shareCreatedAt: string | null;
 }
 
 export interface projectStarsTable {
@@ -66,19 +100,15 @@ export interface projectStarsTable {
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
-export interface temporalStatesTable {
-  id: string; // UUID
+export interface projectCollaboratorsTable {
   projectId: string;
-  parentId: string | null;
-  authorId: string;
-  timestamp: ColumnType<Date, Date | string | undefined, Date | string>;
-  intent: string; // e.g., 'autosave', 'userAction', 'restoration'
-  diff: string; // JSON string of the operation-based diff
-  isSnapshot: number; // Boolean as int (0 or 1)
+  userId: string;
+  role: "owner" | "admin" | "editor" | "viewer";
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface blocksTable {
-  id: string; // Not generated, client-side UUID
+  id: Generated<string>;
   projectId: string;
   blockType:
     | "text"
@@ -91,36 +121,36 @@ export interface blocksTable {
     | "video"
     | "snippet"
     | "checklist";
-  metadata: string;
-  parentBlockId: string | null; // For grouping/zones
+  metadata: string; // JSON string
+  parentBlockId: string | null;
   positionX: number;
   positionY: number;
   ownerId: string;
   content: string | null;
-  data: string; // JSON string for other metadata
+  data: string; // JSON string
   width: number | null;
   height: number | null;
-  selected: number; // Boolean as int
+  selected: number; // 0 or 1
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
   updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface linksTable {
-  id: string; // Client-side UUID
+  id: Generated<string>;
   projectId: string;
   source: string;
   target: string;
   sourceHandle: string | null;
   targetHandle: string | null;
   type: string | null;
-  animated: number;
+  animated: number; // 0 or 1
   sourceX: number | null;
   sourceY: number | null;
   targetX: number | null;
   targetY: number | null;
   sourceOrientation: string | null;
   targetOrientation: string | null;
-  data: string; // JSON string for other metadata
+  data: string | null; // JSON string
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
   updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
@@ -128,15 +158,9 @@ export interface linksTable {
 export interface blockSnapshotsTable {
   id: Generated<string>;
   blockId: string;
-  label: string | null;
-  data: string;
-  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
-}
-
-export interface projectCollaboratorsTable {
-  projectId: string;
-  userId: string;
-  role: "owner" | "admin" | "editor" | "viewer";
+  content: string | null;
+  data: string; // JSON string
+  metadata: string; // JSON string
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
@@ -144,11 +168,22 @@ export interface invitationsTable {
   id: Generated<string>;
   email: string;
   token: string;
-  expiresAt: ColumnType<Date, Date | string | undefined, Date | string>;
-  invitedBy: string | null;
-  role: "superadmin" | "admin" | "member";
+  role: "admin" | "member";
+  invitedBy: string;
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
+  expiresAt: ColumnType<Date, Date | string | undefined, Date | string>;
   acceptedAt: ColumnType<Date, Date | string | undefined, Date | string> | null;
+}
+
+export interface temporalStatesTable {
+  id: Generated<string>;
+  projectId: string;
+  parentId: string | null;
+  authorId: string;
+  intent: string;
+  diff: string; // JSON patch or similar
+  isSnapshot: number; // 0 or 1
+  timestamp: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface systemSettingsTable {
@@ -208,6 +243,8 @@ export interface rateLimitsTable {
 
 export interface database {
   users: usersTable;
+  folders: foldersTable;
+  folderCollaborators: folderCollaboratorsTable;
   projects: projectsTable;
   projectStars: projectStarsTable;
   projectCollaborators: projectCollaboratorsTable;

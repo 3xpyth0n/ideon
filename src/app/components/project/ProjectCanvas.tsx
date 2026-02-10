@@ -46,7 +46,6 @@ import {
   Minus,
   Maximize,
   FileCode,
-  ArrowDownUp,
   ArrowLeft,
   Check,
   RefreshCw,
@@ -63,9 +62,9 @@ import {
   Figma,
   Share2,
 } from "lucide-react";
-import { ImportExportModal } from "./ImportExportModal";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
+import { DownloadButton } from "./DownloadButton";
 import { CommandPalette, type Command } from "./CommandPalette";
 
 import { Modal } from "@components/ui/Modal";
@@ -81,7 +80,6 @@ const FIXED_EXTENT: [[number, number], [number, number]] = [
   [8000, 5000],
 ];
 import { ProjectCanvasProps } from "./utils/types";
-import { toast } from "sonner";
 
 const RemoteCursors = ({
   activeUsers,
@@ -254,8 +252,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     setIsInviteModalOpen,
     transferBlock,
     setTransferBlock,
-    isImportModalOpen,
-    setIsImportModalOpen,
     isPreviewMode,
     setIsPreviewMode: _setIsPreviewMode,
     selectedStateId,
@@ -281,7 +277,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onKeyDown,
     onPointerMove,
     onPointerLeave,
-    handleImport,
     handlePreview,
     handleApplyState,
     onBlockContextMenu,
@@ -780,13 +775,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             <ControlButton onClick={handleFitView} title={dict.common.fitView}>
               <Maximize />
             </ControlButton>
-            <ControlButton
-              onClick={() => !isPreviewMode && setIsImportModalOpen(true)}
-              title={dict.common.importExport}
-              disabled={isPreviewMode}
-            >
-              <ArrowDownUp className={isPreviewMode ? "opacity-50" : ""} />
-            </ControlButton>
+            <DownloadButton />
           </Controls>
 
           {contextMenu && (
@@ -984,17 +973,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             }}
           />
         )}
-
-        <ImportExportModal
-          isOpen={isImportModalOpen}
-          onClose={() => setIsImportModalOpen(false)}
-          onImport={handleImport}
-          blocks={blocks}
-          links={links}
-          projectId={initialProjectId!}
-          onError={(msg) => toast.error(msg)}
-          onSuccess={(msg) => toast.success(msg)}
-        />
 
         <CommandPalette
           isOpen={isCommandPaletteOpen}

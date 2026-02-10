@@ -19,6 +19,7 @@
     "passwordTooShort": "La password deve essere lunga almeno 8 caratteri"
   },
   "common": {
+    "projectAccess": "Accesso al progetto",
     "onboardingHint": "Incolla un URL GitHub, un link Figma o un'Immagine per iniziare",
     "coreBlockPlaceholder": "Incolla un link o trascina un'immagine per iniziare...",
     "undo": "Annulla",
@@ -369,8 +370,8 @@
     "myProjects": "I Miei Progetti",
     "projects": "Progetti",
     "sharedWithMe": "Condivisi con Me",
-    "recent": "Progetti Recenti",
-    "starred": "Progetti Preferiti",
+    "recent": "Recenti",
+    "starred": "Preferiti",
     "trash": "Cestino",
     "emptyTrash": "Il cestino è vuoto",
     "deletePermanently": "Elimina definitivamente",

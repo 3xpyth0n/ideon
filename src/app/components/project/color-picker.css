@@ -109,9 +109,10 @@
 
 .color-picker-field input {
   width: 100%;
-  background: var(--bg-main);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   padding: 6px 8px;
   font-size: 12px;
   color: var(--text-main);

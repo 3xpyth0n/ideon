@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useI18n } from "@providers/I18nProvider";
-import { useUser } from "@providers/UserProvider";
 import { Trash2, Loader2 } from "lucide-react";
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
@@ -16,21 +15,20 @@ interface UserProfile {
   role?: string;
 }
 
-interface ProjectAccessModalProps {
-  projectId: string;
-  projectName: string;
+interface FolderAccessModalProps {
+  folderId: string;
+  folderName: string;
   onClose: () => void;
   onUpdate?: () => void;
 }
 
-export function ProjectAccessModal({
-  projectId,
-  projectName,
+export function FolderAccessModal({
+  folderId,
+  folderName,
   onClose,
   onUpdate,
-}: ProjectAccessModalProps) {
+}: FolderAccessModalProps) {
   const { dict } = useI18n();
-  const { user: currentUser } = useUser();
 
   const [collaborators, setCollaborators] = useState<UserProfile[]>([]);
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
@@ -41,7 +39,7 @@ export function ProjectAccessModal({
 
   const fetchCollaborators = useCallback(async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/collaborators`);
+      const res = await fetch(`/api/folders/${folderId}/collaborators`);
       if (res.ok) {
         const data = await res.json();
         setCollaborators(data);
@@ -51,7 +49,7 @@ export function ProjectAccessModal({
     } finally {
       setLoadingCollaborators(false);
     }
-  }, [projectId]);
+  }, [folderId]);
 
   useEffect(() => {
     fetchCollaborators();
@@ -64,7 +62,6 @@ export function ProjectAccessModal({
         fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`)
           .then((res) => (res.ok ? res.json() : []))
           .then((data) => {
-            // Filter out existing collaborators from search results
             const filtered = data.filter(
               (user: UserProfile) =>
                 !collaborators.some((c) => c.id === user.id),
@@ -87,7 +84,7 @@ export function ProjectAccessModal({
   const handleInvite = async (user: UserProfile) => {
     setActionId(user.id);
     try {
-      const res = await fetch(`/api/projects/${projectId}/collaborators`, {
+      const res = await fetch(`/api/folders/${folderId}/collaborators`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id, role: "editor" }),
@@ -107,11 +104,12 @@ export function ProjectAccessModal({
   const handleRemove = async (userId: string) => {
     setActionId(userId);
     try {
-      const res = await fetch(`/api/projects/${projectId}/collaborators`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
+      const res = await fetch(
+        `/api/folders/${folderId}/collaborators?userId=${userId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (res.ok) {
         await fetchCollaborators();
@@ -124,86 +122,80 @@ export function ProjectAccessModal({
     }
   };
 
-  const isOwner =
-    collaborators.find((c) => c.id === currentUser?.id)?.role === "owner";
-
   return (
     <Modal
       isOpen={true}
       onClose={onClose}
-      title={projectName}
-      subtitle={dict.common.projectAccess}
+      title={folderName}
+      subtitle="Folder Access"
       className="max-w-lg w-full"
     >
-      {/* Search / Invite Section - Only for owners */}
-      {isOwner && (
-        <div className="mb-8">
-          <div className="relative mb-4">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-20"></div>
-            <input
-              className="zen-input pl-10"
-              placeholder={dict.common.searchUsers}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
-            {loadingSearch ? (
-              <div className="py-4 flex items-center justify-center opacity-20">
-                <Loader2 className="animate-spin" size={20} />
-              </div>
-            ) : searchResults.length > 0 ? (
-              searchResults.map((user) => (
-                <div
-                  key={user.id}
-                  className="user-card flex items-center justify-between p-2 border border-white/5 bg-white/[0.02]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-white/5 flex items-center justify-center overflow-hidden">
-                      <img
-                        src={getAvatarUrl(user.avatarUrl, user.username)}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold">
-                        {user.username || dict.common.defaultUsername}
-                      </span>
-                      <span className="text-2xs opacity-30 font-medium">
-                        {user.email}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => handleInvite(user)}
-                    disabled={actionId === user.id}
-                    variant="outline"
-                    className="h-8"
-                  >
-                    {actionId === user.id ? (
-                      <Loader2 className="animate-spin" size={10} />
-                    ) : (
-                      <span>{dict.common.invite}</span>
-                    )}
-                  </Button>
-                </div>
-              ))
-            ) : searchQuery.length >= 2 ? (
-              <p className="text-[10px] uppercase font-bold opacity-20 text-center py-4">
-                No users found
-              </p>
-            ) : null}
-          </div>
+      {/* Search / Invite Section */}
+      <div className="mb-8">
+        <div className="relative mb-4">
+          <input
+            className="zen-input pl-4"
+            placeholder={dict.common.searchUsers || "Search users..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      )}
+
+        <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+          {loadingSearch ? (
+            <div className="py-4 flex items-center justify-center opacity-20">
+              <Loader2 className="animate-spin" size={20} />
+            </div>
+          ) : searchResults.length > 0 ? (
+            searchResults.map((user) => (
+              <div
+                key={user.id}
+                className="user-card flex items-center justify-between p-2 border border-white/5 bg-white/[0.02]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-white/5 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={getAvatarUrl(user.avatarUrl, user.username)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold">
+                      {user.username || dict.common.defaultUsername}
+                    </span>
+                    <span className="text-2xs opacity-30 font-medium">
+                      {user.email}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => handleInvite(user)}
+                  disabled={actionId === user.id}
+                  variant="outline"
+                  className="h-8"
+                >
+                  {actionId === user.id ? (
+                    <Loader2 className="animate-spin" size={10} />
+                  ) : (
+                    <span>{dict.common.invite || "Invite"}</span>
+                  )}
+                </Button>
+              </div>
+            ))
+          ) : searchQuery.length >= 2 ? (
+            <p className="text-[10px] uppercase font-bold opacity-20 text-center py-4">
+              No users found
+            </p>
+          ) : null}
+        </div>
+      </div>
 
       {/* Collaborators List */}
       <div>
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
-          <span>{dict.common.currentCollaborators}</span>
+          <span>{dict.common.currentCollaborators || "Collaborators"}</span>
           <span className="h-[1px] flex-1 bg-white/5"></span>
           <span>{collaborators.length}</span>
         </h3>

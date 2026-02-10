@@ -374,10 +374,18 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
     try {
       return data.metadata ? JSON.parse(data.metadata) : null;
-    } catch (_e) {
+    } catch {
       return null;
     }
   });
+
+  const [previewImageError, setPreviewImageError] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
+
+  useEffect(() => {
+    setPreviewImageError(false);
+    setFaviconError(false);
+  }, [content, data.metadata]);
 
   const metadataRef = useRef(metadata);
   useEffect(() => {
@@ -739,7 +747,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   useEffect(() => {
     try {
       setMetadata(data.metadata ? JSON.parse(data.metadata) : null);
-    } catch (_e) {
+    } catch {
       setMetadata(null);
     }
   }, [data.metadata]);
@@ -1498,19 +1506,23 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
               </span>
             </div>
           )}
-          {metadata?.image ? (
+          {metadata?.image && !previewImageError ? (
             <div className="block-link-preview w-full aspect-video overflow-hidden relative flex-shrink-0">
               <img
                 src={metadata.image}
                 alt={metadata.title || "Link preview"}
                 className="w-full h-full object-cover"
+                crossOrigin="anonymous"
+                onError={() => setPreviewImageError(true)}
               />
-              {faviconUrl && (
+              {faviconUrl && !faviconError && (
                 <div className="absolute top-2 left-2 w-6 h-6 rounded bg-black/50 backdrop-blur-sm p-1">
                   <img
                     src={faviconUrl}
                     alt="favicon"
                     className="w-full h-full object-contain"
+                    crossOrigin="anonymous"
+                    onError={() => setFaviconError(true)}
                   />
                 </div>
               )}
@@ -1522,12 +1534,14 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
               ) : (
                 <Globe size={48} className="opacity-20" />
               )}
-              {faviconUrl && (
+              {faviconUrl && !faviconError && (
                 <div className="absolute top-2 left-2 w-6 h-6 rounded bg-black/50 backdrop-blur-sm p-1">
                   <img
                     src={faviconUrl}
                     alt="favicon"
                     className="w-full h-full object-contain"
+                    crossOrigin="anonymous"
+                    onError={() => setFaviconError(true)}
                   />
                 </div>
               )}
@@ -1535,11 +1549,13 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           )}
           <div className="block-link-info p-4">
             <div className="flex items-center gap-2 mb-1 overflow-hidden">
-              {faviconUrl && (
+              {faviconUrl && !faviconError && (
                 <img
                   src={faviconUrl}
                   alt="favicon"
                   className="w-4 h-4 min-w-[16px] object-contain opacity-80"
+                  crossOrigin="anonymous"
+                  onError={() => setFaviconError(true)}
                 />
               )}
               <h4
@@ -1624,7 +1640,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                   : "flex items-center gap-3"
               }`}
             >
-              {isImage && imageUrl ? (
+              {isImage && imageUrl && !previewImageError ? (
                 <div
                   role="button"
                   tabIndex={0}
@@ -1655,6 +1671,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                       isLargeBlock ? "object-contain" : "object-cover"
                     }`}
                     draggable={false}
+                    crossOrigin="anonymous"
+                    onError={() => setPreviewImageError(true)}
                   />
                 </div>
               ) : (

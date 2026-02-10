@@ -12,12 +12,14 @@ interface ProjectModalProps {
     name: string;
     description: string | null;
   };
+  folderId?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 export function ProjectModal({
   project,
+  folderId,
   onClose,
   onSuccess,
 }: ProjectModalProps) {
@@ -54,6 +56,7 @@ export function ProjectModal({
         body: JSON.stringify({
           name,
           description,
+          folderId: !isEdit ? folderId : undefined,
         }),
       });
 

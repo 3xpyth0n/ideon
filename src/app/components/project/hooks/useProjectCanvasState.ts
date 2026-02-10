@@ -496,7 +496,6 @@ export const useProjectCanvasState = (
   const [transferBlock, setTransferBlock] = useState<Node<BlockData> | null>(
     null,
   );
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
   const [shareCursor, setShareCursorState] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
@@ -1131,8 +1130,6 @@ export const useProjectCanvasState = (
     setIsInviteModalOpen,
     transferBlock,
     setTransferBlock,
-    isImportModalOpen,
-    setIsImportModalOpen,
     isPreviewMode,
     setIsPreviewMode,
     selectedStateId,
@@ -1158,7 +1155,6 @@ export const useProjectCanvasState = (
     onKeyDown,
     onPointerMove,
     onPointerLeave: rt.onPointerLeave,
-    handleImport: io.handleImport,
     handlePreview: io.handlePreview,
     handleApplyState: async (stateId: string) => {
       if (!initialProjectId) return;

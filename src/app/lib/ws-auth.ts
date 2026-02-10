@@ -75,6 +75,36 @@ export async function validateWebsocketRequest(
       return true;
     }
 
+    // Check folder inheritance
+    const projectInFolder = await db
+      .selectFrom("projects")
+      .select("folderId")
+      .where("id", "=", projectId)
+      .executeTakeFirst();
+
+    if (projectInFolder?.folderId) {
+      const folderAccess = await db
+        .selectFrom("folders")
+        .select("id")
+        .where("id", "=", projectInFolder.folderId)
+        .where((eb) =>
+          eb.or([
+            eb("ownerId", "=", userId),
+            eb(
+              "id",
+              "in",
+              eb
+                .selectFrom("folderCollaborators")
+                .select("folderId")
+                .where("userId", "=", userId),
+            ),
+          ]),
+        )
+        .executeTakeFirst();
+
+      if (folderAccess) return true;
+    }
+
     console.warn(
       `[WS Auth] Access denied for user ${userId} to project ${projectId}`,
     );

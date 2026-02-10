@@ -8,14 +8,47 @@ export const GET = projectAction(async (_req, { project }) => {
 });
 
 export const PATCH = projectAction(async (_req, { project, user, body }) => {
-  const { name, description, isStarred, deletedAt } = body as {
+  const { name, description, isStarred, deletedAt, folderId } = body as {
     name?: string;
     description?: string;
     isStarred?: boolean;
     deletedAt?: string | null;
+    folderId?: string | null;
   };
 
   const db = getDb();
+
+  // Handle Folder Move
+  if (folderId !== undefined) {
+    // If moving to a folder (not root), verify access
+    if (folderId) {
+      const folder = await db
+        .selectFrom("folders")
+        .select("ownerId")
+        .where("id", "=", folderId)
+        .executeTakeFirst();
+
+      if (!folder) throw { status: 404, message: "Folder not found" };
+
+      // User must be owner of folder OR collaborator
+      const hasAccess =
+        folder.ownerId === user.id ||
+        (await db
+          .selectFrom("folderCollaborators")
+          .where("folderId", "=", folderId)
+          .where("userId", "=", user.id)
+          .executeTakeFirst());
+
+      if (!hasAccess)
+        throw { status: 403, message: "Forbidden: No access to folder" };
+    }
+
+    await db
+      .updateTable("projects")
+      .set({ folderId, updatedAt: new Date().toISOString() })
+      .where("id", "=", project.id)
+      .execute();
+  }
 
   // Handle Star Toggle (User specific)
   if (typeof isStarred === "boolean") {

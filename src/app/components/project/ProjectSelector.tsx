@@ -67,7 +67,7 @@ export function ProjectSelector({
       {isCreating ? (
         <input
           autoFocus
-          className="bg-transparent border-none px-3 py-1 text-xs font-semibold outline-none w-28 text-center"
+          className="bg-transparent border-none border-b border-white/10 px-3 py-1 text-xs font-semibold outline-none w-28 text-center"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleCreate()}

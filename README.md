@@ -267,6 +267,13 @@ Thanks go to these wonderful people:
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Solirix"><img src="https://avatars.githubusercontent.com/u/99198915?v=4?s=100" width="100px;" alt="Solirix"/><br /><sub><b>Solirix</b></sub></a><br /><a href="#security-Solirix" title="Security">🛡️</a></td>
+    </tr>
+  </tbody>
+</table>
 
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->

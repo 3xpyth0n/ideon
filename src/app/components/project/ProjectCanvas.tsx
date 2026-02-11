@@ -606,7 +606,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               </div>
             </Panel>
           )}
-          <Panel position="top-left" className="!m-6" style={{ zIndex: 2000 }}>
+          <Panel
+            position="top-left"
+            className="!m-6 !ml-12 !mt-3"
+            style={{ zIndex: 2000 }}
+          >
             {!isPreviewMode && (
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 select-none">

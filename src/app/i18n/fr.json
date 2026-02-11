@@ -50,8 +50,12 @@
     "taskPlaceholder": "Tâche...",
     "noVideo": "Aucune URL vidéo valide",
     "save": "Enregistrer",
+    "saved": "Enregistré",
     "cancel": "Annuler",
+    "expand": "Développer",
+    "collapse": "Réduire",
     "delete": "Supprimer",
+    "deleted": "Supprimé",
     "rename": "Renommer",
     "close": "Fermer",
     "return": "Retour",
@@ -389,5 +393,20 @@
     "copied": "Copié !",
     "regenerate": "Régénérer le lien",
     "regenerateConfirm": "Êtes-vous sûr ? L'ancien lien ne fonctionnera plus."
+  },
+  "gitTokens": {
+    "title": "Jetons Git",
+    "description": "Gérez vos jetons d'accès personnel pour les dépôts privés",
+    "noTokens": "Aucun jeton configuré",
+    "tokenExists": "Un jeton pour cet hôte existe déjà",
+    "disabled": "Désactivé",
+    "add": "Ajouter un jeton",
+    "addTitle": "Ajouter un nouveau jeton Git",
+    "provider": "Fournisseur",
+    "host": "Hôte",
+    "hostHint": "Entrez le nom de domaine (ex: github.com)",
+    "token": "Jeton d'accès personnel",
+    "tokenHint": "Collez votre jeton ici",
+    "deleteWarning": "Êtes-vous sûr de vouloir supprimer ce jeton ?"
   }
 }

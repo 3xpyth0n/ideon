@@ -60,7 +60,6 @@ import ChecklistBlock from "./ChecklistBlock";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 
 import NoteBlock from "./NoteBlock";
-import { getRepoStats } from "@lib/client/git-providers";
 
 export type BlockData = {
   title?: string;
@@ -694,7 +693,16 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       }
 
       try {
-        const { stats: result, error } = await getRepoStats(cleanedUrl);
+        const res = await fetch(
+          `/api/git/stats?url=${encodeURIComponent(cleanedUrl)}`,
+        );
+        let result = null;
+        let error = null;
+        if (res.ok) {
+          result = await res.json();
+        } else {
+          error = (await res.json()).error;
+        }
 
         if (result) {
           // Deep check if stats actually changed before updating metadata
@@ -716,7 +724,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
               github: {
                 url,
                 enabledStats: currentEnabled,
-                lastStats: result,
+                lastStats: result.stats || result,
                 lastFetched: new Date().toISOString(),
               },
             });
@@ -1325,7 +1333,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     }
 
     if (blockType === "github") {
-      const stats = metadata?.github?.lastStats;
+      const rawStats = metadata?.github?.lastStats as unknown as
+        | (GithubStats & { stats?: GithubStats })
+        | null;
+      const stats = rawStats?.stats || rawStats;
       const provider = stats?.provider || "github";
 
       const pullsLabel =

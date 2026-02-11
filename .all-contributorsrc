@@ -1,0 +1,12 @@
+{
+  "projectName": "ideon",
+  "projectOwner": "3xpyth0n",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "repoType": "github",
+  "contributorsPerLine": 7,
+  "repoHost": "https://github.com",
+  "commitType": "docs"
+}

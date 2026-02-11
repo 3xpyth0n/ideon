@@ -31,8 +31,12 @@
     "taskPlaceholder": "Attività...",
     "noVideo": "Nessun URL video valido",
     "save": "Salva",
+    "saved": "Salvato",
     "cancel": "Annulla",
+    "expand": "Espandi",
+    "collapse": "Comprimi",
     "delete": "Elimina",
+    "deleted": "Eliminato",
     "rename": "Rinomina",
     "close": "Chiudi",
     "return": "Ritorna",
@@ -388,5 +392,20 @@
     "checklistProgress": "{completed} / {total}",
     "checklistEmpty": "Nessuna attività",
     "checklistComplete": "Completato"
+  },
+  "gitTokens": {
+    "title": "Token Git",
+    "description": "Gestisci i tuoi token di accesso personale per i repository privati",
+    "noTokens": "Nessun token configurato",
+    "tokenExists": "Un token per questo host esiste già",
+    "disabled": "Disabilitato",
+    "add": "Aggiungi Token",
+    "addTitle": "Aggiungi Nuovo Token Git",
+    "provider": "Provider",
+    "host": "Host",
+    "hostHint": "Inserisci il nome di dominio (es. github.com)",
+    "token": "Token di accesso personale",
+    "tokenHint": "Incolla il tuo token qui",
+    "deleteWarning": "Sei sicuro di voler eliminare questo token?"
   }
 }

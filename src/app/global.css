@@ -973,15 +973,54 @@ input:-webkit-autofill:active {
   z-index: 2000;
   user-select: none;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 .sidebar.collapsed {
-  width: 50px;
+  width: 0px;
+  margin-right: -12px;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Force collapsed state via HTML attribute to avoid flash */
 [data-sidebar-collapsed="true"] .sidebar {
-  width: 50px;
+  width: 0px;
+  margin-right: -12px;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 28px;
+  left: 316px;
+  z-index: 2500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition:
+    left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s,
+    background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.sidebar-toggle-btn:hover {
+  color: var(--text-main);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-toggle-btn.collapsed,
+[data-sidebar-collapsed="true"] .sidebar-toggle-btn {
+  left: 24px;
 }
 
 [data-sidebar-collapsed="true"] .sidebar .sidebar-logo-text,
@@ -1432,6 +1471,10 @@ input:-webkit-autofill:active {
 .p-12 {
   padding: 48px;
 }
+.pr-3 {
+  padding-right: 0.75rem !important;
+}
+
 :root {
   --core-block-width: 640px;
   --core-block-height: 480px;
@@ -2424,6 +2467,14 @@ input:-webkit-autofill:active {
   text-overflow: ellipsis;
 }
 
+.\!ml-12 {
+  margin-left: 48px !important;
+}
+
+.\!mt-3 {
+  margin-top: 18px !important;
+}
+
 /* Main Content - Island Style */
 .main-island {
   flex: 1;
@@ -3043,7 +3094,7 @@ input:-webkit-autofill:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 2999;
   animation: fadeIn 0.3s ease;
 }
 

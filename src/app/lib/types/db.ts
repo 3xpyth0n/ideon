@@ -255,6 +255,8 @@ export interface rateLimitsTable {
   expire: number;
 }
 
+import { userGitTokensTable } from "./userGitTokens";
+
 export interface database {
   users: usersTable;
   folders: foldersTable;
@@ -276,6 +278,7 @@ export interface database {
   rateLimits: rateLimitsTable;
   githubRepoStats: githubRepoStatsTable;
   linkPreviews: linkPreviewsTable;
+  userGitTokens: userGitTokensTable;
 }
 
 export interface githubRepoStatsTable {

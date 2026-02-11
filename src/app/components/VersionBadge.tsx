@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "@providers/I18nProvider";
 
 interface VersionBadgeProps {
@@ -11,6 +12,8 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
   const { dict } = useI18n();
   const [hasUpdate, setHasUpdate] = useState(false);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     fetch("/api/system/version")
@@ -47,25 +50,53 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
   };
 
   return (
-    <a
-      href="https://github.com/3xpyth0n/ideon/releases"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="version-badge"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <span className="version-text">v{currentVersion.replace(/^v/, "")}</span>
-      <span className={`version-dot ${hasUpdate ? "update" : "latest"}`} />
+    <>
+      <a
+        href="https://github.com/3xpyth0n/ideon/releases"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="version-badge"
+        onClick={(e) => e.stopPropagation()}
+        onMouseEnter={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          setTooltipPos({
+            top: rect.bottom + 6,
+            left: rect.left + rect.width / 2,
+          });
+          setShowTooltip(true);
+        }}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        <span className="version-text">
+          v{currentVersion.replace(/^v/, "")}
+        </span>
+        <span className={`version-dot ${hasUpdate ? "update" : "latest"}`} />
+      </a>
 
-      <div className="version-tooltip">
-        {hasUpdate
-          ? dict.system.updateAvailable.replace(
-              "{version}",
-              latestVersion || "",
-            )
-          : dict.system.upToDate}
-        <div className="version-tooltip-arrow" />
-      </div>
-    </a>
+      {showTooltip &&
+        createPortal(
+          <div
+            className="version-tooltip"
+            style={{
+              position: "fixed",
+              top: tooltipPos.top,
+              left: tooltipPos.left,
+              transform: "translateX(-50%)",
+              opacity: 1,
+              visibility: "visible",
+              zIndex: 9999,
+            }}
+          >
+            {hasUpdate
+              ? dict.system.updateAvailable.replace(
+                  "{version}",
+                  latestVersion || "",
+                )
+              : dict.system.upToDate}
+            <div className="version-tooltip-arrow" />
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

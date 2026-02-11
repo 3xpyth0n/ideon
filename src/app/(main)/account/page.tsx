@@ -5,6 +5,7 @@ import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
 import { toast } from "sonner";
 import { getAvatarUrl } from "@lib/utils";
+import { GitTokenManager } from "@components/account/GitTokenManager";
 
 export default function AccountPage() {
   const { dict, lang, setLang, availableLanguages } = useI18n();
@@ -362,6 +363,19 @@ export default function AccountPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </section>
+
+          {/* Git Tokens Section */}
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
+            <div className="md:col-span-4">
+              <h2 className="section-title mb-1">{dict.gitTokens.title}</h2>
+              <p className="text-xs text-muted opacity-40 leading-relaxed">
+                {dict.gitTokens.description}
+              </p>
+            </div>
+            <div className="md:col-span-8">
+              <GitTokenManager />
             </div>
           </section>
         </div>

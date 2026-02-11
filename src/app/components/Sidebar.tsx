@@ -15,6 +15,8 @@ import {
   Star,
   Trash2,
   Share2,
+  PanelLeftOpen,
+  PanelLeftClose,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
@@ -162,7 +164,7 @@ export function Sidebar({
                       e.stopPropagation();
                       setProjectsExpanded(!projectsExpanded);
                     }}
-                    className={`px-2 flex items-center justify-center hover:bg-white/5 transition-colors ${
+                    className={`pr-3 flex items-center justify-center hover:bg-white/5 transition-colors ${
                       projectsExpanded ? "expanded" : ""
                     }`}
                   >
@@ -396,6 +398,22 @@ export function Sidebar({
           </Link>
         </footer>
       </aside>
+
+      <button
+        className={`sidebar-toggle-btn ${isCollapsed ? "collapsed" : ""}`}
+        onClick={() => handleToggle(!isCollapsed)}
+        title={
+          isCollapsed
+            ? dict.common.expand || "Expand"
+            : dict.common.collapse || "Collapse"
+        }
+      >
+        {isCollapsed ? (
+          <PanelLeftOpen size={20} />
+        ) : (
+          <PanelLeftClose size={20} />
+        )}
+      </button>
 
       <Modal
         isOpen={showLogoutModal}

@@ -1,0 +1,12 @@
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: bold;
+  background-color: transparent;
+  opacity: 0.8;
+  margin-bottom: 24px;
+}

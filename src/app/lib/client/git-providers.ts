@@ -25,10 +25,16 @@ async function fetchGithub(
   owner: string,
   repo: string,
   url: string,
+  token?: string,
 ): Promise<FetchResult> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
+    "User-Agent": "Ideon-App",
   };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   try {
     const [repoRes, releaseRes, commitRes, pullsRes, contributorsRes] =
@@ -110,21 +116,36 @@ async function fetchGitlab(
   owner: string,
   repo: string,
   url: string,
+  token?: string,
 ): Promise<FetchResult> {
   const projectPath = encodeURIComponent(`${owner}/${repo}`);
   const baseUrl = `https://${host}/api/v4/projects/${projectPath}`;
 
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   try {
     const [projectRes, releasesRes, commitsRes, mrsRes, contributorsRes] =
       await Promise.all([
-        fetch(baseUrl),
-        fetch(`${baseUrl}/releases?per_page=1`),
-        fetch(`${baseUrl}/repository/commits?per_page=1`),
-        fetch(`${baseUrl}/merge_requests?state=opened&per_page=1`),
-        fetch(`${baseUrl}/repository/contributors?per_page=1`),
+        fetch(baseUrl, { headers }),
+        fetch(`${baseUrl}/releases?per_page=1`, { headers }),
+        fetch(`${baseUrl}/repository/commits?per_page=1`, { headers }),
+        fetch(`${baseUrl}/merge_requests?state=opened&per_page=1`, { headers }),
+        fetch(`${baseUrl}/repository/contributors?per_page=1`, { headers }),
       ]);
 
     if (!projectRes.ok) {
+      if (projectRes.status === 401 || projectRes.status === 403) {
+        return {
+          error: "GitLab API: Unauthorized/Forbidden",
+          status: projectRes.status,
+        };
+      }
+      if (projectRes.status === 404) {
+        return { error: "GitLab Repository not found", status: 404 };
+      }
       return {
         error: `GitLab API error: ${projectRes.statusText}`,
         status: projectRes.status,
@@ -164,20 +185,35 @@ async function fetchGitea(
   owner: string,
   repo: string,
   url: string,
+  token?: string,
 ): Promise<FetchResult> {
   const baseUrl = `https://${host}/api/v1/repos/${owner}/${repo}`;
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `token ${token}`;
+  }
 
   try {
     const [repoRes, releaseRes, commitsRes, pullsRes, contributorsRes] =
       await Promise.all([
-        fetch(baseUrl),
-        fetch(`${baseUrl}/releases?limit=1`),
-        fetch(`${baseUrl}/commits?limit=1`),
-        fetch(`${baseUrl}/pulls?state=open&limit=1`),
-        fetch(`${baseUrl}/contributors?limit=1`),
+        fetch(baseUrl, { headers }),
+        fetch(`${baseUrl}/releases?limit=1`, { headers }),
+        fetch(`${baseUrl}/commits?limit=1`, { headers }),
+        fetch(`${baseUrl}/pulls?state=open&limit=1`, { headers }),
+        fetch(`${baseUrl}/contributors?limit=1`, { headers }),
       ]);
 
     if (!repoRes.ok) {
+      if (repoRes.status === 401 || repoRes.status === 403) {
+        return {
+          error: "Gitea/Forgejo API: Unauthorized/Forbidden",
+          status: repoRes.status,
+        };
+      }
+      if (repoRes.status === 404) {
+        return { error: "Gitea Repository not found", status: 404 };
+      }
       return {
         error: `Gitea/Forgejo API error: ${repoRes.statusText}`,
         status: repoRes.status,
@@ -212,7 +248,10 @@ async function fetchGitea(
   }
 }
 
-export async function getRepoStats(url: string): Promise<FetchResult> {
+export async function getRepoStats(
+  url: string,
+  token?: string,
+): Promise<FetchResult> {
   if (!url) {
     return { error: "URL is required", status: 400 };
   }
@@ -257,14 +296,14 @@ export async function getRepoStats(url: string): Promise<FetchResult> {
   }
 
   if (provider === "github") {
-    return fetchGithub(owner, repo, cleanUrl);
+    return fetchGithub(owner, repo, cleanUrl, token);
   } else if (provider === "gitlab") {
-    return fetchGitlab(host, owner, repo, cleanUrl);
+    return fetchGitlab(host, owner, repo, cleanUrl, token);
   } else {
     // Try probing for self-hosted
-    let result = await fetchGitea(host, owner, repo, cleanUrl);
+    let result = await fetchGitea(host, owner, repo, cleanUrl, token);
     if (result.error && result.status === 404) {
-      result = await fetchGitlab(host, owner, repo, cleanUrl);
+      result = await fetchGitlab(host, owner, repo, cleanUrl, token);
     }
     return result;
   }

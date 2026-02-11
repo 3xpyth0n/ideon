@@ -236,17 +236,9 @@ http://localhost:3000
 
 ---
 
-## License
-
-AGPLv3.
-
-If you deploy Ideon publicly and modify it, you are expected to share the changes.
-
----
-
 ## Contributing
 
-Contributions are welcome.
+If you've ever wanted to contribute to open source, and a great cause, now is your chance!
 
 Bug reports, feature ideas, documentation improvements, and code contributions all matter.
 
@@ -257,3 +249,37 @@ Start here:
 - submit a pull request
 
 Ideon grows through real use and real feedback.
+
+---
+
+## Contributors
+
+### Creator
+
+<table>
+  <td align="center"><a href="https://portfolio.theideon.com"><img src="https://avatars1.githubusercontent.com/u/113543660?v=4" width="100px;" alt="Saad Idrissi"/><br /><sub><b>Saad Idrissi</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/commits?author=3xpyth0n" title="Code">💻</a></td>
+</table>
+
+### Code Contributors
+
+Thanks go to these wonderful people:
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://allcontributors.org) specification.
+Contributions of any kind are welcome!
+
+---
+
+## License
+
+AGPLv3.
+
+If you deploy Ideon publicly and modify it, you are expected to share the changes.

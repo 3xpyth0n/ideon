@@ -1,11 +1,24 @@
 {
   "projectName": "ideon",
   "projectOwner": "3xpyth0n",
-  "files": ["README.md"],
+  "files": [
+    "README.md"
+  ],
   "imageSize": 100,
   "repoType": "github",
   "contributorsPerLine": 7,
   "repoHost": "https://github.com",
   "commitType": "docs",
-  "contributors": []
+  "contributors": [
+    {
+      "login": "Solirix",
+      "name": "Solirix",
+      "avatar_url": "https://avatars.githubusercontent.com/u/99198915?v=4",
+      "profile": "https://github.com/Solirix",
+      "contributions": [
+        "security"
+      ]
+    }
+  ],
+  "commitConvention": "angular"
 }

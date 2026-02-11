@@ -18,6 +18,15 @@
       "contributions": [
         "translation"
       ]
+    },
+    {
+      "login": "Solirix",
+      "name": "Solirix",
+      "avatar_url": "https://avatars.githubusercontent.com/u/99198915?v=4",
+      "profile": "https://github.com/Solirix",
+      "contributions": [
+        "security"
+      ]
     }
   ],
   "commitConvention": "angular"

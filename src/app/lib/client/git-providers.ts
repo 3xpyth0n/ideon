@@ -332,11 +332,15 @@ export async function getRepoStats(
     const parsedUrl = new URL(
       cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`,
     );
+    const normalizedHost = parsedUrl.hostname.replace(/^www\./, "").toLowerCase();
     if (isPrivateIp(parsedUrl.hostname)) {
       return { error: "Private IP addresses are not allowed", status: 400 };
     }
     if (parsedUrl.protocol !== "https:") {
       return { error: "Only HTTPS protocol is allowed", status: 400 };
+    }
+    if (normalizedHost !== "github.com" && normalizedHost !== "gitlab.com") {
+      return { error: "Unsupported host", status: 400 };
     }
   } catch {
     return { error: "Invalid URL format", status: 400 };

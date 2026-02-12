@@ -5491,3 +5491,41 @@ input:-webkit-autofill:active {
 .preview-mode .markdown-content {
   pointer-events: auto !important;
 }
+
+.border-b-2 {
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+}
+
+.border-white {
+  border-color: #ffffff;
+}
+
+.border-transparent {
+  border-color: transparent;
+}
+
+.p-1 {
+  padding: 0.25rem;
+}
+
+.p-1\.5 {
+  padding: 0.375rem;
+}
+
+.sketch-cursor {
+  cursor: var(--sketch-cursor, crosshair);
+}
+.cursor-pen {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M4 20 L20 4' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/><circle cx='20' cy='4' r='3' fill='%23ffffff'/></svg>")
+      20 4,
+    crosshair;
+}
+
+.cursor-eraser {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><rect x='4' y='6' width='16' height='10' rx='2' fill='%23ffffff'/></svg>")
+      8 11,
+    crosshair;
+}

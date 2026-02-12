@@ -20,6 +20,7 @@ import ContactBlock from "./ContactBlock";
 import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
+import SketchBlock from "./SketchBlock";
 import CanvasEdge from "./CanvasEdge";
 import { useI18n } from "@providers/I18nProvider";
 import { useEffect, useMemo } from "react";
@@ -35,6 +36,7 @@ const blockTypes = {
   video: VideoBlock,
   snippet: SnippetBlock,
   checklist: ChecklistBlock,
+  sketch: SketchBlock,
   core: ProjectCoreBlock,
 };
 

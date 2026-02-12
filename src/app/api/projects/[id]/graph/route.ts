@@ -1,7 +1,6 @@
 import { Node, Edge } from "@xyflow/react";
 import { getDb, runTransaction } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
-import { logger } from "@lib/logger";
 import {
   transformBlock,
   transformLink,
@@ -14,7 +13,6 @@ import { z } from "zod";
 export const dynamic = "force-dynamic";
 
 export const GET = projectAction(async (req, { project, user }) => {
-  const startTime = Date.now();
   const db = getDb();
   const url = new URL(req.url);
   const mode = url.searchParams.get("mode") || "full";
@@ -26,16 +24,6 @@ export const GET = projectAction(async (req, { project, user }) => {
     x2: parseFloat(url.searchParams.get("x2") || "Infinity"),
     y2: parseFloat(url.searchParams.get("y2") || "Infinity"),
   };
-
-  logger.info(
-    {
-      mode,
-      offset,
-      limit,
-      viewport: mode === "viewport" ? viewport : "N/A",
-    },
-    `[GraphAPI] Fetching graph for project ${project.id}`,
-  );
 
   // SUMMARY MODE: Return lightweight block structure (positions only)
   if (mode === "summary") {
@@ -205,14 +193,6 @@ export const GET = projectAction(async (req, { project, user }) => {
       .where("projectId", "=", project.id)
       .execute();
   }
-
-  logger.info(
-    {
-      blockCount: blocks.length,
-      linkCount: links.length,
-    },
-    `[GraphAPI] Request completed in ${Date.now() - startTime}ms`,
-  );
 
   return {
     blocks: blocks.map((b) => transformBlock(b)),

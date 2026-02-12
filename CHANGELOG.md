@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-02-12
+
+### Added
+
+- New Sketch block type for freehand drawing and annotations.
+
 ## [0.3.1] - 2026-02-11
 
 ### Added

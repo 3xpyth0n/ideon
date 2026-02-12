@@ -507,11 +507,20 @@ export const useProjectCanvasGraph = ({
         | "contact"
         | "video"
         | "snippet"
-        | "checklist" = "text",
+        | "checklist"
+        | "sketch" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
       if (!currentUser) return null;
+
+      const isSketch = blockType === "sketch";
+      const blockWidth = isSketch
+        ? DEFAULT_BLOCK_WIDTH * 1.5
+        : DEFAULT_BLOCK_WIDTH;
+      const blockHeight = isSketch
+        ? DEFAULT_BLOCK_HEIGHT * 1.5
+        : DEFAULT_BLOCK_HEIGHT;
 
       const position = getAdjustedPosition(
         {
@@ -527,8 +536,8 @@ export const useProjectCanvasGraph = ({
                 x: contextMenu?.left || 0,
                 y: contextMenu?.top || 0,
               }).y,
-          width: DEFAULT_BLOCK_WIDTH,
-          height: DEFAULT_BLOCK_HEIGHT,
+          width: blockWidth,
+          height: blockHeight,
         },
         {
           x: CORE_BLOCK_X,
@@ -543,9 +552,9 @@ export const useProjectCanvasGraph = ({
         id: newBlockId,
         type: blockType,
         position,
-        width: DEFAULT_BLOCK_WIDTH,
-        height: DEFAULT_BLOCK_HEIGHT,
-        style: { width: DEFAULT_BLOCK_WIDTH, height: DEFAULT_BLOCK_HEIGHT },
+        width: blockWidth,
+        height: blockHeight,
+        style: { width: blockWidth, height: blockHeight },
         data: {
           title: "",
           content: initialContent,
@@ -576,8 +585,8 @@ export const useProjectCanvasGraph = ({
           const sourceX =
             (fromBlock.position.x || 0) + (isRight ? fromWidth : 0);
           const sourceY = (fromBlock.position.y || 0) + fromHeight * 0.5;
-          const targetX = position.x + (isRight ? 0 : DEFAULT_BLOCK_WIDTH);
-          const targetY = position.y + DEFAULT_BLOCK_HEIGHT * 0.5;
+          const targetX = position.x + (isRight ? 0 : blockWidth);
+          const targetY = position.y + blockHeight * 0.5;
 
           const newLink: Edge = {
             id: uuidv4(),

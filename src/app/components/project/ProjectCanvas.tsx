@@ -24,6 +24,7 @@ import ContactBlock from "./ContactBlock";
 import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
+import SketchBlock from "./SketchBlock";
 import CanvasEdge from "./CanvasEdge";
 import { InviteUserModal } from "./InviteUserModal";
 import { TransferBlockModal } from "./TransferBlockModal";
@@ -62,6 +63,7 @@ import {
   Redo2,
   Figma,
   Share2,
+  PenTool,
 } from "lucide-react";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
@@ -146,6 +148,7 @@ const blockTypes = {
   video: VideoBlock,
   snippet: SnippetBlock,
   checklist: ChecklistBlock,
+  sketch: SketchBlock,
   core: ProjectCoreBlock,
 };
 
@@ -319,6 +322,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         icon: <FileText size={18} />,
         keywords: ["text", "note", "markdown"],
         action: () => handleCreateBlock(undefined, undefined, "text"),
+        category: "create",
+      },
+      {
+        id: "create-sketch",
+        label: dict.common.newSketch || "New Sketch",
+        icon: <PenTool size={18} />,
+        keywords: ["sketch", "draw", "whiteboard", "canvas"],
+        action: () => handleCreateBlock(undefined, undefined, "sketch"),
         category: "create",
       },
       {
@@ -872,6 +883,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         className="context-menu-item"
                       >
                         {dict.common.newChecklist || "New Checklist"}
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleCreateBlock(undefined, undefined, "sketch")
+                        }
+                        className="context-menu-item"
+                      >
+                        {dict.common.newSketch || "New Sketch"}
                       </button>
                       <div className="context-menu-separator" />
                     </>

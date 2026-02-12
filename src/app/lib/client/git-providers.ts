@@ -79,7 +79,7 @@ async function fetchGithub(
       // Check Link header for "last" page.
       const link = res.headers.get("link");
       if (link) {
-        const match = link.match(/page=(\d+)&[^>]*>; rel="last"/);
+        const match = link.match(/[?&]page=(\d+)[^>]*>; rel="last"/);
         if (match) {
           return parseInt(match[1], 10);
         }

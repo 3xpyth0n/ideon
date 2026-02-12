@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "ideon",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "The Visual Hub for Everything Your Project Needs",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -40,6 +40,7 @@
     "next-auth": "^5.0.0-beta.30",
     "node-html-parser": "^7.0.2",
     "nodemailer": "^7.0.13",
+    "perfect-freehand": "^1.2.3",
     "pg": "^8.11.3",
     "pino": "^10.2.0",
     "prettier": "^3.8.1",

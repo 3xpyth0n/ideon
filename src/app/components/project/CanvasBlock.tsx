@@ -57,6 +57,7 @@ import ContactBlock from "./ContactBlock";
 import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
+import SketchBlock from "./SketchBlock";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 
 import NoteBlock from "./NoteBlock";
@@ -79,7 +80,8 @@ export type BlockData = {
     | "contact"
     | "video"
     | "snippet"
-    | "checklist";
+    | "checklist"
+    | "sketch";
   label?: string;
   metadata?: string;
   isLocked?: boolean;
@@ -1330,6 +1332,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
     if (blockType === "checklist") {
       return <ChecklistBlock {...props} isReadOnly={isReadOnly} />;
+    }
+
+    if (blockType === "sketch") {
+      return <SketchBlock {...props} isReadOnly={isReadOnly} />;
     }
 
     if (blockType === "github") {

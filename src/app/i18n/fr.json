@@ -337,6 +337,8 @@
     "newVideo": "Nouvelle Vidéo",
     "newSnippet": "Nouveau Snippet",
     "newChecklist": "Nouvelle Checklist",
+    "newSketch": "Nouveau Croquis",
+    "blockTypeSketch": "Croquis",
     "blockTypeText": "Note",
     "blockTypeLink": "Lien",
     "blockTypeFile": "Fichier",

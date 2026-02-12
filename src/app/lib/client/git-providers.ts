@@ -539,11 +539,16 @@ export async function getRepoStats(
     ];
 
     let validGitlab = true;
-    for (const glu of gitlabUrls) {
-      const v = validateUrl(glu);
-      if (!v.valid) {
-        validGitlab = false;
-        break;
+    // Re-validate GitLab URLs with provider awareness to prevent SSRF
+    if (isPrivateOrLocalHost(host)) {
+      validGitlab = false;
+    } else {
+      for (const glu of gitlabUrls) {
+        const v = validateUrl(glu, "gitlab");
+        if (!v.valid) {
+          validGitlab = false;
+          break;
+        }
       }
     }
 

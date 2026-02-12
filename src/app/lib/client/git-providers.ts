@@ -351,6 +351,35 @@ async function fetchGitea(
   }
 
   try {
+    // Derive the allowed host from the already-validated repository URL
+    const normalizedRepoUrl = normalizeUrl(repoUrl);
+    const repoUrlObj = new URL(
+      normalizedRepoUrl.startsWith("http")
+        ? normalizedRepoUrl
+        : `https://${normalizedRepoUrl}`,
+    );
+    const allowedHost = repoUrlObj.host.toLowerCase();
+
+    // Validate all Gitea URLs before making any requests
+    for (const urlStr of urls) {
+      let urlObj: URL;
+      try {
+        urlObj = new URL(urlStr);
+      } catch {
+        return { error: "Invalid Gitea API URL", status: 400 };
+      }
+
+      // Enforce HTTPS and ensure the host matches the originally validated host
+      if (urlObj.protocol !== "https:" || urlObj.host.toLowerCase() !== allowedHost) {
+        return { error: "Invalid or unsafe Gitea API URL", status: 400 };
+      }
+
+      const v = validateUrl(urlStr);
+      if (!v.valid) {
+        return { error: "Invalid or unsafe Gitea API URL", status: 400 };
+      }
+    }
+
     const [repoRes, releaseRes, commitsRes, pullsRes, contributorsRes] =
       await Promise.all([
         fetch(urls[0], { headers }),

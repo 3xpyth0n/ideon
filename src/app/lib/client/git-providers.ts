@@ -111,6 +111,32 @@ function normalizeUrl(url: string): string {
   return url.replace(/\/$/, "").replace(/\.git$/, "");
 }
 
+/**
+ * Ensure the given URL uses HTTPS and matches the expected host.
+ * Returns the normalized URL string if valid, otherwise null.
+ */
+function ensureAllowedApiUrl(
+  rawUrl: string,
+  expectedHost: string,
+): string | null {
+  try {
+    const parsed = new URL(rawUrl);
+    const hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    const allowedHost = expectedHost.replace(/^www\./, "").toLowerCase();
+
+    if (parsed.protocol !== "https:") {
+      return null;
+    }
+    if (hostname !== allowedHost) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 // Basic SSRF protection: reject obvious local or private hosts.
 function isPrivateOrLocalHost(host: string): boolean {
   const h = host.trim().toLowerCase();
@@ -173,14 +199,27 @@ async function fetchGithub(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // Final safety check: ensure all URLs point to the expected GitHub API host.
+  const safeUrls: string[] = [];
+  for (const rawUrl of urls) {
+    const validated = ensureAllowedApiUrl(rawUrl, "api.github.com");
+    if (!validated) {
+      return {
+        error: "Invalid GitHub API URL",
+        status: 400,
+      };
+    }
+    safeUrls.push(validated);
+  }
+
   try {
     const [repoRes, releaseRes, commitRes, pullsRes, contributorsRes] =
       await Promise.all([
-        fetch(urls[0], { headers }),
-        fetch(urls[1], { headers }),
-        fetch(urls[2], { headers }),
-        fetch(urls[3], { headers }),
-        fetch(urls[4], { headers }),
+        fetch(safeUrls[0], { headers }),
+        fetch(safeUrls[1], { headers }),
+        fetch(safeUrls[2], { headers }),
+        fetch(safeUrls[3], { headers }),
+        fetch(safeUrls[4], { headers }),
       ]);
 
     if (!repoRes.ok) {

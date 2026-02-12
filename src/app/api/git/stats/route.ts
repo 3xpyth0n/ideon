@@ -57,7 +57,19 @@ export async function GET(req: NextRequest) {
         } catch (e) {
           console.error("[GitStats] Failed to decrypt token:", e);
         }
+      } else {
+        // Do not allow requests to arbitrary hosts that the user has not configured
+        return NextResponse.json(
+          { error: "No configured credentials for requested host" },
+          { status: 400 },
+        );
       }
+    } else {
+      // Without an authenticated user, do not allow proxying to arbitrary hosts
+      return NextResponse.json(
+        { error: "Authentication required to access repository stats" },
+        { status: 401 },
+      );
     }
 
     const result = await getRepoStats(url, token);

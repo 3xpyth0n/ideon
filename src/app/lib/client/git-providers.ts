@@ -17,14 +17,177 @@ interface FetchResult {
   status?: number;
 }
 
+// SSRF Protection Configuration
+const ALLOWED_PROVIDERS = {
+  github: {
+    domains: ["github.com", "api.github.com"],
+    apiBase: "https://api.github.com",
+  },
+  gitlab: {
+    domains: ["gitlab.com"],
+    apiBase: "https://gitlab.com/api/v4",
+  },
+  gitea: {
+    domains: ["gitea.io", "try.gitea.io"],
+    apiBase: "https://gitea.io/api/v1",
+  },
+  forgejo: {
+    domains: ["forgejo.org", "codeberg.org"],
+    apiBase: "https://forgejo.org/api/v1",
+  },
+};
+
+const PRIVATE_IP_RANGES = [
+  /^10\./,
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,
+  /^192\.168\./,
+  /^127\./,
+  /^0\./,
+  /^169\.254\./,
+  /^::1$/,
+  /^fc00:/,
+  /^fe80:/,
+];
+
+function isPrivateIp(hostname: string): boolean {
+  if (!hostname || hostname === "localhost") return true;
+
+  // Check if hostname is an IP address
+  const ipv4Regex = /^\d+\.\d+\.\d+\.\d+$/;
+  const ipv6Regex = /^[0-9a-fA-F:]+$/;
+
+  if (ipv4Regex.test(hostname)) {
+    return PRIVATE_IP_RANGES.some((range) => range.test(hostname));
+  }
+
+  if (ipv6Regex.test(hostname)) {
+    return PRIVATE_IP_RANGES.some((range) => range.test(hostname));
+  }
+
+  return false;
+}
+
+function isAllowedDomain(hostname: string, provider: GitProvider): boolean {
+  const allowedDomains = ALLOWED_PROVIDERS[provider]?.domains || [];
+  return allowedDomains.includes(hostname.toLowerCase());
+}
+
+function validateUrl(
+  url: string,
+  provider?: GitProvider,
+): { valid: boolean; error?: string } {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Check protocol
+    if (parsedUrl.protocol !== "https:") {
+      return { valid: false, error: "Only HTTPS protocol is allowed" };
+    }
+
+    // Check for private IP addresses
+    if (isPrivateIp(parsedUrl.hostname)) {
+      return { valid: false, error: "Private IP addresses are not allowed" };
+    }
+
+    // Check if domain is allowed for this provider (if specified)
+    if (provider && !isAllowedDomain(parsedUrl.hostname, provider)) {
+      return {
+        valid: false,
+        error: `Domain ${parsedUrl.hostname} is not allowed for ${provider}`,
+      };
+    }
+
+    return { valid: true };
+  } catch {
+    return { valid: false, error: "Invalid URL format" };
+  }
+}
+
+function sanitizeRepoPath(path: string): string {
+  return path.replace(/[^a-zA-Z0-9-_./]/g, "").replace(/\.\./g, "");
+}
+
 function normalizeUrl(url: string): string {
-  return url.replace(/\/$/, "").replace(".git", "");
+  return url.replace(/\/$/, "").replace(/\.git$/, "");
+}
+
+/**
+ * Ensure the given URL uses HTTPS and matches the expected host.
+ * Returns the normalized URL string if valid, otherwise null.
+ */
+function ensureAllowedApiUrl(
+  rawUrl: string,
+  expectedHost: string,
+): string | null {
+  try {
+    const parsed = new URL(rawUrl);
+    const hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    const allowedHost = expectedHost.replace(/^www\./, "").toLowerCase();
+
+    if (parsed.protocol !== "https:") {
+      return null;
+    }
+    if (hostname !== allowedHost) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+// Basic SSRF protection: reject obvious local or private hosts.
+function isPrivateOrLocalHost(host: string): boolean {
+  const h = host.trim().toLowerCase();
+
+  // Strip port if present
+  const withoutPort = h.split(":")[0];
+
+  if (
+    withoutPort === "localhost" ||
+    withoutPort === "127.0.0.1" ||
+    withoutPort === "[::1]"
+  ) {
+    return true;
+  }
+
+  // Reject common local/internal domains
+  if (
+    withoutPort.endsWith(".local") ||
+    withoutPort.endsWith(".localdomain") ||
+    withoutPort.endsWith(".home") ||
+    withoutPort.endsWith(".internal")
+  ) {
+    return true;
+  }
+
+  // Check IPv4 private and special ranges
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(withoutPort)) {
+    const parts = withoutPort.split(".").map((p) => parseInt(p, 10));
+    if (parts.length === 4 && parts.every((n) => n >= 0 && n <= 255)) {
+      const [a, b] = parts;
+      // 10.0.0.0/8
+      if (a === 10) return true;
+      // 172.16.0.0 - 172.31.0.0
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      // 192.168.0.0/16
+      if (a === 192 && b === 168) return true;
+      // 127.0.0.0/8
+      if (a === 127) return true;
+      // 169.254.0.0/16 (link-local)
+      if (a === 169 && b === 254) return true;
+      // 100.64.0.0/10 (carrier-grade NAT)
+      if (a === 100 && b >= 64 && b <= 127) return true;
+    }
+  }
+
+  return false;
 }
 
 async function fetchGithub(
-  owner: string,
-  repo: string,
-  url: string,
+  urls: string[],
+  repoUrl: string,
   token?: string,
 ): Promise<FetchResult> {
   const headers: Record<string, string> = {
@@ -36,25 +199,27 @@ async function fetchGithub(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // Final safety check: ensure all URLs point to the expected GitHub API host.
+  const safeUrls: string[] = [];
+  for (const rawUrl of urls) {
+    const validated = ensureAllowedApiUrl(rawUrl, "api.github.com");
+    if (!validated) {
+      return {
+        error: "Invalid GitHub API URL",
+        status: 400,
+      };
+    }
+    safeUrls.push(validated);
+  }
+
   try {
     const [repoRes, releaseRes, commitRes, pullsRes, contributorsRes] =
       await Promise.all([
-        fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
-        fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
-          headers,
-        }),
-        fetch(
-          `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
-          { headers },
-        ),
-        fetch(
-          `https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=1`,
-          { headers },
-        ),
-        fetch(
-          `https://api.github.com/repos/${owner}/${repo}/contributors?per_page=1&anon=true`,
-          { headers },
-        ),
+        fetch(safeUrls[0], { headers }),
+        fetch(safeUrls[1], { headers }),
+        fetch(safeUrls[2], { headers }),
+        fetch(safeUrls[3], { headers }),
+        fetch(safeUrls[4], { headers }),
       ]);
 
     if (!repoRes.ok) {
@@ -102,7 +267,7 @@ async function fetchGithub(
         openPulls: getCount(pullsRes, pullsData),
         contributors: getCount(contributorsRes, contributorsData),
         provider: "github",
-        repoUrl: url,
+        repoUrl: repoUrl,
       },
     };
   } catch (error) {
@@ -112,15 +277,10 @@ async function fetchGithub(
 }
 
 async function fetchGitlab(
-  host: string,
-  owner: string,
-  repo: string,
-  url: string,
+  urls: string[],
+  repoUrl: string,
   token?: string,
 ): Promise<FetchResult> {
-  const projectPath = encodeURIComponent(`${owner}/${repo}`);
-  const baseUrl = `https://${host}/api/v4/projects/${projectPath}`;
-
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -129,11 +289,11 @@ async function fetchGitlab(
   try {
     const [projectRes, releasesRes, commitsRes, mrsRes, contributorsRes] =
       await Promise.all([
-        fetch(baseUrl, { headers }),
-        fetch(`${baseUrl}/releases?per_page=1`, { headers }),
-        fetch(`${baseUrl}/repository/commits?per_page=1`, { headers }),
-        fetch(`${baseUrl}/merge_requests?state=opened&per_page=1`, { headers }),
-        fetch(`${baseUrl}/repository/contributors?per_page=1`, { headers }),
+        fetch(urls[0], { headers }),
+        fetch(urls[1], { headers }),
+        fetch(urls[2], { headers }),
+        fetch(urls[3], { headers }),
+        fetch(urls[4], { headers }),
       ]);
 
     if (!projectRes.ok) {
@@ -171,7 +331,7 @@ async function fetchGitlab(
         openPulls: getCountFromHeader(mrsRes),
         contributors: getCountFromHeader(contributorsRes),
         provider: "gitlab",
-        repoUrl: url,
+        repoUrl: repoUrl,
       },
     };
   } catch (error) {
@@ -181,27 +341,52 @@ async function fetchGitlab(
 }
 
 async function fetchGitea(
-  host: string,
-  owner: string,
-  repo: string,
-  url: string,
+  urls: string[],
+  repoUrl: string,
   token?: string,
 ): Promise<FetchResult> {
-  const baseUrl = `https://${host}/api/v1/repos/${owner}/${repo}`;
-
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `token ${token}`;
   }
 
   try {
+    // Derive the allowed host from the already-validated repository URL
+    const normalizedRepoUrl = normalizeUrl(repoUrl);
+    const repoUrlObj = new URL(
+      normalizedRepoUrl.startsWith("http")
+        ? normalizedRepoUrl
+        : `https://${normalizedRepoUrl}`,
+    );
+    const allowedHost = repoUrlObj.host.toLowerCase();
+
+    // Validate all Gitea URLs before making any requests
+    for (const urlStr of urls) {
+      let urlObj: URL;
+      try {
+        urlObj = new URL(urlStr);
+      } catch {
+        return { error: "Invalid Gitea API URL", status: 400 };
+      }
+
+      // Enforce HTTPS and ensure the host matches the originally validated host
+      if (urlObj.protocol !== "https:" || urlObj.host.toLowerCase() !== allowedHost) {
+        return { error: "Invalid or unsafe Gitea API URL", status: 400 };
+      }
+
+      const v = validateUrl(urlStr);
+      if (!v.valid) {
+        return { error: "Invalid or unsafe Gitea API URL", status: 400 };
+      }
+    }
+
     const [repoRes, releaseRes, commitsRes, pullsRes, contributorsRes] =
       await Promise.all([
-        fetch(baseUrl, { headers }),
-        fetch(`${baseUrl}/releases?limit=1`, { headers }),
-        fetch(`${baseUrl}/commits?limit=1`, { headers }),
-        fetch(`${baseUrl}/pulls?state=open&limit=1`, { headers }),
-        fetch(`${baseUrl}/contributors?limit=1`, { headers }),
+        fetch(urls[0], { headers }),
+        fetch(urls[1], { headers }),
+        fetch(urls[2], { headers }),
+        fetch(urls[3], { headers }),
+        fetch(urls[4], { headers }),
       ]);
 
     if (!repoRes.ok) {
@@ -239,7 +424,7 @@ async function fetchGitea(
         openPulls: repoData.open_pr_counter || getCountFromHeader(pullsRes),
         contributors: getCountFromHeader(contributorsRes),
         provider: "gitea",
-        repoUrl: url,
+        repoUrl: repoUrl,
       },
     };
   } catch (error) {
@@ -257,7 +442,26 @@ export async function getRepoStats(
   }
 
   const cleanUrl = normalizeUrl(url);
-  let provider: GitProvider | null = null;
+
+  // Preliminary security check for the input URL
+  try {
+    const parsedUrl = new URL(
+      cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`,
+    );
+    const normalizedHost = parsedUrl.hostname.replace(/^www\./, "").toLowerCase();
+    if (isPrivateIp(parsedUrl.hostname)) {
+      return { error: "Private IP addresses are not allowed", status: 400 };
+    }
+    if (parsedUrl.protocol !== "https:") {
+      return { error: "Only HTTPS protocol is allowed", status: 400 };
+    }
+    if (normalizedHost !== "github.com" && normalizedHost !== "gitlab.com") {
+      return { error: "Unsupported host", status: 400 };
+    }
+  } catch {
+    return { error: "Invalid URL format", status: 400 };
+  }
+
   let owner = "";
   let repo = "";
   let host = "";
@@ -270,41 +474,119 @@ export async function getRepoStats(
   );
 
   if (githubMatch) {
-    provider = "github";
-    owner = githubMatch[1];
-    repo = githubMatch[2];
-    host = "github.com";
-  } else if (gitlabMatch) {
-    provider = "gitlab";
-    owner = gitlabMatch[1];
-    repo = gitlabMatch[2];
-    host = "gitlab.com";
-  } else {
-    try {
-      const u = new URL(
-        cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`,
-      );
-      host = u.host;
-      const parts = u.pathname.split("/").filter(Boolean);
-      if (parts.length >= 2) {
-        owner = parts[parts.length - 2];
-        repo = parts[parts.length - 1];
-      }
-    } catch {
-      return { error: "Invalid URL format", status: 400 };
+    owner = sanitizeRepoPath(githubMatch[1]);
+    repo = sanitizeRepoPath(githubMatch[2]);
+    const apiUrls = [
+      `https://api.github.com/repos/${owner}/${repo}`,
+      `https://api.github.com/repos/${owner}/${repo}/releases/latest`,
+      `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
+      `https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=1`,
+      `https://api.github.com/repos/${owner}/${repo}/contributors?per_page=1&anon=true`,
+    ];
+
+    for (const u of apiUrls) {
+      const validation = validateUrl(u, "github");
+      if (!validation.valid) return { error: validation.error, status: 400 };
     }
+    return fetchGithub(apiUrls, cleanUrl, token);
   }
 
-  if (provider === "github") {
-    return fetchGithub(owner, repo, cleanUrl, token);
-  } else if (provider === "gitlab") {
-    return fetchGitlab(host, owner, repo, cleanUrl, token);
-  } else {
-    // Try probing for self-hosted
-    let result = await fetchGitea(host, owner, repo, cleanUrl, token);
-    if (result.error && result.status === 404) {
-      result = await fetchGitlab(host, owner, repo, cleanUrl, token);
+  if (gitlabMatch) {
+    owner = sanitizeRepoPath(gitlabMatch[1]);
+    repo = sanitizeRepoPath(gitlabMatch[2]);
+    const projectPath = encodeURIComponent(`${owner}/${repo}`);
+    const baseUrl = `https://gitlab.com/api/v4/projects/${projectPath}`;
+    const apiUrls = [
+      baseUrl,
+      `${baseUrl}/releases?per_page=1`,
+      `${baseUrl}/repository/commits?per_page=1`,
+      `${baseUrl}/merge_requests?state=opened&per_page=1`,
+      `${baseUrl}/repository/contributors?per_page=1`,
+    ];
+
+    for (const u of apiUrls) {
+      const validation = validateUrl(u, "gitlab");
+      if (!validation.valid) return { error: validation.error, status: 400 };
     }
-    return result;
+    return fetchGitlab(apiUrls, cleanUrl, token);
+  }
+
+  // Self-hosted or unknown provider
+  try {
+    const u = new URL(
+      cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`,
+    );
+    host = u.host;
+
+    // Prevent SSRF by rejecting obvious local or private hosts
+    if (isPrivateOrLocalHost(host)) {
+      return { error: "Invalid or unsafe host", status: 400 };
+    }
+
+    const parts = u.pathname.split("/").filter(Boolean);
+    if (parts.length >= 2) {
+      owner = sanitizeRepoPath(parts[parts.length - 2]);
+      repo = sanitizeRepoPath(parts[parts.length - 1]);
+    }
+
+    if (!owner || !repo)
+      return { error: "Invalid repository path", status: 400 };
+
+    // Try Gitea/Forgejo first
+    const giteaBasePath = `https://${host}/api/v1/repos/${owner}/${repo}`;
+    const giteaUrls = [
+      giteaBasePath,
+      `${giteaBasePath}/releases?limit=1`,
+      `${giteaBasePath}/commits?limit=1`,
+      `${giteaBasePath}/pulls?state=open&limit=1`,
+      `${giteaBasePath}/contributors?limit=1`,
+    ];
+
+    let validGitea = true;
+    for (const gu of giteaUrls) {
+      const v = validateUrl(gu); // No provider = self-hosted friendly
+      if (!v.valid) {
+        validGitea = false;
+        break;
+      }
+    }
+
+    if (validGitea) {
+      const result = await fetchGitea(giteaUrls, cleanUrl, token);
+      if (result.stats) return result;
+    }
+
+    // Try GitLab self-hosted
+    const projectPath = encodeURIComponent(`${owner}/${repo}`);
+    const gitlabBaseUrl = `https://${host}/api/v4/projects/${projectPath}`;
+    const gitlabUrls = [
+      gitlabBaseUrl,
+      `${gitlabBaseUrl}/releases?per_page=1`,
+      `${gitlabBaseUrl}/repository/commits?per_page=1`,
+      `${gitlabBaseUrl}/merge_requests?state=opened&per_page=1`,
+      `${gitlabBaseUrl}/repository/contributors?per_page=1`,
+    ];
+
+    let validGitlab = true;
+    // Re-validate GitLab URLs with provider awareness to prevent SSRF
+    if (isPrivateOrLocalHost(host)) {
+      validGitlab = false;
+    } else {
+      for (const glu of gitlabUrls) {
+        const v = validateUrl(glu, "gitlab");
+        if (!v.valid) {
+          validGitlab = false;
+          break;
+        }
+      }
+    }
+
+    if (validGitlab) {
+      return fetchGitlab(gitlabUrls, cleanUrl, token);
+    }
+
+    return { error: "Unsupported or unreachable Git provider", status: 400 };
+  } catch {
+    return { error: "Invalid URL format", status: 400 };
   }
 }

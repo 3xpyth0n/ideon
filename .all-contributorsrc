@@ -1,9 +1,7 @@
 {
   "projectName": "ideon",
   "projectOwner": "3xpyth0n",
-  "files": [
-    "README.md"
-  ],
+  "files": ["README.md"],
   "imageSize": 100,
   "repoType": "github",
   "contributorsPerLine": 7,
@@ -15,18 +13,14 @@
       "name": "albanobattistella",
       "avatar_url": "https://avatars.githubusercontent.com/u/34811668?v=4",
       "profile": "https://zorinos.com/ ",
-      "contributions": [
-        "translation"
-      ]
+      "contributions": ["translation"]
     },
     {
       "login": "Solirix",
       "name": "Solirix",
       "avatar_url": "https://avatars.githubusercontent.com/u/99198915?v=4",
       "profile": "https://github.com/Solirix",
-      "contributions": [
-        "security"
-      ]
+      "contributions": ["security"]
     }
   ],
   "commitConvention": "angular"

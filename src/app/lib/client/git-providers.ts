@@ -111,6 +111,54 @@ function normalizeUrl(url: string): string {
   return url.replace(/\/$/, "").replace(/\.git$/, "");
 }
 
+// Basic SSRF protection: reject obvious local or private hosts.
+function isPrivateOrLocalHost(host: string): boolean {
+  const h = host.trim().toLowerCase();
+
+  // Strip port if present
+  const withoutPort = h.split(":")[0];
+
+  if (
+    withoutPort === "localhost" ||
+    withoutPort === "127.0.0.1" ||
+    withoutPort === "[::1]"
+  ) {
+    return true;
+  }
+
+  // Reject common local/internal domains
+  if (
+    withoutPort.endsWith(".local") ||
+    withoutPort.endsWith(".localdomain") ||
+    withoutPort.endsWith(".home") ||
+    withoutPort.endsWith(".internal")
+  ) {
+    return true;
+  }
+
+  // Check IPv4 private and special ranges
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(withoutPort)) {
+    const parts = withoutPort.split(".").map((p) => parseInt(p, 10));
+    if (parts.length === 4 && parts.every((n) => n >= 0 && n <= 255)) {
+      const [a, b] = parts;
+      // 10.0.0.0/8
+      if (a === 10) return true;
+      // 172.16.0.0 - 172.31.0.0
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      // 192.168.0.0/16
+      if (a === 192 && b === 168) return true;
+      // 127.0.0.0/8
+      if (a === 127) return true;
+      // 169.254.0.0/16 (link-local)
+      if (a === 169 && b === 254) return true;
+      // 100.64.0.0/10 (carrier-grade NAT)
+      if (a === 100 && b >= 64 && b <= 127) return true;
+    }
+  }
+
+  return false;
+}
+
 async function fetchGithub(
   urls: string[],
   repoUrl: string,
@@ -401,6 +449,12 @@ export async function getRepoStats(
       cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`,
     );
     host = u.host;
+
+    // Prevent SSRF by rejecting obvious local or private hosts
+    if (isPrivateOrLocalHost(host)) {
+      return { error: "Invalid or unsafe host", status: 400 };
+    }
+
     const parts = u.pathname.split("/").filter(Boolean);
     if (parts.length >= 2) {
       owner = sanitizeRepoPath(parts[parts.length - 2]);

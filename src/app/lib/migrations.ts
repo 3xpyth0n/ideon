@@ -13,6 +13,7 @@ import * as foldersMigration from "../db/migrations/09Folders";
 import * as addFolderStarredMigration from "../db/migrations/10AddFolderStarred";
 import * as addFolderDeletedAtMigration from "../db/migrations/11AddFolderDeletedAt";
 import * as addUserGitTokensMigration from "../db/migrations/14AddUserGitTokens";
+import * as fixFolderRlsRecursionMigration from "../db/migrations/15FixFolderRlsRecursion";
 
 class StaticMigrationProvider implements MigrationProvider {
   async getMigrations(): Promise<Record<string, Migration>> {
@@ -29,6 +30,7 @@ class StaticMigrationProvider implements MigrationProvider {
       "10AddFolderStarred": addFolderStarredMigration,
       "11AddFolderDeletedAt": addFolderDeletedAtMigration,
       "14AddUserGitTokens": addUserGitTokensMigration,
+      "15FixFolderRlsRecursion": fixFolderRlsRecursionMigration,
     };
   }
 }

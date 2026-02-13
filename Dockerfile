@@ -32,8 +32,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV NODE_OPTIONS='--max-old-space-size=8192'
 ENV HOSTNAME="0.0.0.0"
-# Install tini for better signal handling and curl for healthchecks
-RUN apk add --no-cache curl tini
+# Install tini for better signal handling, curl for healthchecks and su-exec for permission management
+RUN apk add --no-cache curl tini su-exec
 RUN adduser -D -u 1001 appuser && \
     mkdir -p storage/avatars storage/yjs storage/uploads && \
     chown -R appuser:appuser storage
@@ -46,9 +46,12 @@ COPY --from=builder --chown=appuser:appuser /app/public ./public
 COPY --from=builder --chown=appuser:appuser /app/package.json ./package.json
 COPY --from=builder --chown=appuser:appuser /app/src/app/i18n ./src/app/i18n
 
-USER appuser
+# Copy entrypoint script and make it executable
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 3000
 
-# Use tini as entrypoint for proper signal forwarding
-ENTRYPOINT ["/sbin/tini", "--"]
+# Use tini as entrypoint for proper signal forwarding and entrypoint script for permission management
+ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]
 CMD ["node", "dist/server.cjs"]

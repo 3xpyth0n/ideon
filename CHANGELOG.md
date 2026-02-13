@@ -11,6 +11,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Support for touch devices with long-press gestures, allowing access to all context menus (including block creation on the canvas) (#37).
 
+### Fixed
+
+- Resolved permission issues when using bind mounts by implementing a dynamic entrypoint script that automatically manages directory ownership (#38).
+
 ## [0.3.2] - 2026-02-12
 
 ### Added

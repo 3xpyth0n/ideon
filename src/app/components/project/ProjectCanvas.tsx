@@ -77,7 +77,8 @@ import {
   UserPresence,
 } from "./hooks/useProjectCanvasState";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
-
+import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
   [-5000, -4000],
   [8000, 5000],
@@ -308,6 +309,48 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     isLocalSynced,
   );
 
+  const { rippleRef } = useTouch();
+
+  const onLongPress = useCallback(
+    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+      if (isPreviewMode) return;
+
+      const target = e.target as HTMLElement;
+      const nodeElement = target.closest(".react-flow__node");
+
+      if (nodeElement) {
+        const nodeId = nodeElement.getAttribute("data-id");
+        if (nodeId) {
+          const node = (blocks as Node<BlockData>[]).find(
+            (n) => n.id === nodeId,
+          );
+          if (node) {
+            onBlockContextMenu(
+              {
+                preventDefault: () => {},
+                clientX: x,
+                clientY: y,
+              } as unknown as React.MouseEvent,
+              node,
+            );
+          }
+        }
+      } else {
+        onPaneContextMenu({
+          preventDefault: () => {},
+          clientX: x,
+          clientY: y,
+        } as unknown as React.MouseEvent);
+      }
+    },
+    [isPreviewMode, blocks, onBlockContextMenu, onPaneContextMenu],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+  });
+
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -524,6 +567,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         }`}
         onKeyDown={onKeyDown}
         tabIndex={0}
+        {...touchHandlers}
       >
         {isLoading && (
           <div className="loading-overlay">

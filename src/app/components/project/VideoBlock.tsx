@@ -4,6 +4,8 @@ import { memo, useState, useCallback, useEffect } from "react";
 import * as Y from "yjs";
 import { Video, Lock } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
@@ -21,6 +23,7 @@ type VideoBlockProps = NodeProps<Node<BlockData>> & {
 
 const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
   const { dict, lang } = useI18n();
+  const { rippleRef } = useTouch();
   const { setNodes, getNode, getEdges } = useReactFlow();
   const [url, setUrl] = useState(data.content || "");
   const [title, setTitle] = useState(data.title || "");
@@ -88,6 +91,24 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
 
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
+  const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX:
+        "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX,
+      clientY:
+        "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY,
+    });
+    target.dispatchEvent(event);
+  }, []);
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+  });
 
   const handleTitleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,6 +271,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         isBeingMoved ? "is-moving" : ""
       } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0`}
       style={{ "--block-border-color": borderColor } as React.CSSProperties}
+      {...touchHandlers}
     >
       <NodeResizer
         minWidth={250}

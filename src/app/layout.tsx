@@ -4,6 +4,7 @@ import { I18nProvider } from "@providers/I18nProvider";
 import { ThemeProvider } from "@providers/ThemeProvider";
 import { UserProvider } from "@providers/UserProvider";
 import { ConfigProvider } from "@providers/ConfigProvider";
+import { TouchProvider } from "@providers/TouchProvider";
 import { Toaster } from "sonner";
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
@@ -110,7 +111,7 @@ export default async function RootLayout({
           <I18nProvider dictionaries={dictionaries} initialLang={lang}>
             <ConfigProvider isSetupComplete={isSetupComplete}>
               <UserProvider>
-                {children}
+                <TouchProvider>{children}</TouchProvider>
                 <Toaster
                   position="top-right"
                   expand={false}

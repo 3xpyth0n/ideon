@@ -199,6 +199,46 @@ body {
   right: 12px;
 }
 
+/* Ripple Effect */
+.ripple-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.touch-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: var(--text-main);
+  opacity: 0.2;
+  transform: scale(0.5);
+  animation: touch-ripple-grow 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+.touch-ripple.removing {
+  animation: touch-ripple-fade-out 0.4s ease-out forwards;
+}
+
+@keyframes touch-ripple-grow {
+  to {
+    transform: scale(1.25);
+    opacity: 0.4;
+  }
+}
+
+@keyframes touch-ripple-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
 /* Context Menu Styles */
 .temporal-context-menu {
   position: fixed;

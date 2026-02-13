@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Trash2, Copy, Check, ChevronDown, RefreshCw } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { Button } from "@components/ui/Button";
+import { useTouchGestures } from "../../components/project/hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 import { Modal } from "@components/ui/Modal";
 import { Select } from "@components/ui/Select";
 import { UserDetailsModal } from "@components/users/UserDetailsModal";
@@ -55,11 +57,30 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
   const [selectedUserForModal, setSelectedUserForModal] =
     useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { rippleRef } = useTouch();
 
-  const fetchData = async () => {
+  const onLongPress = useCallback(
+    (e: React.TouchEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      const userCard = target.closest("[data-user-id]");
+      if (userCard) {
+        const userId = userCard.getAttribute("data-user-id");
+        const user = users.find((u) => u.id === userId);
+        if (user) {
+          setSelectedUserForModal(user);
+        }
+      }
+    },
+    [users],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+    stopPropagation: true,
+  });
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [usersRes, invitesRes] = await Promise.all([
@@ -78,7 +99,11 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,6 +261,8 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
               <div
                 key={user.id}
                 className="user-card group transition-colors"
+                data-user-id={user.id}
+                {...touchHandlers}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setSelectedUserForModal(user);

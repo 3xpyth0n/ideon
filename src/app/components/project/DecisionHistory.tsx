@@ -19,6 +19,8 @@ import {
   Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 
 interface TemporalState {
   id: string;
@@ -74,6 +76,35 @@ export function DecisionHistory({
   const menuRef = useRef<HTMLDivElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  const { rippleRef } = useTouch();
+
+  const onLongPress = useCallback(
+    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+      const target = e.target as HTMLElement;
+      const historyItem = target.closest(".history-item");
+
+      if (historyItem) {
+        const stateId = historyItem.getAttribute("data-state-id");
+        const intent = historyItem.getAttribute("data-intent");
+        if (stateId && intent) {
+          setContextMenu({
+            x,
+            y,
+            stateId,
+            intent,
+          });
+        }
+      }
+    },
+    [],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+    stopPropagation: true,
+  });
 
   // Adjust context menu position to prevent overflow
   useLayoutEffect(() => {
@@ -335,6 +366,9 @@ export function DecisionHistory({
                         onContextMenu={(e) =>
                           handleContextMenu(e, state.id, state.intent)
                         }
+                        data-state-id={state.id}
+                        data-intent={state.intent}
+                        {...touchHandlers}
                         className={`history-item w-full ${
                           selectedStateId === state.id ? "active" : ""
                         }`}

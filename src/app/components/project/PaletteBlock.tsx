@@ -1,9 +1,11 @@
 "use client";
 
-import { memo, useState, useCallback, useMemo, useEffect } from "react";
+import { memo, useState, useCallback, useMemo } from "react";
 import { Plus, Trash2, Palette, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
+import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
@@ -34,23 +36,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   >(undefined);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // Close picker when block loses selection
-  useEffect(() => {
-    if (!selected) {
-      setShowPicker(false);
-      setEditingIndex(null);
-    }
-  }, [selected]);
-
-  // Title state
-  const [title, setTitle] = useState(data.title || "");
-
-  // Sync title from data if it changes externally
-  useEffect(() => {
-    if (data.title !== undefined && data.title !== title) {
-      setTitle(data.title);
-    }
-  }, [data.title]);
+  const { rippleRef } = useTouch();
 
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
@@ -60,22 +46,16 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
+
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
-  const isBeingMoved = !!data.movingUserColor;
-  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
-
-  const metadata = useMemo((): PaletteMetadata => {
-    if (!data.metadata) return { colors: [] };
+  const [title, setTitle] = useState(data.title || "");
+  const metadata = useMemo(() => {
     try {
-      const parsed =
-        typeof data.metadata === "string"
-          ? JSON.parse(data.metadata)
-          : data.metadata;
-      return {
-        colors: Array.isArray(parsed?.colors) ? parsed.colors : [],
-      };
+      return data.metadata
+        ? (JSON.parse(data.metadata) as PaletteMetadata)
+        : { colors: [] };
     } catch {
       return { colors: [] };
     }
@@ -83,14 +63,12 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
 
   const updatePalette = useCallback(
     (newColors: string[]) => {
-      if (isReadOnly) return;
-      const newMetadata = { ...metadata, colors: newColors };
       const now = new Date().toISOString();
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
         dict.common.anonymous;
-
+      const newMetadata: PaletteMetadata = { colors: newColors };
       data.onContentChange?.(
         id,
         data.content,
@@ -100,21 +78,19 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
         title,
       );
     },
-    [id, data, metadata, isReadOnly, currentUser, dict, title],
+    [id, data, currentUser, dict, title],
   );
 
   const addColor = useCallback(
     (color: string) => {
       updatePalette([...metadata.colors, color]);
-      setShowPicker(false);
     },
     [metadata.colors, updatePalette],
   );
 
   const removeColor = useCallback(
     (index: number) => {
-      const newColors = [...metadata.colors];
-      newColors.splice(index, 1);
+      const newColors = metadata.colors.filter((_, i) => i !== index);
       updatePalette(newColors);
     },
     [metadata.colors, updatePalette],
@@ -123,15 +99,15 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   const handleColorClick = useCallback(
     (color: string) => {
       navigator.clipboard.writeText(color);
-      toast.success(dict.common.copiedToClipboard || "Copied to clipboard");
+      toast.success(`${dict.common.copied || "Copied"}: ${color}`);
     },
-    [dict],
+    [dict.common.copied],
   );
 
   const handleEditColor = useCallback(
     (index: number, e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault?.();
+      e.stopPropagation?.();
       if (isReadOnly) return;
       setEditingIndex(index);
       setPickerPosition({ x: e.clientX, y: e.clientY });
@@ -139,6 +115,30 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
     },
     [isReadOnly],
   );
+
+  const onLongPress = useCallback(
+    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+      if (isReadOnly) return;
+      const target = e.target as HTMLElement;
+      const colorItem = target.closest("[data-color-index]");
+      if (colorItem) {
+        const index = parseInt(
+          colorItem.getAttribute("data-color-index") || "0",
+        );
+        handleEditColor(index, {
+          preventDefault: () => {},
+          clientX: x,
+          clientY: y,
+        } as unknown as React.MouseEvent);
+      }
+    },
+    [handleEditColor, isReadOnly],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+  });
 
   const handleUpdateColor = useCallback(
     (color: string) => {
@@ -274,6 +274,9 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   const isBottomTargetConnected = isHandleConnected("bottom-target");
   const isBottomSourceConnected = isHandleConnected("bottom");
 
+  const isBeingMoved = data.movingUserColor !== undefined;
+  const borderColor = data.movingUserColor || "var(--border)";
+
   return (
     <div
       className={`block-card ${selected ? "selected" : ""} ${
@@ -325,6 +328,8 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
                   <div
                     className="palette-color-preview"
                     style={{ backgroundColor: color }}
+                    data-color-index={index}
+                    {...touchHandlers}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleColorClick(color);

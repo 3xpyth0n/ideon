@@ -23,6 +23,8 @@ import { getRecentProjects } from "@lib/utils";
 
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
+import { useTouchGestures } from "../project/hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 
 interface Project {
   id: string;
@@ -90,6 +92,43 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     folder?: Folder;
     project?: Project;
   } | null>(null);
+
+  const { rippleRef } = useTouch();
+
+  const isTrash = view === "trash";
+
+  const onLongPress = useCallback(
+    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+      const target = e.target as HTMLElement;
+
+      const folderCard = target.closest("[data-folder-id]");
+      if (folderCard) {
+        const folderId = folderCard.getAttribute("data-folder-id");
+        const folder = folders.find((f) => f.id === folderId);
+        if (folder && !isTrash && folder.ownerId === currentUser?.id) {
+          setContextMenu({ x, y, folder });
+          return;
+        }
+      }
+
+      const projectCard = target.closest("[data-project-id]");
+      if (projectCard) {
+        const projectId = projectCard.getAttribute("data-project-id");
+        const project = projects.find((p) => p.id === projectId);
+        if (project && !isTrash) {
+          setContextMenu({ x, y, project });
+          return;
+        }
+      }
+    },
+    [folders, projects, currentUser?.id, isTrash],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+    stopPropagation: true,
+  });
 
   // Close context menu on click elsewhere
   useEffect(() => {
@@ -546,7 +585,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     );
   }
 
-  const isTrash = view === "trash";
   const isReadOnlyView = ["trash", "recent", "starred"].includes(view || "");
   // Allow creation ONLY in Home (view is undefined/null/empty)
   const canCreate = !view;
@@ -663,6 +701,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 onDragOver={(e) => !isTrash && handleDragOver(e, folder.id)}
                 onDragLeave={!isTrash ? handleDragLeave : undefined}
                 onDrop={(e) => !isTrash && handleDrop(e, folder.id)}
+                data-folder-id={folder.id}
+                {...touchHandlers}
                 className={`project-card group relative flex flex-col justify-between cursor-pointer transition-colors ${
                   isTrash ? "cursor-default opacity-75" : ""
                 } ${
@@ -863,6 +903,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               }}
               draggable={!isTrash}
               onDragStart={(e) => handleDragStart(e, project.id)}
+              data-project-id={project.id}
+              {...touchHandlers}
               className={`project-card group relative overflow-hidden ${
                 isTrash ? "cursor-default opacity-75" : ""
               }`}

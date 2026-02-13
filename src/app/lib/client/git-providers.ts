@@ -370,7 +370,10 @@ async function fetchGitea(
       }
 
       // Enforce HTTPS and ensure the host matches the originally validated host
-      if (urlObj.protocol !== "https:" || urlObj.host.toLowerCase() !== allowedHost) {
+      if (
+        urlObj.protocol !== "https:" ||
+        urlObj.host.toLowerCase() !== allowedHost
+      ) {
         return { error: "Invalid or unsafe Gitea API URL", status: 400 };
       }
 
@@ -448,7 +451,9 @@ export async function getRepoStats(
     const parsedUrl = new URL(
       cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`,
     );
-    const normalizedHost = parsedUrl.hostname.replace(/^www\./, "").toLowerCase();
+    const normalizedHost = parsedUrl.hostname
+      .replace(/^www\./, "")
+      .toLowerCase();
     if (isPrivateIp(parsedUrl.hostname)) {
       return { error: "Private IP addresses are not allowed", status: 400 };
     }

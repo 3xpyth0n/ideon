@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useEffect, useMemo } from "react";
 import * as Y from "yjs";
 import { Code, Lock, Brush, Copy } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { useTouchGestures } from "./hooks/useTouchGestures";
 import { format } from "prettier/standalone";
 import type { Plugin } from "prettier";
 import * as parserBabel from "prettier/plugins/babel";
@@ -142,6 +143,23 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
 
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
+  const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX:
+        "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX,
+      clientY:
+        "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY,
+    });
+    target.dispatchEvent(event);
+  }, []);
+
+  const touchHandlers = useTouchGestures({
+    onLongPress,
+  });
 
   const handleTitleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,6 +366,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
           ? ({ "--block-border-color": borderColor } as React.CSSProperties)
           : undefined
       }
+      {...touchHandlers}
     >
       <NodeResizer
         minWidth={250}

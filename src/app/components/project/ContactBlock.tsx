@@ -3,6 +3,8 @@
 import { memo, useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { User, Lock } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
@@ -64,6 +66,34 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const blockRef = useRef<HTMLDivElement>(null);
 
+  const { rippleRef } = useTouch();
+
+  const currentUser = data.currentUser;
+  const projectOwnerId = data.projectOwnerId;
+  const ownerId = data.ownerId;
+  const isPreviewMode = data.isPreviewMode;
+  const isLocked = data.isLocked;
+
+  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+  const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isReadOnly =
+    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+
+  const onLongPress = useCallback(
+    (_e: React.TouchEvent | TouchEvent) => {
+      if (!isReadOnly) {
+        setIsEditing(true);
+      }
+    },
+    [isReadOnly],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+    stopPropagation: true,
+  });
+
   // Title state
   const [title, setTitle] = useState(data.title || "");
 
@@ -77,17 +107,6 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       setTitle(data.title);
     }
   }, [data.title]);
-
-  const currentUser = data.currentUser;
-  const projectOwnerId = data.projectOwnerId;
-  const ownerId = data.ownerId;
-  const isPreviewMode = data.isPreviewMode;
-  const isLocked = data.isLocked;
-
-  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
-  const isOwner = currentUser?.id && ownerId === currentUser.id;
-  const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
@@ -278,6 +297,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
         isBeingMoved ? "is-moving" : ""
       } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0`}
       style={{ "--block-border-color": borderColor } as React.CSSProperties}
+      {...touchHandlers}
     >
       <NodeResizer
         minWidth={250}

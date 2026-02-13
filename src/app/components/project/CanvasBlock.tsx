@@ -48,6 +48,8 @@ import {
 import MarkdownEditor from "./MarkdownEditor";
 import { createPortal } from "react-dom";
 import { useI18n } from "@providers/I18nProvider";
+import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useTouch } from "@providers/TouchProvider";
 import getCaretCoordinates from "textarea-caret";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import * as Y from "yjs";
@@ -353,6 +355,65 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
   const { setNodes, getNode, getEdges } = useReactFlow();
+
+  const { rippleRef } = useTouch();
+
+  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+  const isOwner = currentUser?.id && ownerId === currentUser.id;
+
+  const isReadOnly =
+    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+
+  const handleContentContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (isReadOnly) return;
+
+      if (
+        blockType === "link" ||
+        blockType === "github" ||
+        blockType === "contact"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id === id) {
+              return {
+                ...n,
+                selected: true,
+                data: {
+                  ...n.data,
+                  isEditingLink:
+                    blockType === "link" ? true : n.data.isEditingLink,
+                  isEditingGithub:
+                    blockType === "github" ? true : n.data.isEditingGithub,
+                  isEditingContact:
+                    blockType === "contact" ? true : n.data.isEditingContact,
+                },
+              };
+            }
+            return { ...n, selected: false };
+          }),
+        );
+      }
+    },
+    [blockType, id, isReadOnly, setNodes],
+  );
+
+  const onLongPress = useCallback(
+    (e: React.TouchEvent | TouchEvent) => {
+      handleContentContextMenu(e as unknown as React.MouseEvent);
+    },
+    [handleContentContextMenu],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+    stopPropagation: true,
+  });
+
   const [content, setContent] = useState(data.content);
   const Icon = getBlockIconComponent(blockType);
 
@@ -870,12 +931,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const isRemoteTyping = (typingUsers?.length || 0) > 0;
   const isBeingMoved = !!data.movingUserColor;
 
-  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
-  const isOwner = currentUser?.id && ownerId === currentUser.id;
-
-  const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
-
   // Force strict non-connectable in preview mode
   const isConnectable = !isReadOnly && !isPreviewMode;
 
@@ -1261,40 +1316,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     syncToYjs("");
   };
 
-  const handleContentContextMenu = (e: React.MouseEvent) => {
-    if (isReadOnly) return;
-
-    if (
-      blockType === "link" ||
-      blockType === "github" ||
-      blockType === "contact"
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.id === id) {
-            return {
-              ...n,
-              selected: true,
-              data: {
-                ...n.data,
-                isEditingLink:
-                  blockType === "link" ? true : n.data.isEditingLink,
-                isEditingGithub:
-                  blockType === "github" ? true : n.data.isEditingGithub,
-                isEditingContact:
-                  blockType === "contact" ? true : n.data.isEditingContact,
-              },
-            };
-          }
-          return { ...n, selected: false };
-        }),
-      );
-    }
-  };
-
   const renderContent = () => {
     if (blockType === "palette") {
       return <PaletteBlock {...props} isReadOnly={isReadOnly} />;
@@ -1305,6 +1326,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         <div
           className="h-full w-full relative group"
           onContextMenu={handleContentContextMenu}
+          {...touchHandlers}
         >
           <ContactBlock
             {...props}
@@ -1480,6 +1502,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         <div
           className="github-widget group relative"
           onContextMenu={handleContentContextMenu}
+          {...touchHandlers}
           onClick={() =>
             repoUrl &&
             window.open(
@@ -1618,6 +1641,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         <div
           className="block-link-widget flex-1 flex flex-col min-h-0 overflow-hidden rounded bg-white/5 transition-colors cursor-pointer group relative"
           onContextMenu={handleContentContextMenu}
+          {...touchHandlers}
           onClick={() =>
             content &&
             window.open(

@@ -135,7 +135,7 @@ export function FolderAccessModal({
         <div className="relative mb-4">
           <input
             className="zen-input pl-4"
-            placeholder={dict.common.searchUsers || "Search users..."}
+            placeholder={dict.management.searchUsers || "Search users..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -163,7 +163,7 @@ export function FolderAccessModal({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs font-bold">
-                      {user.username || dict.common.defaultUsername}
+                      {user.username || dict.account.defaultUsername}
                     </span>
                     <span className="text-2xs opacity-30 font-medium">
                       {user.email}
@@ -179,7 +179,7 @@ export function FolderAccessModal({
                   {actionId === user.id ? (
                     <Loader2 className="animate-spin" size={10} />
                   ) : (
-                    <span>{dict.common.invite || "Invite"}</span>
+                    <span>{dict.auth.invite || "Invite"}</span>
                   )}
                 </Button>
               </div>
@@ -195,7 +195,7 @@ export function FolderAccessModal({
       {/* Collaborators List */}
       <div>
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
-          <span>{dict.common.currentCollaborators || "Collaborators"}</span>
+          <span>{dict.project.currentCollaborators || "Collaborators"}</span>
           <span className="h-[1px] flex-1 bg-white/5"></span>
           <span>{collaborators.length}</span>
         </h3>
@@ -223,7 +223,7 @@ export function FolderAccessModal({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold tracking-tight">
-                        {user.username || dict.common.defaultUsername}
+                        {user.username || dict.account.defaultUsername}
                       </span>
                     </div>
                     <span className="text-2xs opacity-30 font-medium">

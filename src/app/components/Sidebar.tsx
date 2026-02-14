@@ -152,10 +152,10 @@ export function Sidebar({
                 <Link
                   href="/home"
                   className="flex-1 flex items-center gap-3 px-3 py-2 text-inherit no-underline"
-                  title={isCollapsed ? dict.common.home : ""}
+                  title={isCollapsed ? dict.dashboard.home : ""}
                 >
                   <House size={20} />
-                  {!isCollapsed && <span>{dict.common.home}</span>}
+                  {!isCollapsed && <span>{dict.dashboard.home}</span>}
                 </Link>
                 {!isCollapsed && (
                   <button
@@ -186,7 +186,7 @@ export function Sidebar({
                     }`}
                   >
                     <User size={16} />
-                    <span>{dict.common.myProjects || "My Projects"}</span>
+                    <span>{dict.dashboard.myProjects || "My Projects"}</span>
                   </Link>
                   <Link
                     href="/home?view=shared"
@@ -195,7 +195,7 @@ export function Sidebar({
                     }`}
                   >
                     <Share2 size={16} />
-                    <span>{dict.common.sharedWithMe || "Shared"}</span>
+                    <span>{dict.dashboard.sharedWithMe || "Shared"}</span>
                   </Link>
                   <Link
                     href="/home?view=recent"
@@ -204,7 +204,7 @@ export function Sidebar({
                     }`}
                   >
                     <Clock size={16} />
-                    <span>{dict.common.recent || "Recent"}</span>
+                    <span>{dict.dashboard.recent || "Recent"}</span>
                   </Link>
                   <Link
                     href="/home?view=starred"
@@ -213,7 +213,7 @@ export function Sidebar({
                     }`}
                   >
                     <Star size={16} />
-                    <span>{dict.common.starred || "Starred"}</span>
+                    <span>{dict.dashboard.starred || "Starred"}</span>
                   </Link>
                   <Link
                     href="/home?view=trash"
@@ -222,7 +222,7 @@ export function Sidebar({
                     }`}
                   >
                     <Trash2 size={16} />
-                    <span>{dict.common.trash || "Trash"}</span>
+                    <span>{dict.dashboard.trash || "Trash"}</span>
                   </Link>
                 </div>
               )}
@@ -234,10 +234,10 @@ export function Sidebar({
                 className={`nav-item pointer-events-auto ${
                   isActive("/users") ? "active" : ""
                 }`}
-                title={isCollapsed ? dict.common.team : ""}
+                title={isCollapsed ? dict.dashboard.team : ""}
               >
                 <Users size={20} />
-                {!isCollapsed && <span>{dict.common.team}</span>}
+                {!isCollapsed && <span>{dict.dashboard.team}</span>}
               </Link>
             )}
             {isAdminOrSuper && (
@@ -253,12 +253,12 @@ export function Sidebar({
                   className={`nav-item ${
                     isActive("/management") ? "active" : ""
                   } ${managementExpanded ? "expanded" : ""}`}
-                  title={isCollapsed ? dict.common.management : ""}
+                  title={isCollapsed ? dict.management.management : ""}
                 >
                   <Settings size={20} />
                   {!isCollapsed && (
                     <>
-                      <span>{dict.common.management}</span>
+                      <span>{dict.management.management}</span>
                       <ChevronDown size={14} className="nav-item-expand" />
                     </>
                   )}
@@ -279,7 +279,7 @@ export function Sidebar({
                         }
                       }}
                     >
-                      <span>{dict.common.authentication}</span>
+                      <span>{dict.auth.authentication}</span>
                     </a>
                     <a
                       href="/management#sso"
@@ -294,7 +294,7 @@ export function Sidebar({
                         }
                       }}
                     >
-                      <span>{dict.common.ssoProviders}</span>
+                      <span>{dict.management.ssoProviders}</span>
                     </a>
                     <a
                       href="/management#audit"
@@ -309,7 +309,7 @@ export function Sidebar({
                         }
                       }}
                     >
-                      <span>{dict.common.securityAudit}</span>
+                      <span>{dict.management.securityAudit}</span>
                     </a>
                   </div>
                 )}
@@ -330,8 +330,8 @@ export function Sidebar({
                 className="theme-btn-collapsed pointer-events-auto"
                 title={
                   theme === "light"
-                    ? dict.common.darkMode
-                    : dict.common.lightMode
+                    ? dict.layout.darkMode
+                    : dict.layout.lightMode
                 }
               >
                 {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
@@ -341,14 +341,14 @@ export function Sidebar({
                 <button
                   onClick={() => setTheme("light")}
                   className={`theme-btn ${theme === "light" ? "active" : ""}`}
-                  title={dict.common.lightMode}
+                  title={dict.layout.lightMode}
                 >
                   <Sun size={16} />
                 </button>
                 <button
                   onClick={() => setTheme("dark")}
                   className={`theme-btn ${theme === "dark" ? "active" : ""}`}
-                  title={dict.common.darkMode}
+                  title={dict.layout.darkMode}
                 >
                   <Moon size={16} />
                 </button>
@@ -358,7 +358,7 @@ export function Sidebar({
             <button
               onClick={() => setShowLogoutModal(true)}
               className="logout-btn-minimal pointer-events-auto"
-              title={dict.common.logout}
+              title={dict.auth.logout}
             >
               <LogOut size={18} />
             </button>
@@ -369,7 +369,7 @@ export function Sidebar({
             className={`sidebar-profile pointer-events-auto ${
               isActive("/account") ? "active" : ""
             }`}
-            title={isCollapsed ? dict.common.settings : ""}
+            title={isCollapsed ? dict.layout.settings : ""}
           >
             <div className="sidebar-profile-avatar">
               <img
@@ -388,7 +388,7 @@ export function Sidebar({
                 <span className="sidebar-profile-name">
                   {user?.displayName ||
                     user?.username ||
-                    dict.common.defaultUsername}
+                    dict.account.defaultUsername}
                 </span>
                 <span className="sidebar-profile-email">
                   {user?.email || "..."}
@@ -404,8 +404,8 @@ export function Sidebar({
         onClick={() => handleToggle(!isCollapsed)}
         title={
           isCollapsed
-            ? dict.common.expand || "Expand"
-            : dict.common.collapse || "Collapse"
+            ? dict.layout.expand || "Expand"
+            : dict.layout.collapse || "Collapse"
         }
       >
         {isCollapsed ? (
@@ -418,12 +418,12 @@ export function Sidebar({
       <Modal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
-        title={dict.common.logoutConfirm}
-        subtitle={dict.common.logoutDescription}
+        title={dict.auth.logoutConfirm}
+        subtitle={dict.auth.logoutDescription}
       >
         <div className="modal-actions">
           <Button onClick={logout} noRipple className="btn-danger">
-            {dict.common.logout}
+            {dict.auth.logout}
           </Button>
           <Button
             onClick={() => setShowLogoutModal(false)}

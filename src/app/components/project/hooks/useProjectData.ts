@@ -62,7 +62,9 @@ export const useProjectData = ({
         if (!res.ok) {
           if (res.status === 403 || res.status === 404) {
             toast.error(
-              res.status === 403 ? dict.common.forbidden : dict.common.notFound,
+              res.status === 403
+                ? dict.project.forbidden
+                : dict.common.notFound,
             );
             router.push("/home");
             return;
@@ -97,7 +99,7 @@ export const useProjectData = ({
           else fitView({ duration: 800, maxZoom: 1 });
         }, 100);
       } catch {
-        toast.error(dict.common.noHistory);
+        toast.error(dict.modals.noHistory);
       } finally {
         setIsLoading(false);
       }
@@ -209,7 +211,7 @@ export const useProjectData = ({
           })),
         );
       } catch {
-        toast.error(dict.common.noHistory);
+        toast.error(dict.modals.noHistory);
       }
     },
     [
@@ -238,12 +240,12 @@ export const useProjectData = ({
 
         handleExitPreview();
         setSelectedStateId(null);
-        toast.success(dict.common.stateApplied);
+        toast.success(dict.modals.stateApplied);
 
         // Refresh the graph to pull the newly applied state and sync it to Yjs
         fetchGraph(true);
       } catch {
-        toast.error(dict.common.noHistory);
+        toast.error(dict.modals.noHistory);
       }
     },
     [

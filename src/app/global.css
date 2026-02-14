@@ -490,10 +490,19 @@ body {
   height: 100vh;
   position: relative;
   background-color: white;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 [data-theme="dark"] .project-canvas-container {
   background-color: #0d0d0d;
+}
+
+.project-canvas-container input,
+.project-canvas-container textarea,
+.project-canvas-container [contenteditable="true"] {
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .block-file-container {
@@ -1012,6 +1021,7 @@ input:-webkit-autofill:active {
   position: relative;
   z-index: 2000;
   user-select: none;
+  -webkit-touch-callout: none;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
@@ -2682,6 +2692,8 @@ input:-webkit-autofill:active {
   min-width: 180px;
   overflow: hidden;
   transition: opacity 0.1s ease-in-out;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .context-menu-item {
@@ -4747,6 +4759,8 @@ input:-webkit-autofill:active {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+  user-select: none;
+  -webkit-touch-callout: none;
   transition:
     border-color 0.2s ease,
     background-color 0.2s ease,
@@ -4771,6 +4785,15 @@ input:-webkit-autofill:active {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
+  pointer-events: auto !important;
+}
+
+/* Touch optimization: Increase interaction area for resizer handles on touch screens */
+@media (pointer: coarse) {
+  .resizer-handle {
+    width: 48px !important;
+    height: 48px !important;
+  }
 }
 
 .block-handle {
@@ -5310,6 +5333,15 @@ input:-webkit-autofill:active {
   border-radius: 50%;
   z-index: 9999 !important;
   position: absolute;
+  pointer-events: auto !important;
+}
+
+/* Touch optimization for selected resizer handles */
+@media (pointer: coarse) {
+  .resizer-handle {
+    width: 64px !important;
+    height: 64px !important;
+  }
 }
 
 .react-flow__resize-control.line {

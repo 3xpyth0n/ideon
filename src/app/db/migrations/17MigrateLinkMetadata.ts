@@ -27,7 +27,14 @@ export async function up(db: Kysely<database>): Promise<void> {
     let metadata: BlockMetadata = {};
     try {
       if (block.metadata) {
-        metadata = JSON.parse(block.metadata);
+        metadata =
+          typeof block.metadata === "string"
+            ? JSON.parse(block.metadata)
+            : block.metadata;
+        // Handle double encoding if necessary
+        if (typeof metadata === "string") {
+          metadata = JSON.parse(metadata);
+        }
       }
     } catch (e) {
       console.warn(`Failed to parse metadata for block ${block.id}`, e);
@@ -52,7 +59,7 @@ export async function up(db: Kysely<database>): Promise<void> {
       title: metadata.title || null,
       description: metadata.description || null,
       imageUrl: imageUrl || null,
-      fetchedAt: new Date(),
+      fetchedAt: new Date().toISOString(),
     };
 
     // Insert into linkPreviews

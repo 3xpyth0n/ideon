@@ -6,7 +6,13 @@ import { RippleHandle } from "../../ui/TouchRipple";
 interface UseTouchGesturesProps {
   rippleRef?: React.RefObject<RippleHandle | null>;
   onLongPress: (e: React.TouchEvent | TouchEvent, x: number, y: number) => void;
+  onDoubleTap?: (
+    e: React.TouchEvent | TouchEvent,
+    x: number,
+    y: number,
+  ) => void;
   longPressDelay?: number;
+  doubleTapDelay?: number;
   moveThreshold?: number;
   stopPropagation?: boolean;
 }
@@ -14,7 +20,9 @@ interface UseTouchGesturesProps {
 export const useTouchGestures = ({
   rippleRef,
   onLongPress,
+  onDoubleTap,
   longPressDelay = 500,
+  doubleTapDelay = 300,
   moveThreshold = 10,
   stopPropagation = false,
 }: UseTouchGesturesProps) => {
@@ -22,6 +30,9 @@ export const useTouchGestures = ({
   const rippleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
   const activeRippleIdRef = useRef<number | null>(null);
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(
+    null,
+  );
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent | TouchEvent) => {
@@ -32,6 +43,35 @@ export const useTouchGestures = ({
       if (!touch) return;
 
       const { clientX, clientY } = touch;
+      const now = Date.now();
+
+      // Double tap detection
+      if (onDoubleTap && lastTapRef.current) {
+        const timeDiff = now - lastTapRef.current.time;
+        const dist = Math.sqrt(
+          Math.pow(clientX - lastTapRef.current.x, 2) +
+            Math.pow(clientY - lastTapRef.current.y, 2),
+        );
+
+        if (timeDiff < doubleTapDelay && dist < moveThreshold * 2) {
+          // It's a double tap
+          onDoubleTap(e, clientX, clientY);
+
+          // Cancel long press and ripple
+          if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+          }
+          if (rippleTimerRef.current) {
+            clearTimeout(rippleTimerRef.current);
+            rippleTimerRef.current = null;
+          }
+          lastTapRef.current = null;
+          return;
+        }
+      }
+
+      lastTapRef.current = { time: now, x: clientX, y: clientY };
       startPosRef.current = { x: clientX, y: clientY };
 
       // Start ripple timer (appears after a short delay to avoid single click ripples)
@@ -46,6 +86,10 @@ export const useTouchGestures = ({
 
       // Start long press timer
       timerRef.current = setTimeout(() => {
+        // Clear selection to prevent text highlighting on long press
+        if (window.getSelection) {
+          window.getSelection()?.removeAllRanges();
+        }
         onLongPress(e, clientX, clientY);
         timerRef.current = null;
       }, longPressDelay);

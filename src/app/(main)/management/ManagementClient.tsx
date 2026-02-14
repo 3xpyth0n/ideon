@@ -211,24 +211,24 @@ export function ManagementClient() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success(dict.common.testSmtpSuccess);
+        toast.success(dict.setup.testSmtpSuccess);
         setSmtpTestStatus({
           success: true,
-          message: dict.common.testSmtpSuccess,
+          message: dict.setup.testSmtpSuccess,
         });
       } else {
-        toast.error(data.error || dict.common.testSmtpError);
+        toast.error(data.error || dict.setup.testSmtpError);
         setSmtpTestStatus({
           success: false,
-          message: data.error || dict.common.testSmtpError,
+          message: data.error || dict.setup.testSmtpError,
         });
       }
     } catch (error) {
       console.error(error);
-      toast.error(dict.common.testSmtpError);
+      toast.error(dict.setup.testSmtpError);
       setSmtpTestStatus({
         success: false,
-        message: dict.common.testSmtpError,
+        message: dict.setup.testSmtpError,
       });
     } finally {
       setTestingSmtp(false);
@@ -264,9 +264,9 @@ export function ManagementClient() {
     <div className="management-container">
       <header className="management-header">
         <div>
-          <h1 className="management-title">{dict.common.management}</h1>
+          <h1 className="management-title">{dict.management.management}</h1>
           <p className="management-subtitle">
-            {dict.common.managementSubtitle}
+            {dict.management.managementSubtitle}
           </p>
         </div>
       </header>
@@ -279,7 +279,7 @@ export function ManagementClient() {
           onClick={() => (window.location.hash = "authentication")}
         >
           <Key size={16} />
-          {dict.common.authentication}
+          {dict.auth.authentication}
         </button>
         <button
           className={`management-tab-btn ${
@@ -288,7 +288,7 @@ export function ManagementClient() {
           onClick={() => (window.location.hash = "sso")}
         >
           <Globe size={16} />
-          {dict.common.ssoProviders}
+          {dict.management.ssoProviders}
         </button>
         <button
           className={`management-tab-btn ${
@@ -297,7 +297,7 @@ export function ManagementClient() {
           onClick={() => (window.location.hash = "audit")}
         >
           <Shield size={16} />
-          {dict.common.securityAudit}
+          {dict.management.securityAudit}
         </button>
       </div>
 
@@ -306,9 +306,11 @@ export function ManagementClient() {
           {activeTab === "authentication" && (
             <div className="auth-settings">
               <section className="settings-section">
-                <h2 className="section-title">{dict.common.generalSettings}</h2>
+                <h2 className="section-title">
+                  {dict.management.generalSettings}
+                </h2>
                 <p className="section-subtitle">
-                  {dict.common.authSettingsSubtitle}
+                  {dict.management.authSettingsSubtitle}
                 </p>
 
                 <div className="settings-grid">
@@ -317,10 +319,10 @@ export function ManagementClient() {
                       <UserPlus size={24} className="setting-icon" />
                       <div>
                         <h3 className="setting-name">
-                          {dict.common.publicRegistration}
+                          {dict.management.publicRegistration}
                         </h3>
                         <p className="setting-description">
-                          {dict.common.publicRegistrationDesc}
+                          {dict.management.publicRegistrationDesc}
                         </p>
                       </div>
                     </div>
@@ -348,10 +350,10 @@ export function ManagementClient() {
                       <Shield size={24} className="setting-icon" />
                       <div>
                         <h3 className="setting-name">
-                          {dict.common.ssoRegistration}
+                          {dict.management.ssoRegistration}
                         </h3>
                         <p className="setting-description">
-                          {dict.common.ssoRegistrationDesc}
+                          {dict.management.ssoRegistrationDesc}
                         </p>
                       </div>
                     </div>
@@ -379,10 +381,10 @@ export function ManagementClient() {
                       <Lock size={24} className="setting-icon" />
                       <div>
                         <h3 className="setting-name">
-                          {dict.common.passwordLogin}
+                          {dict.management.passwordLogin}
                         </h3>
                         <p className="setting-description">
-                          {dict.common.passwordLoginDesc}
+                          {dict.management.passwordLoginDesc}
                         </p>
                       </div>
                     </div>
@@ -412,8 +414,10 @@ export function ManagementClient() {
           {activeTab === "sso" && (
             <div className="auth-settings">
               <section className="settings-section">
-                <h2 className="section-title">{dict.common.ssoProviders}</h2>
-                <p className="section-subtitle">{dict.common.ssoDesc}</p>
+                <h2 className="section-title">
+                  {dict.management.ssoProviders}
+                </h2>
+                <p className="section-subtitle">{dict.management.ssoDesc}</p>
 
                 <div className="provider-grid">
                   {providers.map((p) => {
@@ -461,7 +465,7 @@ export function ManagementClient() {
                           noRipple
                         >
                           <span className="btn-text">
-                            {dict.common.configure}
+                            {dict.management.configure}
                           </span>
                           <ChevronRight size={16} />
                         </Button>
@@ -479,10 +483,10 @@ export function ManagementClient() {
                 <div className="flex justify-between items-center">
                   <div>
                     <h2 className="section-title">
-                      {dict.common.securityAudit}
+                      {dict.management.securityAudit}
                     </h2>
                     <p className="section-subtitle">
-                      {dict.common.managementSubtitle}
+                      {dict.management.managementSubtitle}
                     </p>
                   </div>
                   <Button
@@ -616,7 +620,7 @@ function ProviderConfigModal({
     <Modal
       isOpen={true}
       onClose={onClose}
-      title={`${dict.common.configure} ${
+      title={`${dict.management.configure} ${
         dict.common[provider as keyof typeof dict.common]
       }`}
     >
@@ -625,7 +629,7 @@ function ProviderConfigModal({
           <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
             <div className="flex items-center gap-2 font-bold tracking-wider">
               <Globe size={14} />
-              <span>{dict.common.callbackUrlNotice}</span>
+              <span>{dict.providers.callbackUrlNotice}</span>
             </div>
             <div className="flex items-center gap-2">
               <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -638,7 +642,7 @@ function ProviderConfigModal({
         {isOidc && (
           <>
             <div className="form-group">
-              <label className="modal-label">{dict.common.clientId}</label>
+              <label className="modal-label">{dict.providers.clientId}</label>
               <input
                 className="zen-input"
                 value={formData.clientId || ""}
@@ -649,7 +653,9 @@ function ProviderConfigModal({
               />
             </div>
             <div className="form-group">
-              <label className="modal-label">{dict.common.clientSecret}</label>
+              <label className="modal-label">
+                {dict.providers.clientSecret}
+              </label>
               <input
                 className="zen-input"
                 type="password"
@@ -662,7 +668,7 @@ function ProviderConfigModal({
             </div>
             {provider === "entra" && (
               <div className="form-group">
-                <label className="modal-label">{dict.common.tenantId}</label>
+                <label className="modal-label">{dict.providers.tenantId}</label>
                 <input
                   className="zen-input"
                   value={formData.tenantId || ""}
@@ -675,7 +681,7 @@ function ProviderConfigModal({
             )}
             {provider === "oidc" && (
               <div className="form-group">
-                <label className="modal-label">{dict.common.issuer}</label>
+                <label className="modal-label">{dict.providers.issuer}</label>
                 <input
                   className="zen-input"
                   value={formData.issuer || ""}
@@ -687,7 +693,9 @@ function ProviderConfigModal({
               </div>
             )}
             <div className="form-group">
-              <label className="modal-label">{dict.common.redirectUri}</label>
+              <label className="modal-label">
+                {dict.providers.redirectUri}
+              </label>
               <input
                 className="zen-input"
                 value={formData.redirectUri || ""}
@@ -705,7 +713,7 @@ function ProviderConfigModal({
             <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
               <div className="flex items-center gap-2 font-bold tracking-wider">
                 <Globe size={14} />
-                <span>{dict.common.samlSpConfig}</span>
+                <span>{dict.providers.samlSpConfig}</span>
               </div>
               <div className="flex items-center gap-2">
                 <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -714,7 +722,7 @@ function ProviderConfigModal({
               </div>
               <div className="flex items-center gap-2 font-bold tracking-wider mt-2">
                 <Shield size={14} />
-                <span>{dict.common.samlSpEntityId}</span>
+                <span>{dict.providers.samlSpEntityId}</span>
               </div>
               <div className="flex items-center gap-2">
                 <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -724,7 +732,7 @@ function ProviderConfigModal({
             </div>
             <div className="form-group">
               <label className="modal-label">
-                {dict.common.samlIdpMetadataUrl}
+                {dict.providers.samlIdpMetadataUrl}
               </label>
               <input
                 className="zen-input"
@@ -737,7 +745,7 @@ function ProviderConfigModal({
             </div>
             <div className="form-group">
               <label className="modal-label">
-                {dict.common.samlRawMetadataXml}
+                {dict.providers.samlRawMetadataXml}
               </label>
               <textarea
                 className="zen-input min-h-[100px] font-mono text-[10px]"
@@ -752,7 +760,7 @@ function ProviderConfigModal({
         {isMagicLink && (
           <div className="form-group">
             <label className="modal-label">
-              {dict.common.magicLinkDuration}
+              {dict.providers.magicLinkDuration}
             </label>
             <input
               type="number"
@@ -764,10 +772,10 @@ function ProviderConfigModal({
                   expiresInMinutes: parseInt(e.target.value),
                 })
               }
-              placeholder={dict.common.magicLinkDurationPlaceholder}
+              placeholder={dict.providers.magicLinkDurationPlaceholder}
             />
             <p className="text-[10px] opacity-40 mt-1">
-              {dict.common.magicLinkEnvNotice}
+              {dict.providers.magicLinkEnvNotice}
             </p>
           </div>
         )}
@@ -785,7 +793,7 @@ function ProviderConfigModal({
                   {testingSmtp ? (
                     <Loader2 className="animate-spin" size={18} />
                   ) : (
-                    dict.common.testSmtp
+                    dict.setup.testSmtp
                   )}
                 </Button>
                 {smtpTestStatus && (

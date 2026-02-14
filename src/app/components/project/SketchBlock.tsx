@@ -159,7 +159,10 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   useEffect(() => {
     if (data.metadata && !isLoaded) {
       try {
-        const parsed = JSON.parse(data.metadata);
+        const parsed =
+          typeof data.metadata === "string"
+            ? JSON.parse(data.metadata)
+            : data.metadata;
         if (parsed.strokes) {
           // New format
           setStrokes(parsed.strokes);
@@ -201,7 +204,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
         const editorName =
           currentUser?.displayName ||
           currentUser?.username ||
-          dict.common.anonymous;
+          dict.project.anonymous;
 
         data.onContentChange?.(
           id,
@@ -328,7 +331,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
       const editorName =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -359,7 +362,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleResize = useCallback(
@@ -446,7 +449,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
         <div className="flex items-center gap-2">
           <PenTool size={16} />
           <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-            {dict.common.blockTypeSketch || "Sketch"}
+            {dict.blocks.blockTypeSketch || "Sketch"}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -878,7 +881,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           <div className="block-author-info flex items-center gap-1.5">
             {isLocked && <LockIcon size={10} className="block-lock-icon" />}
             <div className="author-name">
-              {(data.authorName || dict.common.anonymous).toLowerCase()}
+              {(data.authorName || dict.project.anonymous).toLowerCase()}
             </div>
           </div>
         </div>

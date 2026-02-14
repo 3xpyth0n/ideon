@@ -4,6 +4,7 @@ import { database } from "../../lib/types/db";
 export async function up(db: Kysely<database>): Promise<void> {
   await db.schema
     .createTable("linkPreviews")
+    .ifNotExists()
     .addColumn("id", "text", (col) => col.primaryKey())
     .addColumn("blockId", "text", (col) =>
       col.notNull().references("blocks.id").onDelete("cascade"),

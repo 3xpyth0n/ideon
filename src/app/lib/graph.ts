@@ -123,7 +123,8 @@ export function prepareBlockForDb(
       | "contact"
       | "video"
       | "snippet"
-      | "checklist") ||
+      | "checklist"
+      | "sketch") ||
     "text";
 
   return {

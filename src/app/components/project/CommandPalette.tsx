@@ -73,8 +73,8 @@ export function CommandPalette({
   if (!isOpen) return null;
 
   const categories = {
-    create: dict.common.invite,
-    navigate: dict.common.return,
+    create: dict.auth.invite,
+    navigate: dict.canvas.return,
     edit: dict.common.edit,
   };
 
@@ -100,7 +100,7 @@ export function CommandPalette({
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder={dict.common.commandPalettePlaceholder}
+            placeholder={dict.canvas.commandPalettePlaceholder}
             className="command-input"
           />
         </div>
@@ -110,7 +110,7 @@ export function CommandPalette({
             <div className="no-results">
               <Zap size={24} className="opacity-20" />
               <p className="text-sm opacity-40 mt-2">
-                {dict.common.noCommandsFound}
+                {dict.canvas.noCommandsFound}
               </p>
             </div>
           ) : (
@@ -145,8 +145,8 @@ export function CommandPalette({
 
         <div className="command-footer">
           <div className="command-hint">
-            <kbd>↑↓</kbd> {dict.common.navigate}
-            <kbd>↵</kbd> {dict.common.select}
+            <kbd>↑↓</kbd> {dict.canvas.navigate}
+            <kbd>↵</kbd> {dict.canvas.select}
             <kbd>Esc</kbd> {dict.common.close}
           </div>
         </div>

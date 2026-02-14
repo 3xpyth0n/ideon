@@ -46,7 +46,7 @@ export function ProjectSelector({
         onClick={() => onSelect(null)}
         className={`project-btn ${!currentProjectId ? "active" : ""}`}
       >
-        {dict.common.overview}
+        {dict.templates.overview}
       </button>
 
       <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1" />
@@ -72,7 +72,7 @@ export function ProjectSelector({
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           onBlur={() => !newName && setIsCreating(false)}
-          placeholder={dict.common.projectPlaceholder}
+          placeholder={dict.project.projectPlaceholder}
         />
       ) : (
         <button

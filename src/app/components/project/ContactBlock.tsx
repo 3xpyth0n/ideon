@@ -161,7 +161,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -183,7 +183,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -214,7 +214,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleResize = useCallback(
@@ -314,7 +314,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
         <div className="flex items-center gap-2">
           <User size={16} />
           <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-            {dict.common.blockTypeContact || "Contact"}
+            {dict.blocks.blockTypeContact || "Contact"}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -332,49 +332,49 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
         <div className="contact-block-container nowheel nodrag h-full">
           <div className="contact-field">
             <label className="contact-field-label">
-              {dict.common.contactName || "Name"}
+              {dict.blocks.contactName || "Name"}
             </label>
             <input
               type="text"
               className={`contact-input ${!isEditing ? "preview-mode" : ""}`}
               value={localMeta.name}
               onChange={(e) => updateField("name", e.target.value)}
-              placeholder={dict.common.namePlaceholder || "Full name"}
+              placeholder={dict.blocks.namePlaceholder || "Full name"}
               readOnly={isInputReadOnly}
             />
           </div>
 
           <div className="contact-field">
             <label className="contact-field-label">
-              {dict.common.contactPhone || "Phone"}
+              {dict.blocks.contactPhone || "Phone"}
             </label>
             <input
               type="tel"
               className={`contact-input ${!isEditing ? "preview-mode" : ""}`}
               value={localMeta.phone}
               onChange={(e) => updateField("phone", e.target.value)}
-              placeholder={dict.common.phonePlaceholder || "+00 000 000 000"}
+              placeholder={dict.blocks.phonePlaceholder || "+00 000 000 000"}
               readOnly={isInputReadOnly}
             />
           </div>
 
           <div className="contact-field">
             <label className="contact-field-label">
-              {dict.common.contactEmail || "Email"}
+              {dict.blocks.contactEmail || "Email"}
             </label>
             <input
               type="email"
               className={`contact-input ${!isEditing ? "preview-mode" : ""}`}
               value={localMeta.email}
               onChange={(e) => updateField("email", e.target.value)}
-              placeholder={dict.common.emailPlaceholder || "email@example.com"}
+              placeholder={dict.blocks.emailPlaceholder || "email@example.com"}
               readOnly={isInputReadOnly}
             />
           </div>
 
           <div className="contact-field">
             <label className="contact-field-label">
-              {dict.common.contactNote || "Note"}
+              {dict.blocks.contactNote || "Note"}
             </label>
             <textarea
               className={`contact-input contact-textarea ${
@@ -382,7 +382,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
               }`}
               value={localMeta.note}
               onChange={(e) => updateField("note", e.target.value)}
-              placeholder={dict.common.notePlaceholder || "Add a note..."}
+              placeholder={dict.blocks.notePlaceholder || "Add a note..."}
               readOnly={isInputReadOnly}
             />
           </div>
@@ -397,7 +397,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
           <div className="block-author-info flex items-center gap-1.5">
             {isLocked && <Lock size={10} className="block-lock-icon" />}
             <div className="author-name">
-              {(data.authorName || dict.common.anonymous).toLowerCase()}
+              {(data.authorName || dict.project.anonymous).toLowerCase()}
             </div>
           </div>
         </div>

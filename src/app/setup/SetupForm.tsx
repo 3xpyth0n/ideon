@@ -31,19 +31,19 @@ export function SetupForm() {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast.error(dict.common.invalidEmail);
+      toast.error(dict.auth.invalidEmail);
       setBusy(false);
       return;
     }
 
     if (!username.trim()) {
-      toast.error(dict.common.usernameRequired);
+      toast.error(dict.auth.usernameRequired);
       setBusy(false);
       return;
     }
 
     if (password !== confirm) {
-      toast.error(dict.common.passwordMismatch);
+      toast.error(dict.auth.passwordMismatch);
       setBusy(false);
       return;
     }
@@ -53,7 +53,7 @@ export function SetupForm() {
       router.replace("/login?setupSuccess=true");
       return;
     }
-    toast.error(dict.common.errorInit);
+    toast.error(dict.setup.errorInit);
   };
 
   if (!mounted) {
@@ -76,35 +76,35 @@ export function SetupForm() {
 
       <div className="auth-card">
         <div className="auth-header">
-          <h1 className="auth-title">{dict.common.setupTitle}</h1>
-          <p className="auth-subtitle">{dict.common.setupSubtitle}</p>
+          <h1 className="auth-title">{dict.setup.setupTitle}</h1>
+          <p className="auth-subtitle">{dict.setup.setupSubtitle}</p>
         </div>
 
         <form onSubmit={onSubmit} noValidate className="auth-form">
           <div className="auth-field">
-            <label className="auth-label">{dict.common.email}</label>
+            <label className="auth-label">{dict.auth.email}</label>
             <input
               className="auth-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={dict.common.emailPlaceholder}
+              placeholder={dict.blocks.emailPlaceholder}
               required
             />
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">{dict.common.username}</label>
+            <label className="auth-label">{dict.auth.username}</label>
             <input
               className="auth-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder={dict.common.usernamePlaceholder}
+              placeholder={dict.auth.usernamePlaceholder}
               required
             />
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">{dict.common.password}</label>
+            <label className="auth-label">{dict.auth.password}</label>
             <div className="auth-input-wrapper">
               <input
                 className="auth-input auth-input-password"
@@ -125,7 +125,7 @@ export function SetupForm() {
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">{dict.common.confirmPassword}</label>
+            <label className="auth-label">{dict.auth.confirmPassword}</label>
             <div className="auth-input-wrapper">
               <input
                 className="auth-input auth-input-password"
@@ -152,7 +152,7 @@ export function SetupForm() {
               type="submit"
               className="btn-primary auth-submit-btn"
             >
-              {busy ? dict.common.loading : dict.common.submit}
+              {busy ? dict.common.loading : dict.auth.submit}
             </Button>
           </div>
         </form>

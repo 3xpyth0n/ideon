@@ -70,9 +70,18 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
 
   const [code, setCode] = useState(data.content || "");
   const [title, setTitle] = useState(data.title || "");
-  const [language, setLanguage] = useState(
-    data.metadata ? JSON.parse(data.metadata).language : "javascript",
-  );
+  const [language, setLanguage] = useState(() => {
+    if (!data.metadata) return "javascript";
+    try {
+      const parsed =
+        typeof data.metadata === "string"
+          ? JSON.parse(data.metadata)
+          : data.metadata;
+      return parsed.language || "javascript";
+    } catch {
+      return "javascript";
+    }
+  });
 
   const syncToYjs = useCallback(
     (text: string) => {
@@ -169,7 +178,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -191,7 +200,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -212,7 +221,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -243,7 +252,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleFormat = useCallback(async () => {
@@ -284,9 +293,9 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       });
 
       handleCodeChange(formatted);
-      toast.success(dict.common.codeFormatted || "Code formatted");
+      toast.success(dict.blocks.codeFormatted || "Code formatted");
     } catch (_err) {
-      toast.error(dict.common.formatError || "Formatting failed");
+      toast.error(dict.blocks.formatError || "Formatting failed");
     }
   }, [code, language, handleCodeChange, dict]);
 
@@ -384,7 +393,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
           <div className="flex items-center gap-2">
             <Code size={16} />
             <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-              {dict.common.blockTypeSnippet || "Snippet"}
+              {dict.blocks.blockTypeSnippet || "Snippet"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -398,7 +407,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             <button
               onClick={handleCopy}
               className="snippet-format-button"
-              title={dict.common.copyCode || "Copy Code"}
+              title={dict.blocks.copyCode || "Copy Code"}
             >
               <Copy size={14} />
             </button>
@@ -406,7 +415,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               <button
                 onClick={handleFormat}
                 className="snippet-format-button"
-                title={dict.common.formatCode || "Format code"}
+                title={dict.blocks.formatCode || "Format code"}
               >
                 <Brush size={14} />
               </button>
@@ -457,7 +466,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             <div className="block-author-info flex items-center gap-1.5">
               {isLocked && <Lock size={10} className="block-lock-icon" />}
               <div className="author-name">
-                {(data.authorName || dict.common.anonymous).toLowerCase()}
+                {(data.authorName || dict.project.anonymous).toLowerCase()}
               </div>
             </div>
           </div>

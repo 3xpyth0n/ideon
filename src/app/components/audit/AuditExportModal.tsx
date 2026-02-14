@@ -96,15 +96,15 @@ export function AuditExportModal({
       title={
         <div className="flex items-center gap-2">
           <Download className="w-5 h-5" />
-          {dict.common.exportLogs}
+          {dict.management.exportLogs}
         </div>
       }
-      subtitle={dict.common.selectFormat}
+      subtitle={dict.modals.selectFormat}
       className="max-w-md w-full"
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
-          <label className="modal-label">{dict.common.exportFormat}</label>
+          <label className="modal-label">{dict.modals.exportFormat}</label>
           <div className="flex flex-col gap-2">
             <button
               onClick={() => setFormat("json")}
@@ -119,7 +119,7 @@ export function AuditExportModal({
               />
               <div className="flex flex-col">
                 <span className="font-bold text-sm">
-                  {dict.common.formatJson}
+                  {dict.providers.formatJson}
                 </span>
               </div>
             </button>
@@ -137,7 +137,7 @@ export function AuditExportModal({
               />
               <div className="flex flex-col">
                 <span className="font-bold text-sm">
-                  {dict.common.formatCsv}
+                  {dict.providers.formatCsv}
                 </span>
               </div>
             </button>

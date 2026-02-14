@@ -118,7 +118,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -142,7 +142,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(id, newUrl, now, editor, data.metadata, title);
     },
@@ -166,7 +166,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleResize = useCallback(
@@ -289,7 +289,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
           <div className="flex items-center gap-2">
             <Video size={16} />
             <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-              {dict.common.blockTypeVideo || "Video"}
+              {dict.blocks.blockTypeVideo || "Video"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -338,7 +338,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
             </div>
           ) : (
             <div className="flex items-center justify-center h-full opacity-30 italic">
-              {dict.common.noVideo || "No valid video URL"}
+              {dict.blocks.noVideo || "No valid video URL"}
             </div>
           )}
         </div>
@@ -351,7 +351,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
             <div className="block-author-info flex items-center gap-1.5">
               {isLocked && <Lock size={10} className="block-lock-icon" />}
               <div className="author-name">
-                {(data.authorName || dict.common.anonymous).toLowerCase()}
+                {(data.authorName || dict.project.anonymous).toLowerCase()}
               </div>
             </div>
           </div>

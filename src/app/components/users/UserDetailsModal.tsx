@@ -50,11 +50,11 @@ export function UserDetailsModal({
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "superadmin":
-        return dict.common.superadmin;
+        return dict.management.superadmin;
       case "admin":
-        return dict.common.admin;
+        return dict.management.admin;
       default:
-        return dict.common.member;
+        return dict.management.member;
     }
   };
 
@@ -62,7 +62,7 @@ export function UserDetailsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={dict.common.userDetails}
+      title={dict.management.userDetails}
       subtitle={user.email}
       className="max-w-2xl w-full"
     >
@@ -93,21 +93,21 @@ export function UserDetailsModal({
         <div className="user-details-grid">
           <div className="user-details-item">
             <label className="user-details-label">
-              {dict.common.memberSince}
+              {dict.management.memberSince}
             </label>
             <p className="user-details-value">{formatDate(user.createdAt)}</p>
           </div>
 
           <div className="user-details-item">
             <label className="user-details-label">
-              {dict.common.lastOnline}
+              {dict.management.lastOnline}
             </label>
             <p className="user-details-value">{formatDate(user.lastOnline)}</p>
           </div>
 
           <div className="user-details-item">
             <label className="user-details-label">
-              {dict.common.invitedBy}
+              {dict.management.invitedBy}
             </label>
             <div className="user-details-value">
               {user.invitedByUserId ? (
@@ -125,7 +125,7 @@ export function UserDetailsModal({
                 </div>
               ) : (
                 <span className="user-details-manual">
-                  {dict.common.manualSignup}
+                  {dict.auth.manualSignup}
                 </span>
               )}
             </div>

@@ -64,11 +64,11 @@ export function LoginClient() {
     const accessDenied = params.get("error") === "AccessDenied";
 
     if (setupSuccess) {
-      toast.success(dict.common.setupSuccess);
+      toast.success(dict.setup.setupSuccess);
     } else if (regDisabled) {
-      toast.error(dict.common.registrationDisabledError);
+      toast.error(dict.auth.registrationDisabledError);
     } else if (accessDenied) {
-      toast.error(dict.common.accessDenied || "Access Denied");
+      toast.error(dict.auth.accessDenied || "Access Denied");
     }
 
     if (setupSuccess || regDisabled || accessDenied) {
@@ -80,9 +80,9 @@ export function LoginClient() {
     }
   }, [
     mounted,
-    dict.common.setupSuccess,
-    dict.common.registrationDisabledError,
-    dict.common.accessDenied,
+    dict.setup.setupSuccess,
+    dict.auth.registrationDisabledError,
+    dict.auth.accessDenied,
   ]);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -99,9 +99,9 @@ export function LoginClient() {
 
     if (res?.error) {
       if (res.error === "too_many_requests") {
-        toast.error(dict.common.tooManyRequests);
+        toast.error(dict.auth.tooManyRequests);
       } else {
-        toast.error(dict.common.invalidCredentials);
+        toast.error(dict.auth.invalidCredentials);
       }
       return;
     }
@@ -113,8 +113,8 @@ export function LoginClient() {
   const onForgotPassword = async () => {
     if (!identifier) {
       toast.error(
-        dict.common.identifierLabel
-          ? `${dict.common.identifierLabel} required`
+        dict.auth.identifierLabel
+          ? `${dict.auth.identifierLabel} required`
           : "Email or Username required",
       );
       return;
@@ -140,7 +140,7 @@ export function LoginClient() {
   const onMagicLinkRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!magicEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(magicEmail)) {
-      toast.error(dict.common.invalidEmail);
+      toast.error(dict.auth.invalidEmail);
       return;
     }
 
@@ -152,14 +152,14 @@ export function LoginClient() {
       });
 
       if (res?.ok && !res?.error) {
-        toast.success(dict.common.magicLinkSent);
+        toast.success(dict.auth.magicLinkSent);
         setShowMagicInput(false);
         setMagicEmail("");
       } else {
-        toast.error(dict.common.magicLinkError);
+        toast.error(dict.auth.magicLinkError);
       }
     } catch (_err) {
-      toast.error(dict.common.magicLinkError);
+      toast.error(dict.auth.magicLinkError);
     } finally {
       setSendingMagic(false);
     }
@@ -169,9 +169,9 @@ export function LoginClient() {
     const error = searchParams.get("error");
     if (error) {
       if (error === "invalidToken") {
-        toast.error(dict.common.invalidToken || "Invalid or expired link");
+        toast.error(dict.auth.invalidToken || "Invalid or expired link");
       } else if (error === "internalError") {
-        toast.error(dict.common.magicLinkError);
+        toast.error(dict.auth.magicLinkError);
       }
     }
   }, [searchParams, dict]);
@@ -199,35 +199,33 @@ export function LoginClient() {
 
       <div className="auth-card">
         <div className="auth-header">
-          <h1 className="auth-title">{dict.common.loginTitle}</h1>
+          <h1 className="auth-title">{dict.auth.loginTitle}</h1>
         </div>
 
         {settings.passwordLoginEnabled && (
           <form onSubmit={onSubmit} noValidate className="auth-form">
             <div className="auth-field">
-              <label className="auth-label">
-                {dict.common.identifierLabel}
-              </label>
+              <label className="auth-label">{dict.auth.identifierLabel}</label>
               <input
                 className="auth-input"
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={dict.common.identifierPlaceholder}
+                placeholder={dict.auth.identifierPlaceholder}
                 autoComplete="username"
                 required
               />
             </div>
 
             <div className="auth-field">
-              <label className="auth-label">{dict.common.password}</label>
+              <label className="auth-label">{dict.auth.password}</label>
               <div className="auth-input-wrapper">
                 <input
                   className="auth-input auth-input-password"
                   type={show ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={dict.common.passwordPlaceholder}
+                  placeholder={dict.auth.passwordPlaceholder}
                   autoComplete="current-password"
                   required
                 />
@@ -265,7 +263,7 @@ export function LoginClient() {
                   {busy ? (
                     <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
                   ) : (
-                    dict.common.login
+                    dict.auth.login
                   )}
                 </Button>
               </div>
@@ -275,7 +273,7 @@ export function LoginClient() {
 
         {settings.passwordLoginEnabled && enabledProviders.length > 0 && (
           <div className="auth-divider">
-            <span>{dict.common.or}</span>
+            <span>{dict.auth.or}</span>
           </div>
         )}
 
@@ -291,7 +289,7 @@ export function LoginClient() {
                         onClick={() => setShowMagicInput(true)}
                       >
                         <span>
-                          {dict.common.continueWith}{" "}
+                          {dict.auth.continueWith}{" "}
                           {dict.common[provider as keyof typeof dict.common]}
                         </span>
                       </Button>
@@ -317,7 +315,7 @@ export function LoginClient() {
                           {sendingMagic ? (
                             <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
                           ) : (
-                            dict.common.submit
+                            dict.auth.submit
                           )}
                         </Button>
                       </form>
@@ -336,7 +334,7 @@ export function LoginClient() {
                   }}
                 >
                   <span>
-                    {dict.common.continueWith}{" "}
+                    {dict.auth.continueWith}{" "}
                     {dict.common[provider as keyof typeof dict.common]}
                   </span>
                 </Button>
@@ -352,7 +350,7 @@ export function LoginClient() {
             onClick={() => router.push("/register")}
             className="auth-footer-link"
           >
-            {dict.common.createAccount}
+            {dict.auth.createAccount}
           </button>
         </div>
       )}

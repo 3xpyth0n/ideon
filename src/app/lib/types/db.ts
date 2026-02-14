@@ -124,7 +124,8 @@ export interface blocksTable {
     | "contact"
     | "video"
     | "snippet"
-    | "checklist";
+    | "checklist"
+    | "sketch";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;

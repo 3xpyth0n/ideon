@@ -107,7 +107,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -127,7 +127,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       const meta =
         typeof data.metadata === "string"
@@ -200,7 +200,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleResize = useCallback(
@@ -311,15 +311,15 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           <div className="flex items-center gap-2">
             <Check size={16} />
             <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-              {dict.common.blockTypeChecklist || "Checklist"}
+              {dict.blocks.blockTypeChecklist || "Checklist"}
             </span>
             {total > 0 && (
               <div
                 className={`checklist-progress-badge checklist-progress-${status}`}
               >
                 {status === "complete"
-                  ? dict.common.checklistComplete
-                  : dict.common.checklistProgress
+                  ? dict.blocks.checklistComplete
+                  : dict.blocks.checklistProgress
                       .replace("{completed}", completed.toString())
                       .replace("{total}", total.toString())}
               </div>
@@ -368,7 +368,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                     handleChangeItemText(item.id, e.target.value)
                   }
                   className={`checklist-input ${item.checked ? "checked" : ""}`}
-                  placeholder={dict.common.taskPlaceholder || "Task..."}
+                  placeholder={dict.blocks.taskPlaceholder || "Task..."}
                   readOnly={isReadOnly}
                 />
                 {!isReadOnly && (
@@ -386,7 +386,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
               <button
                 className="checklist-add-button"
                 onClick={handleAddItem}
-                title={dict.common.addTask || "Add task"}
+                title={dict.blocks.addTask || "Add task"}
               >
                 <Plus size={16} />
               </button>
@@ -402,7 +402,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             <div className="block-author-info flex items-center gap-1.5">
               {isLocked && <Lock size={10} className="block-lock-icon" />}
               <div className="author-name">
-                {(data.authorName || dict.common.anonymous).toLowerCase()}
+                {(data.authorName || dict.project.anonymous).toLowerCase()}
               </div>
             </div>
           </div>

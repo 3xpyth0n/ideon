@@ -88,14 +88,14 @@ export function InviteUserModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={dict.common.inviteUser}
-      subtitle={dict.common.inviteUserSubtitle}
+      title={dict.management.inviteUser}
+      subtitle={dict.project.inviteUserSubtitle}
     >
       <div className="relative mb-6">
         <input
           autoFocus
           className="zen-input pl-12"
-          placeholder={dict.common.searchUsers}
+          placeholder={dict.management.searchUsers}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -137,7 +137,7 @@ export function InviteUserModal({
                   <div className="flex items-center gap-2 text-accent opacity-50">
                     <Check size={14} />
                     <span className="text-[10px] font-bold uppercase tracking-widest">
-                      {dict.common.userAdded}
+                      {dict.project.userAdded}
                     </span>
                   </div>
                 ) : (
@@ -149,7 +149,7 @@ export function InviteUserModal({
                     {invitingId === user.id ? (
                       <Loader2 className="animate-spin" size={14} />
                     ) : (
-                      dict.common.addUser
+                      dict.project.addUser
                     )}
                   </Button>
                 )}
@@ -159,13 +159,13 @@ export function InviteUserModal({
         ) : query.length >= 2 ? (
           <div className="py-12 text-center opacity-20">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em]">
-              {dict.common.noUsersFound}
+              {dict.management.noUsersFound}
             </p>
           </div>
         ) : (
           <div className="py-12 text-center opacity-10">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em]">
-              {dict.common.startTypingToSearch}
+              {dict.project.startTypingToSearch}
             </p>
           </div>
         )}

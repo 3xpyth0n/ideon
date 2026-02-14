@@ -39,14 +39,14 @@ interface UseProjectCanvasGraphProps {
   setContextMenu: (
     val: {
       id?: string;
-      type: "block" | "pane";
+      type: "block" | "pane" | "edge";
       top: number;
       left: number;
     } | null,
   ) => void;
   contextMenu: {
     id?: string;
-    type: "block" | "pane";
+    type: "block" | "pane" | "edge";
     top: number;
     left: number;
   } | null;
@@ -84,6 +84,32 @@ export const useProjectCanvasGraph = ({
         padding: 0.3,
       });
   }, [blocks, fitView, setViewport]);
+
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent | MouseEvent, edge: Edge) => {
+      event.preventDefault();
+
+      // Select the edge when right-clicked/double-tapped
+      setLinks((prevLinks) => {
+        const isAlreadySelected = prevLinks.find((l) => l.id === edge.id)
+          ?.selected;
+        if (isAlreadySelected) return prevLinks;
+
+        return prevLinks.map((l) => ({
+          ...l,
+          selected: l.id === edge.id,
+        }));
+      });
+
+      setContextMenu({
+        id: edge.id,
+        type: "edge",
+        top: (event as React.MouseEvent).clientY,
+        left: (event as React.MouseEvent).clientX,
+      });
+    },
+    [setContextMenu, setLinks],
+  );
 
   const applyMutation = useCallback(
     ({
@@ -688,6 +714,7 @@ export const useProjectCanvasGraph = ({
     onResizeCallback,
     onResizeEndCallback,
     onBlockContextMenu,
+    onEdgeContextMenu,
     onPaneContextMenu,
     handleCreateBlock,
     handleDeleteBlock,

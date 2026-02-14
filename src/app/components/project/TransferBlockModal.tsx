@@ -70,8 +70,8 @@ export function TransferBlockModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={dict.common.transferTitle}
-      subtitle={dict.common.transferDescription}
+      title={dict.modals.transferTitle}
+      subtitle={dict.modals.transferDescription}
       className="max-w-lg w-full"
     >
       <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -99,7 +99,7 @@ export function TransferBlockModal({
                   <span className="text-xs font-bold">
                     {user.displayName ||
                       user.username ||
-                      dict.common.defaultUsername}
+                      dict.account.defaultUsername}
                   </span>
                   <span className="text-2xs opacity-30 font-medium">
                     {user.email}
@@ -113,7 +113,7 @@ export function TransferBlockModal({
           ))
         ) : (
           <div className="py-8 text-center opacity-30 text-xs uppercase tracking-widest font-bold">
-            {dict.common.noUsersFound}
+            {dict.management.noUsersFound}
           </div>
         )}
       </div>

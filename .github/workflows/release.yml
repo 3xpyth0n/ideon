@@ -3,88 +3,51 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*" # Runs whenever a semantic version tag is pushed
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
+      - name: Extract release version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Check CI Status
-        if: github.actor != 'nektos/act'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const sha = context.sha;
-
-            console.log(`Checking status for commit ${sha}`);
-
-            const { data: checkRuns } = await github.rest.checks.listForRef({
-              owner,
-              repo,
-              ref: sha
-            });
-
-            // Specifically check for the 'Build and Validate' job from the main CI workflow
-            const ciJobName = 'Build and Validate';
-            const ciJob = checkRuns.check_runs.find(run => run.name === ciJobName);
-
-            if (ciJob) {
-              if (ciJob.conclusion === 'failure' || ciJob.conclusion === 'timed_out' || ciJob.conclusion === 'cancelled') {
-                core.setFailed(`CI check '${ciJobName}' failed. Refusing to release.`);
-              } else if (ciJob.conclusion === 'success') {
-                console.log(`CI check '${ciJobName}' passed. Proceeding with release.`);
-              } else {
-                console.log(`CI check '${ciJobName}' is ${ciJob.status}. Proceeding...`);
-              }
-            } else {
-              console.log(`CI job '${ciJobName}' not found (likely skipped on tag push). Proceeding...`);
-            }
-
-      - name: Generate Changelog
-        if: github.actor != 'nektos/act'
+      - name: Read changelog section
         id: changelog
         run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
-          if [ -z "$PREVIOUS_TAG" ]; then
-            echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-            git log --pretty=format:"- %s (%h)" >> $GITHUB_ENV
-            echo "" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          else
-            echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-            git log ${PREVIOUS_TAG}..${{ github.ref_name }} --pretty=format:"- %s (%h)" >> $GITHUB_ENV
-            echo "" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+          VERSION=${{ env.VERSION }}
+          # Extracts the section between "## [x.y.z]" and the next "## "
+          # Using awk with -v for safe variable passing and to avoid regex delimiter issues
+          awk -v ver="${VERSION#v}" '$0 ~ "^## \\[" ver "\\]" {flag=1; next} /^## / {flag=0} flag' CHANGELOG.md > RELEASE_NOTES.md
+
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "❌ No matching section found in CHANGELOG.md for version ${VERSION#v}"
+            echo "Make sure CHANGELOG.md contains a section like: ## [${VERSION#v}]"
+            exit 1
           fi
 
-      - name: Create Release
-        if: github.actor != 'nektos/act'
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
         with:
-          name: Ideon ${{ github.ref_name }}
-          body: |
-            ## Changes in this version
-            ${{ env.CHANGELOG }}
+          tag_name: ${{ env.VERSION }}
+          name: Ideon ${{ env.VERSION }}
+          body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
+          files: |
+            LICENSE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

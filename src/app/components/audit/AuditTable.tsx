@@ -26,19 +26,19 @@ export function AuditTable({ logs, loading }: AuditTableProps) {
         <thead className="bg-[var(--bg-sidebar)] uppercase tracking-wider text-[10px] font-bold text-[var(--text-muted)]">
           <tr>
             <th className="p-4 border-b border-[var(--border)]">
-              {dict.common.timestamp}
+              {dict.management.timestamp}
             </th>
             <th className="p-4 border-b border-[var(--border)]">
-              {dict.common.action}
+              {dict.management.action}
             </th>
             <th className="p-4 border-b border-[var(--border)]">
-              {dict.common.status}
+              {dict.management.status}
             </th>
             <th className="p-4 border-b border-[var(--border)]">
-              {dict.common.email}
+              {dict.auth.email}
             </th>
             <th className="p-4 border-b border-[var(--border)]">
-              {dict.common.ipAddress}
+              {dict.modals.ipAddress}
             </th>
           </tr>
         </thead>
@@ -79,7 +79,7 @@ export function AuditTable({ logs, loading }: AuditTableProps) {
                         isSuccess ? "auditStatusSuccess" : "auditStatusFailure"
                       }`}
                     >
-                      {isSuccess ? dict.common.success : dict.common.failure}
+                      {isSuccess ? dict.common.success : dict.modals.failure}
                     </span>
                   </td>
                   <td className="p-4 font-mono text-[11px] opacity-40">
@@ -98,7 +98,7 @@ export function AuditTable({ logs, loading }: AuditTableProps) {
                 colSpan={5}
                 className="py-12 text-center opacity-30 uppercase tracking-widest text-xs"
               >
-                {dict.common.noLogs}
+                {dict.modals.noLogs}
               </td>
             </tr>
           )}

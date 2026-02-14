@@ -225,9 +225,9 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">
-            {dict.common.users}
+            {dict.project.users}
           </h1>
-          <p className="text-sm opacity-40">{dict.common.usersSubtitle}</p>
+          <p className="text-sm opacity-40">{dict.project.usersSubtitle}</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -241,7 +241,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
             onClick={() => setShowInviteModal(true)}
             className="btn-primary"
           >
-            {dict.common.inviteUser}
+            {dict.management.inviteUser}
           </Button>
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
         <section className="space-y-8">
           <div className="section-header-row">
             <h2 className="text-3xl font-bold tracking-tight text-text-main">
-              {dict.common.activeMembers}
+              {dict.management.activeMembers}
             </h2>
             <span className="text-[10px] font-bold">{users.length}</span>
           </div>
@@ -282,7 +282,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                       <span className="text-sm font-bold tracking-tight">
                         {user.displayName ||
                           user.username ||
-                          dict.common.defaultUsername}
+                          dict.account.defaultUsername}
                       </span>
                       <span
                         className={`role-badge ${
@@ -294,10 +294,10 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                         }`}
                       >
                         {user.role === "superadmin"
-                          ? dict.common.superadmin
+                          ? dict.management.superadmin
                           : user.role === "admin"
-                            ? dict.common.admin
-                            : dict.common.member}
+                            ? dict.management.admin
+                            : dict.management.member}
                       </span>
                     </div>
                     <div className="user-email-text">{user.email}</div>
@@ -320,8 +320,8 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                           >
                             <span>
                               {user.role === "admin"
-                                ? dict.common.admin
-                                : dict.common.member}
+                                ? dict.management.admin
+                                : dict.management.member}
                             </span>
                             <ChevronDown
                               size={10}
@@ -351,7 +351,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                                   }`}
                                 >
                                   <span className="text-[10px] uppercase font-bold tracking-tight">
-                                    {dict.common.member}
+                                    {dict.management.member}
                                   </span>
                                   {user.role === "member" && (
                                     <Check size={10} className="opacity-40" />
@@ -370,7 +370,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                                   }`}
                                 >
                                   <span className="text-[10px] uppercase font-bold tracking-tight">
-                                    {dict.common.admin}
+                                    {dict.management.admin}
                                   </span>
                                   {user.role === "admin" && (
                                     <Check size={10} className="opacity-40" />
@@ -398,7 +398,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
         <section className="space-y-8 pt-24 border-border/5">
           <div className="section-header-row">
             <h2 className="text-3xl font-bold tracking-tight text-text-main">
-              {dict.common.pendingInvites}
+              {dict.management.pendingInvites}
             </h2>
             <span className="text-[10px] font-bold">{invitations.length}</span>
           </div>
@@ -406,7 +406,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
           {invitations.length === 0 ? (
             <div className="py-12 flex items-center justify-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-10">
-                {dict.common.noPendingInvites}
+                {dict.management.noPendingInvites}
               </p>
             </div>
           ) : (
@@ -428,8 +428,8 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                       }`}
                     >
                       {invite.role === "admin"
-                        ? dict.common.admin
-                        : dict.common.member}
+                        ? dict.management.admin
+                        : dict.management.member}
                     </span>
                   </div>
 
@@ -445,7 +445,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                         <RefreshCw size={14} />
                       )}
                       <span className="tooltip">
-                        {dict.common.resendInvite}
+                        {dict.management.resendInvite}
                       </span>
                     </button>
                     <button
@@ -454,7 +454,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                     >
                       <Trash2 size={14} />
                       <span className="tooltip">
-                        {dict.common.deleteInvite}
+                        {dict.management.deleteInvite}
                       </span>
                     </button>
                   </div>
@@ -472,23 +472,23 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
           setShowInviteModal(false);
           setLastInviteUrl(null);
         }}
-        title={!lastInviteUrl ? dict.common.inviteUser : undefined}
-        subtitle={!lastInviteUrl ? dict.common.usersSubtitle : undefined}
+        title={!lastInviteUrl ? dict.management.inviteUser : undefined}
+        subtitle={!lastInviteUrl ? dict.project.usersSubtitle : undefined}
       >
         {lastInviteUrl ? (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col items-center justify-center pb-12">
               <h3 className="text-xl font-bold mb-2">
-                {dict.common.inviteSuccessTitle}
+                {dict.modals.inviteSuccessTitle}
               </h3>
               <p className="modal-description-center">
-                {dict.common.inviteSuccessSubtitle}
+                {dict.modals.inviteSuccessSubtitle}
               </p>
             </div>
 
             <div className="flex flex-col gap-2">
               <label className="modal-label">
-                {dict.common.directInviteLabel}
+                {dict.modals.directInviteLabel}
               </label>
               <div className="relative group">
                 <input
@@ -524,7 +524,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
         ) : (
           <form onSubmit={handleInvite} className="flex flex-col gap-6">
             <div className="form-group">
-              <label className="modal-label">{dict.common.email}:</label>
+              <label className="modal-label">{dict.auth.email}:</label>
               <input
                 type="email"
                 required
@@ -532,19 +532,19 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 className="zen-input"
-                placeholder={dict.common.emailPlaceholder}
+                placeholder={dict.blocks.emailPlaceholder}
               />
             </div>
 
             {currentUserRole === "superadmin" && (
               <div className="form-row-horizontal">
-                <label className="modal-label">{dict.common.role}</label>
+                <label className="modal-label">{dict.management.role}</label>
                 <Select
                   value={inviteRole}
                   onChange={(val) => setInviteRole(val as "member" | "admin")}
                   options={[
-                    { value: "member", label: dict.common.member },
-                    { value: "admin", label: dict.common.admin },
+                    { value: "member", label: dict.management.member },
+                    { value: "admin", label: dict.management.admin },
                   ]}
                   align="right"
                 />
@@ -560,7 +560,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                 {inviting ? (
                   <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
                 ) : (
-                  dict.common.invite
+                  dict.auth.invite
                 )}
               </Button>
             </div>
@@ -571,8 +571,8 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
       <Modal
         isOpen={!!deleteUserId}
         onClose={() => setDeleteUserId(null)}
-        title={dict.common.deleteUserTitle}
-        subtitle={dict.common.deleteUserDescription}
+        title={dict.modals.deleteUserTitle}
+        subtitle={dict.modals.deleteUserDescription}
       >
         <div className="flex justify-end gap-3 mt-6">
           <Button
@@ -591,8 +591,8 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
       <Modal
         isOpen={!!deleteInviteId}
         onClose={() => setDeleteInviteId(null)}
-        title={dict.common.deleteInviteTitle}
-        subtitle={dict.common.deleteInviteDescription}
+        title={dict.management.deleteInviteTitle}
+        subtitle={dict.management.deleteInviteDescription}
       >
         <div className="flex justify-end gap-3 mt-6">
           <Button

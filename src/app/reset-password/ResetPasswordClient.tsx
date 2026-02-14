@@ -79,7 +79,7 @@ export function ResetPasswordClient() {
             onClick={() => router.push("/login")}
             className="w-full btn-primary"
           >
-            {dict.common.return}
+            {dict.canvas.return}
           </Button>
         </div>
       </div>
@@ -95,14 +95,14 @@ export function ResetPasswordClient() {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="auth-field">
-            <label className="auth-label">{dict.common.password}</label>
+            <label className="auth-label">{dict.auth.password}</label>
             <div className="auth-input-wrapper">
               <input
                 className="auth-input auth-input-password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={dict.common.passwordPlaceholder}
+                placeholder={dict.auth.passwordPlaceholder}
                 required
                 autoFocus
                 autoComplete="new-password"
@@ -118,14 +118,14 @@ export function ResetPasswordClient() {
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">{dict.common.confirmPassword}</label>
+            <label className="auth-label">{dict.auth.confirmPassword}</label>
             <div className="auth-input-wrapper">
               <input
                 className="auth-input auth-input-password"
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={dict.common.passwordPlaceholder}
+                placeholder={dict.auth.passwordPlaceholder}
                 required
                 autoComplete="new-password"
               />
@@ -142,7 +142,7 @@ export function ResetPasswordClient() {
               {loading ? (
                 <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
               ) : (
-                dict.common.submit
+                dict.auth.submit
               )}
             </Button>
           </div>

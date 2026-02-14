@@ -551,17 +551,17 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     if (folderId) return currentFolder?.name || "Folder";
     switch (view) {
       case "my-projects":
-        return dict.common.myProjects || "My Projects";
+        return dict.dashboard.myProjects || "My Projects";
       case "shared":
-        return dict.common.sharedWithMe || "Shared with Me";
+        return dict.dashboard.sharedWithMe || "Shared with Me";
       case "recent":
-        return dict.common.recent || "Recent Projects";
+        return dict.dashboard.recent || "Recent Projects";
       case "starred":
-        return dict.common.starred || "Starred Projects";
+        return dict.dashboard.starred || "Starred Projects";
       case "trash":
-        return dict.common.trash || "Trash";
+        return dict.dashboard.trash || "Trash";
       default:
-        return dict.common.overview;
+        return dict.templates.overview;
     }
   };
 
@@ -571,7 +571,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       case "trash":
         return "Manage deleted projects";
       default:
-        return dict.common.manageProjects;
+        return dict.dashboard.manageProjects;
     }
   };
 
@@ -673,7 +673,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 className="btn-primary gap-2"
               >
                 <Plus size={14} />
-                <span>{dict.common.newProject}</span>
+                <span>{dict.dashboard.newProject}</span>
               </Button>
             </div>
           )}
@@ -878,14 +878,14 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 )}
                 <span className="text-2xs font-bold uppercase tracking-[0.2em]">
                   {isTrash
-                    ? dict.common.emptyTrash || "Trash is empty"
+                    ? dict.dashboard.emptyTrash || "Trash is empty"
                     : view === "starred"
-                      ? dict.common.emptyStarred || "No starred projects"
+                      ? dict.dashboard.emptyStarred || "No starred projects"
                       : view === "recent"
-                        ? dict.common.emptyRecent || "No recent projects"
+                        ? dict.dashboard.emptyRecent || "No recent projects"
                         : view === "shared"
-                          ? dict.common.emptyShared || "No shared projects"
-                          : dict.common.newProject}
+                          ? dict.dashboard.emptyShared || "No shared projects"
+                          : dict.dashboard.newProject}
                 </span>
               </div>
             </div>
@@ -995,7 +995,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 />
               ) : (
                 <p className="project-card-desc">
-                  {project.description || dict.common.noDescription}
+                  {project.description || dict.project.noDescription}
                 </p>
               )}
 
@@ -1025,8 +1025,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     }`}
                   >
                     {project.ownerId === currentUser?.id
-                      ? dict.common.statusMine
-                      : dict.common.statusShared}
+                      ? dict.dashboard.statusMine
+                      : dict.dashboard.statusShared}
                   </span>
                 </div>
 
@@ -1171,12 +1171,12 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       <Modal
         isOpen={!!projectToDelete}
         onClose={() => setProjectToDelete(null)}
-        title={dict.common.deleteProjectTitle || "Delete Project?"}
+        title={dict.modals.deleteProjectTitle || "Delete Project?"}
         className="max-w-md"
       >
         <div className="p-6 pt-2">
           <p className="text-sm text-muted-foreground mb-6">
-            {dict.common.deleteProjectDescription ||
+            {dict.modals.deleteProjectDescription ||
               "Are you sure you want to delete this project? This action is irreversible."}
           </p>
           <div className="flex justify-end gap-3">

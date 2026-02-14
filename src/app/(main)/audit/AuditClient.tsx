@@ -28,7 +28,7 @@ export default function AuditClient({
         <header className="mb-8 flex items-center gap-3">
           <Shield className="opacity-50" size={24} />
           <h1 className="text-2xl font-bold uppercase tracking-widest">
-            {dict.common.securityAuditLog}
+            {dict.management.securityAuditLog}
           </h1>
         </header>
 

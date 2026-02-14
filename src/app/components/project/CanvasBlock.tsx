@@ -172,6 +172,7 @@ export type CanvasBlockProps = NodeProps<
     | "video"
     | "snippet"
     | "checklist"
+    | "sketch"
   >
 >;
 
@@ -569,7 +570,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
     try {
-      return data.metadata ? JSON.parse(data.metadata) : null;
+      if (!data.metadata) return null;
+      return typeof data.metadata === "string"
+        ? JSON.parse(data.metadata)
+        : data.metadata;
     } catch {
       return null;
     }
@@ -616,7 +620,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
       const metadataString = newMetadata
         ? JSON.stringify(newMetadata)
         : undefined;
@@ -639,7 +643,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         );
       }
     },
-    [currentUser, dict.common.anonymous, data, id, content, title, setNodes],
+    [currentUser, dict.project.anonymous, data, id, content, title, setNodes],
   );
 
   const linkRetries = useRef(0);
@@ -744,7 +748,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         const editor =
           currentUser?.displayName ||
           currentUser?.username ||
-          dict.common.anonymous;
+          dict.project.anonymous;
         data.onContentChange?.(
           id,
           cleanedUrl,
@@ -794,11 +798,11 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           }
         } else {
           console.error("Git stats error:", error);
-          setGithubError(dict.common.githubError);
+          setGithubError(dict.blocks.githubError);
         }
       } catch (error) {
         console.error("Failed to fetch git stats:", error);
-        setGithubError(dict.common.githubError);
+        setGithubError(dict.blocks.githubError);
       } finally {
         setIsFetchingGithub(false);
       }
@@ -806,8 +810,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     [
       content,
       currentUser,
-      dict.common.anonymous,
-      dict.common.githubError,
+      dict.project.anonymous,
+      dict.blocks.githubError,
       data.onContentChange,
       id,
       syncToYjs,
@@ -865,7 +869,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
       data.onContentChange?.(
         id,
         content,
@@ -875,7 +879,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         newTitle,
       );
     },
-    [id, data, currentUser, dict.common.anonymous, metadata, content],
+    [id, data, currentUser, dict.project.anonymous, metadata, content],
   );
 
   useEffect(() => {
@@ -942,7 +946,15 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
   useEffect(() => {
     try {
-      setMetadata(data.metadata ? JSON.parse(data.metadata) : null);
+      if (!data.metadata) {
+        setMetadata(null);
+        return;
+      }
+      const parsed =
+        typeof data.metadata === "string"
+          ? JSON.parse(data.metadata)
+          : data.metadata;
+      setMetadata(parsed);
     } catch {
       setMetadata(null);
     }
@@ -976,7 +988,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         const editor =
           currentUser?.displayName ||
           currentUser?.username ||
-          dict.common.anonymous;
+          dict.project.anonymous;
         const metadataString = JSON.stringify(newMetadata);
         setContent(fileData.name);
         syncToYjs(fileData.name);
@@ -1125,7 +1137,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     const editor =
       currentUser?.displayName ||
       currentUser?.username ||
-      dict.common.anonymous;
+      dict.project.anonymous;
 
     const onContentChange = data.onContentChange;
     const metadataString = metadata ? JSON.stringify(metadata) : undefined;
@@ -1147,7 +1159,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     const editor =
       currentUser?.displayName ||
       currentUser?.username ||
-      dict.common.anonymous;
+      dict.project.anonymous;
 
     const onContentChange = data.onContentChange;
     const metadataString = metadata ? JSON.stringify(metadata) : undefined;
@@ -1171,7 +1183,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleResize = useCallback(
@@ -1336,7 +1348,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           {!isReadOnly && !isEditingContact && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <span className="canvas-context-badge">
-                {dict.common.rightClickToEdit}
+                {dict.canvas.rightClickToEdit}
               </span>
             </div>
           )}
@@ -1368,15 +1380,15 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       const provider = stats?.provider || "github";
 
       const pullsLabel =
-        provider === "gitlab" ? dict.common.mergeRequests : dict.common.pulls;
+        provider === "gitlab" ? dict.blocks.mergeRequests : dict.blocks.pulls;
 
       const statsOptions = [
-        { id: "stars", label: dict.common.stars, icon: Star },
-        { id: "release", label: dict.common.release, icon: Tag },
-        { id: "commit", label: dict.common.commit, icon: GitCommit },
-        { id: "issues", label: dict.common.issues, icon: AlertCircle },
+        { id: "stars", label: dict.blocks.stars, icon: Star },
+        { id: "release", label: dict.blocks.release, icon: Tag },
+        { id: "commit", label: dict.blocks.commit, icon: GitCommit },
+        { id: "issues", label: dict.blocks.issues, icon: AlertCircle },
         { id: "pulls", label: pullsLabel, icon: GitPullRequest },
-        { id: "contributors", label: dict.common.contributors, icon: Users },
+        { id: "contributors", label: dict.blocks.contributors, icon: Users },
       ];
 
       if (isEditingGithub) {
@@ -1420,7 +1432,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                   const editor =
                     currentUser?.displayName ||
                     currentUser?.username ||
-                    dict.common.anonymous;
+                    dict.project.anonymous;
                   data.onContentChange?.(
                     id,
                     val,
@@ -1441,7 +1453,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                     setIsEditingGithub(false);
                   }
                 }}
-                placeholder={dict.common.githubPlaceholder}
+                placeholder={dict.blocks.githubPlaceholder}
                 className="github-input"
                 readOnly={isReadOnly}
               />
@@ -1449,7 +1461,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                 <div className="github-error-container">
                   <p className="github-error-message">{githubError}</p>
                   <p className="github-error-hint">
-                    {dict.common.githubUrlHint}{" "}
+                    {dict.blocks.githubUrlHint}{" "}
                     https://github.com/owner-name/repo-name
                   </p>
                 </div>
@@ -1514,7 +1526,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           {!isReadOnly && !isEditingGithub && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <span className="canvas-context-badge">
-                {dict.common.rightClickToEdit}
+                {dict.canvas.rightClickToEdit}
               </span>
             </div>
           )}
@@ -1522,7 +1534,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             <ProviderIcon size={20} className="github-logo" />
             <div className="github-title-container">
               <h4 className="github-repo-name">
-                {repoName || dict.common.gitRepository}
+                {repoName || dict.blocks.gitRepository}
               </h4>
               <span className="github-repo-url">{repoUrl}</span>
             </div>
@@ -1578,7 +1590,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
           {metadata?.github?.lastFetched && (
             <div className="github-footer">
-              {dict.common.lastUpdated}:{" "}
+              {dict.blocks.lastUpdated}:{" "}
               {formatDate(metadata.github.lastFetched)}
             </div>
           )}
@@ -1602,7 +1614,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                 const editor =
                   currentUser?.displayName ||
                   currentUser?.username ||
-                  dict.common.anonymous;
+                  dict.project.anonymous;
                 data.onContentChange?.(
                   id,
                   val,
@@ -1622,7 +1634,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                   fetchLinkMetadata(content);
                 }
               }}
-              placeholder={dict.common.linkPlaceholder}
+              placeholder={dict.blocks.linkPlaceholder}
               className="link-input"
               readOnly={isReadOnly}
             />
@@ -1653,7 +1665,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           {!isReadOnly && !isEditingLink && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <span className="canvas-context-badge">
-                {dict.common.rightClickToEdit}
+                {dict.canvas.rightClickToEdit}
               </span>
             </div>
           )}
@@ -1782,7 +1794,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
               />
               <Upload size={32} className="opacity-20" />
               <span className="text-xs opacity-40 text-center px-4">
-                {dict.common.clickToUpload}
+                {dict.blocks.clickToUpload}
               </span>
             </div>
           ) : (
@@ -1868,7 +1880,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           onBlur={handleBlur}
           onKeyUp={(e) => handleCaretUpdate(e.currentTarget)}
           onClick={(e) => handleCaretUpdate(e.currentTarget)}
-          placeholder={dict.common.contentPlaceholder || "Start noting..."}
+          placeholder={dict.blocks.contentPlaceholder || "Start noting..."}
           className={`block-description editing nodrag nowheel ${
             isEditing
               ? "opacity-100 z-10"
@@ -1894,7 +1906,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
               />
             ) : (
               <span className="opacity-30 italic">
-                {dict.common.contentPlaceholder || "Start noting..."}
+                {dict.blocks.contentPlaceholder || "Start noting..."}
               </span>
             )}
           </div>
@@ -1916,7 +1928,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
               }
             >
               {typingUsers![0].username}{" "}
-              {dict.common.isTyping || "is typing..."}
+              {dict.blocks.isTyping || "is typing..."}
             </div>
           </div>
         )}
@@ -1978,7 +1990,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                     handleFileDownload();
                   }}
                   className="p-1 rounded hover:bg-white/10 opacity-40 hover:opacity-100 transition-all"
-                  title={dict.common.download || "Download"}
+                  title={dict.blocks.download || "Download"}
                 >
                   <Download size={14} />
                 </button>
@@ -2020,7 +2032,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             <div className="block-author-info flex items-center gap-1.5">
               {isLocked && <Lock size={10} className="block-lock-icon" />}
               <div className="author-name">
-                {(data.authorName || dict.common.anonymous).toLowerCase()}
+                {(data.authorName || dict.project.anonymous).toLowerCase()}
               </div>
             </div>
           </div>

@@ -53,9 +53,12 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   const [title, setTitle] = useState(data.title || "");
   const metadata = useMemo(() => {
     try {
-      return data.metadata
-        ? (JSON.parse(data.metadata) as PaletteMetadata)
-        : { colors: [] };
+      if (!data.metadata) return { colors: [] };
+      const parsed =
+        typeof data.metadata === "string"
+          ? JSON.parse(data.metadata)
+          : data.metadata;
+      return (parsed as PaletteMetadata) || { colors: [] };
     } catch {
       return { colors: [] };
     }
@@ -67,7 +70,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
       const newMetadata: PaletteMetadata = { colors: newColors };
       data.onContentChange?.(
         id,
@@ -168,7 +171,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
       const editor =
         currentUser?.displayName ||
         currentUser?.username ||
-        dict.common.anonymous;
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
@@ -199,7 +202,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleResize = useCallback(
@@ -299,7 +302,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
         <div className="flex items-center gap-2">
           <Palette size={16} />
           <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-            {dict.common.blockTypePalette || "Palette"}
+            {dict.blocks.blockTypePalette || "Palette"}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -361,7 +364,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
                     setPickerPosition({ x: e.clientX, y: e.clientY });
                     setShowPicker(true);
                   }}
-                  title={dict.common.addColor || "Add color"}
+                  title={dict.blocks.addColor || "Add color"}
                 >
                   <Plus size={20} />
                 </button>
@@ -395,7 +398,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
           <div className="block-author-info flex items-center gap-1.5">
             {isLocked && <Lock size={10} className="block-lock-icon" />}
             <div className="author-name">
-              {(data.authorName || dict.common.anonymous).toLowerCase()}
+              {(data.authorName || dict.project.anonymous).toLowerCase()}
             </div>
           </div>
         </div>

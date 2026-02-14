@@ -111,7 +111,7 @@ export default function AccountPage() {
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast(dict.common.passwordMismatch);
+      toast(dict.auth.passwordMismatch);
       return;
     }
     try {
@@ -143,9 +143,9 @@ export default function AccountPage() {
     <div className="island-content">
       <div className="zen-container max-w-5xl py-12 animate-in fade-in duration-700">
         <header className="mb-12">
-          <h1 className="zen-title text-2xl mb-1">{dict.common.settings}</h1>
+          <h1 className="zen-title text-2xl mb-1">{dict.layout.settings}</h1>
           <p className="zen-subtitle text-sm opacity-40">
-            {dict.common.accountSubtitle}
+            {dict.account.accountSubtitle}
           </p>
         </header>
 
@@ -153,9 +153,9 @@ export default function AccountPage() {
           {/* Language Section */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
             <div className="md:col-span-4">
-              <h2 className="section-title mb-1">{dict.common.language}</h2>
+              <h2 className="section-title mb-1">{dict.account.language}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
-                {dict.common.languageDescription}
+                {dict.account.languageDescription}
               </p>
             </div>
             <div className="md:col-span-8 max-w-xs">
@@ -206,9 +206,9 @@ export default function AccountPage() {
           {/* Identity Section */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
             <div className="md:col-span-4">
-              <h2 className="section-title mb-1">{dict.common.identity}</h2>
+              <h2 className="section-title mb-1">{dict.account.identity}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
-                {dict.common.identityDescription}
+                {dict.account.identityDescription}
               </p>
             </div>
             <div className="md:col-span-8">
@@ -222,7 +222,7 @@ export default function AccountPage() {
                     >
                       <img
                         src={getAvatarUrl(avatarUrl, username)}
-                        alt={dict.common.avatarAlt}
+                        alt={dict.account.avatarAlt}
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
@@ -246,7 +246,7 @@ export default function AccountPage() {
                           handleDeleteAvatar();
                         }}
                         className="avatar-remove-btn"
-                        title={dict.common.deleteAvatar}
+                        title={dict.account.deleteAvatar}
                       >
                         <X size={12} strokeWidth={2.5} />
                       </button>
@@ -263,7 +263,7 @@ export default function AccountPage() {
 
                   <div className="flex flex-col gap-1.5">
                     <p className="text-[11px] text-muted opacity-40 max-w-[200px]">
-                      {dict.common.avatarHint}
+                      {dict.account.avatarHint}
                     </p>
                   </div>
                 </div>
@@ -275,36 +275,34 @@ export default function AccountPage() {
                 >
                   <div className="flex flex-col gap-2">
                     <label className="zen-label ml-0">
-                      {dict.common.displayName}
+                      {dict.account.displayName}
                     </label>
                     <input
                       className="zen-input text-sm"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder={dict.common.displayNamePlaceholder}
+                      placeholder={dict.account.displayNamePlaceholder}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="zen-label ml-0">
-                      {dict.common.username}
+                      {dict.auth.username}
                     </label>
                     <input
                       className="zen-input text-sm"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder={dict.common.usernamePlaceholder}
+                      placeholder={dict.auth.usernamePlaceholder}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="zen-label ml-0">
-                      {dict.common.email}
-                    </label>
+                    <label className="zen-label ml-0">{dict.auth.email}</label>
                     <input
                       className="zen-input text-sm"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder={dict.common.emailPlaceholder}
+                      placeholder={dict.blocks.emailPlaceholder}
                     />
                   </div>
                   <div className="pt-2">
@@ -323,9 +321,9 @@ export default function AccountPage() {
           {/* Security Section */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
             <div className="md:col-span-4">
-              <h2 className="section-title mb-1">{dict.common.security}</h2>
+              <h2 className="section-title mb-1">{dict.account.security}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
-                {dict.common.securityDescription}
+                {dict.account.securityDescription}
               </p>
             </div>
             <div className="md:col-span-8 max-w-md">
@@ -335,31 +333,31 @@ export default function AccountPage() {
               >
                 <div className="flex flex-col gap-2">
                   <label className="zen-label ml-0">
-                    {dict.common.newPassword}
+                    {dict.account.newPassword}
                   </label>
                   <input
                     type="password"
                     className="zen-input text-sm"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={dict.common.passwordPlaceholder}
+                    placeholder={dict.auth.passwordPlaceholder}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="zen-label ml-0">
-                    {dict.common.confirmPassword}
+                    {dict.auth.confirmPassword}
                   </label>
                   <input
                     type="password"
                     className="zen-input text-sm"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder={dict.common.passwordPlaceholder}
+                    placeholder={dict.auth.passwordPlaceholder}
                   />
                 </div>
                 <div className="pt-2">
                   <button type="submit" className="btn-primary">
-                    {dict.common.rotatePassword}
+                    {dict.account.rotatePassword}
                   </button>
                 </div>
               </form>

@@ -103,8 +103,8 @@ const ProjectCoreBlock = memo(
     const nodeCount = useStore((s) => s.nodeLookup.size);
     const placeholder =
       description === "" && nodeCount === 1
-        ? dict.common.coreBlockPlaceholder
-        : dict.common.description;
+        ? dict.canvas.coreBlockPlaceholder
+        : dict.blocks.description;
 
     const handleResize = useCallback(
       (_event: unknown, params: ResizeParams) => {
@@ -160,13 +160,13 @@ const ProjectCoreBlock = memo(
           <div className="flex-1 flex flex-col gap-6 justify-center items-center text-center max-w-2xl mx-auto w-full h-full overflow-hidden">
             <div className="space-y-2 w-full shrink-0">
               <div className="text-tiny uppercase tracking-[0.3em] opacity-30 font-bold mb-4">
-                {dict.common.blockTypeCore || "Project Core"}
+                {dict.blocks.blockTypeCore || "Project Core"}
               </div>
               <input
                 value={title}
                 onChange={handleTitleChange}
                 className="core-title-input text-7xl font-black text-center focus:outline-none placeholder:opacity-10 tracking-tighter leading-none bg-transparent w-full nodrag"
-                placeholder={dict.common.title}
+                placeholder={dict.blocks.title}
                 disabled={data.isPreviewMode}
               />
             </div>

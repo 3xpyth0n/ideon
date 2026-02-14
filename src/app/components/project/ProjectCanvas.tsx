@@ -276,6 +276,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onBlockDragStop,
     onConnect,
     handleDeleteBlock: _handleDeleteBlock,
+    deleteLinks: _deleteLinks,
     handleToggleLock,
     handleTransferBlock,
     confirmDelete,
@@ -285,6 +286,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     handlePreview,
     handleApplyState,
     onBlockContextMenu,
+    onEdgeContextMenu,
     onPaneContextMenu,
     onPaneClick,
     onBlockClick,
@@ -315,8 +317,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
       if (isPreviewMode) return;
 
+      // Clear any existing selection to prevent text selection on long press
+      if (window.getSelection) {
+        window.getSelection()?.removeAllRanges();
+      }
+
       const target = e.target as HTMLElement;
       const nodeElement = target.closest(".react-flow__node");
+      const edgeElement = target.closest(".react-flow__edge");
 
       if (nodeElement) {
         const nodeId = nodeElement.getAttribute("data-id");
@@ -335,6 +343,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             );
           }
         }
+      } else if (edgeElement) {
+        // Do nothing for edges on long press, they use double tap
+        return;
       } else {
         onPaneContextMenu({
           preventDefault: () => {},
@@ -346,9 +357,37 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     [isPreviewMode, blocks, onBlockContextMenu, onPaneContextMenu],
   );
 
+  const onDoubleTap = useCallback(
+    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+      if (isPreviewMode) return;
+
+      const target = e.target as HTMLElement;
+      const edgeElement = target.closest(".react-flow__edge");
+
+      if (edgeElement) {
+        const edgeId = edgeElement.getAttribute("data-id");
+        if (edgeId) {
+          const edge = (links as Edge[]).find((l) => l.id === edgeId);
+          if (edge) {
+            onEdgeContextMenu(
+              {
+                preventDefault: () => {},
+                clientX: x,
+                clientY: y,
+              } as unknown as React.MouseEvent,
+              edge,
+            );
+          }
+        }
+      }
+    },
+    [isPreviewMode, links, onEdgeContextMenu],
+  );
+
   const touchHandlers = useTouchGestures({
     rippleRef,
     onLongPress,
+    onDoubleTap,
   });
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -361,7 +400,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     const createCommands: Command[] = [
       {
         id: "create-text",
-        label: dict.common.newBlock || "New Note",
+        label: dict.blocks.newBlock || "New Note",
         icon: <FileText size={18} />,
         keywords: ["text", "note", "markdown"],
         action: () => handleCreateBlock(undefined, undefined, "text"),
@@ -369,7 +408,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-sketch",
-        label: dict.common.newSketch || "New Sketch",
+        label: dict.blocks.newSketch || "New Sketch",
         icon: <PenTool size={18} />,
         keywords: ["sketch", "draw", "whiteboard", "canvas"],
         action: () => handleCreateBlock(undefined, undefined, "sketch"),
@@ -377,7 +416,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-link",
-        label: dict.common.newLink || "New Link",
+        label: dict.blocks.newLink || "New Link",
         icon: <LinkIcon size={18} />,
         keywords: ["link", "url", "website", "bookmark"],
         action: () => handleCreateBlock(undefined, undefined, "link"),
@@ -385,7 +424,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-file",
-        label: dict.common.newFile || "New File",
+        label: dict.blocks.newFile || "New File",
         icon: <FileIcon size={18} />,
         keywords: ["file", "upload", "document", "image"],
         action: () => handleCreateBlock(undefined, undefined, "file"),
@@ -393,7 +432,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-github",
-        label: dict.common.newGithub || "New GitHub",
+        label: dict.blocks.newGithub || "New GitHub",
         icon: <Github size={18} />,
         keywords: ["github", "repo", "git", "issue", "pr"],
         action: () => handleCreateBlock(undefined, undefined, "github"),
@@ -401,7 +440,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-palette",
-        label: dict.common.newPalette || "New Palette",
+        label: dict.blocks.newPalette || "New Palette",
         icon: <Palette size={18} />,
         keywords: ["palette", "color", "design", "theme"],
         action: () => handleCreateBlock(undefined, undefined, "palette"),
@@ -409,7 +448,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-contact",
-        label: dict.common.newContact || "New Contact",
+        label: dict.blocks.newContact || "New Contact",
         icon: <User size={18} />,
         keywords: ["contact", "person", "user", "phone", "email"],
         action: () => handleCreateBlock(undefined, undefined, "contact"),
@@ -417,7 +456,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-video",
-        label: dict.common.newVideo || "New Video",
+        label: dict.blocks.newVideo || "New Video",
         icon: <Video size={18} />,
         keywords: ["video", "youtube", "loom", "media"],
         action: () => handleCreateBlock(undefined, undefined, "video"),
@@ -425,7 +464,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-snippet",
-        label: dict.common.newSnippet || "New Snippet",
+        label: dict.blocks.newSnippet || "New Snippet",
         icon: <FileCode size={18} />,
         keywords: ["snippet", "code", "dev", "script"],
         action: () => handleCreateBlock(undefined, undefined, "snippet"),
@@ -433,7 +472,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-checklist",
-        label: dict.common.newChecklist || "New Checklist",
+        label: dict.blocks.newChecklist || "New Checklist",
         icon: <ListTodo size={18} />,
         keywords: ["checklist", "todo", "task", "list"],
         action: () => handleCreateBlock(undefined, undefined, "checklist"),
@@ -444,7 +483,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     const navigateCommands: Command[] = [
       {
         id: "nav-home",
-        label: dict.common.fitView || "Fit View",
+        label: dict.canvas.fitView || "Fit View",
         icon: <Maximize size={18} />,
         keywords: ["home", "reset", "fit", "view"],
         action: () => handleFitView(),
@@ -589,6 +628,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           onPointerLeave={onPointerLeave}
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onBlockContextMenu}
+          onEdgeContextMenu={onEdgeContextMenu}
           onPaneClick={onPaneClick}
           onNodeClick={onBlockClick}
           onEdgeClick={onLinkClick}
@@ -656,7 +696,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 </div>
                 <div className="onboarding-text">
                   <h3>Magic Paste</h3>
-                  <p>{dict.common.onboardingHint}</p>
+                  <p>{dict.project.onboardingHint}</p>
                 </div>
               </div>
             </Panel>
@@ -669,7 +709,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             {!isPreviewMode && (
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 select-none">
-                  {dict.common.shareCursor}
+                  {dict.project.shareCursor}
                 </span>
                 <input
                   type="checkbox"
@@ -692,17 +732,17 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             {isPreviewMode && (
               <div className="preview-mode-banner">
                 <span className="preview-mode-text">
-                  {dict.common.previewMode}
+                  {dict.canvas.previewMode}
                 </span>
                 <div className="preview-mode-actions">
                   <button
                     onClick={() => handlePreview(null)}
                     className="preview-action-btn preview-return-btn"
-                    title={dict.common.returnToPresent}
+                    title={dict.canvas.returnToPresent}
                   >
                     <ArrowLeft size={14} />
                     <span className="preview-btn-text">
-                      {dict.common.return}
+                      {dict.canvas.return}
                     </span>
                   </button>
                   {currentUser?.id === projectOwnerId && (
@@ -711,12 +751,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         selectedStateId && handleApplyState(selectedStateId)
                       }
                       className="preview-action-btn preview-apply-btn"
-                      title={dict.common.apply}
+                      title={dict.canvas.apply}
                       disabled={!selectedStateId}
                     >
                       <Check size={14} />
                       <span className="preview-btn-text">
-                        {dict.common.apply}
+                        {dict.canvas.apply}
                       </span>
                     </button>
                   )}
@@ -765,14 +805,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   className="btn-primary"
                   disabled={isPreviewMode}
                 >
-                  {dict.common.invite.toUpperCase()}
+                  {dict.auth.invite.toUpperCase()}
                 </Button>
                 {currentUser?.id === projectOwnerId && (
                   <Button
                     onClick={() => setIsShareModalOpen(true)}
                     className="btn-secondary !px-3"
                     disabled={isPreviewMode}
-                    title={dict.common.share || "Share"}
+                    title={dict.project.share || "Share"}
                   >
                     <Share2 size={16} />
                   </Button>
@@ -815,24 +855,24 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             <ControlButton
               onClick={undo}
               disabled={!canUndo || isPreviewMode}
-              title={dict.common.undo || "Undo"}
+              title={dict.canvas.undo || "Undo"}
             >
               <Undo2 />
             </ControlButton>
             <ControlButton
               onClick={redo}
               disabled={!canRedo || isPreviewMode}
-              title={dict.common.redo || "Redo"}
+              title={dict.canvas.redo || "Redo"}
             >
               <Redo2 />
             </ControlButton>
-            <ControlButton onClick={handleZoomIn} title={dict.common.zoomIn}>
+            <ControlButton onClick={handleZoomIn} title={dict.canvas.zoomIn}>
               <Plus />
             </ControlButton>
-            <ControlButton onClick={handleZoomOut} title={dict.common.zoomOut}>
+            <ControlButton onClick={handleZoomOut} title={dict.canvas.zoomOut}>
               <Minus />
             </ControlButton>
-            <ControlButton onClick={handleFitView} title={dict.common.fitView}>
+            <ControlButton onClick={handleFitView} title={dict.canvas.fitView}>
               <Maximize />
             </ControlButton>
             <DownloadButton />
@@ -862,7 +902,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newBlock || "New Note"}
+                        {dict.blocks.newBlock || "New Note"}
                       </button>
                       <button
                         onClick={() =>
@@ -870,7 +910,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newLink || "New Link"}
+                        {dict.blocks.newLink || "New Link"}
                       </button>
                       <button
                         onClick={() =>
@@ -878,7 +918,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newFile || "New File"}
+                        {dict.blocks.newFile || "New File"}
                       </button>
                       <button
                         onClick={() =>
@@ -886,7 +926,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newGithub || "New GitHub"}
+                        {dict.blocks.newGithub || "New GitHub"}
                       </button>
                       <button
                         onClick={() =>
@@ -894,7 +934,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newPalette || "New Palette"}
+                        {dict.blocks.newPalette || "New Palette"}
                       </button>
                       <button
                         onClick={() =>
@@ -902,7 +942,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newContact || "New Contact"}
+                        {dict.blocks.newContact || "New Contact"}
                       </button>
                       <button
                         onClick={() =>
@@ -910,7 +950,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newVideo || "New Video"}
+                        {dict.blocks.newVideo || "New Video"}
                       </button>
                       <button
                         onClick={() =>
@@ -918,7 +958,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newSnippet || "New Snippet"}
+                        {dict.blocks.newSnippet || "New Snippet"}
                       </button>
                       <button
                         onClick={() =>
@@ -926,7 +966,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newChecklist || "New Checklist"}
+                        {dict.blocks.newChecklist || "New Checklist"}
                       </button>
                       <button
                         onClick={() =>
@@ -934,13 +974,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         }
                         className="context-menu-item"
                       >
-                        {dict.common.newSketch || "New Sketch"}
+                        {dict.blocks.newSketch || "New Sketch"}
                       </button>
                       <div className="context-menu-separator" />
                     </>
                   )}
                 </>
-              ) : (
+              ) : contextMenu.type === "block" ? (
                 (() => {
                   const block = contextMenuBlock;
                   if (!block || !currentUser) return null;
@@ -961,8 +1001,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             className="context-menu-item"
                           >
                             {isLocked
-                              ? dict.common.unlock || "Unlock"
-                              : dict.common.lock || "Lock"}
+                              ? dict.blocks.unlock || "Unlock"
+                              : dict.blocks.lock || "Lock"}
                           </button>
                           <button
                             onClick={() => {
@@ -971,7 +1011,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             }}
                             className="context-menu-item"
                           >
-                            {dict.common.transferOwnership ||
+                            {dict.project.transferOwnership ||
                               "Transfer Ownership"}
                           </button>
                           <div className="context-menu-separator" />
@@ -1000,13 +1040,30 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       )}
                       {!canManage && (
                         <div className="px-3 py-2 text-xs text-gray-500">
-                          {dict.common.viewOnly || "View Only"}
+                          {dict.blocks.viewOnly || "View Only"}
                         </div>
                       )}
                     </>
                   );
                 })()
-              )}
+              ) : contextMenu.type === "edge" ? (
+                (() => {
+                  const edgeId = contextMenu.id;
+                  if (!edgeId) return null;
+
+                  return (
+                    <button
+                      onClick={() => {
+                        _deleteLinks([edgeId]);
+                        setContextMenu(null);
+                      }}
+                      className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      {dict.common.delete || "Delete"}
+                    </button>
+                  );
+                })()
+              ) : null}
             </div>
           )}
         </ReactFlow>
@@ -1022,6 +1079,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           onClose={() => setIsShareModalOpen(false)}
           projectId={initialProjectId!}
           isOwner={currentUser?.id === projectOwnerId}
+          onRegenerate={async (updateContent) => {
+            if (updateContent) {
+              await handleSaveState("Share link regeneration");
+            }
+          }}
         />
 
         {transferBlock && (
@@ -1054,16 +1116,16 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             setBlockToDelete(null);
             setBlocksToDelete([]);
           }}
-          title={dict.common.confirmDelete}
+          title={dict.modals.confirmDelete}
           className="max-w-md"
         >
           <p className="modal-description">
             {blocksToDelete.length > 0
-              ? dict.common.deleteBlocksWarning.replace(
+              ? dict.modals.deleteBlocksWarning.replace(
                   "{count}",
                   blocksToDelete.length.toString(),
                 )
-              : dict.common.deleteBlockWarning}
+              : dict.modals.deleteBlockWarning}
           </p>
 
           <div className="flex items-center gap-2 mt-4 mb-2">
@@ -1075,7 +1137,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
             <label htmlFor="dont-ask-again" className="text-sm opacity-80">
-              {dict.common.dontAskAgain}
+              {dict.modals.dontAskAgain}
             </label>
           </div>
 

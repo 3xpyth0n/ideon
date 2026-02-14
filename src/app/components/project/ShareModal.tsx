@@ -12,6 +12,7 @@ interface ShareModalProps {
   onClose: () => void;
   projectId: string;
   isOwner: boolean;
+  onRegenerate?: (updateContent: boolean) => Promise<void>;
 }
 
 export function ShareModal({
@@ -19,12 +20,14 @@ export function ShareModal({
   onClose,
   projectId,
   isOwner,
+  onRegenerate,
 }: ShareModalProps) {
   const { dict } = useI18n();
   const [loading, setLoading] = useState(false);
   const [shareEnabled, setShareEnabled] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [updateContent, setUpdateContent] = useState(true);
 
   useEffect(() => {
     if (isOpen && projectId) {
@@ -53,6 +56,9 @@ export function ShareModal({
     try {
       // If enabling and no URL exists, generate one first
       if (!shareEnabled && !shareUrl) {
+        if (onRegenerate) {
+          await onRegenerate(true);
+        }
         const res = await fetch(`/api/projects/${projectId}/share`, {
           method: "POST",
         });
@@ -83,7 +89,7 @@ export function ShareModal({
   const handleRegenerate = async () => {
     if (
       !confirm(
-        dict.common.regenerateConfirm ||
+        dict.project.regenerateConfirm ||
           "Are you sure? Old link will stop working.",
       )
     )
@@ -91,6 +97,10 @@ export function ShareModal({
 
     setLoading(true);
     try {
+      if (updateContent && onRegenerate) {
+        await onRegenerate(true);
+      }
+
       const res = await fetch(`/api/projects/${projectId}/share`, {
         method: "POST",
       });
@@ -122,9 +132,9 @@ export function ShareModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={dict.common.shareProject || "Share Project"}
+      title={dict.project.shareProject || "Share Project"}
       subtitle={
-        dict.common.shareSubtitle || "Share this project via a public link"
+        dict.project.shareSubtitle || "Share this project via a public link"
       }
     >
       <div className="space-y-6 share-modal-custom-layout">
@@ -140,12 +150,12 @@ export function ShareModal({
               {shareEnabled ? <Globe size={20} /> : <Lock size={20} />}
             </div>
             <div className="text-group">
-              <h3>{dict.common.shareEnabled || "Enable public link"}</h3>
+              <h3>{dict.project.shareEnabled || "Enable public link"}</h3>
               <p>
                 {shareEnabled
-                  ? dict.common.publicLinkActive ||
+                  ? dict.project.publicLinkActive ||
                     "Anyone with the link can view"
-                  : dict.common.publicLinkInactive ||
+                  : dict.project.publicLinkInactive ||
                     "Only you can access this project"}
               </p>
             </div>
@@ -164,7 +174,7 @@ export function ShareModal({
         {shareEnabled && shareUrl && (
           <div className="animate-in fade-in slide-in-from-top-2">
             <label className="input-label">
-              {dict.common.shareLink || "Public Link"}
+              {dict.project.shareLink || "Public Link"}
             </label>
             <div className="flex gap-2 items-center">
               <input readOnly value={shareUrl} className="zen-input" />
@@ -176,7 +186,28 @@ export function ShareModal({
                 {copied ? <Check size={16} /> : <Copy size={16} />}
               </Button>
             </div>
-            <div className="flex justify-end mt-4">
+            <div className="flex items-center justify-between gap-4 mt-6 p-4 border rounded-lg dark:border-white/5 bg-black/5 dark:bg-white/5">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="update-content"
+                  checked={updateContent}
+                  onChange={(e) => setUpdateContent(e.target.checked)}
+                  className="mt-1"
+                />
+                <label
+                  htmlFor="update-content"
+                  className="flex flex-col cursor-pointer"
+                >
+                  <span className="text-sm font-medium">
+                    {dict.project.updateShareContent || "Update content"}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {dict.project.updateShareContentDescription ||
+                      "Link will capture current state"}
+                  </span>
+                </label>
+              </div>
               <Button
                 onClick={handleRegenerate}
                 variant="primary"
@@ -186,7 +217,7 @@ export function ShareModal({
                   size={12}
                   className={`mr-2 ${loading ? "animate-spin" : ""}`}
                 />
-                {dict.common.regenerate || "Regenerate Link"}
+                {dict.project.regenerate || "Regenerate Link"}
               </Button>
             </div>
           </div>

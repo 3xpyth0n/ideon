@@ -142,7 +142,7 @@ function PublicProjectCanvasContent({
           <div className="flex flex-col">
             <span className="text-lg font-bold">{projectName}</span>
             <span className="text-[10px] uppercase font-bold opacity-40 tracking-widest">
-              {dict.common.viewOnly || "View Only"}
+              {dict.blocks.viewOnly || "View Only"}
             </span>
           </div>
         </Panel>

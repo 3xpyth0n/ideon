@@ -19,6 +19,7 @@ export default function CanvasEdge({
   markerEnd,
   data,
   selected,
+  id,
 }: LinkProps) {
   // console.log("Rendering CanvasEdge:", { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   if (
@@ -96,10 +97,11 @@ export default function CanvasEdge({
   const opacity = selected ? 1 : Math.min(0.4 + weight * 0.1, 1);
 
   return (
-    <g className="react-flow__edge">
+    <g className="react-flow__edge" data-id={id}>
       <BaseEdge
         path={edgePath}
         markerEnd={markerEnd}
+        interactionWidth={30}
         style={{
           strokeWidth,
           opacity,

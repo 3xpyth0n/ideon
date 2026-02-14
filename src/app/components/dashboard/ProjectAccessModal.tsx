@@ -132,7 +132,7 @@ export function ProjectAccessModal({
       isOpen={true}
       onClose={onClose}
       title={projectName}
-      subtitle={dict.common.projectAccess}
+      subtitle={dict.project.projectAccess}
       className="max-w-lg w-full"
     >
       {/* Search / Invite Section - Only for owners */}
@@ -142,7 +142,7 @@ export function ProjectAccessModal({
             <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-20"></div>
             <input
               className="zen-input pl-10"
-              placeholder={dict.common.searchUsers}
+              placeholder={dict.management.searchUsers}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -170,7 +170,7 @@ export function ProjectAccessModal({
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs font-bold">
-                        {user.username || dict.common.defaultUsername}
+                        {user.username || dict.account.defaultUsername}
                       </span>
                       <span className="text-2xs opacity-30 font-medium">
                         {user.email}
@@ -186,7 +186,7 @@ export function ProjectAccessModal({
                     {actionId === user.id ? (
                       <Loader2 className="animate-spin" size={10} />
                     ) : (
-                      <span>{dict.common.invite}</span>
+                      <span>{dict.auth.invite}</span>
                     )}
                   </Button>
                 </div>
@@ -203,7 +203,7 @@ export function ProjectAccessModal({
       {/* Collaborators List */}
       <div>
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
-          <span>{dict.common.currentCollaborators}</span>
+          <span>{dict.project.currentCollaborators}</span>
           <span className="h-[1px] flex-1 bg-white/5"></span>
           <span>{collaborators.length}</span>
         </h3>
@@ -231,7 +231,7 @@ export function ProjectAccessModal({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold tracking-tight">
-                        {user.username || dict.common.defaultUsername}
+                        {user.username || dict.account.defaultUsername}
                       </span>
                     </div>
                     <span className="text-2xs opacity-30 font-medium">

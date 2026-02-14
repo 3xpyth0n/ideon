@@ -100,9 +100,9 @@ export function ProjectModal({
         <div className="flex flex-col gap-6 py-12 px-16 text-left">
           <div className="flex flex-col gap-2">
             <h2 className="text-xl font-bold">
-              {dict.common.deleteProjectTitle}
+              {dict.modals.deleteProjectTitle}
             </h2>
-            <p className="opacity-80">{dict.common.deleteProjectDescription}</p>
+            <p className="opacity-80">{dict.modals.deleteProjectDescription}</p>
           </div>
           <div className="flex flex-row justify-end gap-3 mt-4">
             <Button
@@ -126,17 +126,19 @@ export function ProjectModal({
       ) : isEdit ? (
         <div className="flex flex-col p-12 w-full h-full overflow-y-auto text-left">
           <h2 className="text-xl font-bold mb-8 uppercase tracking-widest text-center">
-            {dict.common.editProject}
+            {dict.project.editProject}
           </h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-8 w-full">
             <div className="flex flex-col gap-6 w-full">
               <div className="form-group w-full">
-                <label className="modal-label">{dict.common.projectName}</label>
+                <label className="modal-label">
+                  {dict.project.projectName}
+                </label>
                 <input
                   ref={inputRef}
                   type="text"
                   className="zen-input w-full"
-                  placeholder={dict.common.projectPlaceholder}
+                  placeholder={dict.project.projectPlaceholder}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -145,11 +147,11 @@ export function ProjectModal({
 
               <div className="form-group w-full">
                 <label className="modal-label">
-                  {dict.common.projectDescriptionOptional}
+                  {dict.project.projectDescriptionOptional}
                 </label>
                 <textarea
                   className="zen-textarea min-h-[120px] w-full"
-                  placeholder={dict.common.projectDescription}
+                  placeholder={dict.project.projectDescription}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -186,17 +188,19 @@ export function ProjectModal({
       ) : (
         <div className="flex flex-col p-12 w-full h-full overflow-y-auto text-left">
           <h2 className="text-xl font-bold mb-8 uppercase tracking-widest text-center">
-            {dict.common.newProject}
+            {dict.dashboard.newProject}
           </h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-8">
             <div className="flex flex-col gap-6">
               <div className="form-group">
-                <label className="modal-label">{dict.common.projectName}</label>
+                <label className="modal-label">
+                  {dict.project.projectName}
+                </label>
                 <input
                   ref={inputRef}
                   type="text"
                   className="zen-input"
-                  placeholder={dict.common.projectPlaceholder}
+                  placeholder={dict.project.projectPlaceholder}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -205,11 +209,11 @@ export function ProjectModal({
 
               <div className="form-group">
                 <label className="modal-label">
-                  {dict.common.projectDescriptionOptional}
+                  {dict.project.projectDescriptionOptional}
                 </label>
                 <textarea
                   className="zen-textarea min-h-[120px]"
-                  placeholder={dict.common.projectDescription}
+                  placeholder={dict.project.projectDescription}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -227,7 +231,7 @@ export function ProjectModal({
                     <span className="animate-pulse">{dict.common.saving}</span>
                   ) : (
                     <>
-                      <span>{dict.common.submit.toUpperCase()}</span>
+                      <span>{dict.auth.submit.toUpperCase()}</span>
                       <ChevronRight size={14} />
                     </>
                   )}

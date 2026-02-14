@@ -75,7 +75,7 @@ export function RegisterClient() {
     setBusy(true);
 
     if (password !== confirm) {
-      toast.error(dict.common.passwordMismatch);
+      toast.error(dict.auth.passwordMismatch);
       setBusy(false);
       return;
     }
@@ -120,9 +120,9 @@ export function RegisterClient() {
       <div className="auth-page">
         <div className="auth-card">
           <div className="auth-header">
-            <h1 className="auth-title">{dict.common.invalidInvitationTitle}</h1>
+            <h1 className="auth-title">{dict.auth.invalidInvitationTitle}</h1>
             <p className="auth-subtitle">
-              {dict.common.invalidInvitationSubtitle}
+              {dict.auth.invalidInvitationSubtitle}
             </p>
           </div>
           <div className="auth-footer flex justify-center mt-6">
@@ -130,7 +130,7 @@ export function RegisterClient() {
               className="auth-footer-link"
               onClick={() => router.push("/login")}
             >
-              {dict.common.backToLogin}
+              {dict.auth.backToLogin}
             </button>
           </div>
         </div>
@@ -150,17 +150,15 @@ export function RegisterClient() {
 
       <div className="auth-card">
         <div className="auth-header">
-          <h1 className="auth-title">
-            {dict.common.completeRegistrationTitle}
-          </h1>
+          <h1 className="auth-title">{dict.auth.completeRegistrationTitle}</h1>
           <p className="auth-subtitle">
-            {dict.common.completeRegistrationSubtitle}
+            {dict.auth.completeRegistrationSubtitle}
           </p>
         </div>
 
         <form onSubmit={onSubmit} className="auth-form">
           <div className="auth-field">
-            <label className="auth-label">{dict.common.email}</label>
+            <label className="auth-label">{dict.auth.email}</label>
             <input
               className={`auth-input ${token ? "opacity-50" : ""}`}
               value={email}
@@ -172,18 +170,18 @@ export function RegisterClient() {
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">{dict.common.username}</label>
+            <label className="auth-label">{dict.auth.username}</label>
             <input
               className="auth-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder={dict.common.usernamePlaceholder}
+              placeholder={dict.auth.usernamePlaceholder}
               required
             />
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">{dict.common.password}</label>
+            <label className="auth-label">{dict.auth.password}</label>
             <div className="auth-input-wrapper">
               <input
                 className="auth-input auth-input-password"
@@ -204,7 +202,7 @@ export function RegisterClient() {
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">{dict.common.confirmPassword}</label>
+            <label className="auth-label">{dict.auth.confirmPassword}</label>
             <div className="auth-input-wrapper">
               <input
                 className="auth-input auth-input-password"
@@ -233,7 +231,7 @@ export function RegisterClient() {
               {busy ? (
                 <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
               ) : (
-                dict.common.register
+                dict.auth.register
               )}
             </Button>
           </div>

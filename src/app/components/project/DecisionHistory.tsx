@@ -208,11 +208,11 @@ export function DecisionHistory({
     try {
       const success = await onSave();
       if (success) {
-        toast.success(dict.common.milestoneSuccess);
+        toast.success(dict.modals.milestoneSuccess);
         fetchHistory();
       }
     } catch (_error) {
-      toast.error(dict.common.saveStateError);
+      toast.error(dict.modals.saveStateError);
     } finally {
       setIsSaving(false);
     }
@@ -293,7 +293,7 @@ export function DecisionHistory({
       <button
         className={`temporal-trigger outline-none ${isOpen ? "active" : ""}`}
         onClick={handleToggle}
-        title={dict.common.temporalHistory}
+        title={dict.canvas.temporalHistory}
       >
         <History className="w-5 h-5 transition-transform duration-300" />
       </button>
@@ -305,7 +305,7 @@ export function DecisionHistory({
             <div className="flex items-center gap-2">
               <History className="w-4 h-4 text-primary" />
               <h3 className="font-semibold text-sm">
-                {dict.common.temporalHistory}
+                {dict.canvas.temporalHistory}
               </h3>
             </div>
             <Button
@@ -352,7 +352,7 @@ export function DecisionHistory({
                 </div>
               ) : history.length === 0 ? (
                 <div className="text-center py-10 text-xs text-muted-foreground">
-                  {dict.common.noHistory}
+                  {dict.modals.noHistory}
                 </div>
               ) : (
                 <>
@@ -376,7 +376,7 @@ export function DecisionHistory({
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-semibold truncate text-foreground">
-                            {state.authorName || dict.common.anonymous}
+                            {state.authorName || dict.project.anonymous}
                           </span>
                           <span className="text-[10px] text-muted-foreground tabular-nums font-medium">
                             {formatDate(state.timestamp)}
@@ -410,13 +410,13 @@ export function DecisionHistory({
                             />
                           ) : (
                             <span className="text-[10px] text-muted-foreground truncate opacity-70">
-                              {state.intent || dict.common.noDescription}
+                              {state.intent || dict.project.noDescription}
                             </span>
                           )}
                           {state.isSnapshot && (
                             <div className="flex items-center gap-1 bg-primary/10 text-primary text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
                               <Save className="w-2 h-2" />
-                              <span>{dict.common.milestone}</span>
+                              <span>{dict.modals.milestone}</span>
                             </div>
                           )}
                         </div>

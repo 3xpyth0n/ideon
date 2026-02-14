@@ -89,7 +89,7 @@ export function GitTokenManager() {
       setToken("");
       fetchTokens();
     } catch {
-      toast.error(dict.common.saveError);
+      toast.error(dict.modals.saveError);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +111,7 @@ export function GitTokenManager() {
       });
       if (!res.ok) throw new Error();
     } catch {
-      toast.error(dict.common.saveError);
+      toast.error(dict.modals.saveError);
       // Revert on error
       setTokens((prev) =>
         prev.map((t) => (t.id === id ? { ...t, enabled: currentEnabled } : t)),
@@ -130,7 +130,7 @@ export function GitTokenManager() {
       toast.success(dict.common.deleted);
       setTokens((prev) => prev.filter((t) => t.id !== id));
     } catch {
-      toast.error(dict.common.deleteError);
+      toast.error(dict.modals.deleteError);
     }
   };
 

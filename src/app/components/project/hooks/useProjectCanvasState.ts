@@ -495,7 +495,7 @@ export const useProjectCanvasState = (
   const [zoom, setZoom] = useState(100);
   const [contextMenu, setContextMenu] = useState<{
     id?: string;
-    type: "block" | "pane";
+    type: "block" | "pane" | "edge";
     top: number;
     left: number;
   } | null>(null);
@@ -569,7 +569,7 @@ export const useProjectCanvasState = (
         );
 
         if (lastSnapshotHash.current === currentHash) {
-          toast.info(dict.common.noChanges || "No changes to save");
+          toast.info(dict.modals.noChanges || "No changes to save");
           return false;
         }
 
@@ -586,9 +586,9 @@ export const useProjectCanvasState = (
 
         if (!res.ok) {
           if (res.status === 403) {
-            toast.error(dict.common.unauthorized || "Unauthorized action");
+            toast.error(dict.auth.unauthorized || "Unauthorized action");
           } else {
-            toast.error(dict.common.saveError || "Failed to save changes");
+            toast.error(dict.modals.saveError || "Failed to save changes");
           }
           return false;
         }
@@ -596,7 +596,7 @@ export const useProjectCanvasState = (
         lastSnapshotHash.current = currentHash;
         return true;
       } catch (_error) {
-        toast.error(dict.common.saveError || "Failed to save changes");
+        toast.error(dict.modals.saveError || "Failed to save changes");
         return false;
       }
     },
@@ -620,17 +620,17 @@ export const useProjectCanvasState = (
           const err = await res.json();
           toast.error(
             err.message ||
-              dict.common.deleteError ||
+              dict.modals.deleteError ||
               "Failed to delete snapshot",
           );
           return;
         }
 
         toast.success(
-          dict.common.snapshotDeleted || "Snapshot deleted successfully",
+          dict.modals.snapshotDeleted || "Snapshot deleted successfully",
         );
       } catch (_error) {
-        toast.error(dict.common.deleteError || "Failed to delete snapshot");
+        toast.error(dict.modals.deleteError || "Failed to delete snapshot");
       }
     },
     [initialProjectId, dict.common],
@@ -790,12 +790,12 @@ export const useProjectCanvasState = (
               ),
             );
           } else {
-            toast.error(dict.common.uploadError || "Upload failed");
+            toast.error(dict.blocks.uploadError || "Upload failed");
             // Remove block or show error state? For now, leave as is but maybe user can delete
           }
         } catch (error) {
           console.error("Paste upload error:", error);
-          toast.error(dict.common.uploadError || "Upload failed");
+          toast.error(dict.blocks.uploadError || "Upload failed");
         }
         return;
       }
@@ -1078,7 +1078,7 @@ export const useProjectCanvasState = (
       },
     ) => {
       graph.handleTransferBlock(id, target);
-      toast.success(dict.common.blockTransferred);
+      toast.success(dict.blocks.blockTransferred);
     },
     [graph, dict.common],
   );
@@ -1122,7 +1122,7 @@ export const useProjectCanvasState = (
           });
 
           if (cannotDelete) {
-            toast.error(dict.common.cannotDeleteBlock);
+            toast.error(dict.blocks.cannotDeleteBlock);
             return;
           }
 
@@ -1211,6 +1211,7 @@ export const useProjectCanvasState = (
     onBlockDragStop: graph.onBlockDragStop,
     onConnect: graph.onConnect,
     handleDeleteBlock: graph.handleDeleteBlock,
+    deleteLinks,
     handleToggleLock,
     handleTransferBlock,
     confirmDelete,
@@ -1251,7 +1252,7 @@ export const useProjectCanvasState = (
 
         if (presentHash === snapshotHash) {
           toast.info(
-            dict.common.stateAlreadyApplied ||
+            dict.modals.stateAlreadyApplied ||
               "This state is already applied to the present",
           );
           return;
@@ -1262,6 +1263,7 @@ export const useProjectCanvasState = (
       await io.handleApplyState(stateId);
     },
     onBlockContextMenu: graph.onBlockContextMenu,
+    onEdgeContextMenu: graph.onEdgeContextMenu,
     onPaneContextMenu: graph.onPaneContextMenu,
     onPaneClick: () => setContextMenu(null),
     onBlockClick: () => setContextMenu(null),

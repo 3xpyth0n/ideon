@@ -89,7 +89,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       options,
     ).format(date);
 
-    return formatted.replace(",", "").replace(" ", ` ${dict.common.at} `);
+    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
   };
 
   const handleContentChange = useCallback(
@@ -133,7 +133,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             <div className="flex items-center gap-2">
               <FileText size={16} />
               <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-                {dict.common.blockTypeText || "Note"}
+                {dict.blocks.blockTypeText || "Note"}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                 value={title}
                 onChange={handleTitleChange}
                 className="block-title"
-                placeholder={dict.common.title || "..."}
+                placeholder={dict.blocks.title || "..."}
                 disabled={data.isPreviewMode}
               />
             </div>
@@ -167,7 +167,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                   <Lock size={10} className="block-lock-icon" />
                 )}
                 <div className="author-name">
-                  {(data.authorName || dict.common.anonymous).toLowerCase()}
+                  {(data.authorName || dict.project.anonymous).toLowerCase()}
                 </div>
               </div>
             </div>

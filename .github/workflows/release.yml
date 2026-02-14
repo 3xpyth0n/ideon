@@ -40,6 +40,7 @@ jobs:
           fi
 
       - name: Create GitHub release
+        if: env.ACT != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
@@ -51,3 +52,10 @@ jobs:
             LICENSE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dry run release (act only)
+        if: env.ACT == 'true'
+        run: |
+          echo "🚀 [DRY RUN] Would create/update release ${{ env.VERSION }}"
+          echo "Release Notes:"
+          cat RELEASE_NOTES.md

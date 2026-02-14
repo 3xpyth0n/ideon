@@ -69,6 +69,9 @@ export function getPostgresConfig() {
 
 export function getSqlitePath() {
   const storageDir = getStorageDir();
+  if (process.env.SQLITE_PATH === ":memory:") {
+    return ":memory:";
+  }
   return process.env.SQLITE_PATH
     ? path.resolve(process.cwd(), process.env.SQLITE_PATH)
     : path.resolve(storageDir, "dev.db");
@@ -148,7 +151,9 @@ function getSqlite(): DatabaseDriver.Database {
   if (state.sqliteInstance) return state.sqliteInstance;
 
   const dbPath = getSqlitePath();
-  logger.info(`Using SQLite database at: ${dbPath}`);
+  if (!process.env.VITEST) {
+    logger.info(`Using SQLite database at: ${dbPath}`);
+  }
 
   state.sqliteInstance = new DatabaseDriver(dbPath);
   state.sqliteInstance.pragma("journal_mode = WAL");

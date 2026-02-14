@@ -1,4 +1,5 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
+import { logger as appLogger } from "@lib/logger";
 import Credentials from "next-auth/providers/credentials";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Discord from "next-auth/providers/discord";
@@ -409,7 +410,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         ) {
           return;
         }
-        console.error(error);
+        appLogger.error({ error }, "NextAuth error");
       },
     },
   };

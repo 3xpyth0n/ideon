@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { render } from "@react-email/components";
+import { logger } from "./logger";
 import InviteEmail from "../emails/InviteEmail";
 import ResetPasswordEmail from "../emails/ResetPasswordEmail";
 
@@ -29,8 +30,9 @@ export async function sendEmail({
   const fromName = process.env.SMTP_FROM_NAME || "Ideon";
 
   if (!host || !fromEmail || !user || !pass) {
-    console.warn(
-      `SMTP settings missing: host=${!!host}, user=${!!user}, pass=${!!pass}, from=${!!fromEmail}`,
+    logger.warn(
+      { host: !!host, user: !!user, pass: !!pass, from: !!fromEmail },
+      "SMTP settings missing",
     );
     return false;
   }
@@ -55,8 +57,10 @@ export async function sendEmail({
     });
     return true;
   } catch (err) {
-    console.error("CRITICAL: Failed to send email via Nodemailer:");
-    console.error(err);
+    logger.error(
+      { error: err, to, subject },
+      "CRITICAL: Failed to send email via Nodemailer",
+    );
     return false;
   }
 }

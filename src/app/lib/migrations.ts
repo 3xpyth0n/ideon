@@ -1,6 +1,7 @@
 import { Migrator, MigrationProvider, Migration } from "kysely";
 import { getDb } from "./db";
 import { isBuildMode } from "./runtime";
+import { logger } from "./logger";
 import * as initialMigration from "../db/migrations/01InitialSchema";
 import * as jacksonMigration from "../db/migrations/02JacksonStore";
 import * as ssoRegistrationMigration from "../db/migrations/03AddSsoRegistration";
@@ -42,7 +43,7 @@ class StaticMigrationProvider implements MigrationProvider {
 }
 
 export async function runMigrations() {
-  if (isBuildMode()) {
+  if (isBuildMode() && !process.env.VITEST) {
     return { results: [] };
   }
 
@@ -58,17 +59,18 @@ export async function runMigrations() {
 
   results?.forEach((it) => {
     if (it.status === "Success") {
-      console.log(
-        `[DB] Migration "${it.migrationName}" was executed successfully`,
-      );
+      if (!process.env.VITEST) {
+        logger.info(
+          `[DB] Migration "${it.migrationName}" was executed successfully`,
+        );
+      }
     } else if (it.status === "Error") {
-      console.error(`[DB] Failed to execute migration "${it.migrationName}"`);
+      logger.error(`[DB] Failed to execute migration "${it.migrationName}"`);
     }
   });
 
   if (error) {
-    console.error("[DB] Failed to migrate");
-    console.error(error);
+    logger.error({ error }, "[DB] Failed to migrate");
     throw error;
   }
 

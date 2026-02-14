@@ -4,6 +4,7 @@ import { stringToColor } from "./utils";
 import * as crypto from "crypto";
 import { headers } from "next/headers";
 import { logSecurityEvent } from "./audit";
+import { logger } from "./logger";
 
 export function KyselyAdapter(): Adapter {
   const db = getDb();
@@ -32,6 +33,10 @@ export function KyselyAdapter(): Adapter {
         .executeTakeFirst();
 
       if (!invitation && !isSsoEnabled) {
+        logger.error(
+          { email, ip },
+          "Registration blocked: SSO disabled and no invitation found",
+        );
         await logSecurityEvent("register:blocked", "failure", { ip });
         throw new Error("Registration disabled");
       }

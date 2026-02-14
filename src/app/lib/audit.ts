@@ -1,5 +1,6 @@
 import { withAuthenticatedSession, getGlobalDb } from "./db";
 import * as crypto from "crypto";
+import { logger } from "./logger";
 
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -29,6 +30,6 @@ export async function logSecurityEvent(
       getGlobalDb(),
     );
   } catch (e) {
-    console.error("Failed to log security event:", e);
+    logger.error({ error: e, action, status }, "Failed to log security event");
   }
 }

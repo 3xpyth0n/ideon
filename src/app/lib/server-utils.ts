@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getAuthUser, AuthUser } from "@auth";
 import { getDb, withAuthenticatedSession } from "./db";
+import { logger } from "./logger";
 import { Selectable } from "kysely";
 import { projectsTable } from "./types/db";
 import { z } from "zod";
@@ -70,7 +71,9 @@ export function authenticatedAction<T, B = unknown>(
           .set({ lastOnline: new Date().toISOString() })
           .where("id", "=", user.id)
           .execute()
-          .catch((err) => console.error("[lastOnline update error]:", err));
+          .catch((err) =>
+            logger.error({ err, userId: user.id }, "lastOnline update error"),
+          );
       }
 
       let body = {} as B;
@@ -138,7 +141,7 @@ export function authenticatedAction<T, B = unknown>(
         (status === 500 ? "Internal Server Error" : "Error");
 
       if (status === 500 && !isExplicitError) {
-        console.error("[API Error]:", error);
+        logger.error({ error, path: req.nextUrl.pathname }, "API Error");
         message = "Internal Server Error";
       }
 

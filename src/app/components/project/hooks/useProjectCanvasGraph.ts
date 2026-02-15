@@ -273,6 +273,7 @@ export const useProjectCanvasGraph = ({
         type: "connection",
         markerEnd: "connection-arrow",
         data: { label: "" },
+        zIndex: 2000,
       };
 
       setLinks((lks) => addEdge(link, lks || []));
@@ -293,21 +294,19 @@ export const useProjectCanvasGraph = ({
     (_: React.MouseEvent, block: Node) => {
       if (block.type === "core") return;
 
-      const adjustedPos = getAdjustedPosition(
-        {
-          x: block.position.x,
-          y: block.position.y,
-          width: block.measured?.width || block.width || DEFAULT_BLOCK_WIDTH,
-          height:
-            block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT,
-        },
-        {
-          x: CORE_BLOCK_X,
-          y: CORE_BLOCK_Y,
-          width: CORE_BLOCK_WIDTH,
-          height: CORE_BLOCK_HEIGHT,
-        },
-      );
+      const blockRect = {
+        x: block.position.x,
+        y: block.position.y,
+        width: block.measured?.width || block.width || DEFAULT_BLOCK_WIDTH,
+        height: block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT,
+      };
+
+      const adjustedPos = getAdjustedPosition(blockRect, {
+        x: CORE_BLOCK_X,
+        y: CORE_BLOCK_Y,
+        width: CORE_BLOCK_WIDTH,
+        height: CORE_BLOCK_HEIGHT,
+      });
 
       const adjustedBlock = {
         ...block,
@@ -328,21 +327,19 @@ export const useProjectCanvasGraph = ({
       if (block.type === "core") return;
       updateMyPresence({ draggingBlockId: null });
 
-      const adjustedPos = getAdjustedPosition(
-        {
-          x: block.position.x,
-          y: block.position.y,
-          width: block.measured?.width || block.width || DEFAULT_BLOCK_WIDTH,
-          height:
-            block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT,
-        },
-        {
-          x: CORE_BLOCK_X,
-          y: CORE_BLOCK_Y,
-          width: CORE_BLOCK_WIDTH,
-          height: CORE_BLOCK_HEIGHT,
-        },
-      );
+      const blockRect = {
+        x: block.position.x,
+        y: block.position.y,
+        width: block.measured?.width || block.width || DEFAULT_BLOCK_WIDTH,
+        height: block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT,
+      };
+
+      const adjustedPos = getAdjustedPosition(blockRect, {
+        x: CORE_BLOCK_X,
+        y: CORE_BLOCK_Y,
+        width: CORE_BLOCK_WIDTH,
+        height: CORE_BLOCK_HEIGHT,
+      });
 
       const adjustedBlock = {
         ...block,
@@ -357,7 +354,7 @@ export const useProjectCanvasGraph = ({
           ),
       });
     },
-    [applyMutation, updateMyPresence, links, blocks, setLinks],
+    [applyMutation, updateMyPresence],
   );
 
   const onContentChange = useCallback(
@@ -368,6 +365,11 @@ export const useProjectCanvasGraph = ({
       lastEditor: string,
       metadata?: string,
       title?: string,
+      reactions?: {
+        emoji: string;
+        count: number;
+        users: (string | { id: string; username: string })[];
+      }[],
     ) => {
       setBlocks((blocks) =>
         blocks.map((b) =>
@@ -381,6 +383,7 @@ export const useProjectCanvasGraph = ({
                   lastEditor,
                   ...(metadata !== undefined ? { metadata } : {}),
                   ...(title !== undefined ? { title } : {}),
+                  ...(reactions !== undefined ? { reactions } : {}),
                 },
               }
             : b,

@@ -78,6 +78,7 @@ export const useProjectData = ({
             ...l,
             type: l.type || "connection",
             markerEnd: "connection-arrow",
+            zIndex: 2000,
           }),
         );
 

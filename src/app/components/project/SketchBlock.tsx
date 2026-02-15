@@ -22,6 +22,8 @@ import {
 import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import { getStroke } from "perfect-freehand";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 type SketchBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -134,13 +136,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     onTouchEnd: stopPropagation,
   };
 
-  // Sync title
-  useEffect(() => {
-    if (data.title !== undefined && data.title !== title) {
-      setTitle(data.title);
-    }
-  }, [data.title]);
-
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
@@ -152,8 +147,45 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
+  });
+
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      const now = new Date().toISOString();
+      const editor =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.project.anonymous;
+
+      data.onContentChange?.(
+        id,
+        data.content,
+        now,
+        editor,
+        JSON.stringify({ strokes }),
+        newTitle,
+        data.reactions,
+      );
+    },
+    [id, data, currentUser, dict, strokes],
+  );
+
+  // Sync title
+  useEffect(() => {
+    if (data.title !== undefined && data.title !== title) {
+      setTitle(data.title);
+    }
+  }, [data.title]);
 
   // Initialize from metadata
   useEffect(() => {
@@ -196,7 +228,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     }
   }, [data.metadata, isLoaded]);
 
-  // Persistence
   const save = useCallback(
     (newStrokes: Stroke[]) => {
       try {
@@ -213,6 +244,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           editorName,
           JSON.stringify({ strokes: newStrokes }),
           title,
+          data.reactions,
         );
       } catch (e) {
         console.error("Failed to save sketch", e);
@@ -322,29 +354,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     triggerSave([]);
   };
 
-  const handleTitleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTitle = e.target.value;
-      setTitle(newTitle);
-
-      const now = new Date().toISOString();
-      const editorName =
-        currentUser?.displayName ||
-        currentUser?.username ||
-        dict.project.anonymous;
-
-      data.onContentChange?.(
-        id,
-        data.content,
-        now,
-        editorName,
-        JSON.stringify({ strokes }),
-        newTitle,
-      );
-    },
-    [data, id, currentUser, dict, strokes],
-  );
-
   const formatDate = (isoString: string) => {
     if (!isoString) return "";
     const date = new Date(isoString);
@@ -425,14 +434,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     );
 
   return (
-    <div
-      className={`block-card ${selected ? "selected" : ""} ${
-        isBeingMoved ? "is-moving" : ""
-      } ${
-        isReadOnly ? "read-only" : ""
-      } flex flex-col !p-0 overflow-hidden select-none bg-[#121212]`}
-      style={{ "--block-border-color": borderColor } as React.CSSProperties}
-    >
+    <>
       <NodeResizer
         minWidth={300}
         minHeight={200}
@@ -443,524 +445,558 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
         onResize={handleResize}
         onResizeEnd={handleResizeEnd}
       />
-
-      {/* Header */}
-      <div className="block-header flex items-center justify-between pt-4 px-4 mb-2 handle-drag-target">
-        <div className="flex items-center gap-2">
-          <PenTool size={16} />
-          <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
-            {dict.blocks.blockTypeSketch || "Sketch"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            value={title}
-            onChange={handleTitleChange}
-            className="block-title"
-            placeholder="..."
-            readOnly={isReadOnly}
-          />
-        </div>
-      </div>
-
-      {!isReadOnly && (
-        <div
-          className="flex items-center gap-1 px-2 pb-1 border-b border-white/5 nowheel nodrag flex-wrap relative bg-[#121212]"
-          style={{ zIndex: 50, position: "relative" }}
-          {...preventDrag}
-          onClick={stopPropagation}
-        >
-          {/* Pen Tool */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={(e) => {
-                stopPropagation(e);
-                if (tool === "pen") {
-                  setActivePopup(activePopup === "pen" ? null : "pen");
-                } else {
-                  setTool("pen");
-                  setActivePopup("pen");
-                }
-              }}
-              {...preventDrag}
-              className={`p-1 rounded-t-sm transition-colors border-b-2 ${
-                tool === "pen"
-                  ? "border-white text-white"
-                  : "border-transparent text-white/40 hover:text-white/70"
-              }`}
-              title="Pen"
-            >
-              <Pen size={14} ref={penIconRef} />
-            </button>
-            {activePopup === "pen" && (
-              <div
-                className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 bg-[#121212]"
-                style={{
-                  zIndex: 100,
-                  minWidth: "max-content",
-                  backgroundColor: "#121212",
-                  pointerEvents: "auto",
-                  display: "flex",
-                  gap: "4px",
-                }}
-                {...preventDrag}
-                onClick={stopPropagation}
-              >
-                {STROKE_SIZES.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={(e) => {
-                      stopPropagation(e);
-                      setPenSize(s);
-                      setActivePopup(null);
-                    }}
-                    {...preventDrag}
-                    className="flex items-center justify-center rounded-md transition-colors"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      backgroundColor:
-                        penSize === s ? "rgba(255,255,255,0.1)" : "transparent",
-                    }}
-                  >
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: Math.max(2, s),
-                        height: Math.max(2, s),
-                        backgroundColor:
-                          penSize === s ? "#ffffff" : "rgba(255,255,255,0.3)",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Eraser Tool */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={(e) => {
-                stopPropagation(e);
-                if (tool === "eraser") {
-                  setActivePopup(activePopup === "eraser" ? null : "eraser");
-                } else {
-                  setTool("eraser");
-                  setActivePopup("eraser");
-                }
-              }}
-              {...preventDrag}
-              className={`p-1 rounded-t-sm transition-colors border-b-2 ${
-                tool === "eraser"
-                  ? "border-white text-white"
-                  : "border-transparent text-white/40 hover:text-white/70"
-              }`}
-              title="Eraser"
-            >
-              <Eraser size={14} ref={eraserIconRef} />
-            </button>
-            {activePopup === "eraser" && (
-              <div
-                className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 bg-[#121212]"
-                style={{
-                  zIndex: 100,
-                  minWidth: "max-content",
-                  backgroundColor: "#121212",
-                  pointerEvents: "auto",
-                  display: "flex",
-                  gap: "4px",
-                }}
-                {...preventDrag}
-                onClick={stopPropagation}
-              >
-                {STROKE_SIZES.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={(e) => {
-                      stopPropagation(e);
-                      setEraserSize(s);
-                      setActivePopup(null);
-                    }}
-                    {...preventDrag}
-                    className="flex items-center justify-center rounded-md transition-colors"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      backgroundColor:
-                        eraserSize === s
-                          ? "rgba(255,255,255,0.1)"
-                          : "transparent",
-                    }}
-                  >
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: Math.max(2, s),
-                        height: Math.max(2, s),
-                        backgroundColor:
-                          eraserSize === s
-                            ? "#ffffff"
-                            : "rgba(255,255,255,0.3)",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="w-px h-4 bg-white/10 mx-1" />
-
-          {/* Color Picker */}
-          <div className="relative" style={{ zIndex: 60 }}>
-            <button
-              type="button"
-              onClick={(e) => {
-                stopPropagation(e);
-                setActivePopup(activePopup === "color" ? null : "color");
-              }}
-              {...preventDrag}
-              className="p-1 rounded-md transition-colors text-white/40 hover:text-white/70 flex items-center gap-1"
-              title="Color"
-            >
-              <div
-                className="w-4 h-4 rounded-full border border-white/20"
-                style={{ backgroundColor: color }}
-              />
-            </button>
-            {activePopup === "color" && (
-              <div
-                className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 flex-wrap w-[140px]"
-                {...preventDrag}
-                onClick={stopPropagation}
-                style={{
-                  pointerEvents: "auto",
-                  backgroundColor: "#121212",
-                  zIndex: 100,
-                }}
-              >
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={(e) => {
-                      stopPropagation(e);
-                      setColor(c);
-                      setActivePopup(null);
-                      setTool("pen");
-                    }}
-                    {...preventDrag}
-                    className={`w-6 h-6 rounded-full border ${
-                      color === c ? "border-white" : "border-white/10"
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1" />
-
-          {/* Actions */}
-          <button
-            onClick={(e) => {
-              handleUndo();
-              stopPropagation(e);
-            }}
-            {...preventDrag}
-            disabled={history.length === 0}
-            className={`p-1 rounded-md transition-all duration-200 ${
-              history.length === 0
-                ? "text-white/20 cursor-not-allowed opacity-30"
-                : "text-white hover:text-white hover:bg-white/10 opacity-100"
-            }`}
-            title="Undo"
-          >
-            <Undo2 size={14} />
-          </button>
-          <button
-            onClick={(e) => {
-              handleRedo();
-              stopPropagation(e);
-            }}
-            {...preventDrag}
-            disabled={redoStack.length === 0}
-            className={`p-1 rounded-md transition-all duration-200 ${
-              redoStack.length === 0
-                ? "text-white/20 cursor-not-allowed opacity-30"
-                : "text-white hover:text-white hover:bg-white/10 opacity-100"
-            }`}
-            title="Redo"
-          >
-            <Redo2 size={14} />
-          </button>
-          <button
-            onClick={(e) => {
-              handleClear();
-              stopPropagation(e);
-            }}
-            {...preventDrag}
-            className="p-1 rounded-md text-white/40 hover:text-red-400"
-            title="Clear"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* SVG Canvas Area */}
       <div
-        ref={canvasContainerRef}
-        className={`block-content flex-1 flex flex-col min-h-0 relative nowheel nodrag select-none bg-[#121212] sketch-cursor`}
-        style={{
-          minHeight: "200px",
-          touchAction: "none",
-          zIndex: 0,
-          position: "relative",
-        }}
+        className={`block-card ${selected ? "selected" : ""} ${
+          isBeingMoved ? "is-moving" : ""
+        } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0 select-none`}
+        style={{ "--block-border-color": borderColor } as React.CSSProperties}
       >
-        <svg
-          ref={svgCanvasRef}
-          className="w-full h-full absolute inset-0 touch-none sketch-cursor"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          style={{ zIndex: 10 }}
-        >
-          <defs>
-            {(() => {
-              // 1. Prepare all strokes including current interaction
-              const allStrokes = [...strokes];
-              if (currentPoints) {
-                allStrokes.push({
-                  points: currentPoints,
-                  color: tool === "eraser" ? "#000000" : color,
-                  size: tool === "pen" ? penSize : eraserSize,
-                  isEraser: tool === "eraser",
-                });
-              }
+        <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] bg-[#121212]">
+          {/* Header */}
+          <div className="block-header flex items-center justify-between pt-4 px-4 mb-2 handle-drag-target">
+            <div className="flex items-center gap-2">
+              <PenTool size={16} />
+              <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+                {dict.blocks.blockTypeSketch || "Sketch"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                value={title}
+                onChange={handleTitleChange}
+                className="block-title"
+                placeholder="..."
+                readOnly={isReadOnly}
+              />
+            </div>
+          </div>
 
-              // 2. Group consecutive strokes by type
-              const groups: {
-                type: "draw" | "erase";
-                strokes: Stroke[];
-                id: string;
-              }[] = [];
-              let currentGroup: {
-                type: "draw" | "erase";
-                strokes: Stroke[];
-                id: string;
-              } | null = null;
+          {!isReadOnly && (
+            <div
+              className="flex items-center gap-1 px-2 pb-1 border-b border-white/5 nowheel nodrag flex-wrap relative bg-[#121212]"
+              style={{ zIndex: 50, position: "relative" }}
+              {...preventDrag}
+              onClick={stopPropagation}
+            >
+              {/* Pen Tool */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    stopPropagation(e);
+                    if (tool === "pen") {
+                      setActivePopup(activePopup === "pen" ? null : "pen");
+                    } else {
+                      setTool("pen");
+                      setActivePopup("pen");
+                    }
+                  }}
+                  {...preventDrag}
+                  className={`p-1 rounded-t-sm transition-colors border-b-2 ${
+                    tool === "pen"
+                      ? "border-white text-white"
+                      : "border-transparent text-white/40 hover:text-white/70"
+                  }`}
+                  title="Pen"
+                >
+                  <Pen size={14} ref={penIconRef} />
+                </button>
+                {activePopup === "pen" && (
+                  <div
+                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 bg-[#121212]"
+                    style={{
+                      zIndex: 100,
+                      minWidth: "max-content",
+                      backgroundColor: "#121212",
+                      pointerEvents: "auto",
+                      display: "flex",
+                      gap: "4px",
+                    }}
+                    {...preventDrag}
+                    onClick={stopPropagation}
+                  >
+                    {STROKE_SIZES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={(e) => {
+                          stopPropagation(e);
+                          setPenSize(s);
+                          setActivePopup(null);
+                        }}
+                        {...preventDrag}
+                        className="flex items-center justify-center rounded-md transition-colors"
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          backgroundColor:
+                            penSize === s
+                              ? "rgba(255,255,255,0.1)"
+                              : "transparent",
+                        }}
+                      >
+                        <div
+                          className="rounded-full"
+                          style={{
+                            width: Math.max(2, s),
+                            height: Math.max(2, s),
+                            backgroundColor:
+                              penSize === s
+                                ? "#ffffff"
+                                : "rgba(255,255,255,0.3)",
+                            borderRadius: "50%",
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-              allStrokes.forEach((stroke, i) => {
-                const type = stroke.isEraser ? "erase" : "draw";
-                if (!currentGroup || currentGroup.type !== type) {
-                  currentGroup = { type, strokes: [stroke], id: `group-${i}` };
-                  groups.push(currentGroup);
-                } else {
-                  currentGroup.strokes.push(stroke);
+              {/* Eraser Tool */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    stopPropagation(e);
+                    if (tool === "eraser") {
+                      setActivePopup(
+                        activePopup === "eraser" ? null : "eraser",
+                      );
+                    } else {
+                      setTool("eraser");
+                      setActivePopup("eraser");
+                    }
+                  }}
+                  {...preventDrag}
+                  className={`p-1 rounded-t-sm transition-colors border-b-2 ${
+                    tool === "eraser"
+                      ? "border-white text-white"
+                      : "border-transparent text-white/40 hover:text-white/70"
+                  }`}
+                  title="Eraser"
+                >
+                  <Eraser size={14} ref={eraserIconRef} />
+                </button>
+                {activePopup === "eraser" && (
+                  <div
+                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 bg-[#121212]"
+                    style={{
+                      zIndex: 100,
+                      minWidth: "max-content",
+                      backgroundColor: "#121212",
+                      pointerEvents: "auto",
+                      display: "flex",
+                      gap: "4px",
+                    }}
+                    {...preventDrag}
+                    onClick={stopPropagation}
+                  >
+                    {STROKE_SIZES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={(e) => {
+                          stopPropagation(e);
+                          setEraserSize(s);
+                          setActivePopup(null);
+                        }}
+                        {...preventDrag}
+                        className="flex items-center justify-center rounded-md transition-colors"
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          backgroundColor:
+                            eraserSize === s
+                              ? "rgba(255,255,255,0.1)"
+                              : "transparent",
+                        }}
+                      >
+                        <div
+                          className="rounded-full"
+                          style={{
+                            width: Math.max(2, s),
+                            height: Math.max(2, s),
+                            backgroundColor:
+                              eraserSize === s
+                                ? "#ffffff"
+                                : "rgba(255,255,255,0.3)",
+                            borderRadius: "50%",
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="w-px h-4 bg-white/10 mx-1" />
+
+              {/* Color Picker */}
+              <div className="relative" style={{ zIndex: 60 }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    stopPropagation(e);
+                    setActivePopup(activePopup === "color" ? null : "color");
+                  }}
+                  {...preventDrag}
+                  className="p-1 rounded-md transition-colors text-white/40 hover:text-white/70 flex items-center gap-1"
+                  title="Color"
+                >
+                  <div
+                    className="w-4 h-4 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                </button>
+                {activePopup === "color" && (
+                  <div
+                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 flex-wrap w-[140px]"
+                    {...preventDrag}
+                    onClick={stopPropagation}
+                    style={{
+                      pointerEvents: "auto",
+                      backgroundColor: "#121212",
+                      zIndex: 100,
+                    }}
+                  >
+                    {COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={(e) => {
+                          stopPropagation(e);
+                          setColor(c);
+                          setActivePopup(null);
+                          setTool("pen");
+                        }}
+                        {...preventDrag}
+                        className={`w-6 h-6 rounded-full border ${
+                          color === c ? "border-white" : "border-white/10"
+                        }`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1" />
+
+              {/* Actions */}
+              <button
+                onClick={(e) => {
+                  handleUndo();
+                  stopPropagation(e);
+                }}
+                {...preventDrag}
+                disabled={history.length === 0}
+                className={`p-1 rounded-md transition-all duration-200 ${
+                  history.length === 0
+                    ? "text-white/20 cursor-not-allowed opacity-30"
+                    : "text-white hover:text-white hover:bg-white/10 opacity-100"
+                }`}
+                title="Undo"
+              >
+                <Undo2 size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  handleRedo();
+                  stopPropagation(e);
+                }}
+                {...preventDrag}
+                disabled={redoStack.length === 0}
+                className={`p-1 rounded-md transition-all duration-200 ${
+                  redoStack.length === 0
+                    ? "text-white/20 cursor-not-allowed opacity-30"
+                    : "text-white hover:text-white hover:bg-white/10 opacity-100"
+                }`}
+                title="Redo"
+              >
+                <Redo2 size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  handleClear();
+                  stopPropagation(e);
+                }}
+                {...preventDrag}
+                className="p-1 rounded-md text-white/40 hover:text-red-400"
+                title="Clear"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* SVG Canvas Area */}
+          <div
+            ref={canvasContainerRef}
+            className={`block-content flex-1 flex flex-col min-h-0 relative nowheel nodrag select-none bg-[#121212] sketch-cursor`}
+            style={{
+              touchAction: "none",
+              zIndex: 0,
+              position: "relative",
+            }}
+          >
+            <svg
+              ref={svgCanvasRef}
+              className="w-full h-full absolute inset-0 touch-none sketch-cursor"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              style={{ zIndex: 10 }}
+            >
+              <defs>
+                {(() => {
+                  // 1. Prepare all strokes including current interaction
+                  const allStrokes = [...strokes];
+                  if (currentPoints) {
+                    allStrokes.push({
+                      points: currentPoints,
+                      color: tool === "eraser" ? "#000000" : color,
+                      size: tool === "pen" ? penSize : eraserSize,
+                      isEraser: tool === "eraser",
+                    });
+                  }
+
+                  // 2. Group consecutive strokes by type
+                  const groups: {
+                    type: "draw" | "erase";
+                    strokes: Stroke[];
+                    id: string;
+                  }[] = [];
+                  let currentGroup: {
+                    type: "draw" | "erase";
+                    strokes: Stroke[];
+                    id: string;
+                  } | null = null;
+
+                  allStrokes.forEach((stroke, i) => {
+                    const type = stroke.isEraser ? "erase" : "draw";
+                    if (!currentGroup || currentGroup.type !== type) {
+                      currentGroup = {
+                        type,
+                        strokes: [stroke],
+                        id: `group-${i}`,
+                      };
+                      groups.push(currentGroup);
+                    } else {
+                      currentGroup.strokes.push(stroke);
+                    }
+                  });
+
+                  // 3. Generate masks for each "draw" group
+                  // A draw group needs a mask that includes all *subsequent* erase groups
+                  return groups.map((group, i) => {
+                    if (group.type !== "draw") return null;
+
+                    const subsequentErasers = groups
+                      .slice(i + 1)
+                      .filter((g) => g.type === "erase");
+                    if (subsequentErasers.length === 0) return null; // No mask needed
+
+                    const maskId = `mask-${group.id}`;
+                    return (
+                      <mask key={maskId} id={maskId}>
+                        <rect width="100%" height="100%" fill="white" />
+                        {subsequentErasers.flatMap((g) =>
+                          g.strokes.map((s, j) => (
+                            <path
+                              key={`${g.id}-${j}`}
+                              d={getSvgPathFromStroke(
+                                getStroke(s.points, {
+                                  size: s.size,
+                                  thinning: 0.5,
+                                  smoothing: 0.5,
+                                  streamline: 0.5,
+                                  simulatePressure: true,
+                                }),
+                              )}
+                              fill="black"
+                            />
+                          )),
+                        )}
+                      </mask>
+                    );
+                  });
+                })()}
+              </defs>
+
+              {/* Render Groups */}
+              {(() => {
+                const allStrokes = [...strokes];
+                if (currentPoints) {
+                  allStrokes.push({
+                    points: currentPoints,
+                    color: tool === "eraser" ? "#000000" : color,
+                    size: tool === "pen" ? penSize : eraserSize,
+                    isEraser: tool === "eraser",
+                  });
                 }
-              });
 
-              // 3. Generate masks for each "draw" group
-              // A draw group needs a mask that includes all *subsequent* erase groups
-              return groups.map((group, i) => {
-                if (group.type !== "draw") return null;
+                const groups: {
+                  type: "draw" | "erase";
+                  strokes: Stroke[];
+                  id: string;
+                }[] = [];
+                let currentGroup: {
+                  type: "draw" | "erase";
+                  strokes: Stroke[];
+                  id: string;
+                } | null = null;
 
-                const subsequentErasers = groups
-                  .slice(i + 1)
-                  .filter((g) => g.type === "erase");
-                if (subsequentErasers.length === 0) return null; // No mask needed
+                allStrokes.forEach((stroke, i) => {
+                  const type = stroke.isEraser ? "erase" : "draw";
+                  if (!currentGroup || currentGroup.type !== type) {
+                    currentGroup = {
+                      type,
+                      strokes: [stroke],
+                      id: `group-${i}`,
+                    };
+                    groups.push(currentGroup);
+                  } else {
+                    currentGroup.strokes.push(stroke);
+                  }
+                });
 
-                const maskId = `mask-${group.id}`;
-                return (
-                  <mask key={maskId} id={maskId}>
-                    <rect width="100%" height="100%" fill="white" />
-                    {subsequentErasers.flatMap((g) =>
-                      g.strokes.map((s, j) => (
+                return groups.map((group, i) => {
+                  if (group.type === "erase") return null; // Erasers are only used in masks
+
+                  const subsequentErasers = groups
+                    .slice(i + 1)
+                    .filter((g) => g.type === "erase");
+                  const maskId =
+                    subsequentErasers.length > 0
+                      ? `mask-${group.id}`
+                      : undefined;
+
+                  return (
+                    <g
+                      key={group.id}
+                      mask={maskId ? `url(#${maskId})` : undefined}
+                    >
+                      {group.strokes.map((stroke, j) => (
                         <path
-                          key={`${g.id}-${j}`}
+                          key={`${group.id}-${j}`}
                           d={getSvgPathFromStroke(
-                            getStroke(s.points, {
-                              size: s.size,
+                            getStroke(stroke.points, {
+                              size: stroke.size,
                               thinning: 0.5,
                               smoothing: 0.5,
                               streamline: 0.5,
                               simulatePressure: true,
                             }),
                           )}
-                          fill="black"
+                          fill={stroke.color}
                         />
-                      )),
-                    )}
-                  </mask>
-                );
-              });
-            })()}
-          </defs>
-
-          {/* Render Groups */}
-          {(() => {
-            const allStrokes = [...strokes];
-            if (currentPoints) {
-              allStrokes.push({
-                points: currentPoints,
-                color: tool === "eraser" ? "#000000" : color,
-                size: tool === "pen" ? penSize : eraserSize,
-                isEraser: tool === "eraser",
-              });
-            }
-
-            const groups: {
-              type: "draw" | "erase";
-              strokes: Stroke[];
-              id: string;
-            }[] = [];
-            let currentGroup: {
-              type: "draw" | "erase";
-              strokes: Stroke[];
-              id: string;
-            } | null = null;
-
-            allStrokes.forEach((stroke, i) => {
-              const type = stroke.isEraser ? "erase" : "draw";
-              if (!currentGroup || currentGroup.type !== type) {
-                currentGroup = { type, strokes: [stroke], id: `group-${i}` };
-                groups.push(currentGroup);
-              } else {
-                currentGroup.strokes.push(stroke);
-              }
-            });
-
-            return groups.map((group, i) => {
-              if (group.type === "erase") return null; // Erasers are only used in masks
-
-              const subsequentErasers = groups
-                .slice(i + 1)
-                .filter((g) => g.type === "erase");
-              const maskId =
-                subsequentErasers.length > 0 ? `mask-${group.id}` : undefined;
-
-              return (
-                <g key={group.id} mask={maskId ? `url(#${maskId})` : undefined}>
-                  {group.strokes.map((stroke, j) => (
-                    <path
-                      key={`${group.id}-${j}`}
-                      d={getSvgPathFromStroke(
-                        getStroke(stroke.points, {
-                          size: stroke.size,
-                          thinning: 0.5,
-                          smoothing: 0.5,
-                          streamline: 0.5,
-                          simulatePressure: true,
-                        }),
-                      )}
-                      fill={stroke.color}
-                    />
-                  ))}
-                </g>
-              );
-            });
-          })()}
-        </svg>
-      </div>
-
-      <div className="block-author-container mt-2 pt-3 px-4 pb-3">
-        <div className="flex items-center justify-between w-full text-tiny opacity-40">
-          <div className="block-timestamp">
-            {formatDate(data.updatedAt || "")}
+                      ))}
+                    </g>
+                  );
+                });
+              })()}
+            </svg>
           </div>
-          <div className="block-author-info flex items-center gap-1.5">
-            {isLocked && <LockIcon size={10} className="block-lock-icon" />}
-            <div className="author-name">
-              {(data.authorName || dict.project.anonymous).toLowerCase()}
+
+          <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
+            <div className="flex items-center justify-between w-full text-tiny opacity-40">
+              <div className="block-timestamp">
+                {formatDate(data.updatedAt || "")}
+              </div>
+              <div className="block-author-info flex items-center gap-1.5">
+                {isLocked && <LockIcon size={10} className="block-lock-icon" />}
+                <div className="author-name">
+                  {(data.authorName || dict.project.anonymous).toLowerCase()}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Handles */}
-      <Handle
-        id="left-target"
-        type="source"
-        position={Position.Left}
-        isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[40%]"
-      >
-        {!isHandleConnected("left-target") && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="left"
-        type="source"
-        position={Position.Left}
-        isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[60%]"
-      >
-        {!isHandleConnected("left") && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="right"
-        type="source"
-        position={Position.Right}
-        isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[40%]"
-      >
-        {!isHandleConnected("right") && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="right-target"
-        type="source"
-        position={Position.Right}
-        isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[60%]"
-      >
-        {!isHandleConnected("right-target") && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="top-target"
-        type="source"
-        position={Position.Top}
-        isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[40%]"
-      >
-        {!isHandleConnected("top-target") && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="top"
-        type="source"
-        position={Position.Top}
-        isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[60%]"
-      >
-        {!isHandleConnected("top") && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="bottom"
-        type="source"
-        position={Position.Bottom}
-        isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[60%]"
-      >
-        {!isHandleConnected("bottom") && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="bottom-target"
-        type="source"
-        position={Position.Bottom}
-        isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[40%]"
-      >
-        {!isHandleConnected("bottom-target") && <div className="handle-dot" />}
-      </Handle>
-    </div>
+        <Handle
+          id="left-target"
+          type="source"
+          position={Position.Left}
+          isConnectable={true}
+          className="block-handle block-handle-left !z-50 !top-[40%]"
+        >
+          {!isHandleConnected("left-target") && <div className="handle-dot" />}
+        </Handle>
+        <Handle
+          id="left"
+          type="source"
+          position={Position.Left}
+          isConnectable={true}
+          className="block-handle block-handle-left !z-50 !top-[60%]"
+        >
+          {!isHandleConnected("left") && <div className="handle-dot" />}
+        </Handle>
+        <Handle
+          id="right"
+          type="source"
+          position={Position.Right}
+          isConnectable={true}
+          className="block-handle block-handle-right !z-50 !top-[40%]"
+        >
+          {!isHandleConnected("right") && <div className="handle-dot" />}
+        </Handle>
+        <Handle
+          id="right-target"
+          type="source"
+          position={Position.Right}
+          isConnectable={true}
+          className="block-handle block-handle-right !z-50 !top-[60%]"
+        >
+          {!isHandleConnected("right-target") && <div className="handle-dot" />}
+        </Handle>
+        <Handle
+          id="top-target"
+          type="source"
+          position={Position.Top}
+          isConnectable={true}
+          className="block-handle block-handle-top !z-50 !left-[40%]"
+        >
+          {!isHandleConnected("top-target") && <div className="handle-dot" />}
+        </Handle>
+        <Handle
+          id="top"
+          type="source"
+          position={Position.Top}
+          isConnectable={true}
+          className="block-handle block-handle-top !z-50 !left-[60%]"
+        >
+          {!isHandleConnected("top") && <div className="handle-dot" />}
+        </Handle>
+        <Handle
+          id="bottom"
+          type="source"
+          position={Position.Bottom}
+          isConnectable={true}
+          className="block-handle block-handle-bottom !z-50 !left-[60%]"
+        >
+          {!isHandleConnected("bottom") && <div className="handle-dot" />}
+        </Handle>
+        <Handle
+          id="bottom-target"
+          type="source"
+          position={Position.Bottom}
+          isConnectable={true}
+          className="block-handle block-handle-bottom !z-50 !left-[40%]"
+        >
+          {!isHandleConnected("bottom-target") && (
+            <div className="handle-dot" />
+          )}
+        </Handle>
+      </div>
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+      />
+    </>
   );
 });
 

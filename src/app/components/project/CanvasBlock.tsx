@@ -63,6 +63,8 @@ import SketchBlock from "./SketchBlock";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 
 import NoteBlock from "./NoteBlock";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 export type BlockData = {
   title?: string;
@@ -95,6 +97,11 @@ export type BlockData = {
   status?: string;
   rationale?: string;
   intent?: string;
+  reactions?: {
+    emoji: string;
+    count: number;
+    users: (string | { id: string; username: string })[];
+  }[];
   onContentChange?: (
     blockId: string,
     content: string,
@@ -102,6 +109,11 @@ export type BlockData = {
     lastEditor: string,
     metadata?: string,
     title?: string,
+    reactions?: {
+      emoji: string;
+      count: number;
+      users: (string | { id: string; username: string })[];
+    }[],
   ) => void;
   onFocus?: (blockId: string, index: number) => void;
   onBlur?: (blockId: string) => void;
@@ -365,6 +377,13 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
+  });
+
   const handleContentContextMenu = useCallback(
     (e: React.MouseEvent) => {
       if (isReadOnly) return;
@@ -624,7 +643,15 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       const metadataString = newMetadata
         ? JSON.stringify(newMetadata)
         : undefined;
-      data.onContentChange?.(id, content, now, editor, metadataString, title);
+      data.onContentChange?.(
+        id,
+        content,
+        now,
+        editor,
+        metadataString,
+        title,
+        data.reactions,
+      );
 
       if (setNodes) {
         setNodes((nds) =>
@@ -756,6 +783,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           editor,
           currentMetadata ? JSON.stringify(currentMetadata) : undefined,
           title,
+          data.reactions,
         );
       }
 
@@ -877,6 +905,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         editor,
         metadata ? JSON.stringify(metadata) : undefined,
         newTitle,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict.project.anonymous, metadata, content],
@@ -999,6 +1028,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           editor,
           metadataString,
           title,
+          data.reactions,
         );
 
         // Sync metadata to yNodes
@@ -1141,7 +1171,15 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
     const onContentChange = data.onContentChange;
     const metadataString = metadata ? JSON.stringify(metadata) : undefined;
-    onContentChange?.(id, newContent, now, editor, metadataString, title);
+    onContentChange?.(
+      id,
+      newContent,
+      now,
+      editor,
+      metadataString,
+      title,
+      data.reactions,
+    );
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
@@ -1163,7 +1201,15 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
     const onContentChange = data.onContentChange;
     const metadataString = metadata ? JSON.stringify(metadata) : undefined;
-    onContentChange?.(id, content, now, editor, metadataString, title);
+    onContentChange?.(
+      id,
+      content,
+      now,
+      editor,
+      metadataString,
+      title,
+      data.reactions,
+    );
   };
 
   const formatDate = (isoString: string) => {
@@ -1440,6 +1486,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                     editor,
                     metadata ? JSON.stringify(metadata) : undefined,
                     title,
+                    data.reactions,
                   );
                   setGithubError(null);
                 }}
@@ -1622,6 +1669,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                   editor,
                   metadata ? JSON.stringify(metadata) : undefined,
                   title,
+                  data.reactions,
                 );
               }}
               onBlur={() => {
@@ -1943,7 +1991,9 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         selected ? "selected" : ""
       } ${isRemoteTyping ? "remote-typing" : ""} ${
         isBeingMoved ? "is-moving" : ""
-      } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0`}
+      } ${
+        isReadOnly ? "read-only" : ""
+      } flex flex-col !p-0 relative w-full h-full`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={
@@ -1954,7 +2004,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     >
       <NodeResizer
         minWidth={250}
-        minHeight={150}
+        minHeight={180}
         isVisible={selected && !isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
@@ -2024,7 +2074,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           {renderContent()}
         </div>
 
-        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+        <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
           <div className="flex items-center justify-between w-full text-tiny opacity-40">
             <div className="block-timestamp">
               {formatDate(data.updatedAt || "")}
@@ -2038,6 +2088,14 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           </div>
         </div>
       </div>
+
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+      />
 
       {/* Connection Handles */}
       <Handle

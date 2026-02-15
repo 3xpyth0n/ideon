@@ -23,7 +23,7 @@ export const useTouchGestures = ({
   onDoubleTap,
   longPressDelay = 500,
   doubleTapDelay = 300,
-  moveThreshold = 10,
+  moveThreshold = 25,
   stopPropagation = false,
 }: UseTouchGesturesProps) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);

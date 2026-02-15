@@ -22,7 +22,7 @@
   --sidebar-collapsed-width: 0px;
   --core-block-width: 640px;
   --core-block-height: 480px;
-  --accent: #004225;
+  --accent: #000080;
   --warning: #f2c94c;
   --danger: #eb5757;
   --toast-bg: #404040;
@@ -470,7 +470,8 @@ body {
   background-color: var(--user-color, #000);
 }
 
-.user-presence-item:hover .user-presence-tooltip {
+.user-presence-item:hover .user-presence-tooltip,
+.reaction-badge:hover .user-presence-tooltip {
   opacity: 1;
 }
 
@@ -2147,6 +2148,42 @@ input:-webkit-autofill:active {
   color: var(--danger);
 }
 
+.error-message-hint {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  padding-left: 10px;
+}
+
+.error-message {
+  background-color: var(--bg-sidebar);
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: var(--text-muted);
+  max-width: 56rem;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.error-message:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.error-message:active {
+  transform: scale(0.99);
+}
+
 .github-error-hint {
   font-size: 0.75rem;
   opacity: 0.6;
@@ -2515,6 +2552,14 @@ input:-webkit-autofill:active {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mr-2 {
+  margin-right: 8px;
+}
+
+.ml-2 {
+  margin-left: 8px;
 }
 
 .\!ml-12 {
@@ -3253,6 +3298,10 @@ input:-webkit-autofill:active {
 }
 
 /* Connection handles styles */
+
+.react-flow__edge {
+  z-index: 2000 !important;
+}
 
 .mental-canvas .react-flow__edge-path {
   stroke: var(--text-main);
@@ -4051,6 +4100,133 @@ input:-webkit-autofill:active {
   -webkit-transition: 0.4s;
   -o-transition: 0.4s;
   transition: 0.4s;
+}
+
+/* Block Reactions Styles */
+.block-reactions-container {
+  position: absolute;
+  top: 100%;
+  right: 16px;
+  left: auto;
+  transform: translateY(-50%);
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.reactions-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reactions-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--bg-island);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 4px 6px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.reaction-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.reaction-badge:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+
+.reaction-badge.active {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+}
+
+.add-reaction-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.add-reaction-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--bg-island);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.add-reaction-btn:hover,
+.add-reaction-btn.active {
+  background-color: var(--bg-island);
+  border-color: var(--text-secondary);
+  color: var(--text-main);
+  transform: scale(1.1);
+}
+
+.emoji-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+}
+
+.emoji-picker-tooltip {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  left: auto;
+  transform: none;
+  margin-bottom: 8px;
+  background-color: var(--bg-island);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  gap: 4px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+}
+
+.emoji-option-btn {
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.emoji-option-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  transform: scale(1.2);
+}
+
+.emoji-option-btn.active {
+  background-color: rgba(var(--accent-rgb), 0.1);
 }
 
 .theme-checkbox:checked::before {

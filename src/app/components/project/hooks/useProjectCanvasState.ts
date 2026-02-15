@@ -31,6 +31,9 @@ const cleanBlockDataForSync = (
     onCaretMove: _onCaretMove,
     onResize: _onResize,
     onResizeEnd: _onResizeEnd,
+    currentUser: _currentUser,
+    initialProjectId: _initialProjectId,
+    projectOwnerId: _projectOwnerId,
     ...rest
   } = data;
   return rest;
@@ -203,7 +206,18 @@ export const useProjectCanvasState = (
             const rl = yLinks.get(key);
             if (rl) {
               if (index >= 0) {
-                next[index] = { ...rl, selected: next[index].selected };
+                const localData = next[index].data as Record<string, unknown>;
+                const remoteData = rl.data as Record<string, unknown>;
+                next[index] = {
+                  ...rl,
+                  selected: next[index].selected,
+                  data: {
+                    ...remoteData,
+                    isEditing: localData?.isEditing,
+                    onLabelSubmit: localData?.onLabelSubmit,
+                    onLabelCancel: localData?.onLabelCancel,
+                  },
+                };
               } else {
                 next.push({ ...rl, selected: false } as Edge);
               }
@@ -356,6 +370,20 @@ export const useProjectCanvasState = (
               if (isSummaryUpdate && isExistingDetailed) {
                 return;
               }
+              const isUpgradeToDetailed =
+                !isSummaryUpdate && existing?.data?.isSummary;
+              if (isUpgradeToDetailed) {
+                const currentYText = yContents.get(block.id);
+                const newContent = (block.data?.content as string) || "";
+                if (
+                  currentYText &&
+                  currentYText.toString() === "" &&
+                  newContent !== ""
+                ) {
+                  currentYText.delete(0, currentYText.length);
+                  currentYText.insert(0, newContent);
+                }
+              }
 
               const hasChanged =
                 !existing ||
@@ -405,7 +433,14 @@ export const useProjectCanvasState = (
         if (!isPreviewModeRef.current) {
           yLinks.doc?.transact(() => {
             nextLinks.forEach((link) => {
-              const { selected, ...linkToSync } = link;
+              const { selected, data, ...rest } = link;
+              const {
+                isEditing: _,
+                onLabelSubmit: __,
+                onLabelCancel: ___,
+                ...cleanData
+              } = (data as Record<string, unknown>) || {};
+              const linkToSync = { ...rest, data: cleanData };
 
               const existing = yLinks.get(link.id);
               const hasChanged =

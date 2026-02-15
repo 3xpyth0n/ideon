@@ -16,6 +16,8 @@ import {
 import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import "./contact-block.css";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 type ContactBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -32,40 +34,6 @@ interface ContactMetadata {
 const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
-
-  const initialMetadata = useMemo((): ContactMetadata => {
-    const defaultMeta: ContactMetadata = {
-      name: "",
-      phone: "",
-      email: "",
-      note: "",
-    };
-
-    if (!data.metadata) return defaultMeta;
-
-    try {
-      const parsed =
-        typeof data.metadata === "string"
-          ? JSON.parse(data.metadata)
-          : data.metadata;
-
-      if (!parsed || typeof parsed !== "object") return defaultMeta;
-
-      return {
-        name: parsed.name ?? "",
-        phone: parsed.phone ?? "",
-        email: parsed.email ?? "",
-        note: parsed.note ?? "",
-      };
-    } catch {
-      return defaultMeta;
-    }
-  }, [data.metadata]);
-
-  const [localMeta, setLocalMeta] = useState<ContactMetadata>(initialMetadata);
-  const [isEditing, setIsEditing] = useState(false);
-  const blockRef = useRef<HTMLDivElement>(null);
-
   const { rippleRef } = useTouch();
 
   const currentUser = data.currentUser;
@@ -78,6 +46,28 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
   const isOwner = currentUser?.id && ownerId === currentUser.id;
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
+  });
+
+  const isBeingMoved = !!data.movingUserColor;
+  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
+  const initialMetadata = useMemo((): ContactMetadata => {
+    try {
+      return JSON.parse(data.metadata || "{}");
+    } catch {
+      return { name: "", phone: "", email: "", note: "" };
+    }
+  }, [data.metadata]);
+
+  const [localMeta, setLocalMeta] = useState<ContactMetadata>(initialMetadata);
+  const [isEditing, setIsEditing] = useState(false);
+  const blockRef = useRef<HTMLDivElement>(null);
 
   const onLongPress = useCallback(
     (_e: React.TouchEvent | TouchEvent) => {
@@ -107,9 +97,6 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       setTitle(data.title);
     }
   }, [data.title]);
-
-  const isBeingMoved = !!data.movingUserColor;
-  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
   // Inputs are read-only if the block is locked/preview OR if not in edit mode
   const isInputReadOnly = isReadOnly || !isEditing;
@@ -170,6 +157,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
         editor,
         JSON.stringify(newMeta),
         title,
+        data.reactions,
       );
     },
     [id, data, localMeta, isInputReadOnly, currentUser, dict, title],
@@ -192,6 +180,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
         editor,
         data.metadata,
         newTitle,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict],
@@ -301,7 +290,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
     >
       <NodeResizer
         minWidth={250}
-        minHeight={150}
+        minHeight={180}
         isVisible={selected && !isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
@@ -389,7 +378,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
         </div>
       </div>
 
-      <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+      <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
         <div className="flex items-center justify-between w-full text-tiny opacity-40">
           <div className="block-timestamp">
             {formatDate(data.updatedAt || "")}
@@ -402,6 +391,14 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
           </div>
         </div>
       </div>
+
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+      />
 
       <Handle
         id="left-target"

@@ -28,6 +28,9 @@ export type Block = Selectable<blocksTable>;
 export type NewBlock = Insertable<blocksTable>;
 export type BlockUpdate = Updateable<blocksTable>;
 
+export type BlockReaction = Selectable<blockReactionsTable>;
+export type NewBlockReaction = Insertable<blockReactionsTable>;
+
 export type Link = Selectable<linksTable>;
 export type NewLink = Insertable<linksTable>;
 
@@ -156,8 +159,17 @@ export interface linksTable {
   sourceOrientation: string | null;
   targetOrientation: string | null;
   data: string | null; // JSON string
+  label: string | null;
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
   updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+export interface blockReactionsTable {
+  id: Generated<string>;
+  blockId: string;
+  userId: string;
+  emoji: string;
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface linkPreviewsTable {
@@ -280,6 +292,7 @@ export interface database {
   githubRepoStats: githubRepoStatsTable;
   linkPreviews: linkPreviewsTable;
   userGitTokens: userGitTokensTable;
+  blockReactions: blockReactionsTable;
 }
 
 export interface githubRepoStatsTable {

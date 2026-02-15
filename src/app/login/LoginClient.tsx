@@ -290,7 +290,7 @@ export function LoginClient() {
                       >
                         <span>
                           {dict.auth.continueWith}{" "}
-                          {dict.common[provider as keyof typeof dict.common]}
+                          {dict.auth[provider as keyof typeof dict.auth]}
                         </span>
                       </Button>
                     ) : (
@@ -335,7 +335,7 @@ export function LoginClient() {
                 >
                   <span>
                     {dict.auth.continueWith}{" "}
-                    {dict.common[provider as keyof typeof dict.common]}
+                    {dict.auth[provider as keyof typeof dict.auth]}
                   </span>
                 </Button>
               );

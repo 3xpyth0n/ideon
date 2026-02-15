@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -20,6 +20,7 @@ import { ProjectModal } from "./ProjectModal";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import { FolderAccessModal } from "./FolderAccessModal";
 import { getRecentProjects } from "@lib/utils";
+import { toast } from "sonner";
 
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
@@ -81,6 +82,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+  const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
 
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [dragOverBreadcrumb, setDragOverBreadcrumb] = useState<string | null>(
@@ -92,6 +94,11 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     folder?: Folder;
     project?: Project;
   } | null>(null);
+  const [adjustedMenuPos, setAdjustedMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const { rippleRef } = useTouch();
 
@@ -130,23 +137,68 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     stopPropagation: true,
   });
 
-  // Close context menu on click elsewhere
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
+  useEffect(() => {
+    if (contextMenu && contextMenuRef.current) {
+      const menuRect = contextMenuRef.current.getBoundingClientRect();
+      const margin = 16;
+
+      let x = contextMenu.x;
+      let y = contextMenu.y;
+
+      if (x + menuRect.width + margin > window.innerWidth) {
+        x = window.innerWidth - menuRect.width - margin;
+      }
+      if (x < margin) x = margin;
+
+      if (y + menuRect.height + margin > window.innerHeight) {
+        y = window.innerHeight - menuRect.height - margin;
+      }
+      if (y < margin) y = margin;
+
+      setAdjustedMenuPos({ x, y });
+    } else if (contextMenu) {
+      setAdjustedMenuPos({ x: contextMenu.x, y: contextMenu.y });
+    } else {
+      setAdjustedMenuPos(null);
+    }
+  }, [contextMenu]);
+
+  useEffect(() => {
+    if (contextMenu && contextMenuRef.current && adjustedMenuPos) {
+      const menuRect = contextMenuRef.current.getBoundingClientRect();
+      const margin = 16;
+      let needsUpdate = false;
+      let { x, y } = adjustedMenuPos;
+
+      if (x + menuRect.width + margin > window.innerWidth) {
+        x = window.innerWidth - menuRect.width - margin;
+        needsUpdate = true;
+      }
+      if (y + menuRect.height + margin > window.innerHeight) {
+        y = window.innerHeight - menuRect.height - margin;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        setAdjustedMenuPos({ x, y });
+      }
+    }
+  }, [contextMenu, adjustedMenuPos]);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Reset state immediately to avoid stale data flash
       setProjects([]);
       setFolders([]);
       setCurrentFolder(null);
 
-      // Prepare fetch promises
       let projectUrl = `/api/projects?view=${view || "all"}`;
       if (folderId) {
         projectUrl += `&folderId=${folderId}`;
@@ -180,14 +232,12 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
           )
         : Promise.resolve(null);
 
-      // Execute in parallel
       const [projectsData, foldersData, currentFolderData] = await Promise.all([
         projectsPromise,
         foldersPromise,
         currentFolderPromise,
       ]);
 
-      // Process Projects
       if (view === "recent") {
         const ids = getRecentProjects();
         const orderMap = new Map(ids.map((id, index) => [id, index]));
@@ -198,14 +248,13 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         });
       }
       setProjects(projectsData);
-
-      // Process Folders
       setFolders(foldersData);
-
-      // Process Current Folder
       setCurrentFolder(currentFolderData);
     } catch (_err) {
-      // Silently fail
+      // Handle error
+      setProjects([]);
+      setFolders([]);
+      setCurrentFolder(null);
     } finally {
       setLoading(false);
     }
@@ -248,7 +297,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     const newIsStarred = !folder.isStarred;
 
     setFolders((prev) => {
-      // If we are in "starred" view and we unstar, we should remove it from view
       if (view === "starred" && !newIsStarred) {
         return prev.filter((f) => f.id !== folder.id);
       }
@@ -313,9 +361,15 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   const confirmDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
-      await fetch(`/api/projects/${projectToDelete.id}?permanent=true`, {
-        method: "DELETE",
-      });
+      const isTrashView = view === "trash";
+      await fetch(
+        `/api/projects/${projectToDelete.id}${
+          isTrashView ? "?permanent=true" : ""
+        }`,
+        {
+          method: "DELETE",
+        },
+      );
       fetchData();
     } catch (e) {
       console.error(e);
@@ -341,6 +395,24 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       console.error(e);
     } finally {
       setFolderToDelete(null);
+    }
+  };
+
+  const confirmEmptyTrash = async () => {
+    try {
+      const response = await fetch("/api/projects/trash", {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        toast.success(dict.common.success || "Trash emptied successfully");
+        fetchData();
+        setShowEmptyTrashModal(false);
+      } else {
+        toast.error(dict.common.error || "Failed to empty trash");
+      }
+    } catch (error) {
+      console.error("Error emptying trash:", error);
+      toast.error(dict.common.error || "An error occurred");
     }
   };
 
@@ -425,7 +497,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   };
 
   const handleInputBlur = (e: React.FocusEvent) => {
-    // If moving focus to another edit input, don't save/close yet
     if (
       e.relatedTarget &&
       (e.relatedTarget as HTMLElement).classList.contains(
@@ -441,26 +512,23 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     e.dataTransfer.setData("projectId", projectId);
     e.dataTransfer.effectAllowed = "move";
 
-    // Create a custom drag image to fix transparency issues
     const target = e.currentTarget as HTMLElement;
     const clone = target.cloneNode(true) as HTMLElement;
 
-    // Set styles to ensure visibility
     clone.style.position = "absolute";
     clone.style.top = "-9999px";
     clone.style.left = "-9999px";
     clone.style.width = `${target.offsetWidth}px`;
     clone.style.height = `${target.offsetHeight}px`;
-    clone.style.opacity = "1"; // Browser adds its own transparency (usually ~50%), so we start with 100%
-    clone.style.backgroundColor = "var(--bg-island)"; // Solid background
+    clone.style.opacity = "1";
+    clone.style.backgroundColor = "var(--bg-island)";
     clone.style.zIndex = "9999";
     clone.style.border = "1px solid var(--border)";
-    clone.style.borderRadius = "8px"; // Match rounded corners
+    clone.style.borderRadius = "8px";
 
     document.body.appendChild(clone);
     e.dataTransfer.setDragImage(clone, 0, 0);
 
-    // Clean up
     setTimeout(() => {
       document.body.removeChild(clone);
     }, 0);
@@ -484,7 +552,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     const projectId = e.dataTransfer.getData("projectId");
     if (!projectId) return;
 
-    // Optimistic update
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
     setFolders((prev) =>
       prev.map((f) =>
@@ -501,10 +568,9 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to move project");
-      // Optionally refresh data
     } catch (err) {
       console.error(err);
-      fetchData(); // Revert on error
+      fetchData();
     }
   };
 
@@ -529,10 +595,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     const projectId = e.dataTransfer.getData("projectId");
     if (!projectId) return;
 
-    // If moving to same folder (current view), ignore
     if (targetFolderId === folderId) return;
 
-    // Optimistic: Remove from current list since it moved out
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
 
     try {
@@ -543,7 +607,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       });
     } catch (err) {
       console.error(err);
-      fetchData(); // Revert
+      fetchData();
     }
   };
 
@@ -586,7 +650,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   }
 
   const isReadOnlyView = ["trash", "recent", "starred"].includes(view || "");
-  // Allow creation ONLY in Home (view is undefined/null/empty)
   const canCreate = !view;
 
   return (
@@ -596,7 +659,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
           <div>
             {folderId ? (
               <>
-                {/* Breadcrumb */}
                 <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
                   <div
                     className={`flex items-center justify-center w-6 h-6 rounded transition-colors cursor-pointer ${
@@ -638,7 +700,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   </div>
                 </div>
 
-                {/* Title */}
                 <h1 className="zen-title text-2xl mb-0 leading-none">
                   {currentFolder ? (
                     currentFolder.name
@@ -677,10 +738,19 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               </Button>
             </div>
           )}
+
+          {isTrash && (projects.length > 0 || folders.length > 0) && (
+            <Button
+              onClick={() => setShowEmptyTrashModal(true)}
+              className="btn-primary gap-2"
+            >
+              <Trash2 size={14} />
+              <span>{dict.dashboard.emptyTrashButton}</span>
+            </Button>
+          )}
         </header>
 
         <div className="project-grid">
-          {/* Folders */}
           {!folderId &&
             (!isReadOnlyView || view === "starred" || view === "trash") &&
             folders.map((folder) => (
@@ -856,7 +926,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               </div>
             ))}
 
-          {/* Empty State */}
           {projects.length === 0 && folders.length === 0 && (
             <div
               onClick={() => canCreate && setShowCreate(true)}
@@ -891,7 +960,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
             </div>
           )}
 
-          {/* Project Cards */}
           {projects.map((project) => (
             <div
               key={project.id}
@@ -1107,12 +1175,13 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         />
       )}
 
-      {contextMenu && (
+      {contextMenu && adjustedMenuPos && (
         <div
+          ref={contextMenuRef}
           className="fixed z-50 border border-white/10 rounded-lg shadow-xl py-1 w-48 animate-in fade-in zoom-in-95 duration-100"
           style={{
-            top: contextMenu.y,
-            left: contextMenu.x,
+            top: adjustedMenuPos.y,
+            left: adjustedMenuPos.x,
             backgroundColor: "var(--bg-island)",
           }}
           onClick={(e) => e.stopPropagation()}
@@ -1214,6 +1283,31 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               {dict.common.cancel || "Cancel"}
             </Button>
             <Button variant="danger" onClick={confirmDeleteFolder}>
+              {dict.common.delete || "Delete"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showEmptyTrashModal}
+        onClose={() => setShowEmptyTrashModal(false)}
+        title={dict.modals.emptyTrashTitle}
+        className="max-w-md"
+      >
+        <div className="p-6 pt-2">
+          <p className="text-sm text-muted-foreground mb-6">
+            {dict.modals.emptyTrashDescription}
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowEmptyTrashModal(false)}
+              className="hover:underline"
+            >
+              {dict.common.cancel || "Cancel"}
+            </Button>
+            <Button variant="danger" onClick={confirmEmptyTrash}>
               {dict.common.delete || "Delete"}
             </Button>
           </div>

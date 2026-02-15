@@ -13,12 +13,33 @@ import { FileText, Lock } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 type NoteBlockProps = NodeProps<Node<BlockData, "text">>;
 
 const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const { dict, lang } = useI18n();
   const { getEdges } = useReactFlow();
+
+  const currentUser = data.currentUser;
+  const projectOwnerId = data.projectOwnerId;
+  const ownerId = data.ownerId;
+  const isPreviewMode = data.isPreviewMode;
+  const isLocked = data.isLocked;
+
+  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+  const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isReadOnly =
+    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
+  });
+
   const [title, setTitle] = useState(data.title || "");
 
   const edges = getEdges();
@@ -59,17 +80,23 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newTitle = e.target.value;
       setTitle(newTitle);
+      const now = new Date().toISOString();
+      const editor =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.project.anonymous;
 
       data.onContentChange?.(
         id,
         data.content || "",
-        new Date().toISOString(),
-        data.lastEditor,
+        now,
+        editor,
         data.metadata ? JSON.stringify(data.metadata) : undefined,
         newTitle,
+        data.reactions,
       );
     },
-    [id, data],
+    [id, data, currentUser, dict],
   );
 
   const formatDate = (isoString: string) => {
@@ -102,6 +129,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         data.lastEditor,
         data.metadata ? JSON.stringify(data.metadata) : undefined,
         title,
+        data.reactions,
       );
     },
     [
@@ -119,7 +147,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       <NodeResizer
         isVisible={selected && !data.isPreviewMode}
         minWidth={200}
-        minHeight={100}
+        minHeight={180}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
       />
@@ -157,7 +185,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             />
           </div>
 
-          <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+          <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
             <div className="flex items-center justify-between w-full text-tiny opacity-40">
               <div className="block-timestamp">
                 {formatDate(data.updatedAt || "")}
@@ -173,6 +201,14 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             </div>
           </div>
         </div>
+
+        <BlockReactions
+          reactions={data.reactions}
+          onReact={handleReact}
+          onRemoveReaction={handleRemoveReaction}
+          currentUserId={currentUser?.id}
+          isReadOnly={isReadOnly}
+        />
 
         {/* Handles for connections - Left Side */}
         <Handle

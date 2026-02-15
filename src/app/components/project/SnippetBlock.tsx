@@ -33,6 +33,8 @@ import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import { Select, SelectOption } from "../ui/Select";
 import "./snippet-block.css";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 type SnippetBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -150,24 +152,11 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
-  const isBeingMoved = !!data.movingUserColor;
-  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
-
-  const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
-    const target = e.target as HTMLElement;
-    const event = new MouseEvent("contextmenu", {
-      bubbles: true,
-      cancelable: true,
-      clientX:
-        "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX,
-      clientY:
-        "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY,
-    });
-    target.dispatchEvent(event);
-  }, []);
-
-  const touchHandlers = useTouchGestures({
-    onLongPress,
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
   });
 
   const handleTitleChange = useCallback(
@@ -187,6 +176,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         editor,
         data.metadata,
         newTitle,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict],
@@ -209,6 +199,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         editor,
         JSON.stringify({ language }),
         title,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict, language, syncToYjs, title],
@@ -230,10 +221,31 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         editor,
         JSON.stringify({ language: newLang }),
         title,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict, code, title],
   );
+
+  const isBeingMoved = !!data.movingUserColor;
+  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
+  const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX:
+        "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX,
+      clientY:
+        "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY,
+    });
+    target.dispatchEvent(event);
+  }, []);
+
+  const touchHandlers = useTouchGestures({
+    onLongPress,
+  });
 
   const formatDate = (isoString: string) => {
     if (!isoString) return "";
@@ -379,7 +391,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     >
       <NodeResizer
         minWidth={250}
-        minHeight={150}
+        minHeight={180}
         isVisible={selected && !isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
@@ -458,7 +470,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
           </div>
         </div>
 
-        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+        <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
           <div className="flex items-center justify-between w-full text-tiny opacity-40">
             <div className="block-timestamp">
               {formatDate(data.updatedAt || "")}
@@ -472,6 +484,14 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
           </div>
         </div>
       </div>
+
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+      />
 
       {/* Handles - Left Side */}
       <Handle

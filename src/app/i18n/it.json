@@ -86,6 +86,7 @@
   },
   "blocks": {
     "addColor": "Aggiungi Colore",
+    "addReaction": "Aggiungi reazione",
     "addTask": "Aggiungi attività",
     "blockTransferred": "Proprietà trasferita con successo",
     "blockTypeChecklist": "Checklist",
@@ -152,7 +153,8 @@
     "paletteTitle": "Colori",
     "phonePlaceholder": "+00 000 000 000",
     "pulls": "Pull Request Aperte",
-    "release": "Ultima Release",
+    "release": "Ultima versione",
+    "searchEmoji": "Cerca Emoji",
     "stars": "Stelle",
     "taskPlaceholder": "Attività...",
     "title": "Titolo",
@@ -196,11 +198,17 @@
     "enabled": "Abilitato",
     "error": "Errore",
     "export": "Esporta",
+    "failedToCopy": "Copia fallita",
     "import": "Importa",
     "loading": "Caricamento in corso...",
     "me": "Io",
     "notFound": "Non trovato",
     "refresh": "Aggiorna",
+    "reloadPage": "Aggiorna la pagina",
+    "contactSupport": "Contatta il supporto",
+    "canvasErrorTitle": "Qualcosa è andato storto",
+    "canvasErrorDescription": "Abbiamo riscontrato un errore durante il rendering del canvas. Potrebbe essere dovuto a un problema temporaneo o a un blocco corrotto.",
+    "clickToCopyError": "Messaggio di errore (clicca per copiare) :",
     "rename": "Rinomina",
     "restore": "Ripristina",
     "save": "Salva",
@@ -210,6 +218,7 @@
     "showMore": "Mostra altro",
     "success": "Successo",
     "unknown": "Sconosciuto",
+    "unknownError": "Errore sconosciuto",
     "update": "Aggiorna"
   },
   "dashboard": {
@@ -230,7 +239,8 @@
     "statusMine": "Miei",
     "statusShared": "Condivisi",
     "team": "Team",
-    "trash": "Cestino"
+    "trash": "Cestino",
+    "emptyTrashButton": "Svuota cestino"
   },
   "gitTokens": {
     "add": "Aggiungi Token",
@@ -307,6 +317,9 @@
     "deletePermanently": "Elimina definitivamente",
     "deleteProjectDescription": "Sei sicuro di voler eliminare questo progetto? Questa azione è irreversibile.",
     "deleteProjectTitle": "Eliminare Progetto?",
+    "emptyTrashDescription": "Sei sicuro di voler eliminare permanentemente tutti gli elementi nel cestino? Questa azione è irreversibile.",
+    "emptyTrashTitle": "Svuota cestino?",
+    "exportProject": "Esporta progetto",
     "deleteUserDescription": "Questa azione è irreversibile. L'utente perderà ogni accesso all'area di lavoro.",
     "deleteUserTitle": "Eliminare l'utente?",
     "directInviteLabel": "Link di invito:",

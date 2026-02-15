@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-15
+
+### Added
+
+- Emoji reactions on blocks to enable quick feedback during collaboration without editing content
+- Edge labels to clarify relationships between blocks and improve visual structure.
+- Permanent “Empty Trash” option allowing users to fully clear deleted items and remove all related project content in one action.
+
+### Improved
+
+- Performance improvements across the app.
+- UX refinements to make interactions smoother and more responsive.
+- Overall user experience enhancements.
+
 ## [0.3.4] - 2026-02-13
 
 ### Fixed

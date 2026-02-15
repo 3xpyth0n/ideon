@@ -18,6 +18,8 @@ import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import ColorPicker from "./ColorPicker";
 import "./palette-block.css";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 type PaletteBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -30,12 +32,6 @@ interface PaletteMetadata {
 const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerPosition, setPickerPosition] = useState<
-    { x: number; y: number } | undefined
-  >(undefined);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
   const { rippleRef } = useTouch();
 
   const currentUser = data.currentUser;
@@ -46,10 +42,24 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
-
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
+  });
+
+  const isBeingMoved = !!data.movingUserColor;
+  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerPosition, setPickerPosition] = useState<
+    { x: number; y: number } | undefined
+  >(undefined);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [title, setTitle] = useState(data.title || "");
   const metadata = useMemo(() => {
     try {
@@ -79,6 +89,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
         editor,
         JSON.stringify(newMetadata),
         title,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict, title],
@@ -180,6 +191,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
         editor,
         data.metadata,
         newTitle,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict],
@@ -277,9 +289,6 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   const isBottomTargetConnected = isHandleConnected("bottom-target");
   const isBottomSourceConnected = isHandleConnected("bottom");
 
-  const isBeingMoved = data.movingUserColor !== undefined;
-  const borderColor = data.movingUserColor || "var(--border)";
-
   return (
     <div
       className={`block-card ${selected ? "selected" : ""} ${
@@ -289,7 +298,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
     >
       <NodeResizer
         minWidth={250}
-        minHeight={150}
+        minHeight={180}
         isVisible={selected && !isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
@@ -390,7 +399,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
         </div>
       </div>
 
-      <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+      <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
         <div className="flex items-center justify-between w-full text-tiny opacity-40">
           <div className="block-timestamp">
             {formatDate(data.updatedAt || "")}
@@ -403,6 +412,14 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
           </div>
         </div>
       </div>
+
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+      />
 
       <Handle
         id="left-target"

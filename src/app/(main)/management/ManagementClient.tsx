@@ -447,7 +447,7 @@ export function ManagementClient() {
                           </button>
                         </div>
                         <h3 className="provider-name">
-                          {(dict.common as Record<string, string>)[p.key]}
+                          {(dict.auth as Record<string, string>)[p.key]}
                         </h3>
                         <div className="provider-status">
                           <span
@@ -621,7 +621,7 @@ function ProviderConfigModal({
       isOpen={true}
       onClose={onClose}
       title={`${dict.management.configure} ${
-        dict.common[provider as keyof typeof dict.common]
+        dict.auth[provider as keyof typeof dict.auth]
       }`}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 mt-6">

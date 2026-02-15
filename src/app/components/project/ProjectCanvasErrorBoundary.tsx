@@ -1,7 +1,9 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, MessageSquare } from "lucide-react";
+import { useI18n } from "@providers/I18nProvider";
+import { toast } from "sonner";
 
 interface Props {
   children: ReactNode;
@@ -11,6 +13,63 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+}
+
+function ErrorBoundaryView({ error }: { error: Error | null }) {
+  const { dict } = useI18n();
+
+  const errorMessage = error?.message || dict.common.unknownError;
+
+  const handleCopy = () => {
+    navigator.clipboard
+      .writeText(errorMessage)
+      .then(() => {
+        toast.success(dict.common.copiedToClipboard);
+      })
+      .catch(() => {
+        toast.error(dict.common.failedToCopy);
+      });
+  };
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-8 text-center">
+      <div className="rounded-full bg-destructive/10 p-4 text-destructive">
+        <AlertTriangle className="h-8 w-8" />
+      </div>
+      <div className="max-w-md space-y-2">
+        <h2 className="text-xl font-semibold tracking-tight">
+          {dict.common.canvasErrorTitle}
+        </h2>
+        <p className="text-sm">{dict.common.canvasErrorDescription}</p>
+      </div>
+      <div className="flex w-full max-w-4xl flex-col gap-2 p-4">
+        <span className="error-message-hint">
+          {dict.common.clickToCopyError}
+        </span>
+        <div className="error-message" onClick={handleCopy}>
+          {errorMessage}
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => window.location.reload()}
+          className="btn-primary"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          {dict.common.reloadPage}
+        </button>
+        <a
+          href="https://github.com/3xpyth0n/ideon/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary"
+        >
+          <MessageSquare className="h-4 w-4 mr-2" />
+          {dict.common.contactSupport}
+        </a>
+      </div>
+    </div>
+  );
 }
 
 export class ProjectCanvasErrorBoundary extends Component<Props, State> {
@@ -32,35 +91,8 @@ export class ProjectCanvasErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
-
-      return (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-8 text-center">
-          <div className="rounded-full bg-destructive/10 p-4 text-destructive">
-            <AlertTriangle className="h-8 w-8" />
-          </div>
-          <div className="max-w-md space-y-2">
-            <h2 className="text-xl font-semibold tracking-tight">
-              Something went wrong
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              We encountered an error while rendering the canvas. This might be
-              due to a temporary glitch or a corrupted block.
-            </p>
-          </div>
-          <div className="rounded-md bg-muted p-4 text-left text-xs font-mono text-muted-foreground max-w-lg w-full overflow-auto max-h-40">
-            {this.state.error?.message || "Unknown error"}
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Reload Page
-          </button>
-        </div>
-      );
+      return <ErrorBoundaryView error={this.state.error} />;
     }
-
     return this.props.children;
   }
 }

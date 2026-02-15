@@ -69,6 +69,12 @@ export function getPostgresConfig() {
 
 export function getSqlitePath() {
   const storageDir = getStorageDir();
+
+  // Force memory or test db during tests to prevent data loss
+  if (process.env.VITEST) {
+    return process.env.SQLITE_PATH || ":memory:";
+  }
+
   if (process.env.SQLITE_PATH === ":memory:") {
     return ":memory:";
   }
@@ -151,6 +157,14 @@ function getSqlite(): DatabaseDriver.Database {
   if (state.sqliteInstance) return state.sqliteInstance;
 
   const dbPath = getSqlitePath();
+  if (process.env.VITEST && dbPath !== ":memory:") {
+    throw new Error(
+      `CRITICAL: Vitest is attempting to connect to a physical database file at ${dbPath}. ` +
+        "Tests must ONLY use :memory: to prevent data loss. " +
+        "Check your environment variables and vitest.config.ts.",
+    );
+  }
+
   if (!process.env.VITEST) {
     logger.info(`Using SQLite database at: ${dbPath}`);
   }

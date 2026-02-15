@@ -157,6 +157,7 @@ export function transformLink(dbLink: Record<string, unknown>): Edge {
     animated?: number | boolean;
     type?: string;
     data?: string | Record<string, unknown>;
+    label?: string;
     markerEnd?: string;
   };
 
@@ -172,7 +173,7 @@ export function transformLink(dbLink: Record<string, unknown>): Edge {
     type: link.type || "connection",
     animated: Boolean(link.animated),
     markerEnd: link.markerEnd || "connection-arrow",
-    data,
+    data: { ...data, label: link.label },
   };
 }
 
@@ -190,6 +191,7 @@ export function prepareLinkForDb(link: Edge, projectId: string) {
     animated: link.animated ? 1 : 0,
     type: link.type || "connection",
     data: JSON.stringify(link.data || {}),
+    label: (link.data as Record<string, unknown>)?.label as string | null,
     updatedAt: new Date().toISOString(),
   };
 }

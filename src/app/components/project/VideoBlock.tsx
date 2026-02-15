@@ -16,6 +16,8 @@ import {
 } from "@xyflow/react";
 import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 type VideoBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -25,6 +27,28 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
   const { dict, lang } = useI18n();
   const { rippleRef } = useTouch();
   const { setNodes, getNode, getEdges } = useReactFlow();
+
+  const currentUser = data.currentUser;
+  const projectOwnerId = data.projectOwnerId;
+  const ownerId = data.ownerId;
+  const isPreviewMode = data.isPreviewMode;
+  const isLocked = data.isLocked;
+
+  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+  const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isReadOnly =
+    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
+  });
+
+  const isBeingMoved = !!data.movingUserColor;
+  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
   const [url, setUrl] = useState(data.content || "");
   const [title, setTitle] = useState(data.title || "");
   const [isEditing, setIsEditing] = useState(false);
@@ -78,20 +102,6 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     return () => yText.unobserve(observer);
   }, [data.yText, isEditing, url]);
 
-  const currentUser = data.currentUser;
-  const projectOwnerId = data.projectOwnerId;
-  const ownerId = data.ownerId;
-  const isPreviewMode = data.isPreviewMode;
-  const isLocked = data.isLocked;
-
-  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
-  const isOwner = currentUser?.id && ownerId === currentUser.id;
-  const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
-
-  const isBeingMoved = !!data.movingUserColor;
-  const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
-
   const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
     const target = e.target as HTMLElement;
     const event = new MouseEvent("contextmenu", {
@@ -127,6 +137,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         editor,
         data.metadata,
         newTitle,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict],
@@ -144,7 +155,15 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         currentUser?.username ||
         dict.project.anonymous;
 
-      data.onContentChange?.(id, newUrl, now, editor, data.metadata, title);
+      data.onContentChange?.(
+        id,
+        newUrl,
+        now,
+        editor,
+        data.metadata,
+        title,
+        data.reactions,
+      );
     },
     [id, data, currentUser, dict, syncToYjs, title],
   );
@@ -275,7 +294,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     >
       <NodeResizer
         minWidth={250}
-        minHeight={150}
+        minHeight={180}
         isVisible={selected && !isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
@@ -343,7 +362,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
           )}
         </div>
 
-        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+        <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
           <div className="flex items-center justify-between w-full text-tiny opacity-40">
             <div className="block-timestamp">
               {formatDate(data.updatedAt || "")}
@@ -357,6 +376,14 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
           </div>
         </div>
       </div>
+
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+      />
 
       <Handle
         id="left-target"

@@ -15,12 +15,34 @@ import { useI18n } from "@providers/I18nProvider";
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
 import { CORE_BLOCK_WIDTH, CORE_BLOCK_HEIGHT } from "./utils/constants";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 export type ProjectCoreBlockProps = NodeProps<Node<BlockData, "core">>;
 
 const ProjectCoreBlock = memo(
   ({ data, selected, id }: ProjectCoreBlockProps) => {
     const { dict } = useI18n();
+    const { setNodes, getEdges } = useReactFlow();
+
+    const currentUser = data.currentUser;
+    const projectOwnerId = data.projectOwnerId;
+    const ownerId = data.ownerId;
+    const isPreviewMode = data.isPreviewMode;
+    const isLocked = data.isLocked;
+
+    const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+    const isOwner = currentUser?.id && ownerId === currentUser.id;
+    const isReadOnly =
+      isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+
+    const { handleReact, handleRemoveReaction } = useBlockReactions({
+      id,
+      data,
+      currentUser,
+      isReadOnly,
+    });
+
     const [title, setTitle] = useState(data.content || "");
     const [description, setDescription] = useState("");
     const lastDimensions = useRef({
@@ -52,10 +74,24 @@ const ProjectCoreBlock = memo(
       }
     }, [data.content, data.metadata]);
 
+    const syncToYjs = useCallback(
+      (text: string) => {
+        if (!data.yText) return;
+        if (data.yText.toString() === text) return;
+
+        data.yText.doc?.transact(() => {
+          data.yText?.delete(0, data.yText.length);
+          data.yText?.insert(0, text);
+        }, data.yText.doc.clientID);
+      },
+      [data.yText],
+    );
+
     const handleTitleChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         const newTitle = e.target.value;
         setTitle(newTitle);
+        syncToYjs(newTitle);
 
         const meta = { description };
         data.onContentChange?.(
@@ -64,9 +100,11 @@ const ProjectCoreBlock = memo(
           new Date().toISOString(),
           data.lastEditor,
           JSON.stringify(meta),
+          undefined,
+          data.reactions,
         );
       },
-      [id, data.onContentChange, data.lastEditor, description],
+      [id, data.onContentChange, data.lastEditor, description, data.reactions],
     );
 
     const handleDescriptionChange = useCallback(
@@ -80,12 +118,12 @@ const ProjectCoreBlock = memo(
           new Date().toISOString(),
           data.lastEditor,
           JSON.stringify(meta),
+          undefined,
+          data.reactions,
         );
       },
-      [id, data.onContentChange, data.lastEditor, title],
+      [id, data.onContentChange, data.lastEditor, title, data.reactions],
     );
-
-    const { setNodes, getEdges } = useReactFlow();
 
     const edges = getEdges();
     const isHandleConnected = (handleId: string) =>
@@ -134,7 +172,7 @@ const ProjectCoreBlock = memo(
     return (
       <>
         <NodeResizer
-          isVisible={selected && !data.isPreviewMode}
+          isVisible={selected && !isReadOnly}
           minWidth={300}
           minHeight={200}
           handleClassName="core-resizer-handle"
@@ -167,7 +205,7 @@ const ProjectCoreBlock = memo(
                 onChange={handleTitleChange}
                 className="core-title-input text-7xl font-black text-center focus:outline-none placeholder:opacity-10 tracking-tighter leading-none bg-transparent w-full nodrag"
                 placeholder={dict.blocks.title}
-                disabled={data.isPreviewMode}
+                disabled={isReadOnly}
               />
             </div>
 
@@ -184,12 +222,20 @@ const ProjectCoreBlock = memo(
               <MarkdownEditor
                 content={description}
                 onChange={handleDescriptionChange}
-                isReadOnly={data.isPreviewMode}
+                isReadOnly={isReadOnly}
                 placeholder={placeholder}
                 className="text-center text-xl font-light leading-relaxed [&_p]:text-center [&_p]:w-full"
               />
             </div>
           </div>
+
+          <BlockReactions
+            reactions={data.reactions}
+            onReact={handleReact}
+            onRemoveReaction={handleRemoveReaction}
+            currentUserId={currentUser?.id}
+            isReadOnly={isReadOnly}
+          />
 
           {/* Handles for connections (2.A) */}
           <Handle

@@ -8,6 +8,7 @@ import {
   prepareLinkForDb,
   DbBlock,
 } from "@lib/graph";
+import type { BlockData } from "@components/project/CanvasBlock";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -226,6 +227,40 @@ export const POST = projectAction(
         .execute();
 
       if (blocks?.length) {
+        const reactionsToInsert: {
+          id: string;
+          blockId: string;
+          userId: string;
+          emoji: string;
+          createdAt: string;
+        }[] = [];
+        blocks.forEach((block: Node<BlockData>) => {
+          if (block.data?.reactions && Array.isArray(block.data.reactions)) {
+            block.data.reactions.forEach(
+              (r: {
+                users: (string | { id: string; username: string })[];
+                emoji: string;
+              }) => {
+                if (r.users && Array.isArray(r.users)) {
+                  r.users.forEach(
+                    (userOrId: string | { id: string; username: string }) => {
+                      const userId =
+                        typeof userOrId === "string" ? userOrId : userOrId.id;
+                      reactionsToInsert.push({
+                        id: crypto.randomUUID(),
+                        blockId: block.id,
+                        userId: userId,
+                        emoji: r.emoji,
+                        createdAt: new Date().toISOString(),
+                      });
+                    },
+                  );
+                }
+              },
+            );
+          }
+        });
+
         const blocksToInsert = blocks.map((n: Node) =>
           prepareBlockForDb(n, project.id, user.id || project.ownerId),
         );
@@ -235,6 +270,19 @@ export const POST = projectAction(
             .insertInto("blocks")
             .values(blocksToInsert.slice(i, i + 1000))
             .execute();
+        }
+
+        if (reactionsToInsert.length) {
+          for (let i = 0; i < reactionsToInsert.length; i += 1000) {
+            try {
+              await trx
+                .insertInto("blockReactions")
+                .values(reactionsToInsert.slice(i, i + 1000))
+                .execute();
+            } catch (error) {
+              console.error("Failed to insert reactions:", error);
+            }
+          }
         }
       }
 

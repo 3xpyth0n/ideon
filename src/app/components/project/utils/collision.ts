@@ -66,3 +66,38 @@ export function getAdjustedPosition(
 
   return { x: adjustedX, y: adjustedY };
 }
+
+/**
+ * Finds the closest rect within a threshold.
+ */
+export function getClosestRect(
+  sourceRect: Rect,
+  targets: { id: string; rect: Rect }[],
+  threshold: number = 150,
+): string | null {
+  let closestId: string | null = null;
+  let minDistance = threshold;
+
+  const sourceCenter = {
+    x: sourceRect.x + sourceRect.width / 2,
+    y: sourceRect.y + sourceRect.height / 2,
+  };
+
+  for (const target of targets) {
+    const targetCenter = {
+      x: target.rect.x + target.rect.width / 2,
+      y: target.rect.y + target.rect.height / 2,
+    };
+
+    const dx = sourceCenter.x - targetCenter.x;
+    const dy = sourceCenter.y - targetCenter.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestId = target.id;
+    }
+  }
+
+  return closestId;
+}

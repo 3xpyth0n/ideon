@@ -16,6 +16,8 @@ import {
 import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import "./checklist-block.css";
+import { BlockReactions } from "./BlockReactions";
+import { useBlockReactions } from "./hooks/useBlockReactions";
 
 type ChecklistBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -32,41 +34,6 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const { rippleRef } = useTouch();
   const { setNodes, getNode, getEdges } = useReactFlow();
 
-  const [title, setTitle] = useState(data.title || "");
-
-  useEffect(() => {
-    if (data.title !== undefined && data.title !== title) {
-      setTitle(data.title);
-    }
-  }, [data.title]);
-
-  const items: ChecklistItem[] = useMemo(() => {
-    if (!data.metadata) return [];
-    try {
-      const meta =
-        typeof data.metadata === "string"
-          ? JSON.parse(data.metadata)
-          : data.metadata;
-      return Array.isArray(meta.items) ? meta.items : [];
-    } catch {
-      return [];
-    }
-  }, [data.metadata]);
-
-  const { total, completed, percentage, status } = useMemo(() => {
-    const total = items.length;
-    const completed = items.filter((item) => item.checked).length;
-    const percentage = total > 0 ? (completed / total) * 100 : 0;
-
-    let status = "empty";
-    if (total === 0) status = "empty";
-    else if (percentage === 100) status = "complete";
-    else if (percentage > 0) status = "in-progress";
-    else status = "not-started";
-
-    return { total, completed, percentage, status };
-  }, [items]);
-
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
@@ -78,8 +45,41 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const isReadOnly =
     isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
+    id,
+    data,
+    currentUser,
+    isReadOnly,
+  });
+
   const isBeingMoved = !!data.movingUserColor;
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
+
+  const [title, setTitle] = useState(data.title || "");
+
+  useEffect(() => {
+    if (data.title !== undefined && data.title !== title) {
+      setTitle(data.title);
+    }
+  }, [data.title]);
+
+  const items: ChecklistItem[] = useMemo(() => {
+    try {
+      const meta =
+        typeof data.metadata === "string"
+          ? JSON.parse(data.metadata || "{}")
+          : data.metadata || {};
+      return meta.items || [];
+    } catch (_) {
+      return [];
+    }
+  }, [data.metadata]);
+
+  const total = items.length;
+  const completed = items.filter((i) => i.checked).length;
+  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const status =
+    percentage === 100 ? "complete" : percentage > 0 ? "in-progress" : "idle";
 
   const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
     const target = e.target as HTMLElement;
@@ -116,6 +116,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         editor,
         data.metadata,
         newTitle,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict],
@@ -141,6 +142,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         editor,
         JSON.stringify({ ...meta, items: newItems }),
         title,
+        data.reactions,
       );
     },
     [id, data, currentUser, dict, title],
@@ -297,7 +299,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     >
       <NodeResizer
         minWidth={250}
-        minHeight={150}
+        minHeight={180}
         isVisible={selected && !isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
@@ -394,7 +396,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           </div>
         </div>
 
-        <div className="block-author-container mt-2 pt-3 px-4 pb-3">
+        <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
           <div className="flex items-center justify-between w-full text-tiny opacity-40">
             <div className="block-timestamp">
               {formatDate(data.updatedAt || "")}
@@ -408,6 +410,14 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           </div>
         </div>
       </div>
+
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+      />
 
       {/* Handles - Left Side */}
       <Handle

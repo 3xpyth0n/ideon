@@ -49,23 +49,19 @@ export const GET = authenticatedAction(
             .as("collaboratorCount"),
       ]);
 
-    // Apply View Filters
     if (view === "trash") {
-      // Trash view: Only show soft-deleted projects owned by the user
       query = query
         .where("projects.deletedAt", "is not", null)
         .where("projects.ownerId", "=", user.id);
     } else {
-      // Default views: Exclude soft-deleted projects
       query = query.where("projects.deletedAt", "is", null);
 
       if (folderId) {
-        // Folder View: Show projects in specific folder
         query = query.where("projects.folderId", "=", folderId);
       } else if (view === "my-projects") {
         query = query
-          .where("projects.ownerId", "=", user.id)
-          .where("projects.folderId", "is", null);
+          .where("projects.folderId", "is", null)
+          .where("projects.ownerId", "=", user.id);
       } else if (view === "shared") {
         query = query
           .where("projects.ownerId", "!=", user.id)
@@ -98,18 +94,15 @@ export const GET = authenticatedAction(
       } else if (view === "recent" && (!ids || ids.length === 0)) {
         return [];
       } else {
-        // view === "all" (default)
         query = query.where("projects.folderId", "is", null);
       }
     }
 
-    // Access Control: User must be owner, direct collaborator, or folder collaborator
-    if (view !== "my-projects" && view !== "trash") {
+    // Only apply global security filter if not already handled by specific view logic
+    if (view !== "trash" && view !== "my-projects") {
       query = query.where((eb) =>
         eb.or([
-          // 1. Direct Owner
           eb("projects.ownerId", "=", user.id),
-          // 2. Direct Collaborator
           eb(
             "projects.id",
             "in",
@@ -118,7 +111,6 @@ export const GET = authenticatedAction(
               .select("projectId")
               .where("userId", "=", user.id),
           ),
-          // 3. Folder Access (Owner or Collaborator)
           eb(
             "projects.folderId",
             "in",
@@ -159,7 +151,6 @@ export const POST = authenticatedAction(
 
     const { name, description, folderId } = body;
 
-    // If folderId provided, verify access
     if (folderId) {
       const folder = await db
         .selectFrom("folders")
@@ -197,7 +188,6 @@ export const POST = authenticatedAction(
         })
         .execute();
 
-      // Create default Core Block
       const blockId = crypto.randomUUID();
       await trx
         .insertInto("blocks")

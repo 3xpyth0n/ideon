@@ -202,6 +202,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
             username: user.username,
             displayName: user.displayName,
             role: user.role,
+            avatarUrl: user.avatarUrl,
+            color: user.color,
           };
         },
       }),
@@ -357,29 +359,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
       },
       async jwt({ token, user, account }) {
         if (user && account) {
-          const email = user.email?.toLowerCase();
-          // For OAuth providers, user.id is the provider's ID.
-          // We need to find our internal user by email.
-          const dbUser = await db
-            .selectFrom("users")
-            .select([
-              "id",
-              "role",
-              "avatarUrl",
-              "color",
-              "username",
-              "displayName",
-            ])
-            .where("email", "=", email!)
-            .executeTakeFirst();
+          // 1. Credentials Provider: user object already contains internal DB data from authorize()
+          if (account.provider === "credentials") {
+            if (isAuthUser(user)) {
+              token.id = user.id;
+              token.role = user.role;
+              token.avatarUrl = user.avatarUrl;
+              token.color = user.color;
+              token.username = user.username;
+              token.displayName = user.displayName;
+            } else {
+              console.warn(
+                "[Auth] Invalid user object from credentials provider",
+                user,
+              );
+            }
+          } else {
+            // 2. OAuth Provider: user.id is provider ID, need to fetch internal user
+            const email = user.email?.toLowerCase();
+            if (email) {
+              const dbUser = await db
+                .selectFrom("users")
+                .select([
+                  "id",
+                  "role",
+                  "avatarUrl",
+                  "color",
+                  "username",
+                  "displayName",
+                ])
+                .where("email", "=", email)
+                .executeTakeFirst();
 
-          if (dbUser) {
-            token.id = dbUser.id;
-            token.role = dbUser.role;
-            token.avatarUrl = dbUser.avatarUrl;
-            token.color = dbUser.color;
-            token.username = dbUser.username;
-            token.displayName = dbUser.displayName;
+              if (dbUser) {
+                token.id = dbUser.id;
+                token.role = dbUser.role;
+                token.avatarUrl = dbUser.avatarUrl;
+                token.color = dbUser.color;
+                token.username = dbUser.username;
+                token.displayName = dbUser.displayName;
+              }
+            }
+          }
+
+          // Log warning if ID is missing
+          if (!token.id && !token.sub) {
+            console.warn("[Auth] JWT callback: Token has no ID or SUB", {
+              accountProvider: account?.provider,
+              userEmail: user?.email,
+            });
           }
         }
         return token;
@@ -387,11 +415,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
       async session({ session, token }) {
         if (token && session.user) {
           const user = session.user as unknown as AuthUser;
-          user.id = token.id as string;
-          user.role = token.role as "superadmin" | "admin" | "member";
+          // Fallback to sub if id is missing
+          user.id = (token.id || token.sub) as string;
+          user.role =
+            (token.role as "superadmin" | "admin" | "member") || "member";
           user.avatarUrl = token.avatarUrl as string | null;
           user.color = token.color as string | null;
-          user.username = token.username as string;
+          user.username = (token.username as string) || "";
           user.displayName = token.displayName as string | null;
         }
         return session;
@@ -425,6 +455,17 @@ export interface AuthUser {
   role: "superadmin" | "admin" | "member";
   avatarUrl?: string | null;
   color?: string | null;
+}
+
+export function isAuthUser(user: unknown): user is AuthUser {
+  return (
+    typeof user === "object" &&
+    user !== null &&
+    typeof (user as AuthUser).id === "string" &&
+    typeof (user as AuthUser).email === "string" &&
+    typeof (user as AuthUser).username === "string" &&
+    ["superadmin", "admin", "member"].includes((user as AuthUser).role)
+  );
 }
 
 export async function getAuthUser(): Promise<AuthUser | null> {

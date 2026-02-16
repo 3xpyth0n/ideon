@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@lib/db";
+import { hashToken } from "@lib/crypto";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   const invitation = await db
     .selectFrom("invitations")
     .select(["email", "role", "expiresAt", "acceptedAt"])
-    .where("token", "=", token)
+    .where("token", "=", hashToken(token))
     .executeTakeFirst();
 
   if (!invitation) {

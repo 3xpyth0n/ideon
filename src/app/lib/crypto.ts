@@ -76,3 +76,16 @@ export function decryptApiKey(encryptedData: string, userSalt: string): string {
 
   return decrypted;
 }
+
+export function getTokenSecret(): string {
+  return deriveKey("token-secret");
+}
+
+/**
+ * Hashes a token using HMAC-SHA256 with a secret key.
+ * This prevents rainbow table attacks if the database is compromised.
+ */
+export function hashToken(token: string): string {
+  const secret = getTokenSecret();
+  return crypto.createHmac("sha256", secret).update(token).digest("hex");
+}

@@ -3,26 +3,52 @@ import { getDb } from "@lib/db";
 import * as argon2 from "argon2";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
+import { hashToken } from "@lib/crypto";
+import { checkRateLimit } from "@lib/rate-limit";
+import { z } from "zod";
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8),
+  identifier: z.string().min(2),
+});
 
 export async function POST(req: Request) {
   try {
-    const { token, password } = await req.json();
+    const { token, password, identifier } = await req.json();
+
+    // Rate limit: 5 attempts per 10 minutes
+    // Use identifier to prevent brute-force attacks against a specific account
+    await checkRateLimit("reset-password", 5, 600, identifier);
     const db = getDb();
     const headersList = await headers();
     const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
 
-    if (!token || !password) {
+    // Validate format
+    const validation = resetPasswordSchema.safeParse({
+      token,
+      password,
+      identifier,
+    });
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid identifier or password format" },
         { status: 400 },
       );
     }
 
+    // Join with users table to verify identifier if provided
     const resetRecord = await db
       .selectFrom("passwordResets")
-      .selectAll()
-      .where("token", "=", token)
-      .where("expiresAt", ">", Date.now())
+      .innerJoin("users", "users.id", "passwordResets.userId")
+      .select([
+        "passwordResets.id",
+        "passwordResets.userId",
+        "users.email",
+        "users.username",
+      ])
+      .where("passwordResets.token", "=", hashToken(token))
+      .where("passwordResets.expiresAt", ">", Date.now())
       .executeTakeFirst();
 
     if (!resetRecord) {
@@ -30,6 +56,19 @@ export async function POST(req: Request) {
         { error: "Invalid or expired token" },
         { status: 400 },
       );
+    }
+
+    // If identifier is provided, verify it matches the user
+    if (identifier) {
+      const isEmailMatch = resetRecord.email === identifier;
+      const isUsernameMatch = resetRecord.username === identifier;
+
+      if (!isEmailMatch && !isUsernameMatch) {
+        return NextResponse.json(
+          { error: "Invalid identifier for this token" },
+          { status: 400 },
+        );
+      }
     }
 
     const passwordHash = await argon2.hash(password);

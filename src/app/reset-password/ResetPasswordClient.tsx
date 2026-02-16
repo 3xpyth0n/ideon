@@ -15,6 +15,7 @@ export function ResetPasswordClient() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -31,6 +32,15 @@ export function ResetPasswordClient() {
       return;
     }
 
+    if (!identifier) {
+      toast.error(
+        dict.auth.identifierLabel
+          ? `${dict.auth.identifierLabel} required`
+          : "Email or Username required",
+      );
+      return;
+    }
+
     if (password.length < 8) {
       toast.error(dict.auth.passwordTooShort);
       return;
@@ -41,7 +51,7 @@ export function ResetPasswordClient() {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, password, identifier }),
       });
 
       const data = await res.json();
@@ -95,6 +105,27 @@ export function ResetPasswordClient() {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="auth-field">
+            <label className="auth-label">
+              {dict.auth.identifierLabel || "Email or Username"}
+            </label>
+            <div className="auth-input-wrapper">
+              <input
+                className="auth-input"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder={
+                  dict.auth.identifierPlaceholder ||
+                  "you@company.com or username"
+                }
+                required
+                autoFocus
+                autoComplete="username"
+              />
+            </div>
+          </div>
+
+          <div className="auth-field">
             <label className="auth-label">{dict.auth.password}</label>
             <div className="auth-input-wrapper">
               <input
@@ -104,7 +135,6 @@ export function ResetPasswordClient() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={dict.auth.passwordPlaceholder}
                 required
-                autoFocus
                 autoComplete="new-password"
               />
               <button

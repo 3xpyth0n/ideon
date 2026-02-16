@@ -19,6 +19,7 @@ import * as addLinkPreviewsMigration from "../db/migrations/16AddLinkPreviews";
 import * as migrateLinkMetadataMigration from "../db/migrations/17MigrateLinkMetadata";
 import * as addSketchBlockTypeMigration from "../db/migrations/18AddSketchBlockType";
 import * as addLabelsAndReactionsMigration from "../db/migrations/19AddLabelsAndReactions";
+import * as invalidateTokensMigration from "../db/migrations/20InvalidateTokens";
 
 class StaticMigrationProvider implements MigrationProvider {
   async getMigrations(): Promise<Record<string, Migration>> {
@@ -40,6 +41,7 @@ class StaticMigrationProvider implements MigrationProvider {
       "17MigrateLinkMetadata": migrateLinkMetadataMigration,
       "18AddSketchBlockType": addSketchBlockTypeMigration,
       "19AddLabelsAndReactions": addLabelsAndReactionsMigration,
+      "20InvalidateTokens": invalidateTokensMigration,
     };
   }
 }

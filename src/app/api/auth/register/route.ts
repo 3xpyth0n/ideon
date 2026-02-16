@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { stringToColor } from "@lib/utils";
 import { authenticatedAction } from "@lib/server-utils";
+import { hashToken } from "@lib/crypto";
+import { checkRateLimit } from "@lib/rate-limit";
 
 const registerSchema = z.object({
   token: z.string().nullable().optional(),
@@ -15,6 +17,9 @@ const registerSchema = z.object({
 
 export const POST = authenticatedAction(
   async (_req, { body }) => {
+    // Rate limit: 5 attempts per 10 minutes
+    await checkRateLimit("register", 5, 600);
+
     const headersList = await headers();
     const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
 
@@ -44,7 +49,7 @@ export const POST = authenticatedAction(
       const invitation = await db
         .selectFrom("invitations")
         .selectAll()
-        .where("token", "=", token)
+        .where("token", "=", hashToken(token))
         .executeTakeFirst();
 
       if (!invitation) {

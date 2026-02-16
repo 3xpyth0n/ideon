@@ -2,6 +2,7 @@ import { Adapter, AdapterUser } from "@auth/core/adapters";
 import { getDb } from "./db";
 import { stringToColor } from "./utils";
 import * as crypto from "crypto";
+import { hashToken } from "./crypto";
 import { headers } from "next/headers";
 import { logSecurityEvent } from "./audit";
 import { logger } from "./logger";
@@ -264,7 +265,7 @@ export function KyselyAdapter(): Adapter {
         .values({
           id: crypto.randomUUID(),
           email: token.identifier,
-          token: token.token,
+          token: hashToken(token.token),
           expiresAt: expires.toISOString(),
         })
         .execute();
@@ -276,11 +277,12 @@ export function KyselyAdapter(): Adapter {
     },
 
     async useVerificationToken({ identifier, token }) {
+      const hashedToken = hashToken(token);
       const magicLink = await db
         .selectFrom("magicLinks")
         .selectAll()
         .where("email", "=", identifier)
-        .where("token", "=", token)
+        .where("token", "=", hashedToken)
         .executeTakeFirst();
 
       if (!magicLink) return null;

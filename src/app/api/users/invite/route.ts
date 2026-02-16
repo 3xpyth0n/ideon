@@ -3,9 +3,14 @@ import { sendEmail, getInvitationEmailTemplate } from "@lib/email";
 import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
+import { hashToken } from "@lib/crypto";
+import { checkRateLimit } from "@lib/rate-limit";
 
 export const POST = authenticatedAction(
   async (req, { user: auth, body }) => {
+    // Rate limit: 10 invites per hour per user (using auth.id)
+    await checkRateLimit("invite-user", 10, 3600, auth?.id);
+
     if (!auth) throw { status: 401, message: "Unauthorized" };
     const db = getDb();
 
@@ -65,7 +70,7 @@ export const POST = authenticatedAction(
       .values({
         id,
         email,
-        token,
+        token: hashToken(token),
         role,
         invitedBy: auth.id,
         createdAt: new Date().toISOString(),

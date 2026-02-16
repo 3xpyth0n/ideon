@@ -4,10 +4,17 @@ import { sendPasswordResetEmail } from "@lib/email";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 import crypto from "crypto";
+import { hashToken } from "@lib/crypto";
+import { checkRateLimit } from "@lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
     const { identifier } = await req.json();
+
+    // Rate limit: 5 attempts per 10 minutes
+    // Use identifier if available to prevent botnets from spamming a specific user
+    await checkRateLimit("forgot-password", 5, 600, identifier);
+
     const db = getDb();
     const headersList = await headers();
     const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
@@ -34,7 +41,7 @@ export async function POST(req: Request) {
         .values({
           id: crypto.randomUUID(),
           userId: user.id,
-          token,
+          token: hashToken(token),
           expiresAt,
         })
         .execute();

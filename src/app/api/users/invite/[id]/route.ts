@@ -3,6 +3,7 @@ import { getDb } from "@lib/db";
 import { sendEmail, getInvitationEmailTemplate } from "@lib/email";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
+import { hashToken } from "@lib/crypto";
 
 export const PUT = authenticatedAction(
   async (_req, { params, user: auth }) => {
@@ -43,7 +44,7 @@ export const PUT = authenticatedAction(
     await db
       .updateTable("invitations")
       .set({
-        token: newToken,
+        token: hashToken(newToken),
         expiresAt: expiresAt.toISOString(),
         createdAt: new Date().toISOString(), // Reset creation date to reflect last resend
       })

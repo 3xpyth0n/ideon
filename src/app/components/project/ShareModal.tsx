@@ -193,7 +193,7 @@ export function ShareModal({
                   id="update-content"
                   checked={updateContent}
                   onChange={(e) => setUpdateContent(e.target.checked)}
-                  className="mt-1"
+                  className="mt-3"
                 />
                 <label
                   htmlFor="update-content"

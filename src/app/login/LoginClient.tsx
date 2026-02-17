@@ -194,7 +194,7 @@ export function LoginClient() {
         onClick={() => router.push("/login")}
       >
         <img src="/dark-icon.png" className="auth-logo-img" alt={dict.title} />
-        <span className="auth-logo-text">{dict.title}</span>
+        <span className="auth-logo-text pt-2">{dict.title}</span>
       </div>
 
       <div className="auth-card">

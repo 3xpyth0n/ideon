@@ -193,7 +193,6 @@ const ProjectCoreBlock = memo(
           className={`core-block relative w-full h-full transition-colors ${
             selected ? "selected" : ""
           } flex flex-col p-12`}
-          style={{ boxSizing: "border-box" }}
         >
           <div className="flex-1 flex flex-col gap-6 justify-center items-center text-center max-w-2xl mx-auto w-full h-full overflow-hidden">
             <div className="space-y-2 w-full shrink-0">

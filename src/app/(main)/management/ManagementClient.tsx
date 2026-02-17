@@ -626,13 +626,13 @@ function ProviderConfigModal({
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 mt-6">
         {["google", "entra", "slack", "discord"].includes(provider) && (
-          <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
+          <div className="border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
             <div className="flex items-center gap-2 font-bold tracking-wider">
               <Globe size={14} />
               <span>{dict.providers.callbackUrlNotice}</span>
             </div>
             <div className="flex items-center gap-2">
-              <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
+              <code className="px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
                 {appUrl}/api/auth/callback/
                 {provider === "entra" ? "azure-ad" : provider}
               </code>

@@ -215,7 +215,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
   if (loading) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-b-2 border-text-main"></div>
+        <div className="animate-spin h-8 w-8 rounded-full border-2 border-text-main border-t-transparent"></div>
       </div>
     );
   }
@@ -253,7 +253,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
             <h2 className="text-3xl font-bold tracking-tight text-text-main">
               {dict.management.activeMembers}
             </h2>
-            <span className="text-[10px] font-bold">{users.length}</span>
+            <span className="text-md font-bold">{users.length}</span>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -350,7 +350,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                                       : ""
                                   }`}
                                 >
-                                  <span className="text-[10px] uppercase font-bold tracking-tight">
+                                  <span className="text-[10px] uppercase font-bold">
                                     {dict.management.member}
                                   </span>
                                   {user.role === "member" && (
@@ -369,7 +369,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                                       : ""
                                   }`}
                                 >
-                                  <span className="text-[10px] uppercase font-bold tracking-tight">
+                                  <span className="text-[10px] uppercase font-bold">
                                     {dict.management.admin}
                                   </span>
                                   {user.role === "admin" && (
@@ -400,12 +400,12 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
             <h2 className="text-3xl font-bold tracking-tight text-text-main">
               {dict.management.pendingInvites}
             </h2>
-            <span className="text-[10px] font-bold">{invitations.length}</span>
+            <span className="text-md font-bold">{invitations.length}</span>
           </div>
 
           {invitations.length === 0 ? (
             <div className="py-12 flex items-center justify-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-10">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-10">
                 {dict.management.noPendingInvites}
               </p>
             </div>
@@ -546,6 +546,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                     { value: "member", label: dict.management.member },
                     { value: "admin", label: dict.management.admin },
                   ]}
+                  className="auto-width"
                   align="right"
                 />
               </div>

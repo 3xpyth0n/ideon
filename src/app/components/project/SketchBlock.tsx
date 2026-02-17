@@ -189,15 +189,17 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
 
   // Initialize from metadata
   useEffect(() => {
-    if (data.metadata && !isLoaded) {
+    if (data.metadata) {
       try {
         const parsed =
           typeof data.metadata === "string"
             ? JSON.parse(data.metadata)
             : data.metadata;
+
+        let newStrokes: Stroke[] = [];
         if (parsed.strokes) {
           // New format
-          setStrokes(parsed.strokes);
+          newStrokes = parsed.strokes;
         } else if (parsed.paths) {
           // Legacy format conversion (react-sketch-canvas)
           const legacyStrokes: Stroke[] = parsed.paths.map(
@@ -217,16 +219,25 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
               isEraser: p.drawMode === false, // approximation
             }),
           );
-          setStrokes(legacyStrokes);
+          newStrokes = legacyStrokes;
         }
-        setIsLoaded(true);
+
+        // Check if content differs
+        if (JSON.stringify(newStrokes) !== JSON.stringify(strokes)) {
+          // Update if read-only or not currently drawing
+          if (isReadOnly || !currentPoints) {
+            setStrokes(newStrokes);
+          }
+        }
+
+        if (!isLoaded) setIsLoaded(true);
       } catch (e) {
         console.error("Failed to load sketch data", e);
       }
     } else if (!data.metadata && !isLoaded) {
       setIsLoaded(true);
     }
-  }, [data.metadata, isLoaded]);
+  }, [data.metadata, isLoaded, isReadOnly, strokes, currentPoints]);
 
   const save = useCallback(
     (newStrokes: Stroke[]) => {
@@ -270,8 +281,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const el = e.currentTarget;
 
-    // Calculate scale factor between screen pixels (rect) and CSS pixels (client)
-    // This handles ReactFlow's zoom transformation correctly
     const scaleX = rect.width > 0 ? el.clientWidth / rect.width : 1;
     const scaleY = rect.height > 0 ? el.clientHeight / rect.height : 1;
 
@@ -298,8 +307,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     e.stopPropagation();
 
     const point = getPointFromEvent(e);
-    // Add point if distance is significant or just add it
-    // For smoother lines, perfect-freehand handles density well
     setCurrentPoints((pts) => [...(pts || []), point]);
   };
 
@@ -451,12 +458,12 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
         } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0 select-none`}
         style={{ "--block-border-color": borderColor } as React.CSSProperties}
       >
-        <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] bg-[#121212]">
+        <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
           {/* Header */}
           <div className="block-header flex items-center justify-between pt-4 px-4 mb-2 handle-drag-target">
             <div className="flex items-center gap-2">
               <PenTool size={16} />
-              <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+              <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
                 {dict.blocks.blockTypeSketch || "Sketch"}
               </span>
             </div>
@@ -473,8 +480,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
 
           {!isReadOnly && (
             <div
-              className="flex items-center gap-1 px-2 pb-1 border-b border-white/5 nowheel nodrag flex-wrap relative bg-[#121212]"
-              style={{ zIndex: 50, position: "relative" }}
+              className="flex items-center gap-1 px-2 pb-1 border-b border-white/5 nowheel nodrag flex-wrap relative z-50"
               {...preventDrag}
               onClick={stopPropagation}
             >
@@ -503,15 +509,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 </button>
                 {activePopup === "pen" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 bg-[#121212]"
-                    style={{
-                      zIndex: 100,
-                      minWidth: "max-content",
-                      backgroundColor: "#121212",
-                      pointerEvents: "auto",
-                      display: "flex",
-                      gap: "4px",
-                    }}
+                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1  z-[100] min-w-max pointer-events-auto"
                     {...preventDrag}
                     onClick={stopPropagation}
                   >
@@ -544,7 +542,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                               penSize === s
                                 ? "#ffffff"
                                 : "rgba(255,255,255,0.3)",
-                            borderRadius: "50%",
                           }}
                         />
                       </button>
@@ -580,15 +577,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 </button>
                 {activePopup === "eraser" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 bg-[#121212]"
-                    style={{
-                      zIndex: 100,
-                      minWidth: "max-content",
-                      backgroundColor: "#121212",
-                      pointerEvents: "auto",
-                      display: "flex",
-                      gap: "4px",
-                    }}
+                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 z-[100] min-w-max pointer-events-auto"
                     {...preventDrag}
                     onClick={stopPropagation}
                   >
@@ -602,10 +591,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                           setActivePopup(null);
                         }}
                         {...preventDrag}
-                        className="flex items-center justify-center rounded-md transition-colors"
+                        className="flex items-center justify-center rounded-md transition-colors w-8 h-8"
                         style={{
-                          width: "32px",
-                          height: "32px",
                           backgroundColor:
                             eraserSize === s
                               ? "rgba(255,255,255,0.1)"
@@ -633,7 +620,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
               <div className="w-px h-4 bg-white/10 mx-1" />
 
               {/* Color Picker */}
-              <div className="relative" style={{ zIndex: 60 }}>
+              <div className="relative z-[60]">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -651,7 +638,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 </button>
                 {activePopup === "color" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 flex-wrap w-[140px]"
+                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1"
                     {...preventDrag}
                     onClick={stopPropagation}
                     style={{
@@ -733,7 +720,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           {/* SVG Canvas Area */}
           <div
             ref={canvasContainerRef}
-            className={`block-content flex-1 flex flex-col min-h-0 relative nowheel nodrag select-none bg-[#121212] sketch-cursor`}
+            className={`block-content flex-1 flex flex-col min-h-0 relative nowheel nodrag select-none sketch-cursor`}
             style={{
               touchAction: "none",
               zIndex: 0,
@@ -915,20 +902,11 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
         </div>
 
         <Handle
-          id="left-target"
-          type="source"
-          position={Position.Left}
-          isConnectable={true}
-          className="block-handle block-handle-left !z-50 !top-[40%]"
-        >
-          {!isHandleConnected("left-target") && <div className="handle-dot" />}
-        </Handle>
-        <Handle
           id="left"
           type="source"
           position={Position.Left}
           isConnectable={true}
-          className="block-handle block-handle-left !z-50 !top-[60%]"
+          className="block-handle block-handle-left !z-50"
         >
           {!isHandleConnected("left") && <div className="handle-dot" />}
         </Handle>
@@ -937,34 +915,16 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           type="source"
           position={Position.Right}
           isConnectable={true}
-          className="block-handle block-handle-right !z-50 !top-[40%]"
+          className="block-handle block-handle-right !z-50"
         >
           {!isHandleConnected("right") && <div className="handle-dot" />}
-        </Handle>
-        <Handle
-          id="right-target"
-          type="source"
-          position={Position.Right}
-          isConnectable={true}
-          className="block-handle block-handle-right !z-50 !top-[60%]"
-        >
-          {!isHandleConnected("right-target") && <div className="handle-dot" />}
-        </Handle>
-        <Handle
-          id="top-target"
-          type="source"
-          position={Position.Top}
-          isConnectable={true}
-          className="block-handle block-handle-top !z-50 !left-[40%]"
-        >
-          {!isHandleConnected("top-target") && <div className="handle-dot" />}
         </Handle>
         <Handle
           id="top"
           type="source"
           position={Position.Top}
           isConnectable={true}
-          className="block-handle block-handle-top !z-50 !left-[60%]"
+          className="block-handle block-handle-top !z-50"
         >
           {!isHandleConnected("top") && <div className="handle-dot" />}
         </Handle>
@@ -973,20 +933,9 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           type="source"
           position={Position.Bottom}
           isConnectable={true}
-          className="block-handle block-handle-bottom !z-50 !left-[60%]"
+          className="block-handle block-handle-bottom !z-50"
         >
           {!isHandleConnected("bottom") && <div className="handle-dot" />}
-        </Handle>
-        <Handle
-          id="bottom-target"
-          type="source"
-          position={Position.Bottom}
-          isConnectable={true}
-          className="block-handle block-handle-bottom !z-50 !left-[40%]"
-        >
-          {!isHandleConnected("bottom-target") && (
-            <div className="handle-dot" />
-          )}
         </Handle>
       </div>
       <BlockReactions

@@ -151,7 +151,7 @@ export default function AccountPage() {
 
         <div className="flex flex-col gap-12">
           {/* Language Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.language}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
@@ -179,7 +179,7 @@ export default function AccountPage() {
                   />
                 </button>
                 {isLangOpen && (
-                  <div className="select-dropdown rounded-none overflow-hidden mt-2 border-border/10 bg-background/80 backdrop-blur-xl shadow-2xl">
+                  <div className="select-dropdown absolute top-full left-0 z-[100] w-full mt-2 rounded-none overflow-hidden border-border/10 bg-background/80 backdrop-blur-xl shadow-2xl">
                     {availableLanguages.map((l, index) => (
                       <button
                         key={l.code}
@@ -204,7 +204,7 @@ export default function AccountPage() {
           </section>
 
           {/* Identity Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.identity}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
@@ -319,7 +319,7 @@ export default function AccountPage() {
           </section>
 
           {/* Security Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.security}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
@@ -365,7 +365,7 @@ export default function AccountPage() {
           </section>
 
           {/* Git Tokens Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 border-b border-border/5">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.gitTokens.title}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">

@@ -870,7 +870,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   ]);
 
   useEffect(() => {
-    if (blockType !== "github" || !content || isEditingGithub) return;
+    if (blockType !== "github" || !content || isEditingGithub || isReadOnly)
+      return;
 
     fetchGitStats(content);
 
@@ -879,15 +880,22 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     }, 70000);
 
     return () => clearInterval(interval);
-  }, [blockType, content, isEditingGithub, fetchGitStats]);
+  }, [blockType, content, isEditingGithub, fetchGitStats, isReadOnly]);
 
   useEffect(() => {
-    if (blockType !== "link" || !content || isEditingLink) return;
+    if (blockType !== "link" || !content || isEditingLink || isReadOnly) return;
 
     if (!metadata?.title && !metadata?.image && !metadata?.error) {
       fetchLinkMetadata(content);
     }
-  }, [blockType, content, isEditingLink, fetchLinkMetadata, metadata]);
+  }, [
+    blockType,
+    content,
+    isEditingLink,
+    fetchLinkMetadata,
+    metadata,
+    isReadOnly,
+  ]);
 
   const handleTitleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -951,13 +959,9 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         (e.target === id && e.targetHandle === handleId),
     );
 
-  const isLeftTargetConnected = isHandleConnected("left-target");
   const isLeftSourceConnected = isHandleConnected("left");
-  const isRightTargetConnected = isHandleConnected("right-target");
   const isRightSourceConnected = isHandleConnected("right");
-  const isTopTargetConnected = isHandleConnected("top-target");
   const isTopSourceConnected = isHandleConnected("top");
-  const isBottomTargetConnected = isHandleConnected("bottom-target");
   const isBottomSourceConnected = isHandleConnected("bottom");
 
   const typingUsers = data.typingUsers;
@@ -990,6 +994,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   }, [data.metadata]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return;
     const file = e.target.files?.[0];
     if (!file || !initialProjectId) return;
 
@@ -1729,7 +1734,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                 onError={() => setPreviewImageError(true)}
               />
               {faviconUrl && !faviconError && (
-                <div className="absolute top-2 left-2 w-6 h-6 rounded bg-black/50 backdrop-blur-sm p-1">
+                <div className="absolute top-2 left-2 w-6 h-6">
                   <img
                     src={faviconUrl}
                     alt="favicon"
@@ -1748,7 +1753,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                 <Globe size={48} className="opacity-20" />
               )}
               {faviconUrl && !faviconError && (
-                <div className="absolute top-2 left-2 w-6 h-6 rounded bg-black/50 backdrop-blur-sm p-1">
+                <div className="absolute top-2 left-2 w-6 h-6">
                   <img
                     src={faviconUrl}
                     alt="favicon"
@@ -2013,7 +2018,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
+      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] px-2">
         <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
           <div className="flex items-center gap-2">
             <Icon
@@ -2022,7 +2027,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                 blockType === "text" || !blockType ? "text" : blockType
               }`}
             />
-            <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+            <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
               {dict.common[
                 `blockType${blockType.charAt(0).toUpperCase()}${blockType.slice(
                   1,
@@ -2097,24 +2102,12 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         isReadOnly={isReadOnly}
       />
 
-      {/* Connection Handles */}
-      <Handle
-        id="left-target"
-        type="source"
-        position={Position.Left}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-left !z-50 !top-[40%] ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
-        }`}
-      >
-        {!isLeftTargetConnected && <div className="handle-dot" />}
-      </Handle>
       <Handle
         id="left"
         type="source"
         position={Position.Left}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-left !z-50 !top-[60%] ${
+        className={`block-handle block-handle-left !z-50 ${
           isReadOnly ? "!opacity-0 !pointer-events-none" : ""
         }`}
       >
@@ -2126,41 +2119,19 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-right !z-50 !top-[40%] ${
+        className={`block-handle block-handle-right !z-50 ${
           isReadOnly ? "!opacity-0 !pointer-events-none" : ""
         }`}
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
       </Handle>
-      <Handle
-        id="right-target"
-        type="source"
-        position={Position.Right}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-right !z-50 !top-[60%] ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
-        }`}
-      >
-        {!isRightTargetConnected && <div className="handle-dot" />}
-      </Handle>
 
-      <Handle
-        id="top-target"
-        type="source"
-        position={Position.Top}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-top !z-50 !left-[40%] ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
-        }`}
-      >
-        {!isTopTargetConnected && <div className="handle-dot" />}
-      </Handle>
       <Handle
         id="top"
         type="source"
         position={Position.Top}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-top !z-50 !left-[60%] ${
+        className={`block-handle block-handle-top !z-50 ${
           isReadOnly ? "!opacity-0 !pointer-events-none" : ""
         }`}
       >
@@ -2172,22 +2143,11 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-bottom !z-50 !left-[40%] ${
+        className={`block-handle block-handle-bottom !z-50 ${
           isReadOnly ? "!opacity-0 !pointer-events-none" : ""
         }`}
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="bottom-target"
-        type="source"
-        position={Position.Bottom}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-bottom !z-50 !left-[60%] ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
-        }`}
-      >
-        {!isBottomTargetConnected && <div className="handle-dot" />}
       </Handle>
 
       {/* Lightbox Portal */}

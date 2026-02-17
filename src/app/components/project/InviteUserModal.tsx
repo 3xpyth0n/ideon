@@ -158,13 +158,13 @@ export function InviteUserModal({
           })
         ) : query.length >= 2 ? (
           <div className="py-12 text-center opacity-20">
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em]">
+            <p className="text-[10px] font-bold uppercase">
               {dict.management.noUsersFound}
             </p>
           </div>
         ) : (
           <div className="py-12 text-center opacity-10">
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em]">
+            <p className="text-[10px] font-bold uppercase">
               {dict.project.startTypingToSearch}
             </p>
           </div>

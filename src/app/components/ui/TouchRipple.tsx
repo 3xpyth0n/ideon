@@ -45,14 +45,12 @@ const TouchRipple = forwardRef<RippleHandle>((_, ref) => {
       {ripples.map((ripple) => (
         <div
           key={ripple.id}
-          className={`touch-ripple ${ripple.isRemoving ? "removing" : ""}`}
+          className={`touch-ripple w-10 h-10 -ml-5 -mt-5 ${
+            ripple.isRemoving ? "removing" : ""
+          }`}
           style={{
             left: ripple.x,
             top: ripple.y,
-            width: 40,
-            height: 40,
-            marginLeft: -20,
-            marginTop: -20,
           }}
         />
       ))}

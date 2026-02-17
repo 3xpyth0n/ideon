@@ -84,8 +84,8 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     const yText = data.yText;
     if (!yText) return;
 
-    // We don't want to overwrite local state if we're currently editing
-    if (isEditing) return;
+    // We don't want to overwrite local state if we're currently editing or read-only
+    if (isEditing || isReadOnly) return;
 
     const currentYText = yText.toString();
     if (url !== currentYText) {
@@ -251,13 +251,9 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         (e.target === id && e.targetHandle === handleId),
     );
 
-  const isLeftTargetConnected = isHandleConnected("left-target");
   const isLeftSourceConnected = isHandleConnected("left");
-  const isRightTargetConnected = isHandleConnected("right-target");
   const isRightSourceConnected = isHandleConnected("right");
-  const isTopTargetConnected = isHandleConnected("top-target");
   const isTopSourceConnected = isHandleConnected("top");
-  const isBottomTargetConnected = isHandleConnected("bottom-target");
   const isBottomSourceConnected = isHandleConnected("bottom");
 
   const getEmbedUrl = (inputUrl: string) => {
@@ -307,7 +303,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
           <div className="flex items-center gap-2">
             <Video size={16} />
-            <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+            <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
               {dict.blocks.blockTypeVideo || "Video"}
             </span>
           </div>
@@ -386,20 +382,11 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
       />
 
       <Handle
-        id="left-target"
-        type="source"
-        position={Position.Left}
-        isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[40%]"
-      >
-        {!isLeftTargetConnected && <div className="handle-dot" />}
-      </Handle>
-      <Handle
         id="left"
         type="source"
         position={Position.Left}
         isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[60%]"
+        className="block-handle block-handle-left !z-50"
       >
         {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -408,36 +395,18 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[40%]"
+        className="block-handle block-handle-right !z-50"
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
       </Handle>
-      <Handle
-        id="right-target"
-        type="source"
-        position={Position.Right}
-        isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[60%]"
-      >
-        {!isRightTargetConnected && <div className="handle-dot" />}
-      </Handle>
 
       {/* Handles - Top Side */}
-      <Handle
-        id="top-target"
-        type="source"
-        position={Position.Top}
-        isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[40%]"
-      >
-        {!isTopTargetConnected && <div className="handle-dot" />}
-      </Handle>
       <Handle
         id="top"
         type="source"
         position={Position.Top}
         isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[60%]"
+        className="block-handle block-handle-top !z-50"
       >
         {!isTopSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -448,18 +417,9 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[60%]"
+        className="block-handle block-handle-bottom !z-50"
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="bottom-target"
-        type="source"
-        position={Position.Bottom}
-        isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[40%]"
-      >
-        {!isBottomTargetConnected && <div className="handle-dot" />}
       </Handle>
     </div>
   );

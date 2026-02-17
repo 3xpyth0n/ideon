@@ -161,7 +161,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const { dict } = useI18n();
   const { user } = useUser();
   const [currentUser, setCurrentUser] = useState<UserPresence | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
   const [isLocalSynced, setIsLocalSynced] = useState(false);
 
   useEffect(() => {
@@ -214,15 +213,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   }, [initialProjectId]);
 
   const { yDoc, provider } = yjsData || { yDoc: null, provider: null };
-
-  useEffect(() => {
-    if (!provider) return;
-    const onStatus = ({ status }: { status: string }) => {
-      setIsConnected(status === "connected");
-    };
-    provider.on("status", onStatus);
-    return () => provider.off("status", onStatus);
-  }, [provider]);
 
   const yBlocks = useMemo(() => {
     if (!yDoc) return null;
@@ -636,14 +626,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   return (
     <>
-      <svg
-        style={{
-          position: "absolute",
-          width: 0,
-          height: 0,
-          pointerEvents: "none",
-        }}
-      >
+      <svg className="absolute w-0 h-0 pointer-events-none">
         <defs>
           <marker
             id="connection-arrow"
@@ -767,8 +750,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               style={{ zIndex: 2000 }}
             >
               {!isPreviewMode && (
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 select-none">
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-sm font-bold opacity-40 select-none">
                     {dict.project.shareCursor}
                   </span>
                   <input
@@ -895,11 +878,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
             <div className="zoom-indicator">
               <div className="flex items-center gap-2">
-                <div
-                  className={`w-1.5 h-1.5 ${
-                    isConnected ? "statusDotConnected" : "statusDotDisconnected"
-                  }`}
-                />
                 <span className="text-[10px] font-bold opacity-40 tabular-nums">
                   {zoom}%
                 </span>

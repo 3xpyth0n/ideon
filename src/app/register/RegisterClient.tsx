@@ -145,7 +145,7 @@ export function RegisterClient() {
         onClick={() => router.push("/login")}
       >
         <img src="/dark-icon.png" className="auth-logo-img" alt={dict.title} />
-        <span className="auth-logo-text">{dict.title}</span>
+        <span className="auth-logo-text pt-2">{dict.title}</span>
       </div>
 
       <div className="auth-card">
@@ -160,9 +160,12 @@ export function RegisterClient() {
           <div className="auth-field">
             <label className="auth-label">{dict.auth.email}</label>
             <input
-              className={`auth-input ${token ? "opacity-50" : ""}`}
+              className={`auth-input placeholder:text-white/20 ${
+                token ? "opacity-50" : ""
+              }`}
               value={email}
               onChange={(e) => !token && setEmail(e.target.value)}
+              placeholder={dict.auth.emailPlaceholder}
               readOnly={!!token}
               required
               type="email"
@@ -172,7 +175,7 @@ export function RegisterClient() {
           <div className="auth-field">
             <label className="auth-label">{dict.auth.username}</label>
             <input
-              className="auth-input"
+              className="auth-input placeholder:text-white/20"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={dict.auth.usernamePlaceholder}
@@ -184,10 +187,11 @@ export function RegisterClient() {
             <label className="auth-label">{dict.auth.password}</label>
             <div className="auth-input-wrapper">
               <input
-                className="auth-input auth-input-password"
+                className="auth-input auth-input-password placeholder:text-white/20"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder={dict.auth.passwordPlaceholder}
                 minLength={8}
                 required
               />
@@ -205,10 +209,11 @@ export function RegisterClient() {
             <label className="auth-label">{dict.auth.confirmPassword}</label>
             <div className="auth-input-wrapper">
               <input
-                className="auth-input auth-input-password"
+                className="auth-input auth-input-password placeholder:text-white/20"
                 type={showConfirm ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
+                placeholder={dict.auth.confirmPasswordPlaceholder}
                 required
               />
               <button

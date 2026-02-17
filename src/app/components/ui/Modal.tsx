@@ -66,12 +66,12 @@ export function Modal({
         )}
 
         {title && (
-          <h2 className="text-xl font-bold mb-1 uppercase tracking-widest">
+          <h2 className="text-xl font-bold mb-1 uppercase tracking-widest text-left">
             {title}
           </h2>
         )}
         {subtitle && (
-          <p className="text-2xs font-bold uppercase tracking-[0.2em] opacity-30 mb-8">
+          <p className="text-xs font-bold uppercase opacity-30 mb-8 text-left">
             {subtitle}
           </p>
         )}

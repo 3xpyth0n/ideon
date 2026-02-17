@@ -61,6 +61,23 @@ export function Sidebar({
   const [currentHash, setCurrentHash] = useState("");
 
   useEffect(() => {
+    try {
+      const savedProjectsExpanded = localStorage.getItem("projectsExpanded");
+      if (savedProjectsExpanded !== null) {
+        setProjectsExpanded(savedProjectsExpanded === "true");
+      }
+
+      const savedManagementExpanded =
+        localStorage.getItem("managementExpanded");
+      if (savedManagementExpanded !== null) {
+        setManagementExpanded(savedManagementExpanded === "true");
+      }
+    } catch {
+      console.warn("LocalStorage unavailable");
+    }
+  }, []);
+
+  useEffect(() => {
     const handleHashChange = () => {
       setCurrentHash(window.location.hash);
     };
@@ -151,7 +168,7 @@ export function Sidebar({
               >
                 <Link
                   href="/home"
-                  className="flex-1 flex items-center gap-3 px-3 py-2 text-inherit no-underline"
+                  className="flex-1 flex items-center gap-3 px-3 py-2.5 text-inherit no-underline"
                   title={isCollapsed ? dict.dashboard.home : ""}
                 >
                   <House size={20} />
@@ -162,15 +179,20 @@ export function Sidebar({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      setProjectsExpanded(!projectsExpanded);
+                      const newState = !projectsExpanded;
+                      setProjectsExpanded(newState);
+                      localStorage.setItem(
+                        "projectsExpanded",
+                        String(newState),
+                      );
                     }}
-                    className={`pr-3 flex items-center justify-center hover:bg-white/5 transition-colors ${
+                    className={`pr-3 flex items-center justify-center transition-colors ${
                       projectsExpanded ? "expanded" : ""
                     }`}
                   >
                     <ChevronDown
                       size={14}
-                      className={`transition-transform duration-200 ${
+                      className={`nav-item-expand transition-transform duration-200 ${
                         projectsExpanded ? "rotate-180" : ""
                       }`}
                     />
@@ -229,40 +251,72 @@ export function Sidebar({
             </div>
 
             {isAdminOrSuper && (
-              <Link
-                href="/users"
-                className={`nav-item pointer-events-auto ${
+              <div
+                className={`nav-item pointer-events-auto flex items-stretch p-0 overflow-hidden ${
                   isActive("/users") ? "active" : ""
                 }`}
-                title={isCollapsed ? dict.dashboard.team : ""}
               >
-                <Users size={20} />
-                {!isCollapsed && <span>{dict.dashboard.team}</span>}
-              </Link>
+                <Link
+                  href="/users"
+                  className="flex-1 flex items-center gap-3 px-3 py-2.5 text-inherit no-underline"
+                  title={isCollapsed ? dict.dashboard.team : ""}
+                >
+                  <Users size={20} />
+                  {!isCollapsed && <span>{dict.dashboard.team}</span>}
+                </Link>
+              </div>
             )}
             {isAdminOrSuper && (
               <div className="nav-group-collapsible pointer-events-auto">
-                <button
-                  onClick={() => {
-                    if (isCollapsed) {
-                      router.push("/management#authentication");
-                    } else {
-                      setManagementExpanded(!managementExpanded);
-                    }
-                  }}
-                  className={`nav-item ${
+                <div
+                  className={`nav-item flex items-stretch p-0 overflow-hidden ${
                     isActive("/management") ? "active" : ""
-                  } ${managementExpanded ? "expanded" : ""}`}
-                  title={isCollapsed ? dict.management.management : ""}
+                  }`}
                 >
-                  <Settings size={20} />
+                  <button
+                    onClick={() => {
+                      if (isCollapsed) {
+                        router.push("/management#authentication");
+                      } else {
+                        const newState = !managementExpanded;
+                        setManagementExpanded(newState);
+                        localStorage.setItem(
+                          "managementExpanded",
+                          String(newState),
+                        );
+                      }
+                    }}
+                    className="flex-1 flex items-center gap-3 px-3 py-2.5 text-inherit no-underline"
+                    title={isCollapsed ? dict.management.management : ""}
+                  >
+                    <Settings size={20} />
+                    {!isCollapsed && <span>{dict.management.management}</span>}
+                  </button>
                   {!isCollapsed && (
-                    <>
-                      <span>{dict.management.management}</span>
-                      <ChevronDown size={14} className="nav-item-expand" />
-                    </>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newState = !managementExpanded;
+                        setManagementExpanded(newState);
+                        localStorage.setItem(
+                          "managementExpanded",
+                          String(newState),
+                        );
+                      }}
+                      className={`pr-3 flex items-center justify-center transition-colors ${
+                        managementExpanded ? "expanded" : ""
+                      }`}
+                    >
+                      <ChevronDown
+                        size={14}
+                        className={`nav-item-expand transition-transform duration-200 ${
+                          managementExpanded ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
                   )}
-                </button>
+                </div>
                 {!isCollapsed && managementExpanded && (
                   <div className="nav-sub-group">
                     <a

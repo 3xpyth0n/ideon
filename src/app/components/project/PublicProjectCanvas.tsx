@@ -89,14 +89,7 @@ function PublicProjectCanvasContent({
 
   return (
     <div className="project-canvas-container preview-mode">
-      <svg
-        style={{
-          position: "absolute",
-          width: 0,
-          height: 0,
-          pointerEvents: "none",
-        }}
-      >
+      <svg className="absolute w-0 h-0 pointer-events-none">
         <defs>
           <marker
             id="connection-arrow"

@@ -1,0 +1,1060 @@
+.react-flow__node,
+.react-flow__node *,
+.react-flow__node:focus,
+.react-flow__node:focus-visible,
+.react-flow__renderer,
+.react-flow__renderer *,
+.react-flow__viewport *,
+.react-flow__viewport:focus,
+.react-flow__viewport:focus-visible,
+.react-flow__viewport:active:not(:focus) {
+  outline: none;
+  outline: 0;
+  box-shadow: none;
+}
+/* Remote Cursor Styles */
+.remote-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1000;
+  transform: translate3d(var(--cursor-x), var(--cursor-y), 0);
+  transition: transform 0.1s linear;
+  will-change: transform;
+}
+
+.remote-cursor-svg {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.remote-cursor-name {
+  position: absolute;
+  top: 18px;
+  left: 14px;
+  background-color: var(--user-color, #000);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}
+
+/* User Presence Styles */
+.user-presence-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  border: 2px solid;
+}
+
+.user-presence-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.user-presence-tooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.2s duration;
+  background-color: var(--user-color, #000);
+}
+
+.user-presence-item:hover .user-presence-tooltip,
+.reaction-badge:hover .user-presence-tooltip {
+  opacity: 1;
+}
+
+.user-presence-tooltip-arrow {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 6px;
+  height: 6px;
+  background-color: var(--user-color, #000);
+}
+
+/* Project Canvas Styles */
+.project-canvas-container {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  background-color: white;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+[data-theme="dark"] .project-canvas-container {
+  background-color: #0d0d0d;
+}
+
+.project-canvas-container input,
+.project-canvas-container textarea,
+.project-canvas-container [contenteditable="true"] {
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+.block-file-container {
+  cursor: default !important;
+}
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .loading-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.hidden-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.preview-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: var(--bg-island);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+}
+
+.preview-mode-text {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgb(245, 158, 11);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.preview-mode-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  border-left: 1px solid rgba(245, 158, 11, 0.2);
+  padding-left: 8px;
+}
+
+.preview-action-btn {
+  padding: 4px;
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.preview-return-btn {
+  color: rgb(245, 158, 11);
+}
+
+.preview-return-btn:hover {
+  background-color: rgba(245, 158, 11, 0.2);
+}
+
+.preview-apply-btn {
+  color: rgb(16, 185, 129);
+}
+
+.preview-apply-btn:hover {
+  background-color: rgba(16, 185, 129, 0.2);
+}
+
+.preview-btn-text {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.theme-checkbox:checked {
+  background-color: var(--text-main);
+}
+
+.react-flow__handle {
+  opacity: 0 !important;
+  pointer-events: auto !important;
+}
+
+/* Core Node Styles */
+.core-block {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-page);
+  color: var(--text-main);
+  border: 2px solid var(--border);
+  border-radius: 50px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default !important;
+  box-sizing: border-box;
+}
+
+.core-block.selected {
+  border-color: var(--text-main);
+  box-shadow: 0 8px 25px #00000040;
+  z-index: 50;
+}
+
+.core-title-input {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  padding-bottom: 8px !important;
+}
+
+.core-description-input {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  resize: none !important;
+}
+
+[data-theme="dark"] .core-block.selected {
+  box-shadow: 0 0 20px 2px #ffffff26;
+}
+
+.resizer-line-core {
+  display: none !important;
+}
+
+.resizer-handle-core {
+  display: none !important;
+}
+
+[data-theme="dark"] .core-block {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.pt-2 {
+  padding-top: 8px;
+}
+.pt-4 {
+  padding-top: 16px;
+}
+.px-2 {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.react-flow__controls {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex !important ;
+  flex-direction: row !important ;
+  gap: 0;
+  background: var(--bg-island) !important ;
+  border: 1px solid var(--border) !important ;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 38px !important ;
+  margin-right: 12px;
+}
+
+[data-theme="dark"] .react-flow__controls {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.react-flow__controls-button {
+  background: transparent !important ;
+  border-right: 1px solid var(--border) !important ;
+  border-bottom: none !important ;
+  width: 36px !important ;
+  height: 36px !important ;
+  display: flex !important ;
+  align-items: center !important ;
+  justify-content: center !important ;
+  transition: all 0.2s;
+  color: var(--text-main) !important ;
+  fill: var(--text-main) !important ;
+}
+
+.react-flow__controls-button:last-child {
+  border-right: none !important ;
+}
+
+.zoom-indicator {
+  position: absolute;
+  bottom: 38px;
+  right: 235px;
+  height: 36px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-sidebar) !important ;
+  color: var(--text-main) !important ;
+}
+
+.react-flow__controls-button svg {
+  width: 16px !important ;
+  height: 16px !important ;
+}
+
+.react-flow__panel.top-center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Connection handles styles */
+
+.mental-canvas .react-flow__edge-path {
+  stroke: var(--text-main);
+  opacity: 0.3;
+  stroke-width: 1.5;
+  transition:
+    stroke 0.2s ease,
+    opacity 0.2s ease;
+  animation: none;
+  stroke-dasharray: none;
+}
+
+.project-canvas .react-flow__edge:hover .react-flow__edge-path {
+  opacity: 0.6;
+}
+
+.project-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--text-main);
+  opacity: 1;
+  stroke-dasharray: 5;
+  animation: edge-marching-ants 0.5s linear infinite;
+}
+
+@keyframes edge-marching-ants {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Canvas & Nodes - Notion Hybrid */
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-page);
+  overflow: hidden;
+}
+
+.canvas-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--bg-island);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.breadcrumb-item {
+  padding: 4px 8px;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.breadcrumb-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.breadcrumb-separator {
+  opacity: 0.3;
+}
+
+.notion-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+}
+
+.notion-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Minimap */
+.minimap-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1500;
+  background: var(--bg-island);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.minimap-canvas {
+  display: block;
+  border-radius: 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.minimap-canvas:hover {
+  transform: scale(1.02);
+}
+
+.minimap-label {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.idea-count {
+  color: var(--accent);
+  font-weight: 900;
+}
+
+/* ThoughtNode */
+.block-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  background: var(--bg-island);
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: visible !important;
+}
+
+.resizer-line {
+  border-color: transparent !important;
+}
+
+.resizer-handle {
+  opacity: 0 !important;
+  width: 12px !important;
+  height: 12px !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: auto !important;
+}
+
+/* Touch optimization: Increase interaction area for resizer handles on touch screens */
+@media (pointer: coarse) {
+  .resizer-handle {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+.block-handle {
+  background: transparent !important;
+  border: none !important;
+  width: 1px !important;
+  height: 1px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: crosshair !important;
+  transition: opacity 0.2s ease !important;
+  color: var(--text-main) !important;
+  opacity: 0.2 !important;
+  visibility: visible !important;
+  z-index: 1000 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: translateY(-50%) !important;
+}
+
+.block-handle:hover {
+  opacity: 0.8 !important;
+}
+
+.block-handle-left {
+  left: 0 !important;
+}
+
+.block-handle-right {
+  right: 0 !important;
+}
+
+.block-handle-top {
+  top: 0 !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.block-handle-bottom {
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translate(-50%, 50%) !important;
+}
+
+/* Create the interaction zone and visual dot */
+.block-handle::after {
+  content: "";
+  position: absolute;
+  width: 64px;
+  height: 40px;
+  background: transparent;
+  cursor: crosshair;
+}
+
+.block-handle-left::after {
+  left: -64px;
+}
+
+.block-handle-right::after {
+  right: -64px;
+}
+
+.block-handle-top::after {
+  top: -64px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 64px;
+  width: 40px;
+}
+
+.block-handle-bottom::after {
+  bottom: -64px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 64px;
+  width: 40px;
+}
+
+.handle-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background-color: currentColor;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.block-handle-left .handle-dot {
+  left: -8px;
+}
+
+.block-handle-right .handle-dot {
+  right: -8px;
+}
+
+.block-handle-top .handle-dot {
+  top: -6px;
+}
+
+.block-handle-bottom .handle-dot {
+  bottom: -6px;
+}
+
+[data-theme="dark"] .block-card {
+  background: var(--bg-island);
+}
+
+.block-card.selected {
+  z-index: 10;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  border-color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .block-card.selected {
+  box-shadow: 0 0 20px 2px rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Thought Node Status Styles */
+.block-card.status-idea {
+  border-style: dashed;
+}
+
+.block-card.status-decision {
+  border-style: solid;
+}
+
+.block-card.status-action {
+  border-style: solid;
+  border-bottom-width: 6px;
+}
+
+/* Intent Styles */
+.block-intent-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.block-intent-icon.task {
+  color: #10b981;
+}
+.block-intent-icon.decision {
+  color: #f59e0b;
+}
+.block-intent-icon.milestone {
+  color: #8b5cf6;
+}
+.block-intent-icon.note {
+  color: #6b7280;
+}
+
+/* Node Badges */
+.block-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .block-badge {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.block-card.task {
+  border-left: 4px solid #10b981;
+}
+.block-card.decision {
+  border-left: 4px solid #f59e0b;
+}
+.block-card.milestone {
+  border-left: 4px solid #8b5cf6;
+}
+
+[data-theme="dark"] .block-card.task {
+  border-left-color: #059669;
+}
+[data-theme="dark"] .block-card.decision {
+  border-left-color: #d97706;
+}
+[data-theme="dark"] .block-card.milestone {
+  border-left-color: #7c3aed;
+}
+
+.block-content {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  flex: 1;
+  width: 100%;
+  cursor: text;
+  min-height: 0;
+  overflow: visible;
+}
+
+.block-title {
+  width: 100%;
+  background: transparent;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: right;
+  outline: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0;
+  margin-bottom: 8px;
+  color: var(--text-main);
+  border-radius: 0;
+}
+
+[data-theme="dark"] .block-title {
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.block-title:focus {
+  border-bottom-color: #ffffff;
+}
+
+[data-theme="dark"] .block-title:focus {
+  border-bottom-color: #ffffff;
+}
+
+.block-title::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .block-title::placeholder {
+  color: rgba(255, 255, 255, 0.1);
+}
+
+.block-status-select-container {
+  width: auto;
+  max-width: none;
+}
+
+.block-status-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  background: transparent !important;
+  border: none !important;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: opacity 0.2s;
+}
+
+.block-status-trigger:hover {
+  opacity: 1;
+}
+
+.block-status-dropdown {
+  min-width: 100px;
+  top: calc(100% + 4px);
+  background: var(--bg-island);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  z-index: 10000;
+}
+
+.block-status-option {
+  padding: 8px 12px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-main);
+  opacity: 0.6;
+}
+
+.block-status-option:hover {
+  opacity: 1;
+  background: rgba(var(--text-main-rgb), 0.05);
+}
+
+.block-status-option.active {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.block-description {
+  resize: none;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.625;
+  outline: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0;
+  color: rgba(0, 0, 0, 0.8);
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  display: block;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  font-family: inherit;
+}
+
+/* Ensure Markdown matches Textarea typography exactly */
+.markdown-content {
+  font-size: 14px;
+  line-height: 1.625;
+  padding: 4px 0;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.markdown-content p {
+  margin: 0;
+  padding: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+[data-theme="dark"] .block-description {
+  scrollbar-color: #ffffff transparent;
+}
+
+.block-description::-webkit-scrollbar {
+  width: 2px;
+  display: block;
+}
+
+.block-description::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.block-description::-webkit-scrollbar-thumb {
+  background: #000000;
+  border-radius: 0;
+}
+
+[data-theme="dark"] .block-description::-webkit-scrollbar-thumb {
+  background: #ffffff;
+}
+
+.block-description::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+[data-theme="dark"] .block-description {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.block-description::placeholder {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .block-description::placeholder {
+  color: rgba(255, 255, 255, 0.05);
+}
+
+.block-author-container {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.block-rationale-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeInRationale 0.3s ease-out;
+}
+
+/* React Flow Resizer Custom Styles */
+.resizer-line {
+  opacity: 0;
+}
+
+.selected .resizer-line {
+  opacity: 1;
+}
+
+.resizer-handle {
+  width: 40px !important;
+  height: 40px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 50%;
+  z-index: 9999 !important;
+  position: absolute;
+  pointer-events: auto !important;
+}
+
+/* Touch optimization for selected resizer handles */
+@media (pointer: coarse) {
+  .resizer-handle {
+    width: 64px !important;
+    height: 64px !important;
+  }
+}
+
+.react-flow__resize-control.line {
+  border-color: var(--accent);
+}
+
+.react-flow__resize-control.handle {
+  background: transparent !important;
+  border: none !important;
+}
+
+.react-flow__node-core .react-flow__resize-control.handle.top.left {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.canvas-context-badge {
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border);
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  pointer-events: none;
+}
+
+.group:hover .canvas-context-badge {
+  opacity: 1;
+}
+
+[data-theme="dark"] .canvas-context-badge {
+  background-color: rgba(10, 10, 10, 0.85);
+}
+
+/* React Flow Controls Override */
+.react-flow__controls-button:disabled {
+  background-color: #e5e5e5 !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .react-flow__controls-button:disabled {
+  background-color: #262626 !important;
+}
+
+/* Fix for Lucide icons inside React Flow controls appearing filled */
+.react-flow__controls-button svg {
+  fill: none !important;
+  stroke: currentColor;
+}
+
+/* Utilities */
+.hover\:underline:hover {
+  text-decoration: underline;
+}
+
+.text-inherit {
+  color: inherit !important;
+}
+
+.no-underline {
+  text-decoration: none !important;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* Preview Mode (Share Mode) Restrictions */
+.preview-mode .react-flow__handle,
+.preview-mode .block-handle {
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+.preview-mode .react-flow__edgeupdater {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.preview-mode .react-flow__node,
+.preview-mode .react-flow__edge {
+  cursor: default !important;
+}
+
+.preview-mode .react-flow__pane {
+  cursor: grab !important;
+  cursor: -webkit-grab !important;
+}
+
+.preview-mode .react-flow__pane:active {
+  cursor: grabbing !important;
+  cursor: -webkit-grabbing !important;
+}
+
+/* Force block-card content to have default cursor in preview mode */
+.preview-mode .block-card * {
+  cursor: default !important;
+}
+
+/* Allow scrolling in content if needed */
+.preview-mode .block-content {
+  overflow-y: auto;
+}

@@ -170,18 +170,18 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const style: React.CSSProperties = position
     ? {
-        position: "fixed",
         left: position.x,
         top: position.y - 10, // Slight offset
-        transform: "translate(-50%, -100%)", // Center horizontally, move above cursor
-        zIndex: 9999,
-        marginTop: 0,
       }
     : {};
 
+  const positionClasses = position
+    ? "fixed z-[9999] mt-0 -translate-x-1/2 -translate-y-full"
+    : "";
+
   const pickerContent = (
     <div
-      className="color-picker-popover"
+      className={`color-picker-popover ${positionClasses}`}
       ref={pickerRef}
       style={style}
       onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing

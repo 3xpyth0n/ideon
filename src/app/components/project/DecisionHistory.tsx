@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Trash2,
   Pencil,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTouchGestures } from "./hooks/useTouchGestures";
@@ -375,10 +376,13 @@ export function DecisionHistory({
                         disabled={!!editingStateId}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold truncate text-foreground">
-                            {state.authorName || dict.project.anonymous}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground tabular-nums font-medium">
+                          <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                            <User className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs font-semibold truncate text-foreground">
+                              {state.authorName || dict.project.anonymous}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground tabular-nums font-medium flex-shrink-0">
                             {formatDate(state.timestamp)}
                           </span>
                         </div>
@@ -428,7 +432,7 @@ export function DecisionHistory({
                   ))}
 
                   {hasMoreHistory && (
-                    <div className="pt-2 pb-1 flex justify-center">
+                    <div className="pt-2 pb-4 flex justify-center">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -455,9 +459,8 @@ export function DecisionHistory({
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className="temporal-context-menu"
+          className="temporal-context-menu fixed"
           style={{
-            position: "fixed",
             top: contextMenu.y,
             left: contextMenu.x,
           }}

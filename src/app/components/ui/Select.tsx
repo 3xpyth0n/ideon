@@ -135,25 +135,18 @@ export function Select({
         createPortal(
           <div
             ref={dropdownRef}
-            className="portal-dropdown-wrapper"
+            className="portal-dropdown-wrapper fixed z-[99999] w-auto"
             style={{
-              position: "fixed",
               top: `${coords.top + 4}px`,
               left:
                 align === "right"
                   ? `${coords.left + coords.width}px`
                   : `${coords.left}px`,
               transform: align === "right" ? "translateX(-100%)" : "none",
-              zIndex: 99999,
-              width: "auto",
             }}
           >
             <div
-              className={`select-dropdown ${dropdownClassName}`}
-              style={{
-                width: "auto",
-                minWidth: "max-content",
-              }}
+              className={`select-dropdown w-auto min-w-max ${dropdownClassName}`}
             >
               {options.map((option) => (
                 <button

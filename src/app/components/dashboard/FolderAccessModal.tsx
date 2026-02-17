@@ -233,7 +233,7 @@ export function FolderAccessModal({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[8px] uppercase font-black tracking-[0.2em] opacity-20 px-2">
+                  <span className="text-[10px] uppercase font-black tracking-[0.2em] opacity-20 px-2">
                     {user.role}
                   </span>
 

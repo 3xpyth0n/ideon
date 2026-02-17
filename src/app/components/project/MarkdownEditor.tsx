@@ -90,7 +90,7 @@ const MarkdownEditor = ({
         editor.storage as unknown as MarkdownStorage
       ).markdown.getMarkdown();
       if (content !== currentMarkdown) {
-        if (!editor.isFocused || editor.isEmpty) {
+        if (isReadOnly || !editor.isFocused || editor.isEmpty) {
           isSyncingRef.current = true;
           editor.commands.setContent(content);
           setTimeout(() => {
@@ -99,7 +99,7 @@ const MarkdownEditor = ({
         }
       }
     }
-  }, [content, editor]);
+  }, [content, editor, isReadOnly]);
 
   // Sync read-only state
   useEffect(() => {

@@ -53,6 +53,17 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
 
+  const currentUser = data.currentUser;
+  const projectOwnerId = data.projectOwnerId;
+  const ownerId = data.ownerId;
+  const isPreviewMode = data.isPreviewMode;
+  const isLocked = data.isLocked;
+
+  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+  const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isReadOnly =
+    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+
   const edges = getEdges();
   const isHandleConnected = (handleId: string) =>
     edges.some(
@@ -61,13 +72,9 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         (e.target === id && e.targetHandle === handleId),
     );
 
-  const isLeftTargetConnected = isHandleConnected("left-target");
   const isLeftSourceConnected = isHandleConnected("left");
-  const isRightTargetConnected = isHandleConnected("right-target");
   const isRightSourceConnected = isHandleConnected("right");
-  const isTopTargetConnected = isHandleConnected("top-target");
   const isTopSourceConnected = isHandleConnected("top");
-  const isBottomTargetConnected = isHandleConnected("bottom-target");
   const isBottomSourceConnected = isHandleConnected("bottom");
 
   const [code, setCode] = useState(data.content || "");
@@ -115,6 +122,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   useEffect(() => {
     const yText = data.yText;
     if (!yText) return;
+    if (isReadOnly) return;
 
     const currentYText = yText.toString();
     if (code !== currentYText) {
@@ -128,7 +136,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
 
     yText.observe(observer);
     return () => yText.unobserve(observer);
-  }, [data.yText, code]);
+  }, [data.yText, code, isReadOnly]);
 
   // Sync metadata (language)
   useEffect(() => {
@@ -140,17 +148,6 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       setLanguage(meta.language);
     }
   }, [data.metadata]);
-
-  const currentUser = data.currentUser;
-  const projectOwnerId = data.projectOwnerId;
-  const ownerId = data.ownerId;
-  const isPreviewMode = data.isPreviewMode;
-  const isLocked = data.isLocked;
-
-  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
-  const isOwner = currentUser?.id && ownerId === currentUser.id;
-  const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
 
   const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
@@ -404,7 +401,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
           <div className="flex items-center gap-2">
             <Code size={16} />
-            <span className="text-tiny uppercase tracking-wider opacity-50 font-bold">
+            <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
               {dict.blocks.blockTypeSnippet || "Snippet"}
             </span>
           </div>
@@ -446,7 +443,6 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             className="snippet-block-container"
             onMouseDown={(e) => {
               // Prevent focus loss when clicking the scrollbar
-              // The scrollbar is part of the container, so e.target === e.currentTarget
               if (e.target === e.currentTarget) {
                 e.preventDefault();
               }
@@ -495,20 +491,11 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
 
       {/* Handles - Left Side */}
       <Handle
-        id="left-target"
-        type="source"
-        position={Position.Left}
-        isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[40%]"
-      >
-        {!isLeftTargetConnected && <div className="handle-dot" />}
-      </Handle>
-      <Handle
         id="left"
         type="source"
         position={Position.Left}
         isConnectable={true}
-        className="block-handle block-handle-left !z-50 !top-[60%]"
+        className="block-handle block-handle-left !z-50"
       >
         {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -519,36 +506,18 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[40%]"
+        className="block-handle block-handle-right !z-50"
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
       </Handle>
-      <Handle
-        id="right-target"
-        type="source"
-        position={Position.Right}
-        isConnectable={true}
-        className="block-handle block-handle-right !z-50 !top-[60%]"
-      >
-        {!isRightTargetConnected && <div className="handle-dot" />}
-      </Handle>
 
       {/* Handles - Top Side */}
-      <Handle
-        id="top-target"
-        type="source"
-        position={Position.Top}
-        isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[40%]"
-      >
-        {!isTopTargetConnected && <div className="handle-dot" />}
-      </Handle>
       <Handle
         id="top"
         type="source"
         position={Position.Top}
         isConnectable={true}
-        className="block-handle block-handle-top !z-50 !left-[60%]"
+        className="block-handle block-handle-top !z-50"
       >
         {!isTopSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -559,18 +528,9 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[60%]"
+        className="block-handle block-handle-bottom !z-50"
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}
-      </Handle>
-      <Handle
-        id="bottom-target"
-        type="source"
-        position={Position.Bottom}
-        isConnectable={true}
-        className="block-handle block-handle-bottom !z-50 !left-[40%]"
-      >
-        {!isBottomTargetConnected && <div className="handle-dot" />}
       </Handle>
     </div>
   );

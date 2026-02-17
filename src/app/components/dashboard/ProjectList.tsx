@@ -777,8 +777,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   isTrash ? "cursor-default opacity-75" : ""
                 } ${
                   dragOverFolderId === folder.id
-                    ? "border-blue-500 bg-blue-500/20"
-                    : "border-blue-500/20 hover:border-blue-500/50 bg-blue-500/5 hover:bg-blue-500/10"
+                    ? "!border-blue-500 !bg-blue-500/20"
+                    : "!border-blue-500/20 hover:!border-blue-500/50 !bg-blue-500/5 hover:!bg-blue-500/10"
                 }`}
               >
                 <div>
@@ -945,7 +945,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 ) : (
                   <Plus size={24} strokeWidth={1.5} />
                 )}
-                <span className="text-2xs font-bold uppercase tracking-[0.2em]">
+                <span className="text-xs font-bold uppercase">
                   {isTrash
                     ? dict.dashboard.emptyTrash || "Trash is empty"
                     : view === "starred"
@@ -1104,14 +1104,14 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     e.stopPropagation();
                     setAccessProject(project);
                   }}
-                  className="project-card-tag hover:bg-white/10 transition-colors justify-self-end group/users"
+                  className="project-card-tag transition-colors justify-self-end group/users"
                 >
                   <Users
                     size={10}
                     strokeWidth={3}
-                    className="group-hover/users:text-accent transition-colors"
+                    className="transition-colors"
                   />
-                  <span className="group-hover/users:text-accent transition-colors">
+                  <span className="transition-colors">
                     Users: {Number(project.collaboratorCount) || 1}
                   </span>
                 </button>

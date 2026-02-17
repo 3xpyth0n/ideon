@@ -84,7 +84,8 @@
     "username": "Nom d'utilisateur",
     "usernameError": "Veuillez saisir un nom d'utilisateur.",
     "usernamePlaceholder": "jean-dupont",
-    "usernameRequired": "Veuillez saisir un nom d'utilisateur."
+    "usernameRequired": "Veuillez saisir un nom d'utilisateur.",
+    "unverifiedEmailError": "L'adresse email n'est pas vérifiée. Veuillez vérifier votre email auprès de votre fournisseur."
   },
   "blocks": {
     "addColor": "Ajouter une couleur",

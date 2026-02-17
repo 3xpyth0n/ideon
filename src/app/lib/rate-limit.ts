@@ -1,6 +1,7 @@
 import { RateLimiterPostgres, RateLimiterMemory } from "rate-limiter-flexible";
 import { Pool } from "pg";
 import { headers } from "next/headers";
+import { getClientIp } from "@lib/security-utils";
 
 // Use a single pool instance for rate limiting if we are using Postgres
 let pgPool: Pool | undefined;
@@ -67,9 +68,7 @@ export async function checkRateLimit(
 
   if (!key) {
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
-    // Clean up IP if it contains multiple addresses
-    key = ip.split(",")[0].trim();
+    key = getClientIp(headersList);
   }
 
   const limiter = getLimiter({

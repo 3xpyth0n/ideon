@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-02-17
+
+### Security
+
+Fixed several vulnerabilities:
+
+- **SSRF Protection**: Implemented strict validation on the image proxy to block private IP access and enforce HTTPS (OWASP SSRF, CWE-918).
+- **WebSocket Security**: Added strict Origin validation to prevent Cross-Site WebSocket Hijacking (OWASP CSWSH, CWE-346).
+- **IP Spoofing**: Implemented trusted proxy-aware IP extraction for accurate client identification (OWASP Logging, RFC 7239).
+
 ## [0.4.0] - 2026-02-15
 
 ### Added

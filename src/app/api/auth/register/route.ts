@@ -7,6 +7,7 @@ import { stringToColor } from "@lib/utils";
 import { authenticatedAction } from "@lib/server-utils";
 import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
+import { getClientIp } from "@lib/security-utils";
 
 const registerSchema = z.object({
   token: z.string().nullable().optional(),
@@ -21,7 +22,7 @@ export const POST = authenticatedAction(
     await checkRateLimit("register", 5, 600);
 
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
 
     const { token, username, password, email } = body;
 

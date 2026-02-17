@@ -7,9 +7,10 @@ const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 export async function logSecurityEvent(
   action: string,
   status: "success" | "failure",
-  reqInfo: { userId?: string; ip?: string },
+  reqInfo: { userId?: string; ip?: string; [key: string]: unknown },
 ) {
-  const effectiveUserId = reqInfo.userId || SYSTEM_USER_ID;
+  const { userId, ip, ...metadata } = reqInfo;
+  const effectiveUserId = userId || SYSTEM_USER_ID;
 
   try {
     await withAuthenticatedSession(
@@ -22,7 +23,8 @@ export async function logSecurityEvent(
             userId: effectiveUserId,
             action,
             status,
-            ipAddress: reqInfo.ip || null,
+            ipAddress: ip || null,
+            metadata: JSON.stringify(metadata),
             createdAt: new Date().toISOString(),
           })
           .execute();

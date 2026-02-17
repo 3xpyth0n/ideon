@@ -84,7 +84,8 @@
     "username": "Nome utente",
     "usernameError": "Inserisci un nome utente.",
     "usernamePlaceholder": "mario-rossi",
-    "usernameRequired": "Inserisci un nome utente."
+    "usernameRequired": "Inserisci un nome utente.",
+    "unverifiedEmailError": "L'indirizzo email non è verificato. Si prega di verificare l'email con il proprio provider."
   },
   "blocks": {
     "addColor": "Aggiungi Colore",

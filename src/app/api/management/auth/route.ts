@@ -2,6 +2,7 @@ import { getDb } from "@lib/db";
 import { adminAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
+import { getClientIp } from "@lib/security-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +110,7 @@ export const POST = adminAction(
     }
 
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
     await logSecurityEvent("updateAuthSettings", "success", {
       userId: user.id,
       ip,

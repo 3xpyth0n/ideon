@@ -172,6 +172,11 @@ export function LoginClient() {
         toast.error(dict.auth.invalidToken || "Invalid or expired link");
       } else if (error === "internalError") {
         toast.error(dict.auth.magicLinkError);
+      } else if (error === "unverified_email") {
+        toast.error(
+          dict.auth.unverifiedEmailError ||
+            "Email not verified. Please verify with your provider.",
+        );
       }
     }
   }, [searchParams, dict]);

@@ -251,6 +251,7 @@ export interface auditLogsTable {
   action: string;
   ipAddress: string | null;
   status: string;
+  metadata: ColumnType<string, string | undefined, string>;
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 

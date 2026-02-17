@@ -84,7 +84,8 @@
     "username": "Username",
     "usernameError": "Please enter a username.",
     "usernamePlaceholder": "johndoe",
-    "usernameRequired": "Please enter a username."
+    "usernameRequired": "Please enter a username.",
+    "unverifiedEmailError": "Email address is not verified. Please verify your email with your provider."
   },
   "blocks": {
     "addColor": "Add Color",

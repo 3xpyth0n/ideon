@@ -16,6 +16,7 @@ import { KyselyAdapter } from "@lib/authAdapter";
 import { render } from "@react-email/components";
 import MagicLinkEmail from "@emails/MagicLinkEmail";
 import { sendEmail } from "@lib/email";
+import { getClientIp } from "@lib/security-utils";
 import { RateLimiterPostgres, RateLimiterMemory } from "rate-limiter-flexible";
 
 // Ensure Auth.js uses the correct public URL for callbacks behind reverse proxy
@@ -124,7 +125,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         },
         authorize: async (credentials) => {
           const headersList = await headers();
-          const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+          const ip = getClientIp(headersList);
 
           const parsed = z
             .object({
@@ -288,12 +289,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         : []),
     ],
     callbacks: {
-      async signIn({ user, account }) {
+      async signIn({ user, account, profile }) {
         try {
           const headersList = await headers();
-          const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+          const ip = getClientIp(headersList);
 
           if (account?.provider === "credentials") return true;
+
+          // Mitigate allowDangerousEmailAccountLinking
+          if (account?.type === "oauth" || account?.type === "oidc") {
+            if (profile) {
+              // Standard OIDC email_verified claim
+              if (
+                "email_verified" in profile &&
+                profile.email_verified === false
+              ) {
+                await logSecurityEvent("loginSSO:unverified_email", "failure", {
+                  ip,
+                  email: user.email,
+                });
+                return "/login?error=unverified_email";
+              }
+              // Discord verified claim
+              if (
+                account.provider === "discord" &&
+                "verified" in profile &&
+                profile.verified === false
+              ) {
+                await logSecurityEvent("loginSSO:unverified_email", "failure", {
+                  ip,
+                  email: user.email,
+                });
+                return "/login?error=unverified_email";
+              }
+            }
+          }
+
           if (!user.email) {
             await logSecurityEvent("loginSSO:unknown", "failure", { ip });
             return false;

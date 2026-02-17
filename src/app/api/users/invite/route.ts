@@ -5,6 +5,7 @@ import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
+import { getClientIp } from "@/lib/security-utils";
 
 export const POST = authenticatedAction(
   async (req, { user: auth, body }) => {
@@ -92,7 +93,7 @@ export const POST = authenticatedAction(
     });
 
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
     await logSecurityEvent("userInvite", "success", {
       userId: auth.id,
       ip,

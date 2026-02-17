@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
 import { z } from "zod";
+import { getClientIp } from "@/lib/security-utils";
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1),
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
     await checkRateLimit("reset-password", 5, 600, identifier);
     const db = getDb();
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
 
     // Validate format
     const validation = resetPasswordSchema.safeParse({

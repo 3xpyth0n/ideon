@@ -63,6 +63,22 @@ initDb()
     const nextUpgradeHandler = app.getUpgradeHandler();
 
     server.on("upgrade", async (request, socket, head) => {
+      const origin = request.headers.origin;
+      const appUrl = process.env.APP_URL;
+
+      // In production, we expect APP_URL to be set and match the origin
+      if (process.env.NODE_ENV === "production" && appUrl) {
+        if (!origin || origin !== appUrl) {
+          logger.warn(
+            { origin, ip: request.socket.remoteAddress },
+            "[CSWSH] Blocked WebSocket connection with invalid origin",
+          );
+          socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+      }
+
       const { pathname } = new URL(request.url!, `http://${hostname}:${port}`);
 
       if (pathname?.startsWith("/yjs")) {

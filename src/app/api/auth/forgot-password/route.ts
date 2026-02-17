@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import crypto from "crypto";
 import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
+import { getClientIp } from "@lib/security-utils";
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
 
     const db = getDb();
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
 
     if (!identifier) {
       // Return success to avoid leaking validation details

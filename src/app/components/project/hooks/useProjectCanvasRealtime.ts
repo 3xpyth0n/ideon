@@ -8,7 +8,6 @@ import type { Awareness } from "y-protocols/awareness";
 export const useProjectCanvasRealtime = (
   awareness: Awareness | null,
   currentUser: UserPresence | null,
-  _isPreviewMode: boolean = false,
   shareCursor: boolean = true,
 ) => {
   const { screenToFlowPosition } = useReactFlow();
@@ -22,16 +21,13 @@ export const useProjectCanvasRealtime = (
       const states = awareness.getStates();
 
       states.forEach(
-        (
-          state: {
-            user?: UserPresence;
-            typingBlockId?: string | null;
-            draggingBlockId?: string | null;
-            cursor?: { x: number; y: number } | null;
-            caretPosition?: number | null;
-          },
-          _clientID,
-        ) => {
+        (state: {
+          user?: UserPresence;
+          typingBlockId?: string | null;
+          draggingBlockId?: string | null;
+          cursor?: { x: number; y: number } | null;
+          caretPosition?: number | null;
+        }) => {
           if (state.user) {
             users.push({
               id: state.user.id,
@@ -108,12 +104,9 @@ export const useProjectCanvasRealtime = (
     [updateMyPresence],
   );
 
-  const onBlur = useCallback(
-    (_blockId: string) => {
-      updateMyPresence({ typingBlockId: null, caretPosition: null });
-    },
-    [updateMyPresence],
-  );
+  const onBlur = useCallback(() => {
+    updateMyPresence({ typingBlockId: null, caretPosition: null });
+  }, [updateMyPresence]);
 
   const onCaretMove = useCallback(
     (blockId: string, index: number) => {

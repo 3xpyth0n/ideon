@@ -327,7 +327,7 @@ export function Sidebar({
                           ? "active"
                           : ""
                       }`}
-                      onClick={(_e) => {
+                      onClick={() => {
                         if (pathname === "/management") {
                           window.location.hash = "#authentication";
                         }
@@ -342,7 +342,7 @@ export function Sidebar({
                           ? "active"
                           : ""
                       }`}
-                      onClick={(_e) => {
+                      onClick={() => {
                         if (pathname === "/management") {
                           window.location.hash = "#sso";
                         }
@@ -357,7 +357,7 @@ export function Sidebar({
                           ? "active"
                           : ""
                       }`}
-                      onClick={(_e) => {
+                      onClick={() => {
                         if (pathname === "/management") {
                           window.location.hash = "#audit";
                         }

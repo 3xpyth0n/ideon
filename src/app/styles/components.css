@@ -306,7 +306,7 @@
 }
 
 /* Utilities */
-.github-footer {
+.git-footer {
   margin-top: auto;
   padding: 8px;
   font-size: 8px;
@@ -314,13 +314,13 @@
   text-align: right;
 }
 
-.block-card.read-only .github-widget,
+.block-card.read-only .git-widget,
 .block-card.read-only .block-file-widget {
   cursor: default;
 }
 
 /* GitHub Block Styles */
-.github-edit-container {
+.git-edit-container {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -329,14 +329,14 @@
   overflow-y: auto;
 }
 
-.github-input-wrapper {
+.git-input-wrapper {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-bottom: 16px;
 }
 
-.github-input {
+.git-input {
   width: 100%;
   background: transparent;
   border: none;
@@ -348,11 +348,11 @@
   transition: border-color 0.2s ease;
 }
 
-.github-input:focus {
+.git-input:focus {
   border-bottom-color: var(--text-main);
 }
 
-.github-error-container {
+.git-error-container {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -360,7 +360,7 @@
   text-align: center;
 }
 
-.github-error-message {
+.git-error-message {
   font-size: 0.75rem;
   color: var(--danger);
 }
@@ -401,18 +401,18 @@
   transform: scale(0.99);
 }
 
-.github-error-hint {
+.git-error-hint {
   font-size: 0.75rem;
   opacity: 0.6;
 }
 
-.github-stats-list {
+.git-stats-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.github-stat-item {
+.git-stat-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -422,33 +422,33 @@
   transition: background-color 0.2s ease;
 }
 
-.github-stat-item:hover {
+.git-stat-item:hover {
   background-color: rgba(128, 128, 128, 0.1);
 }
 
-.github-stat-item.active {
+.git-stat-item.active {
   background-color: rgba(128, 128, 128, 0.15);
 }
 
-.github-stat-item-info {
+.git-stat-item-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.github-stat-icon {
+.git-stat-icon {
   opacity: 0.6;
 }
 
-.github-stat-label {
+.git-stat-label {
   font-size: 0.875rem;
 }
 
-.github-check-icon {
+.git-check-icon {
   color: var(--accent);
 }
 
-.github-widget {
+.git-widget {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -461,11 +461,11 @@
   container-type: size;
 }
 
-.github-widget:hover {
+.git-widget:hover {
   background-color: rgba(128, 128, 128, 0.08);
 }
 
-.github-header {
+.git-header {
   padding: 16px;
   display: flex;
   align-items: center;
@@ -473,17 +473,17 @@
   border-bottom: 1px solid rgba(128, 128, 128, 0.1);
 }
 
-.github-logo {
+.git-logo {
   opacity: 0.8;
 }
 
-.github-title-container {
+.git-title-container {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.github-repo-name {
+.git-repo-name {
   font-weight: bold;
   font-size: 0.875rem;
   margin: 0;
@@ -492,7 +492,7 @@
   white-space: nowrap;
 }
 
-.github-repo-url {
+.git-repo-url {
   font-size: 10px;
   opacity: 0.4;
   overflow: hidden;
@@ -500,7 +500,7 @@
   white-space: nowrap;
 }
 
-.github-stats-grid {
+.git-stats-grid {
   padding: 16px;
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* 2x3 layout */
@@ -509,26 +509,26 @@
 }
 
 @container (max-width: 250px) {
-  .github-stats-grid {
+  .git-stats-grid {
     grid-template-columns: 1fr; /* 1x6 layout */
   }
 }
 
 @container (min-width: 400px) and (max-height: 350px) {
-  .github-stats-grid {
+  .git-stats-grid {
     grid-template-columns: repeat(3, 1fr); /* 3x2 layout */
   }
 }
 
 @container (max-height: 180px) {
-  .github-stats-grid {
+  .git-stats-grid {
     grid-template-columns: repeat(6, 1fr); /* 6x1 layout */
     padding: 8px 16px;
     gap: 8px;
   }
 }
 
-.github-loading {
+.git-loading {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
@@ -536,7 +536,7 @@
   padding: 32px 0;
 }
 
-.github-spinner {
+.git-spinner {
   width: 24px;
   height: 24px;
   border: 2px solid rgba(128, 128, 128, 0.2);
@@ -554,7 +554,7 @@
   }
 }
 
-.github-stat-card {
+.git-stat-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -564,7 +564,7 @@
   border-radius: 4px;
 }
 
-.github-stat-card-header {
+.git-stat-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -574,7 +574,7 @@
   letter-spacing: 0.05em;
 }
 
-.github-stat-value {
+.git-stat-value {
   font-size: 0.875rem;
   font-weight: 500;
   overflow: hidden;
@@ -582,7 +582,7 @@
   white-space: nowrap;
 }
 
-.github-footer {
+.git-footer {
   margin-top: auto;
   padding: 8px;
   font-size: 8px;
@@ -1079,14 +1079,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: transparent;
-  transition: border-color 0.2s;
+  border: 1px solid var(--border);
+  background: var(--bg-island);
+  transition: all 0.2s;
   border-radius: 1rem;
 }
 
 .user-card:hover {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-main);
+  background: var(--bg-sidebar);
 }
 
 .role-badge {
@@ -1409,18 +1410,18 @@
   flex-direction: column;
   height: 200px;
   padding: 1.5rem;
-  background: var(--toast-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-island);
+  border: 1px solid var(--border);
   border-radius: 1rem;
   transition: all 0.2s ease;
   overflow: hidden;
   text-decoration: none;
-  color: #ffffff;
+  color: var(--text-main);
 }
 
 .project-card:hover {
-  background: #0a0a0a;
-  border-color: #ffffff;
+  background: var(--bg-sidebar);
+  border-color: var(--text-main);
 }
 
 .project-card-title {
@@ -1429,7 +1430,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.75rem;
-  color: #ffffff;
+  color: var(--text-main);
   line-clamp: 1;
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -1440,7 +1441,7 @@
 
 .project-card-desc {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   line-height: 1.6;
   margin-bottom: auto;
   line-clamp: 3;
@@ -1453,7 +1454,7 @@
 .project-card-footer {
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1462,7 +1463,7 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted);
 }
 
 .project-card-tag {
@@ -1472,7 +1473,7 @@
 }
 
 .project-card-tag:hover {
-  color: white;
+  color: var(--text-main);
 }
 
 .auth-submit-btn:disabled {

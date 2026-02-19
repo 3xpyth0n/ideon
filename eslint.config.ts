@@ -4,7 +4,7 @@ import tsparser from "@typescript-eslint/parser";
 import globals from "globals";
 import type { Linter } from "eslint";
 
-const config: Linter.FlatConfig[] = [
+const config: Linter.Config[] = [
   {
     languageOptions: {
       globals: {
@@ -29,22 +29,13 @@ const config: Linter.FlatConfig[] = [
       },
     },
     plugins: {
-      "@typescript-eslint": tseslint,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      "@typescript-eslint": tseslint as any,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
-
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
-          ignoreRestSiblings: true,
-        },
-      ],
-
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-explicit-any": "error",
       "no-undef": "off",
     },
   },

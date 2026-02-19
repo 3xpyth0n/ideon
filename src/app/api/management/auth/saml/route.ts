@@ -56,8 +56,11 @@ export const POST = adminAction(
         defaultRedirectUrl: process.env.APP_URL || "http://localhost:3000",
         redirectUrl: process.env.APP_URL || "http://localhost:3000",
         metadataUrl,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+      } as Parameters<
+        Awaited<
+          ReturnType<typeof initJackson>
+        >["apiController"]["createSAMLConnection"]
+      >[0]);
     } else {
       throw new Error("Missing metadata");
     }

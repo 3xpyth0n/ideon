@@ -79,7 +79,7 @@ export function ShareModal({
           setShareEnabled(data.shareEnabled);
         }
       }
-    } catch (_) {
+    } catch {
       toast.error(dict.common.error || "Error");
     } finally {
       setLoading(false);
@@ -110,7 +110,7 @@ export function ShareModal({
         setShareEnabled(true);
         toast.success(dict.common.success || "Success");
       }
-    } catch (_) {
+    } catch {
       toast.error(dict.common.error || "Error");
     } finally {
       setLoading(false);
@@ -138,7 +138,7 @@ export function ShareModal({
       }
     >
       <div className="space-y-6 share-modal-custom-layout">
-        <div className="flex items-center justify-between p-4 border rounded-lg dark:border-white/10">
+        <div className="flex items-center justify-between p-4 border rounded-lg border-border bg-bg-island">
           <div className="flex items-center gap-3">
             <div
               className={`p-2 rounded-full ${
@@ -186,7 +186,7 @@ export function ShareModal({
                 {copied ? <Check size={16} /> : <Copy size={16} />}
               </Button>
             </div>
-            <div className="flex items-center justify-between gap-4 mt-6 p-4 border rounded-lg dark:border-white/5 bg-black/5 dark:bg-white/5">
+            <div className="flex items-center justify-between gap-4 mt-6 p-4 border rounded-lg border-border bg-bg-island">
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"

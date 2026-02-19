@@ -63,7 +63,7 @@ export function isSafeUrl(url: string): boolean {
 export function getClientIp(
   headersObj: Headers | Map<string, string> | Record<string, string>,
 ): string {
-  let forwardedFor = "";
+  let forwardedFor: string;
 
   if (typeof (headersObj as Headers).get === "function") {
     forwardedFor = (headersObj as Headers).get("x-forwarded-for") || "";

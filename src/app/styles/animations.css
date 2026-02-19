@@ -165,7 +165,7 @@
 
 .auth-subtitle {
   font-size: 0.875rem;
-  color: #a3a3a3;
+  color: var(--text-muted);
   margin-top: 0.5rem;
   font-weight: 500;
 }
@@ -185,7 +185,7 @@
 .auth-label {
   font-size: 14px;
   font-weight: 500;
-  color: #a3a3a3;
+  color: var(--text-muted);
 }
 
 .auth-input-wrapper {
@@ -198,16 +198,21 @@
   width: 100%;
   background-color: transparent;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid var(--border);
   padding: 0.875rem 0;
   font-size: 15px;
-  color: white;
+  color: var(--text-main);
   outline: none;
   transition: all 0.2s;
 }
 
+.auth-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
 .auth-input:focus {
-  border-bottom-color: white;
+  border-bottom-color: var(--text-main);
 }
 
 .auth-input-password {
@@ -221,7 +226,7 @@
   transform: translateY(-50%);
   background-color: transparent;
   border: none;
-  color: #737373;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -230,7 +235,7 @@
 }
 
 .password-toggle:hover {
-  color: white;
+  color: var(--text-main);
 }
 
 .auth-actions {
@@ -255,14 +260,14 @@
   content: "";
   flex: 1;
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--border);
 }
 
 .auth-divider span {
   padding: 0 1rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #737373;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -285,14 +290,14 @@
 .auth-footer-link {
   background: none;
   border: none;
-  color: #737373;
+  color: var(--text-muted);
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .auth-footer-link:hover {
-  color: white;
+  color: var(--text-main);
 }
 
 .auth-initializing-container {

@@ -1,5 +1,5 @@
 import { Kysely } from "kysely";
-import { database } from "../../lib/types/db";
+import type { database } from "../../lib/types/db.ts";
 import { nanoid } from "nanoid";
 
 interface BlockMetadata {
@@ -107,7 +107,7 @@ export async function down(db: Kysely<database>): Promise<void> {
 
     if (!block) continue;
 
-    let metadata: BlockMetadata = {};
+    let metadata: BlockMetadata;
     try {
       metadata = block.metadata ? JSON.parse(block.metadata) : {};
     } catch {

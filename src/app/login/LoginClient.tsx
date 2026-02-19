@@ -6,6 +6,7 @@ import { LanguageSelect } from "@setup/components/LanguageSelect";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { ThemeSwitch } from "@components/ThemeSwitch";
 import { Button } from "@components/ui/Button";
 import { toast } from "sonner";
 
@@ -112,11 +113,7 @@ export function LoginClient() {
 
   const onForgotPassword = async () => {
     if (!identifier) {
-      toast.error(
-        dict.auth.identifierLabel
-          ? `${dict.auth.identifierLabel} required`
-          : "Email or Username required",
-      );
+      toast.error(dict.auth.identifierRequired);
       return;
     }
 
@@ -158,7 +155,7 @@ export function LoginClient() {
       } else {
         toast.error(dict.auth.magicLinkError);
       }
-    } catch (_err) {
+    } catch {
       toast.error(dict.auth.magicLinkError);
     } finally {
       setSendingMagic(false);
@@ -198,8 +195,24 @@ export function LoginClient() {
         className="auth-logo-container"
         onClick={() => router.push("/login")}
       >
-        <img src="/dark-icon.png" className="auth-logo-img" alt={dict.title} />
+        <div className="auth-logo-img">
+          <img
+            src="/light-icon.png"
+            className="auth-logo-layer light"
+            alt={dict.title}
+          />
+          <img
+            src="/dark-icon.png"
+            className="auth-logo-layer dark"
+            alt={dict.title}
+          />
+        </div>
         <span className="auth-logo-text pt-2">{dict.title}</span>
+      </div>
+
+      {/* Theme Switch */}
+      <div style={{ position: "absolute", top: "2.5rem", right: "2.5rem" }}>
+        <ThemeSwitch />
       </div>
 
       <div className="auth-card">
@@ -252,7 +265,7 @@ export function LoginClient() {
                 className="forgot-password-link"
               >
                 {forgotPasswordLoading ? (
-                  <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground animate-spin" />
+                  <div className="loading-spinner border-foreground/30 border-t-foreground" />
                 ) : (
                   dict.auth.forgotPassword
                 )}
@@ -261,12 +274,17 @@ export function LoginClient() {
               <div className="flex items-center gap-2">
                 <LanguageSelect />
                 <Button
-                  disabled={busy || forgotPasswordLoading}
+                  disabled={
+                    busy ||
+                    forgotPasswordLoading ||
+                    !identifier.trim() ||
+                    !password.trim()
+                  }
                   type="submit"
                   className="btn-primary auth-submit-btn"
                 >
                   {busy ? (
-                    <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
+                    <div className="loading-spinner border-background/30 border-t-background" />
                   ) : (
                     dict.auth.login
                   )}
@@ -318,7 +336,7 @@ export function LoginClient() {
                           className="btn-primary whitespace-nowrap"
                         >
                           {sendingMagic ? (
-                            <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
+                            <div className="loading-spinner border-background/30 border-t-background" />
                           ) : (
                             dict.auth.submit
                           )}

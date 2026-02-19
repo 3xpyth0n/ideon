@@ -37,6 +37,18 @@ export function getAvatarUrl(
   return url.toString();
 }
 
+export function formatDate(date: string | number | Date): string {
+  if (!date) return "";
+  const d = new Date(date);
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 /**
  * Deduplicates an array of objects by a specific property, keeping the last occurrence.
  */
@@ -65,22 +77,22 @@ export function getSecurityHeaders(nonce: string) {
   const appUrl = process.env.APP_URL || "";
   const isSecure = appUrl.startsWith("https://");
 
-  const cspHeader = `
-    default-src 'self';
-    script-src 'self' 'nonce-${nonce}';
-    style-src 'self' 'unsafe-inline' fonts.googleapis.com;
-    img-src 'self' data: blob: https:;
-    font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;
-    connect-src 'self' ws: wss: https:;
-    frame-src 'self' https:;
-    frame-ancestors 'none';
-    base-uri 'self';
-    form-action 'self';
-    object-src 'none';
-    ${isSecure ? "upgrade-insecure-requests;" : ""}
-  `
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  const cspHeader = [
+    "default-src 'self';",
+    `script-src 'self' 'nonce-${nonce}';`,
+    "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
+    "img-src 'self' data: blob: https:;",
+    "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;",
+    "connect-src 'self' ws: wss: https:;",
+    "frame-src 'self' https:;",
+    "frame-ancestors 'none';",
+    "base-uri 'self';",
+    "form-action 'self';",
+    "object-src 'none';",
+    isSecure ? "upgrade-insecure-requests;" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const headers: Record<string, string> = {
     "Content-Security-Policy": cspHeader,
@@ -99,41 +111,34 @@ export function getSecurityHeaders(nonce: string) {
   return headers;
 }
 
-export function safeJson<T>(input: string | null | undefined, fallback: T): T {
-  if (!input) return fallback;
-  try {
-    return JSON.parse(input) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-const RECENT_PROJECTS_KEY = "ideon_recent_projects";
-const MAX_RECENT_PROJECTS = 5;
-
 export function getRecentProjects(): string[] {
   if (typeof window === "undefined") return [];
-  const stored = localStorage.getItem(RECENT_PROJECTS_KEY);
-  if (!stored) return [];
   try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
+    const recent = localStorage.getItem("recent_projects");
+    return recent ? JSON.parse(recent) : [];
   } catch {
     return [];
   }
 }
 
-export function addRecentProject(projectId: string) {
+export function addRecentProject(id: string) {
   if (typeof window === "undefined") return;
-  const current = getRecentProjects();
-  const updated = [
-    projectId,
-    ...current.filter((id) => id !== projectId),
-  ].slice(0, MAX_RECENT_PROJECTS);
-  localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(updated));
+  try {
+    const recent = getRecentProjects();
+    const newRecent = [id, ...recent.filter((p) => p !== id)].slice(0, 10);
+    localStorage.setItem("recent_projects", JSON.stringify(newRecent));
+  } catch {
+    // ignore
+  }
 }
 
-export function clearRecentProjects() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(RECENT_PROJECTS_KEY);
+export function getDomain(url: string) {
+  if (!url) return "";
+  try {
+    const { hostname } = new URL(url);
+    return hostname.replace(/^www\./, "");
+  } catch {
+    // invalid url
+  }
+  return url;
 }

@@ -170,7 +170,7 @@ export function ResetPasswordClient() {
               className="btn-primary auth-submit-btn"
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
+                <div className="loading-spinner border-background/30 border-t-background" />
               ) : (
                 dict.auth.submit
               )}

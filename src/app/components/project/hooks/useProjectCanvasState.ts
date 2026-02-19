@@ -20,22 +20,20 @@ import { generateStateHash } from "../utils/hash";
 const cleanBlockDataForSync = (
   data: Partial<BlockData>,
 ): Partial<BlockData> => {
-  const {
-    content: _content,
-    yText: _yText,
-    typingUsers: _typingUsers,
-    movingUserColor: _movingUserColor,
-    onContentChange: _onContentChange,
-    onFocus: _onFocus,
-    onBlur: _onBlur,
-    onCaretMove: _onCaretMove,
-    onResize: _onResize,
-    onResizeEnd: _onResizeEnd,
-    currentUser: _currentUser,
-    initialProjectId: _initialProjectId,
-    projectOwnerId: _projectOwnerId,
-    ...rest
-  } = data;
+  const rest = { ...data };
+  delete rest.content;
+  delete rest.yText;
+  delete rest.typingUsers;
+  delete rest.movingUserColor;
+  delete rest.onContentChange;
+  delete rest.onFocus;
+  delete rest.onBlur;
+  delete rest.onCaretMove;
+  delete rest.onResize;
+  delete rest.onResizeEnd;
+  delete rest.currentUser;
+  delete rest.initialProjectId;
+  delete rest.projectOwnerId;
   return rest;
 };
 
@@ -343,7 +341,8 @@ export const useProjectCanvasState = (
         if (!isPreviewModeRef.current) {
           yBlocks.doc?.transact(() => {
             nextBlocks.forEach((block) => {
-              const { selected, ...blockToSync } = block;
+              const blockToSync = { ...block };
+              delete blockToSync.selected;
 
               if (!yContents.has(block.id)) {
                 const yText = new Y.Text();
@@ -433,14 +432,17 @@ export const useProjectCanvasState = (
         if (!isPreviewModeRef.current) {
           yLinks.doc?.transact(() => {
             nextLinks.forEach((link) => {
-              const { selected, data, ...rest } = link;
-              const {
-                isEditing: _,
-                onLabelSubmit: __,
-                onLabelCancel: ___,
-                ...cleanData
-              } = (data as Record<string, unknown>) || {};
-              const linkToSync = { ...rest, data: cleanData };
+              const linkToSync = { ...link };
+              delete linkToSync.selected;
+
+              const cleanData = {
+                ...((link.data as Record<string, unknown>) || {}),
+              };
+              delete cleanData.isEditing;
+              delete cleanData.onLabelSubmit;
+              delete cleanData.onLabelCancel;
+
+              linkToSync.data = cleanData;
 
               const existing = yLinks.get(link.id);
               const hasChanged =
@@ -496,7 +498,8 @@ export const useProjectCanvasState = (
 
         // 3. Add new blocks to Yjs (setBlocks will be called by effects, but we can do it here for atomicity)
         sanitizedBlocks.forEach((block) => {
-          const { selected, ...blockToSync } = block;
+          const blockToSync = { ...block };
+          delete blockToSync.selected;
 
           const yText = new Y.Text();
           const initialContent = (block.data?.content as string) || "";
@@ -514,7 +517,8 @@ export const useProjectCanvasState = (
         });
 
         newLinks.forEach((link) => {
-          const { selected, ...linkToSync } = link;
+          const linkToSync = { ...link };
+          delete linkToSync.selected;
           yLinks.set(link.id, linkToSync as Edge);
         });
       }, yBlocks.doc.clientID);
@@ -630,7 +634,7 @@ export const useProjectCanvasState = (
 
         lastSnapshotHash.current = currentHash;
         return true;
-      } catch (_error) {
+      } catch {
         toast.error(dict.modals.saveError || "Failed to save changes");
         return false;
       }
@@ -664,7 +668,7 @@ export const useProjectCanvasState = (
         toast.success(
           dict.modals.snapshotDeleted || "Snapshot deleted successfully",
         );
-      } catch (_error) {
+      } catch {
         toast.error(dict.modals.deleteError || "Failed to delete snapshot");
       }
     },
@@ -701,12 +705,7 @@ export const useProjectCanvasState = (
     [initialProjectId, dict.common],
   );
 
-  const rt = useProjectCanvasRealtime(
-    awareness,
-    currentUser,
-    isPreviewMode,
-    shareCursor,
-  );
+  const rt = useProjectCanvasRealtime(awareness, currentUser, shareCursor);
 
   const mousePosRef = useRef({ x: 0, y: 0 });
 

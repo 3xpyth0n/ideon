@@ -2,6 +2,7 @@ import { authenticatedAction } from "@lib/server-utils";
 import { getDb } from "@lib/db";
 import { sendEmail, getInvitationEmailTemplate } from "@lib/email";
 import { logSecurityEvent } from "@lib/audit";
+import { getClientIp } from "@lib/security-utils";
 import { headers } from "next/headers";
 import { hashToken } from "@lib/crypto";
 
@@ -64,7 +65,7 @@ export const PUT = authenticatedAction(
     });
 
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
     await logSecurityEvent("userInviteResend", "success", {
       userId: auth.id,
       ip,
@@ -99,7 +100,7 @@ export const DELETE = authenticatedAction(
     await db.deleteFrom("invitations").where("id", "=", id).execute();
 
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
     await logSecurityEvent("userInviteDelete", "success", {
       userId: auth.id,
       ip,

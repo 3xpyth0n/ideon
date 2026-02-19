@@ -2,8 +2,9 @@
 
 import { memo, useState, useCallback, useEffect } from "react";
 import * as Y from "yjs";
-import { Video, Lock } from "lucide-react";
+import { Video } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { BlockFooter } from "./BlockFooter";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useTouch } from "@providers/TouchProvider";
 import {
@@ -167,26 +168,6 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     },
     [id, data, currentUser, dict, syncToYjs, title],
   );
-
-  const formatDate = (isoString: string) => {
-    if (!isoString) return "";
-    const date = new Date(isoString);
-    const options: Intl.DateTimeFormatOptions = {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    };
-
-    const formatted = new Intl.DateTimeFormat(
-      lang === "fr" ? "fr-FR" : "en-US",
-      options,
-    ).format(date);
-
-    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
-  };
 
   const handleResize = useCallback(
     (
@@ -358,19 +339,13 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
           )}
         </div>
 
-        <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
-          <div className="flex items-center justify-between w-full text-tiny opacity-40">
-            <div className="block-timestamp">
-              {formatDate(data.updatedAt || "")}
-            </div>
-            <div className="block-author-info flex items-center gap-1.5">
-              {isLocked && <Lock size={10} className="block-lock-icon" />}
-              <div className="author-name">
-                {(data.authorName || dict.project.anonymous).toLowerCase()}
-              </div>
-            </div>
-          </div>
-        </div>
+        <BlockFooter
+          updatedAt={data.updatedAt}
+          authorName={data.authorName}
+          isLocked={isLocked}
+          dict={dict}
+          lang={lang}
+        />
       </div>
 
       <BlockReactions

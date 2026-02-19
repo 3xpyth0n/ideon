@@ -25,6 +25,8 @@ import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
 import SketchBlock from "./SketchBlock";
+import GitBlock from "./GitBlock";
+import FileBlock from "./FileBlock";
 import CanvasEdge from "./CanvasEdge";
 import { InviteUserModal } from "./InviteUserModal";
 import { TransferBlockModal } from "./TransferBlockModal";
@@ -54,7 +56,7 @@ import {
   FileText,
   Link as LinkIcon,
   File as FileIcon,
-  Github,
+  GitGraph,
   Palette,
   User,
   Video,
@@ -64,6 +66,7 @@ import {
   Figma,
   Share2,
   PenTool,
+  Github,
 } from "lucide-react";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
@@ -142,8 +145,8 @@ const RemoteCursors = ({
 const blockTypes = {
   text: CanvasBlock,
   link: CanvasBlock,
-  file: CanvasBlock,
-  github: CanvasBlock,
+  file: FileBlock,
+  github: GitBlock,
   palette: PaletteBlock,
   contact: ContactBlock,
   video: VideoBlock,
@@ -231,7 +234,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   const {
     blocks,
-    setBlocks: _setBlocks,
     onBlocksChange,
     links,
     setLinks: _setLinks,
@@ -248,10 +250,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     transferBlock,
     setTransferBlock,
     isPreviewMode,
-    setIsPreviewMode: _setIsPreviewMode,
     selectedStateId,
-    setSelectedStateId: _setSelectedStateId,
-    isInitialized: _isInitialized,
     handleFitView,
     handleZoomIn,
     handleZoomOut,
@@ -479,9 +478,17 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       {
         id: "create-github",
-        label: dict.blocks.newGithub || "New GitHub",
-        icon: <Github size={18} />,
-        keywords: ["github", "repo", "git", "issue", "pr"],
+        label: dict.blocks.newGit || "New Git Repo",
+        icon: <GitGraph size={18} />,
+        keywords: [
+          "git",
+          "repo",
+          "github",
+          "gitlab",
+          "bitbucket",
+          "issue",
+          "pr",
+        ],
         action: () => handleCreateBlock(undefined, undefined, "github"),
         category: "create",
       },
@@ -970,7 +977,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                           }
                           className="context-menu-item"
                         >
-                          {dict.blocks.newGithub || "New GitHub"}
+                          {dict.blocks.newGit || "New GitHub"}
                         </button>
                         <button
                           onClick={() =>

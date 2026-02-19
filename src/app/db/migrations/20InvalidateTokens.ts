@@ -1,5 +1,5 @@
 import { Kysely } from "kysely";
-import { database } from "../../lib/types/db";
+import type { database } from "../../lib/types/db.ts";
 
 export async function up(db: Kysely<database>): Promise<void> {
   // Invalidate all existing tokens because we are switching to hashed storage.
@@ -8,6 +8,6 @@ export async function up(db: Kysely<database>): Promise<void> {
   await db.deleteFrom("magicLinks").execute();
 }
 
-export async function down(_db: Kysely<database>): Promise<void> {
+export async function down(): Promise<void> {
   // Data deletion is irreversible
 }

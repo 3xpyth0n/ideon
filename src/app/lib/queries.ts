@@ -1,0 +1,93 @@
+import { Kysely, sql } from "kysely";
+import { database } from "./types/db";
+
+export function getProjectsQuery(
+  db: Kysely<database>,
+  userId: string,
+  view: string | null,
+  folderId: string | null | undefined,
+  ids: string[] | undefined,
+) {
+  let query = db
+    .selectFrom("projects")
+    .innerJoin("users", "users.id", "projects.ownerId")
+    .leftJoin("projectStars", (join) =>
+      join
+        .onRef("projectStars.projectId", "=", "projects.id")
+        .on("projectStars.userId", "=", userId),
+    )
+    .select([
+      "projects.id",
+      "projects.name",
+      "projects.description",
+      "projects.folderId",
+      "projects.createdAt",
+      "projects.updatedAt",
+      "projects.deletedAt",
+      "projects.ownerId",
+      "projects.shareToken",
+      "projects.shareEnabled",
+      "users.username as ownerName",
+      "users.displayName as ownerDisplayName",
+      "users.avatarUrl as ownerAvatarUrl",
+      "users.color as ownerColor",
+      sql<number>`CASE WHEN "projectStars"."projectId" IS NOT NULL THEN 1 ELSE 0 END`.as(
+        "isStarred",
+      ),
+    ]);
+
+  // Handle Trash
+  if (view === "trash") {
+    query = query.where("projects.deletedAt", "is not", null);
+  } else {
+    query = query.where("projects.deletedAt", "is", null);
+  }
+
+  // Handle IDs (Recent view)
+  if (ids && ids.length > 0) {
+    return query.where("projects.id", "in", ids);
+  }
+
+  // Handle Views
+  if (view === "starred") {
+    query = query.where("projectStars.projectId", "is not", null);
+  } else if (view === "shared") {
+    query = query.where("projects.ownerId", "!=", userId);
+
+    // Explicitly check for collaboration
+    query = query.where((eb) =>
+      eb.or([
+        eb(
+          "projects.id",
+          "in",
+          eb
+            .selectFrom("projectCollaborators")
+            .select("projectId")
+            .where("userId", "=", userId),
+        ),
+        eb(
+          "projects.folderId",
+          "in",
+          eb
+            .selectFrom("folderCollaborators")
+            .select("folderId")
+            .where("userId", "=", userId),
+        ),
+      ]),
+    );
+  } else if (view === "my-projects") {
+    query = query.where("projects.ownerId", "=", userId);
+  }
+
+  // Handle Folder
+  if (folderId) {
+    query = query.where("projects.folderId", "=", folderId);
+  } else {
+    // If not in a flat view, show root only
+    if (!["trash", "starred", "recent", "shared"].includes(view || "")) {
+      query = query.where("projects.folderId", "is", null);
+    }
+  }
+
+  return query.orderBy("projects.updatedAt", "desc");
+}

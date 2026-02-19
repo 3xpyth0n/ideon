@@ -128,7 +128,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
       } else {
         toast.error(data.error || dict.common.error);
       }
-    } catch (_err) {
+    } catch {
       toast.error(dict.common.error);
     } finally {
       setInviting(false);
@@ -440,7 +440,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                       className="p-2 opacity-40 hover:opacity-100 transition-all relative group/tooltip"
                     >
                       {resendingId === invite.id ? (
-                        <div className="w-3.5 h-3.5 border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
+                        <div className="w-3.5 h-3.5 border-2 border-blue-500/30 border-t-blue-500 animate-spin rounded-full" />
                       ) : (
                         <RefreshCw size={14} />
                       )}
@@ -559,7 +559,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                 className="btn-primary"
               >
                 {inviting ? (
-                  <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
+                  <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin rounded-full" />
                 ) : (
                   dict.auth.invite
                 )}

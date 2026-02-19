@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       description: metadata.description,
       image: metadata.image,
     });
-  } catch (_error) {
+  } catch {
     // Silence 429/403/500 errors to prevent frontend retries and console noise
     return NextResponse.json({
       title: "",

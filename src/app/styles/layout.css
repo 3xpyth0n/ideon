@@ -587,7 +587,7 @@
   top: var(--menu-top, 0);
   left: var(--menu-left, 0);
   z-index: 3000;
-  background: #1a1a1a;
+  background: var(--bg-island);
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border-radius: 0;
@@ -604,7 +604,7 @@
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: #ffffff;
+  color: var(--text-main);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -620,8 +620,8 @@
 }
 
 .context-menu-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
+  background: rgba(127, 127, 127, 0.1);
+  color: var(--text-main);
 }
 
 .context-menu-item.danger {
@@ -650,7 +650,7 @@
 
 .management-header {
   padding: 2.5rem 3rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border);
 }
 
 .management-tabs-nav {
@@ -658,7 +658,7 @@
   gap: 0.5rem;
   padding: 0 3rem;
   background: var(--bg-sidebar);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border);
 }
 
 .management-tab-btn {
@@ -681,13 +681,22 @@
 }
 
 .management-tab-btn:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.02);
+  color: #000000;
+  background: var(--bg-island);
 }
 
 .management-tab-btn.active {
+  color: #000000;
+  border-bottom-color: #000000;
+}
+
+[data-theme="dark"] .management-tab-btn:hover {
   color: var(--text-main);
-  border-bottom-color: white;
+}
+
+[data-theme="dark"] .management-tab-btn.active {
+  color: var(--text-main);
+  border-bottom-color: var(--text-main);
 }
 
 .management-title {
@@ -710,7 +719,7 @@
 .management-sidebar {
   width: 260px;
   padding: 1.5rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -722,7 +731,7 @@
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
-  color: #a3a3a3;
+  color: var(--text-muted);
   font-weight: 500;
   font-size: 0.9rem;
   transition: all 0.2s;
@@ -734,13 +743,18 @@
 }
 
 .management-nav-item:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.02);
+  color: #000000;
+  background: var(--bg-island);
 }
 
 .management-nav-item.active {
-  color: white;
-  background: rgba(255, 255, 255, 0.05);
+  color: #000000;
+  background: var(--bg-island);
+}
+
+[data-theme="dark"] .management-nav-item:hover,
+[data-theme="dark"] .management-nav-item.active {
+  color: var(--text-main);
 }
 
 .management-content-wrapper {
@@ -775,8 +789,8 @@
 }
 
 .setting-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-island);
+  border: 1px solid var(--border);
   padding: 1.5rem;
   border-radius: 1rem;
   display: flex;
@@ -813,8 +827,8 @@
 }
 
 .provider-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-island);
+  border: 1px solid var(--border);
   padding: 1.5rem;
   border-radius: 1rem;
   display: flex;

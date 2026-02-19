@@ -1,4 +1,4 @@
-import { Adapter, AdapterUser } from "@auth/core/adapters";
+import { Adapter, AdapterUser } from "next-auth/adapters";
 import { getDb } from "./db";
 import { stringToColor } from "./utils";
 import * as crypto from "crypto";
@@ -146,10 +146,7 @@ export function KyselyAdapter(): Adapter {
       } as AdapterUser;
     },
 
-    async getUserByAccount({
-      provider: _provider,
-      providerAccountId: _providerAccountId,
-    }) {
+    async getUserByAccount() {
       // Not implemented as we don't have accounts table yet
       return null;
     },
@@ -181,10 +178,7 @@ export function KyselyAdapter(): Adapter {
       return account;
     },
 
-    async unlinkAccount({
-      provider: _provider,
-      providerAccountId: _providerAccountId,
-    }) {
+    async unlinkAccount() {
       // Not implemented
     },
 
@@ -239,7 +233,7 @@ export function KyselyAdapter(): Adapter {
       };
     },
 
-    async updateSession({ sessionToken: _sessionToken }) {
+    async updateSession() {
       // Minimal implementation
       return null;
     },

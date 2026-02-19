@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { setupAction } from "./setupActions";
 import { useI18n } from "@providers/I18nProvider";
+import { ThemeSwitch } from "@components/ThemeSwitch";
 import { LanguageSelect } from "./components/LanguageSelect";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -71,7 +72,23 @@ export function SetupForm() {
         className="auth-logo-container"
         onClick={() => router.push("/login")}
       >
-        <img src="/dark-icon.png" className="auth-logo-img" alt={dict.title} />
+        <div className="auth-logo-img">
+          <img
+            src="/light-icon.png"
+            className="auth-logo-layer light"
+            alt={dict.title}
+          />
+          <img
+            src="/dark-icon.png"
+            className="auth-logo-layer dark"
+            alt={dict.title}
+          />
+        </div>
+      </div>
+
+      {/* Theme Switch */}
+      <div style={{ position: "absolute", top: "2.5rem", right: "2.5rem" }}>
+        <ThemeSwitch />
       </div>
 
       <div className="auth-card">

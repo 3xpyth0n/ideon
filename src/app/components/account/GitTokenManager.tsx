@@ -10,6 +10,7 @@ import {
   GithubIcon,
   GitlabIcon,
   ServerIcon,
+  GitBranch,
   ChevronDown,
   Check,
 } from "lucide-react";
@@ -140,6 +141,9 @@ export function GitTokenManager() {
         return <GithubIcon className="w-5 h-5" />;
       case "gitlab":
         return <GitlabIcon className="w-5 h-5" />;
+      case "gitea":
+      case "forgejo":
+        return <GitBranch className="w-5 h-5" />;
       default:
         return <ServerIcon className="w-5 h-5" />;
     }
@@ -245,7 +249,8 @@ export function GitTokenManager() {
                   {[
                     { value: "github", label: "GitHub" },
                     { value: "gitlab", label: "GitLab" },
-                    { value: "gitea", label: "Gitea / Forgejo" },
+                    { value: "gitea", label: "Gitea" },
+                    { value: "forgejo", label: "Forgejo" },
                   ].map((option, index) => (
                     <button
                       key={option.value}
@@ -279,7 +284,7 @@ export function GitTokenManager() {
             <input
               type="text"
               required
-              placeholder="github.com"
+              placeholder="git.example.com"
               value={host}
               onChange={(e) => setHost(e.target.value)}
               className="zen-input w-full"

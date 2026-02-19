@@ -110,14 +110,16 @@ export const BlockReactions = ({
                   )
                 : false;
 
-              const userNames = reaction.users.map((u) => {
-                const userId = typeof u === "string" ? u : u.id;
-                const resolved = resolveUser(userId);
-                if (resolved) {
-                  return resolved.displayName || resolved.username;
-                }
-                return typeof u === "object" ? u.username : u;
-              });
+              const userNames = reaction.users
+                .map((u) => {
+                  const userId = typeof u === "string" ? u : u.id;
+                  const resolved = resolveUser(userId);
+                  if (resolved) {
+                    return resolved.displayName || resolved.username;
+                  }
+                  return typeof u === "object" ? u.username : u;
+                })
+                .filter((n): n is string => !!n);
 
               // Determine tooltip color: use first user's color if single user, otherwise black
               let tooltipColor = "#000";

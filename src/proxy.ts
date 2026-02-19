@@ -12,7 +12,7 @@ export async function proxy(req: NextRequest) {
   let nonce: string;
   try {
     nonce = globalThis.crypto.randomUUID();
-  } catch (_e) {
+  } catch {
     nonce = Math.random().toString(36).substring(2);
   }
 
@@ -34,20 +34,10 @@ export async function proxy(req: NextRequest) {
   const getRedirectUrl = (path: string) => {
     try {
       return new URL(path, baseUrl);
-    } catch (_e) {
+    } catch {
       return new URL(path, url);
     }
   };
-
-  // Skip redirection for API routes, Next.js internals, and static assets in public/
-  const isStaticAsset =
-    /\.(png|jpg|jpeg|gif|svg|ico|webp|webmanifest|xml|txt|json|woff2?|ttf|otf|js|css|js\.map)$/.test(
-      pathname,
-    );
-
-  if (pathname.startsWith("/_next") || isStaticAsset) {
-    return NextResponse.next();
-  }
 
   const requestHeaders = new Headers(req.headers);
   Object.entries(securityHeaders).forEach(([key, value]) => {
@@ -103,8 +93,8 @@ export async function proxy(req: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(getRedirectUrl("/home")));
   }
 
-  // 2. If authenticated and at root, go to /home
-  if (pathname === "/" && isLoggedIn) {
+  // 2. Redirect root to /home
+  if (pathname === "/") {
     return applySecurityHeaders(NextResponse.redirect(getRedirectUrl("/home")));
   }
 
@@ -124,13 +114,14 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    {
-      source: "/((?!_next/static|_next/image|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files (images, etc)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
 

@@ -9,8 +9,7 @@ export async function POST(req: NextRequest) {
 
   const { redirect_url, error } =
     await jackson.oauthController.oidcAuthzResponse(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      body as any,
+      body as Record<string, string>,
     );
 
   if (redirect_url) {

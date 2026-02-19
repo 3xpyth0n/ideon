@@ -751,7 +751,7 @@
 }
 
 .block-title:focus {
-  border-bottom-color: #ffffff;
+  border-bottom-color: var(--text-main);
 }
 
 [data-theme="dark"] .block-title:focus {
@@ -759,7 +759,8 @@
 }
 
 .block-title::placeholder {
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 [data-theme="dark"] .block-title::placeholder {

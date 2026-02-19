@@ -30,8 +30,8 @@ jobs:
       DB_NAME: ci_db
       SECRET_KEY: ci_secret_key_fixed
       NEXT_TELEMETRY_DISABLED: 1
-      APP_PORT: 60000
-      APP_URL: http://localhost:60000
+      APP_PORT: ${{ vars.APP_PORT }}
+      APP_URL: http://localhost:${{ vars.APP_PORT }}
       COMPOSE_PROJECT_NAME: ideon_ci
       ENV_FILE: .env.ci
 

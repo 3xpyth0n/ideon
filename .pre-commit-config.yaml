@@ -28,16 +28,16 @@ repos:
       - id: check-case-conflict
 
   # -------------------------
-  # ESLint
+  # Type Check & Lint
   # -------------------------
   - repo: local
     hooks:
-      - id: eslint
-        name: eslint
-        entry: npx eslint --fix
+      - id: type-check
+        name: type-check
+        entry: npm run check
         language: system
+        pass_filenames: false
         types_or: [javascript, ts, tsx]
-        pass_filenames: true
 
   # -------------------------
   # Prettier

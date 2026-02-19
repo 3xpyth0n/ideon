@@ -7,8 +7,7 @@ export interface GraphMutationPayload {
   dimensions?: { width: number; height: number };
   link?: Link;
   linkId?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: any;
+  data?: Record<string, unknown>;
   intent?: string;
   isLocked?: boolean;
   ownerId?: string;

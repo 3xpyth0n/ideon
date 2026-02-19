@@ -248,8 +248,7 @@ export function applyGraphMutation(
       };
 
     case "edgeCreate":
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return { ...state, links: [...links, payload as any] };
+      return { ...state, links: [...links, payload as unknown as Edge] };
 
     case "edgeDelete":
       return { ...state, links: links.filter((l) => l.id !== payload.id) };

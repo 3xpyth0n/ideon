@@ -286,6 +286,12 @@ Contributions of any kind are welcome!
 
 ---
 
+## Project growth over time
+
+[![Star History Chart](https://api.star-history.com/svg?repos=3xpyth0n/ideon&type=date&legend=bottom-right)](https://www.star-history.com/#3xpyth0n/ideon&type=date&legend=bottom-right)
+
+---
+
 ## License
 
 AGPLv3.

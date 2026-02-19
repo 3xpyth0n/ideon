@@ -1,16 +1,9 @@
 "use client";
 
 import { memo, useState, useCallback, useEffect, useRef } from "react";
-import {
-  PenTool,
-  Pen,
-  Lock as LockIcon,
-  Eraser,
-  Undo2,
-  Redo2,
-  Trash2,
-} from "lucide-react";
+import { PenTool, Pen, Eraser, Undo2, Redo2, Trash2 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { BlockFooter } from "./BlockFooter";
 import {
   Handle,
   Position,
@@ -95,8 +88,15 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   const saveTimeoutRef = useRef<NodeJS.Timeout>(null);
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const svgCanvasRef = useRef<SVGSVGElement | null>(null);
-  const penIconRef = useRef<SVGSVGElement | null>(null);
-  const eraserIconRef = useRef<SVGSVGElement | null>(null);
+
+  // Refs for tracking state without triggering effects
+  const strokesRef = useRef(strokes);
+  const currentPointsRef = useRef(currentPoints);
+
+  useEffect(() => {
+    strokesRef.current = strokes;
+    currentPointsRef.current = currentPoints;
+  }, [strokes, currentPoints]);
 
   // Close popup when block is deselected
   useEffect(() => {
@@ -106,19 +106,16 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   }, [selected]);
 
   useEffect(() => {
-    const target = tool === "pen" ? penIconRef.current : eraserIconRef.current;
-    if (!target) return;
-    const cloned = target.cloneNode(true) as SVGSVGElement;
-    cloned.setAttribute("width", "16");
-    cloned.setAttribute("height", "16");
-    cloned.setAttribute("stroke", "#ffffff");
-    cloned.setAttribute("fill", "none");
-    cloned.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const s = new XMLSerializer().serializeToString(cloned);
-    const hotspot = tool === "pen" ? "4 12" : "8 8";
+    const penSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pen"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`;
+    const eraserSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eraser"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>`;
+
+    const svgString = tool === "pen" ? penSvg : eraserSvg;
+    const hotspot = tool === "pen" ? "2 22" : "12 12";
+
     const url = `url("data:image/svg+xml;utf8,${encodeURIComponent(
-      s,
+      svgString,
     )}") ${hotspot}, crosshair`;
+
     canvasContainerRef.current?.style.setProperty("--sketch-cursor", url);
     svgCanvasRef.current?.style.setProperty("--sketch-cursor", url);
   }, [tool]);
@@ -223,9 +220,9 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
         }
 
         // Check if content differs
-        if (JSON.stringify(newStrokes) !== JSON.stringify(strokes)) {
+        if (JSON.stringify(newStrokes) !== JSON.stringify(strokesRef.current)) {
           // Update if read-only or not currently drawing
-          if (isReadOnly || !currentPoints) {
+          if (isReadOnly || !currentPointsRef.current) {
             setStrokes(newStrokes);
           }
         }
@@ -237,7 +234,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     } else if (!data.metadata && !isLoaded) {
       setIsLoaded(true);
     }
-  }, [data.metadata, isLoaded, isReadOnly, strokes, currentPoints]);
+  }, [data.metadata, isLoaded, isReadOnly]);
 
   const save = useCallback(
     (newStrokes: Stroke[]) => {
@@ -361,26 +358,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     triggerSave([]);
   };
 
-  const formatDate = (isoString: string) => {
-    if (!isoString) return "";
-    const date = new Date(isoString);
-    const options: Intl.DateTimeFormatOptions = {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    };
-
-    const formatted = new Intl.DateTimeFormat(
-      lang === "fr" ? "fr-FR" : "en-US",
-      options,
-    ).format(date);
-
-    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
-  };
-
   const handleResize = useCallback(
     (
       _evt: unknown,
@@ -480,7 +457,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
 
           {!isReadOnly && (
             <div
-              className="flex items-center gap-1 px-2 pb-1 border-b border-white/5 nowheel nodrag flex-wrap relative z-50"
+              className="flex items-center gap-1 px-2 pb-1 border-b border-[var(--border)] nowheel nodrag flex-wrap relative z-50"
               {...preventDrag}
               onClick={stopPropagation}
             >
@@ -500,16 +477,16 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   {...preventDrag}
                   className={`p-1 rounded-t-sm transition-colors border-b-2 ${
                     tool === "pen"
-                      ? "border-white text-white"
-                      : "border-transparent text-white/40 hover:text-white/70"
+                      ? "border-[var(--text-main)] text-[var(--text-main)]"
+                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
                   }`}
                   title="Pen"
                 >
-                  <Pen size={14} ref={penIconRef} />
+                  <Pen size={14} />
                 </button>
                 {activePopup === "pen" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1  z-[100] min-w-max pointer-events-auto"
+                    className="absolute top-full left-0 mt-2 p-2 border border-[var(--border)] rounded-lg shadow-xl flex gap-1 z-[100] min-w-max pointer-events-auto bg-[var(--bg-island)]"
                     {...preventDrag}
                     onClick={stopPropagation}
                   >
@@ -528,9 +505,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                           width: "32px",
                           height: "32px",
                           backgroundColor:
-                            penSize === s
-                              ? "rgba(255,255,255,0.1)"
-                              : "transparent",
+                            penSize === s ? "var(--border)" : "transparent",
                         }}
                       >
                         <div
@@ -540,8 +515,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                             height: Math.max(2, s),
                             backgroundColor:
                               penSize === s
-                                ? "#ffffff"
-                                : "rgba(255,255,255,0.3)",
+                                ? "var(--text-main)"
+                                : "var(--text-muted)",
                           }}
                         />
                       </button>
@@ -568,16 +543,16 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   {...preventDrag}
                   className={`p-1 rounded-t-sm transition-colors border-b-2 ${
                     tool === "eraser"
-                      ? "border-white text-white"
-                      : "border-transparent text-white/40 hover:text-white/70"
+                      ? "border-[var(--text-main)] text-[var(--text-main)]"
+                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
                   }`}
                   title="Eraser"
                 >
-                  <Eraser size={14} ref={eraserIconRef} />
+                  <Eraser size={14} />
                 </button>
                 {activePopup === "eraser" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1 z-[100] min-w-max pointer-events-auto"
+                    className="absolute top-full left-0 mt-2 p-2 border border-[var(--border)] rounded-lg shadow-xl flex gap-1 z-[100] min-w-max pointer-events-auto bg-[var(--bg-island)]"
                     {...preventDrag}
                     onClick={stopPropagation}
                   >
@@ -594,9 +569,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                         className="flex items-center justify-center rounded-md transition-colors w-8 h-8"
                         style={{
                           backgroundColor:
-                            eraserSize === s
-                              ? "rgba(255,255,255,0.1)"
-                              : "transparent",
+                            eraserSize === s ? "var(--border)" : "transparent",
                         }}
                       >
                         <div
@@ -606,8 +579,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                             height: Math.max(2, s),
                             backgroundColor:
                               eraserSize === s
-                                ? "#ffffff"
-                                : "rgba(255,255,255,0.3)",
+                                ? "var(--text-main)"
+                                : "var(--text-muted)",
                             borderRadius: "50%",
                           }}
                         />
@@ -617,7 +590,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 )}
               </div>
 
-              <div className="w-px h-4 bg-white/10 mx-1" />
+              <div className="w-px h-4 bg-[var(--border)] mx-1" />
 
               {/* Color Picker */}
               <div className="relative z-[60]">
@@ -628,22 +601,22 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                     setActivePopup(activePopup === "color" ? null : "color");
                   }}
                   {...preventDrag}
-                  className="p-1 rounded-md transition-colors text-white/40 hover:text-white/70 flex items-center gap-1"
+                  className="p-1 rounded-md transition-colors text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1"
                   title="Color"
                 >
                   <div
-                    className="w-4 h-4 rounded-full border border-white/20"
+                    className="w-4 h-4 rounded-full border border-[var(--border)]"
                     style={{ backgroundColor: color }}
                   />
                 </button>
                 {activePopup === "color" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-white/10 rounded-lg shadow-xl flex gap-1"
+                    className="absolute top-full left-0 mt-2 p-2 border border-[var(--border)] rounded-lg shadow-xl flex gap-1"
                     {...preventDrag}
                     onClick={stopPropagation}
                     style={{
                       pointerEvents: "auto",
-                      backgroundColor: "#121212",
+                      backgroundColor: "var(--bg-island)",
                       zIndex: 100,
                     }}
                   >
@@ -659,7 +632,9 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                         }}
                         {...preventDrag}
                         className={`w-6 h-6 rounded-full border ${
-                          color === c ? "border-white" : "border-white/10"
+                          color === c
+                            ? "border-[var(--text-main)]"
+                            : "border-[var(--border)]"
                         }`}
                         style={{ backgroundColor: c }}
                       />
@@ -680,8 +655,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 disabled={history.length === 0}
                 className={`p-1 rounded-md transition-all duration-200 ${
                   history.length === 0
-                    ? "text-white/20 cursor-not-allowed opacity-30"
-                    : "text-white hover:text-white hover:bg-white/10 opacity-100"
+                    ? "text-[var(--text-muted)] cursor-not-allowed opacity-30"
+                    : "text-[var(--text-main)] hover:text-[var(--text-main)] hover:bg-[var(--border)] opacity-100"
                 }`}
                 title="Undo"
               >
@@ -696,8 +671,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 disabled={redoStack.length === 0}
                 className={`p-1 rounded-md transition-all duration-200 ${
                   redoStack.length === 0
-                    ? "text-white/20 cursor-not-allowed opacity-30"
-                    : "text-white hover:text-white hover:bg-white/10 opacity-100"
+                    ? "text-[var(--text-muted)] cursor-not-allowed opacity-30"
+                    : "text-[var(--text-main)] hover:text-[var(--text-main)] hover:bg-[var(--border)] opacity-100"
                 }`}
                 title="Redo"
               >
@@ -709,7 +684,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   stopPropagation(e);
                 }}
                 {...preventDrag}
-                className="p-1 rounded-md text-white/40 hover:text-red-400"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-red-400"
                 title="Clear"
               >
                 <Trash2 size={14} />
@@ -725,6 +700,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
               touchAction: "none",
               zIndex: 0,
               position: "relative",
+              background: "rgba(128, 128, 128, 0.05)",
             }}
           >
             <svg
@@ -886,19 +862,13 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
             </svg>
           </div>
 
-          <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
-            <div className="flex items-center justify-between w-full text-tiny opacity-40">
-              <div className="block-timestamp">
-                {formatDate(data.updatedAt || "")}
-              </div>
-              <div className="block-author-info flex items-center gap-1.5">
-                {isLocked && <LockIcon size={10} className="block-lock-icon" />}
-                <div className="author-name">
-                  {(data.authorName || dict.project.anonymous).toLowerCase()}
-                </div>
-              </div>
-            </div>
-          </div>
+          <BlockFooter
+            updatedAt={data.updatedAt}
+            authorName={data.authorName}
+            isLocked={isLocked}
+            dict={dict}
+            lang={lang}
+          />
         </div>
 
         <Handle

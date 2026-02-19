@@ -1,4 +1,4 @@
-import {
+import type {
   ColumnType,
   Generated,
   Selectable,
@@ -269,7 +269,7 @@ export interface rateLimitsTable {
   expire: number;
 }
 
-import { userGitTokensTable } from "./userGitTokens";
+import type { userGitTokensTable } from "./userGitTokens.ts";
 
 export interface database {
   users: usersTable;

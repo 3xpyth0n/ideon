@@ -250,7 +250,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       setProjects(projectsData);
       setFolders(foldersData);
       setCurrentFolder(currentFolderData);
-    } catch (_err) {
+    } catch {
       // Handle error
       setProjects([]);
       setFolders([]);
@@ -625,15 +625,26 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       case "trash":
         return dict.dashboard.trash || "Trash";
       default:
-        return dict.templates.overview;
+        return dict.dashboard.home || "Home";
     }
   };
 
   const getSubtitle = () => {
-    if (folderId) return "Projects in this folder";
+    if (folderId)
+      return dict.dashboard.manageFolder || "Projects in this folder";
     switch (view) {
       case "trash":
-        return "Manage deleted projects";
+        return dict.dashboard.manageTrash || "Manage deleted projects";
+      case "recent":
+        return dict.dashboard.manageRecent || "Your recently accessed projects";
+      case "starred":
+        return dict.dashboard.manageStarred || "Your favorite projects";
+      case "shared":
+        return dict.dashboard.manageShared || "Projects shared with you";
+      case "my-projects":
+        return (
+          dict.dashboard.manageMyProjects || "Manage the projects you created"
+        );
       default:
         return dict.dashboard.manageProjects;
     }
@@ -777,8 +788,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   isTrash ? "cursor-default opacity-75" : ""
                 } ${
                   dragOverFolderId === folder.id
-                    ? "!border-blue-500 !bg-blue-500/20"
-                    : "!border-blue-500/20 hover:!border-blue-500/50 !bg-blue-500/5 hover:!bg-blue-500/10"
+                    ? "!border-blue-500 !bg-blue-800 dark:!bg-blue-500/20"
+                    : "!border-blue-500/20 hover:!border-blue-500/50 !bg-blue-950 hover:!bg-blue-900 dark:!bg-blue-500/5 dark:hover:!bg-blue-500/10"
                 }`}
               >
                 <div>

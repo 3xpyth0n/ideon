@@ -34,7 +34,7 @@ export async function validateSafeUrl(url: string): Promise<boolean> {
     }
 
     return true;
-  } catch (_error) {
+  } catch {
     // If DNS resolution fails or URL is invalid, treat as unsafe
     return false;
   }

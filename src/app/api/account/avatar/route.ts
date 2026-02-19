@@ -98,7 +98,7 @@ export const DELETE = authenticatedAction(
 
       try {
         await unlink(filePath);
-      } catch (_err) {
+      } catch {
         // Ignore if file doesn't exist
       }
     }

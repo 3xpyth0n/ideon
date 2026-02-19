@@ -79,7 +79,7 @@ export async function checkRateLimit(
 
   try {
     await limiter.consume(key);
-  } catch (_rejRes) {
+  } catch {
     throw {
       status: 429,
       message: "Too many requests, please try again later.",

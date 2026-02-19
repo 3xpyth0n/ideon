@@ -41,8 +41,7 @@ export async function GET(
       const profile = await jackson.oauthController.userInfo(token);
       return NextResponse.json(profile);
     } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const error = err as any;
+      const error = err as Error;
       return NextResponse.json(
         { error: error.message || "Unauthorized" },
         { status: 401 },
@@ -80,8 +79,7 @@ export async function POST(
       const response = await jackson.oauthController.token(body);
       return NextResponse.json(response);
     } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const error = err as any;
+      const error = err as Error;
       return NextResponse.json(
         { error: error.message || "Bad Request" },
         { status: 400 },

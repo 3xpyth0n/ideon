@@ -126,6 +126,23 @@
   margin: 0 4px;
 }
 
+.bubble-menu-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: white;
+  padding: 4px 8px;
+  font-size: 13px;
+  width: 200px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.bubble-menu-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 @keyframes context-menu-fade-in {
   from {
     opacity: 0;

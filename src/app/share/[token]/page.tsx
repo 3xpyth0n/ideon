@@ -3,6 +3,8 @@ import { transformBlock, transformLink, DbBlock } from "@lib/graph";
 import { PublicProjectCanvas } from "@components/project/PublicProjectCanvas";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { cookies } from "next/headers";
+import { loadDictionaries } from "../../i18n/loader";
 import { Node } from "@xyflow/react";
 import { BlockData } from "@components/project/CanvasBlock";
 
@@ -63,11 +65,16 @@ export async function generateMetadata({
   const { token } = await params;
   const data = await getProjectData(token);
 
-  if (!data) return { title: "Project Not Found" };
+  const cookieStore = await cookies();
+  const lang = cookieStore.get("ideonLang")?.value || "en";
+  const dictionaries = await loadDictionaries();
+  const dict = dictionaries[lang] || dictionaries["en"];
+
+  if (!data) return { title: dict.pages.notFound };
 
   return {
-    title: `${data.project.name} - Ideon`,
-    description: data.project.description || "View this project on Ideon",
+    title: `${data.project.name} - ${dict.pages.share}`,
+    description: data.project.description || dict.pages.share,
   };
 }
 

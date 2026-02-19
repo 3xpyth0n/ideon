@@ -10,7 +10,8 @@ export default defineConfig({
       SQLITE_PATH: ":memory:",
       NODE_ENV: "development",
     },
-    include: ["**/*.test.ts"],
+    include: ["src/**/*.test.ts"],
+    exclude: ["**/.next/**", "**/node_modules/**", "**/dist/**"],
     fileParallelism: false,
     coverage: {
       provider: "v8",

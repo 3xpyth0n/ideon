@@ -23,7 +23,7 @@ export async function GET() {
       if (response.status === 403 || response.status === 429) {
         return NextResponse.json({ latest: null });
       }
-      throw new Error(`GitHub API error: ${response.statusText}`);
+      throw new Error(`Update check error: ${response.statusText}`);
     }
 
     const data = await response.json();

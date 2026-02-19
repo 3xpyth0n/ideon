@@ -1,5 +1,5 @@
 import { Kysely, sql } from "kysely";
-import { database } from "../../lib/types/db";
+import type { database } from "../../lib/types/db.ts";
 
 export async function up(db: Kysely<database>): Promise<void> {
   // Users

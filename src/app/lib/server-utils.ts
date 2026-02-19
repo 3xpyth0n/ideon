@@ -66,32 +66,11 @@ export function authenticatedAction<T, B = unknown>(
 
       // Update lastOnline for authenticated users
       if (user) {
-        const db = getDb();
-        db.updateTable("users")
-          .set({ lastOnline: new Date().toISOString() })
-          .where("id", "=", user.id)
-          .execute()
-          .catch((err) =>
-            logger.error({ err, userId: user.id }, "lastOnline update error"),
-          );
+        // Fire and forget update
+        updateLastOnline(user.id);
       }
 
-      let body = {} as B;
-      const contentType = req.headers.get("content-type") || "";
-
-      if (
-        (req.method === "POST" ||
-          req.method === "PUT" ||
-          req.method === "PATCH") &&
-        contentType.includes("application/json")
-      ) {
-        const rawBody = await req.json().catch(() => ({}));
-        if (options?.schema) {
-          body = options.schema.parse(rawBody);
-        } else {
-          body = rawBody;
-        }
-      }
+      const body = await parseBody(req, options?.schema);
 
       const executeHandler = () =>
         handler(req, {
@@ -122,32 +101,69 @@ export function authenticatedAction<T, B = unknown>(
 
       return NextResponse.json(result);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return NextResponse.json(
-          {
-            error: error.errors[0]?.message || "Invalid request body",
-            details: error.errors,
-          },
-          { status: 400 },
-        );
-      }
-
-      const status = (error as { status?: number })?.status || 500;
-      const isExplicitError =
-        typeof (error as { status?: number })?.status === "number";
-
-      let message =
-        (error as { message?: string })?.message ||
-        (status === 500 ? "Internal Server Error" : "Error");
-
-      if (status === 500 && !isExplicitError) {
-        logger.error({ error, path: req.nextUrl.pathname }, "API Error");
-        message = "Internal Server Error";
-      }
-
-      return NextResponse.json({ error: message }, { status });
+      return handleError(error, req);
     }
   };
+}
+
+// Helper: Update lastOnline
+export function updateLastOnline(userId: string) {
+  const db = getDb();
+  db.updateTable("users")
+    .set({ lastOnline: new Date().toISOString() })
+    .where("id", "=", userId)
+    .execute()
+    .catch((err) => logger.error({ err, userId }, "lastOnline update error"));
+}
+
+// Helper: Parse Body
+export async function parseBody<B>(
+  req: NextRequest,
+  schema?: z.ZodSchema<B>,
+): Promise<B> {
+  let body = {} as B;
+  const contentType = req.headers.get("content-type") || "";
+
+  if (
+    (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") &&
+    contentType.includes("application/json")
+  ) {
+    const rawBody = await req.json().catch(() => ({}));
+    if (schema) {
+      body = schema.parse(rawBody);
+    } else {
+      body = rawBody;
+    }
+  }
+  return body;
+}
+
+// Helper: Handle Error
+export function handleError(error: unknown, req: NextRequest) {
+  if (error instanceof z.ZodError) {
+    return NextResponse.json(
+      {
+        error: error.errors[0]?.message || "Invalid request body",
+        details: error.errors,
+      },
+      { status: 400 },
+    );
+  }
+
+  const status = (error as { status?: number })?.status || 500;
+  const isExplicitError =
+    typeof (error as { status?: number })?.status === "number";
+
+  let message =
+    (error as { message?: string })?.message ||
+    (status === 500 ? "Internal Server Error" : "Error");
+
+  if (status === 500 && !isExplicitError) {
+    logger.error({ error, path: req.nextUrl.pathname }, "API Error");
+    message = "Internal Server Error";
+  }
+
+  return NextResponse.json({ error: message }, { status });
 }
 
 export function adminAction<T, B = unknown>(
@@ -172,9 +188,7 @@ export function projectAction<T, B = unknown>(
   options?: ActionOptions<B>,
 ) {
   return authenticatedAction(async (req, { params, user, body }) => {
-    if (!user) {
-      throw { status: 401, message: "Unauthorized" };
-    }
+    const currentUser = user as AuthUser;
 
     const { id } = z.object({ id: z.string().uuid() }).parse(params);
     const db = getDb();
@@ -190,12 +204,12 @@ export function projectAction<T, B = unknown>(
     }
 
     // Verify ownership or collaboration
-    if (project.ownerId !== user.id) {
+    if (project.ownerId !== currentUser.id) {
       const collaborator = await db
         .selectFrom("projectCollaborators")
         .select("role")
         .where("projectId", "=", id)
-        .where("userId", "=", user.id)
+        .where("userId", "=", currentUser.id)
         .executeTakeFirst();
 
       if (!collaborator) {
@@ -209,14 +223,14 @@ export function projectAction<T, B = unknown>(
             .where("id", "=", project.folderId)
             .where((eb) =>
               eb.or([
-                eb("ownerId", "=", user.id),
+                eb("ownerId", "=", currentUser.id),
                 eb(
                   "id",
                   "in",
                   eb
                     .selectFrom("folderCollaborators")
                     .select("folderId")
-                    .where("userId", "=", user.id),
+                    .where("userId", "=", currentUser.id),
                 ),
               ]),
             )
@@ -231,6 +245,6 @@ export function projectAction<T, B = unknown>(
       }
     }
 
-    return handler(req, { params, user, project, body });
+    return handler(req, { params, user: currentUser, project, body });
   }, options);
 }

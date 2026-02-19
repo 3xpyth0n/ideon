@@ -45,6 +45,7 @@ COPY --from=builder --chown=appuser:appuser /app/.next ./.next
 COPY --from=builder --chown=appuser:appuser /app/public ./public
 COPY --from=builder --chown=appuser:appuser /app/package.json ./package.json
 COPY --from=builder --chown=appuser:appuser /app/src/app/i18n ./src/app/i18n
+COPY --from=builder --chown=appuser:appuser /app/src/app/db/migrations ./src/app/db/migrations
 
 # Copy entrypoint script and make it executable
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh

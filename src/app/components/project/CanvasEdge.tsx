@@ -62,9 +62,9 @@ export default function CanvasEdge({
   const isVertical = (pos: Position) =>
     pos === Position.Top || pos === Position.Bottom;
 
-  let edgePath = "";
-  let labelX = 0;
-  let labelY = 0;
+  let edgePath: string;
+  let labelX: number;
+  let labelY: number;
 
   // Use Bezier for strictly linear connections (horizontal-horizontal or vertical-vertical)
   // Use SmoothStep for orthogonal/mixed connections (horizontal-vertical)

@@ -4,7 +4,7 @@ import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 
 import { z } from "zod";
-import { sql, Insertable } from "kysely";
+import { Insertable } from "kysely";
 import { blocksTable } from "@lib/types/db";
 
 const createProjectSchema = z.object({
@@ -12,6 +12,8 @@ const createProjectSchema = z.object({
   description: z.string().optional(),
   folderId: z.string().uuid().optional(),
 });
+
+import { getProjectsQuery } from "@lib/queries";
 
 export const GET = authenticatedAction(
   async (req, { user }) => {
@@ -22,123 +24,8 @@ export const GET = authenticatedAction(
     const ids = url.searchParams.get("ids")?.split(",").filter(Boolean);
     const folderId = url.searchParams.get("folderId");
 
-    let query = db
-      .selectFrom("projects")
-      .leftJoin("projectStars", (join) =>
-        join
-          .onRef("projectStars.projectId", "=", "projects.id")
-          .on("projectStars.userId", "=", user.id),
-      )
-      .select([
-        "projects.id as id",
-        "projects.name as name",
-        "projects.description as description",
-        "projects.updatedAt as updatedAt",
-        "projects.ownerId as ownerId",
-        "projects.deletedAt as deletedAt",
-        "projects.folderId as folderId",
-        sql<number>`CASE WHEN "projectStars"."projectId" IS NOT NULL THEN 1 ELSE 0 END`.as(
-          "isStarred",
-        ),
-        (eb) =>
-          eb
-            .selectFrom("projectCollaborators")
-            .select(sql<number>`count("userId") + 1`.as("count"))
-            .whereRef("projectCollaborators.projectId", "=", "projects.id")
-            .whereRef("projectCollaborators.userId", "!=", "projects.ownerId")
-            .as("collaboratorCount"),
-      ]);
-
-    if (view === "trash") {
-      query = query
-        .where("projects.deletedAt", "is not", null)
-        .where("projects.ownerId", "=", user.id);
-    } else {
-      query = query.where("projects.deletedAt", "is", null);
-
-      if (folderId) {
-        query = query.where("projects.folderId", "=", folderId);
-      } else if (view === "my-projects") {
-        query = query
-          .where("projects.folderId", "is", null)
-          .where("projects.ownerId", "=", user.id);
-      } else if (view === "shared") {
-        query = query
-          .where("projects.ownerId", "!=", user.id)
-          .where((eb) =>
-            eb.or([
-              eb.exists(
-                eb
-                  .selectFrom("projectCollaborators")
-                  .select("projectCollaborators.userId")
-                  .whereRef("projectId", "=", "projects.id")
-                  .where("userId", "=", user.id),
-              ),
-              eb.exists(
-                eb
-                  .selectFrom("folders")
-                  .innerJoin(
-                    "folderCollaborators",
-                    "folderCollaborators.folderId",
-                    "folders.id",
-                  )
-                  .whereRef("folders.id", "=", "projects.folderId")
-                  .where("folderCollaborators.userId", "=", user.id),
-              ),
-            ]),
-          );
-      } else if (view === "starred") {
-        query = query.where("projectStars.projectId", "is not", null);
-      } else if (view === "recent" && ids && ids.length > 0) {
-        query = query.where("projects.id", "in", ids);
-      } else if (view === "recent" && (!ids || ids.length === 0)) {
-        return [];
-      } else {
-        query = query.where("projects.folderId", "is", null);
-      }
-    }
-
-    // Only apply global security filter if not already handled by specific view logic
-    if (view !== "trash" && view !== "my-projects") {
-      query = query.where((eb) =>
-        eb.or([
-          eb("projects.ownerId", "=", user.id),
-          eb(
-            "projects.id",
-            "in",
-            eb
-              .selectFrom("projectCollaborators")
-              .select("projectId")
-              .where("userId", "=", user.id),
-          ),
-          eb(
-            "projects.folderId",
-            "in",
-            eb
-              .selectFrom("folders")
-              .select("id")
-              .where((feb) =>
-                feb.or([
-                  feb("ownerId", "=", user.id),
-                  feb(
-                    "id",
-                    "in",
-                    eb
-                      .selectFrom("folderCollaborators")
-                      .select("folderId")
-                      .where("userId", "=", user.id),
-                  ),
-                ]),
-              ),
-          ),
-        ]),
-      );
-    }
-
-    const projects = await query
-      .orderBy("projects.updatedAt", "desc")
-      .execute();
-
+    const query = getProjectsQuery(db, user.id, view, folderId, ids);
+    const projects = await query.execute();
     return projects;
   },
   { requireUser: true },

@@ -4,6 +4,7 @@ import { useI18n } from "@providers/I18nProvider";
 import { LanguageSelect } from "@setup/components/LanguageSelect";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ThemeSwitch } from "@components/ThemeSwitch";
 import { Button } from "@components/ui/Button";
 import { toast } from "sonner";
 
@@ -98,7 +99,7 @@ export function RegisterClient() {
         const data = await res.json();
         toast.error(data.error || dict.common.error);
       }
-    } catch (_err) {
+    } catch {
       toast.error(dict.common.error);
     } finally {
       setBusy(false);
@@ -108,7 +109,7 @@ export function RegisterClient() {
   if (!mounted || loading) {
     return (
       <div className="auth-page flex items-center justify-center">
-        <Loader2 className="animate-spin text-white/50" size={32} />
+        <Loader2 className="animate-spin text-muted" size={32} />
       </div>
     );
   }
@@ -118,6 +119,11 @@ export function RegisterClient() {
   if (!canRegister) {
     return (
       <div className="auth-page">
+        {/* Theme Switch */}
+        <div style={{ position: "absolute", top: "2.5rem", right: "2.5rem" }}>
+          <ThemeSwitch />
+        </div>
+
         <div className="auth-card">
           <div className="auth-header">
             <h1 className="auth-title">{dict.auth.invalidInvitationTitle}</h1>
@@ -144,8 +150,24 @@ export function RegisterClient() {
         className="auth-logo-container"
         onClick={() => router.push("/login")}
       >
-        <img src="/dark-icon.png" className="auth-logo-img" alt={dict.title} />
+        <div className="auth-logo-img">
+          <img
+            src="/light-icon.png"
+            className="auth-logo-layer light"
+            alt={dict.title}
+          />
+          <img
+            src="/dark-icon.png"
+            className="auth-logo-layer dark"
+            alt={dict.title}
+          />
+        </div>
         <span className="auth-logo-text pt-2">{dict.title}</span>
+      </div>
+
+      {/* Theme Switch */}
+      <div style={{ position: "absolute", top: "2.5rem", right: "2.5rem" }}>
+        <ThemeSwitch />
       </div>
 
       <div className="auth-card">
@@ -160,9 +182,7 @@ export function RegisterClient() {
           <div className="auth-field">
             <label className="auth-label">{dict.auth.email}</label>
             <input
-              className={`auth-input placeholder:text-white/20 ${
-                token ? "opacity-50" : ""
-              }`}
+              className={`auth-input ${token ? "opacity-50" : ""}`}
               value={email}
               onChange={(e) => !token && setEmail(e.target.value)}
               placeholder={dict.auth.emailPlaceholder}
@@ -175,7 +195,7 @@ export function RegisterClient() {
           <div className="auth-field">
             <label className="auth-label">{dict.auth.username}</label>
             <input
-              className="auth-input placeholder:text-white/20"
+              className="auth-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={dict.auth.usernamePlaceholder}
@@ -187,7 +207,7 @@ export function RegisterClient() {
             <label className="auth-label">{dict.auth.password}</label>
             <div className="auth-input-wrapper">
               <input
-                className="auth-input auth-input-password placeholder:text-white/20"
+                className="auth-input auth-input-password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -209,7 +229,7 @@ export function RegisterClient() {
             <label className="auth-label">{dict.auth.confirmPassword}</label>
             <div className="auth-input-wrapper">
               <input
-                className="auth-input auth-input-password placeholder:text-white/20"
+                className="auth-input auth-input-password"
                 type={showConfirm ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -234,7 +254,7 @@ export function RegisterClient() {
               className="btn-primary auth-submit-btn"
             >
               {busy ? (
-                <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
+                <div className="loading-spinner border-background/30 border-t-background" />
               ) : (
                 dict.auth.register
               )}

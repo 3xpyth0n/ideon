@@ -1,6 +1,7 @@
 import { getDb, runTransaction } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
+import { getClientIp } from "@lib/security-utils";
 import { headers } from "next/headers";
 
 export const GET = projectAction(async (_req, { project }) => {
@@ -101,7 +102,7 @@ export const PATCH = projectAction(async (_req, { project, user, body }) => {
       .execute();
 
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
     await logSecurityEvent("projectUpdate", "success", {
       userId: user.id,
       ip,
@@ -177,7 +178,7 @@ export const DELETE = projectAction(async (req, { project, user }) => {
       .execute();
 
     const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    const ip = getClientIp(headersList);
     await logSecurityEvent("projectSoftDelete", "success", {
       userId: user.id,
       ip,

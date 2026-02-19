@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useI18n } from "@providers/I18nProvider";
+import { useI18n, type Dict } from "@providers/I18nProvider";
 import {
   Shield,
   Key,
   Mail,
   Slack,
-  Github,
+  Gitlab,
   Disc,
   Globe,
   Cloud,
@@ -108,6 +108,18 @@ export function ManagementClient() {
       window.removeEventListener("popstate", handleHashChange);
     };
   }, []);
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      authentication: dict.pages.management,
+      sso: dict.pages.ssoProviders,
+      audit: dict.pages.securityAudit,
+    };
+
+    if (activeTab && titles[activeTab]) {
+      document.title = `Ideon - ${titles[activeTab]}`;
+    }
+  }, [activeTab, dict]);
 
   useEffect(() => {
     if (activeTab === "audit") {
@@ -245,7 +257,7 @@ export function ManagementClient() {
     { key: "slack", icon: Slack, color: "#4A154B" },
     { key: "oidc", icon: Key, color: "#F78C40" },
     { key: "discord", icon: Disc, color: "#5865F2" },
-    { key: "gitlab", icon: Github, color: "#FC6D26" },
+    { key: "gitlab", icon: Gitlab, color: "#FC6D26" },
     { key: "magicLink", icon: Mail, color: "#EA4335" },
     { key: "saml", icon: Shield, color: "#8E44AD" },
   ];
@@ -460,14 +472,17 @@ export function ManagementClient() {
                             : dict.common.disabled}
                         </div>
                         <Button
-                          className="btn-minimal w-full mt-4 justify-between"
+                          className="btn-minimal w-full mt-4 justify-between group hover:text-text-main"
                           onClick={() => openProviderConfig(p.key)}
                           noRipple
                         >
-                          <span className="btn-text">
+                          <span className="btn-text group-hover:text-text-main">
                             {dict.management.configure}
                           </span>
-                          <ChevronRight size={16} />
+                          <ChevronRight
+                            size={16}
+                            className="group-hover:text-text-main"
+                          />
                         </Button>
                       </div>
                     );
@@ -556,8 +571,7 @@ function ProviderConfigModal({
   onTestSmtp: () => void;
   testingSmtp: boolean;
   smtpTestStatus: { success: boolean; message: string } | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  dict: any;
+  dict: Dict;
   appUrl: string;
 }) {
   const [formData, setFormData] = useState<Partial<ProviderConfig>>(config);

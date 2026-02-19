@@ -2,8 +2,9 @@
 
 import { memo, useState, useCallback, useEffect, useMemo } from "react";
 import * as Y from "yjs";
-import { Code, Lock, Brush, Copy } from "lucide-react";
+import { Code, Brush, Copy } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { BlockFooter } from "./BlockFooter";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { format } from "prettier/standalone";
 import type { Plugin } from "prettier";
@@ -244,26 +245,6 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     onLongPress,
   });
 
-  const formatDate = (isoString: string) => {
-    if (!isoString) return "";
-    const date = new Date(isoString);
-    const options: Intl.DateTimeFormatOptions = {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    };
-
-    const formatted = new Intl.DateTimeFormat(
-      lang === "fr" ? "fr-FR" : "en-US",
-      options,
-    ).format(date);
-
-    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
-  };
-
   const handleFormat = useCallback(async () => {
     try {
       let parser = "";
@@ -303,7 +284,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
 
       handleCodeChange(formatted);
       toast.success(dict.blocks.codeFormatted || "Code formatted");
-    } catch (_err) {
+    } catch {
       toast.error(dict.blocks.formatError || "Formatting failed");
     }
   }, [code, language, handleCodeChange, dict]);
@@ -409,7 +390,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
-              className="block-title mr-2"
+              className="block-title mr-2 !max-w-[120px]"
               placeholder="..."
               readOnly={isReadOnly}
             />
@@ -434,6 +415,8 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               options={LANGUAGE_OPTIONS}
               onChange={handleLanguageChange}
               align="right"
+              triggerClassName="!pr-3"
+              className="mr-1"
             />
           </div>
         </div>
@@ -466,19 +449,13 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
           </div>
         </div>
 
-        <div className="block-author-container mt-2 pt-3 px-4 pb-3 shrink-0">
-          <div className="flex items-center justify-between w-full text-tiny opacity-40">
-            <div className="block-timestamp">
-              {formatDate(data.updatedAt || "")}
-            </div>
-            <div className="block-author-info flex items-center gap-1.5">
-              {isLocked && <Lock size={10} className="block-lock-icon" />}
-              <div className="author-name">
-                {(data.authorName || dict.project.anonymous).toLowerCase()}
-              </div>
-            </div>
-          </div>
-        </div>
+        <BlockFooter
+          updatedAt={data.updatedAt}
+          authorName={data.authorName}
+          isLocked={isLocked}
+          dict={dict}
+          lang={lang}
+        />
       </div>
 
       <BlockReactions

@@ -12,90 +12,19 @@ export const DELETE = authenticatedAction(
 
     try {
       await runTransaction(db, async (trx) => {
-        const foldersInTrash = await trx
-          .selectFrom("folders")
-          .select("id")
+        // Delete Folders (cascades to projects inside, and folderCollaborators)
+        await trx
+          .deleteFrom("folders")
           .where("deletedAt", "is not", null)
           .where("ownerId", "=", user.id)
           .execute();
 
-        const folderIds = foldersInTrash.map((f) => f.id);
-
-        const projectsToDelete = await trx
-          .selectFrom("projects")
-          .select("id")
-          .where((eb) =>
-            eb.or([
-              eb("deletedAt", "is not", null),
-              folderIds.length > 0
-                ? eb("folderId", "in", folderIds)
-                : eb.val(false),
-            ]),
-          )
+        // Delete Projects (cascades to blocks, links, collaborators, etc.)
+        await trx
+          .deleteFrom("projects")
+          .where("deletedAt", "is not", null)
           .where("ownerId", "=", user.id)
           .execute();
-
-        const projectIds = projectsToDelete.map((p) => p.id);
-
-        if (projectIds.length > 0) {
-          await trx
-            .deleteFrom("projectCollaborators")
-            .where("projectId", "in", projectIds)
-            .execute();
-          await trx
-            .deleteFrom("projectStars")
-            .where("projectId", "in", projectIds)
-            .execute();
-          await trx
-            .deleteFrom("blockSnapshots")
-            .where(
-              "blockId",
-              "in",
-              trx
-                .selectFrom("blocks")
-                .select("id")
-                .where("projectId", "in", projectIds),
-            )
-            .execute();
-          await trx
-            .deleteFrom("linkPreviews")
-            .where(
-              "blockId",
-              "in",
-              trx
-                .selectFrom("blocks")
-                .select("id")
-                .where("projectId", "in", projectIds),
-            )
-            .execute();
-          await trx
-            .deleteFrom("blocks")
-            .where("projectId", "in", projectIds)
-            .execute();
-          await trx
-            .deleteFrom("links")
-            .where("projectId", "in", projectIds)
-            .execute();
-          await trx
-            .deleteFrom("temporalStates")
-            .where("projectId", "in", projectIds)
-            .execute();
-          await trx
-            .deleteFrom("projects")
-            .where("id", "in", projectIds)
-            .execute();
-        }
-
-        if (folderIds.length > 0) {
-          await trx
-            .deleteFrom("folderCollaborators")
-            .where("folderId", "in", folderIds)
-            .execute();
-          await trx
-            .deleteFrom("folders")
-            .where("id", "in", folderIds)
-            .execute();
-        }
       });
 
       await logSecurityEvent("emptyTrash", "success", {

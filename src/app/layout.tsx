@@ -35,7 +35,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = dictionaries[lang] || dictionaries["en"];
 
   return {
-    title: APP_NAME,
+    title: {
+      template: `${APP_NAME} - %s`,
+      default: APP_NAME,
+    },
     description: dict.subtitle,
     manifest: "/site.webmanifest",
     icons: {

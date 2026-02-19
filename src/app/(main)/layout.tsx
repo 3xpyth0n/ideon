@@ -11,7 +11,7 @@ async function getVersion() {
       "utf-8",
     );
     return JSON.parse(pkg).version;
-  } catch (_e) {
+  } catch {
     return "0.0.0";
   }
 }

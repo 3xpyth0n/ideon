@@ -1,45 +1,45 @@
-"use client";
-import dynamic from "next/dynamic";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { addRecentProject } from "@lib/utils";
+import { Metadata } from "next";
+import { cookies } from "next/headers";
+import { loadDictionaries } from "../../../i18n/loader";
+import { getDb } from "../../../lib/db";
+import ProjectClient from "./ProjectClient";
 
-const ProjectCanvas = dynamic(
-  () => import("@components/project/ProjectCanvas"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center w-full h-full bg-page">
-        <div className="text-sm opacity-60">Loading canvas...</div>
-      </div>
-    ),
-  },
-);
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const cookieStore = await cookies();
+  const lang = cookieStore.get("ideonLang")?.value || "en";
+  const dictionaries = await loadDictionaries();
+  const dict = dictionaries[lang] || dictionaries["en"];
 
-export default function ProjectPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+  if (id && id !== "undefined") {
+    const db = getDb();
+    const project = await db
+      .selectFrom("projects")
+      .select("name")
+      .where("id", "=", id)
+      .executeTakeFirst();
 
-  useEffect(() => {
-    if (!id || id === "undefined") {
-      router.push("/home");
-    } else {
-      addRecentProject(id);
-      // Track server-side last opened
-      fetch(`/api/projects/${id}/open`, { method: "POST" }).catch(
-        console.error,
-      );
+    if (project) {
+      return {
+        title: project.name,
+      };
     }
-  }, [id, router]);
-
-  if (!id || id === "undefined") {
-    return null;
   }
 
-  return (
-    <main className="relative w-full h-screen overflow-hidden">
-      <ProjectCanvas initialProjectId={id} />
-    </main>
-  );
+  return {
+    title: dict.pages.project,
+  };
+}
+
+export default async function ProjectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <ProjectClient id={id} />;
 }

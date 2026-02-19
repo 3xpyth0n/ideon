@@ -21,6 +21,8 @@ import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
 import SketchBlock from "./SketchBlock";
+import GitBlock from "./GitBlock";
+import FileBlock from "./FileBlock";
 import CanvasEdge from "./CanvasEdge";
 import { useI18n } from "@providers/I18nProvider";
 import { useEffect, useMemo } from "react";
@@ -29,8 +31,8 @@ import { DEFAULT_VIEWPORT } from "./utils/constants";
 const blockTypes = {
   text: CanvasBlock,
   link: CanvasBlock,
-  file: CanvasBlock,
-  github: CanvasBlock,
+  file: FileBlock,
+  github: GitBlock,
   palette: PaletteBlock,
   contact: ContactBlock,
   video: VideoBlock,

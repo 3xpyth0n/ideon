@@ -49,7 +49,6 @@ interface DecisionHistoryProps {
 export function DecisionHistory({
   projectId,
   onPreview,
-  onApply: _onApply,
   onSave,
   onDelete,
   onRename,
@@ -188,7 +187,7 @@ export function DecisionHistory({
       setHistory(data.history || []);
       // Reset scroll check after data load
       setTimeout(checkScroll, 100);
-    } catch (_error) {
+    } catch {
       toast.error(dict.common.error);
     } finally {
       setIsLoading(false);
@@ -212,7 +211,7 @@ export function DecisionHistory({
         toast.success(dict.modals.milestoneSuccess);
         fetchHistory();
       }
-    } catch (_error) {
+    } catch {
       toast.error(dict.modals.saveStateError);
     } finally {
       setIsSaving(false);
@@ -267,7 +266,7 @@ export function DecisionHistory({
     try {
       await onRename(stateId, newIntent);
       fetchHistory();
-    } catch (_error) {
+    } catch {
       // Error handled in onRename
     }
   };
@@ -279,7 +278,7 @@ export function DecisionHistory({
       setContextMenu(null);
       await onDelete(stateId);
       fetchHistory();
-    } catch (_error) {
+    } catch {
       // Error handled in onDelete
     }
   };

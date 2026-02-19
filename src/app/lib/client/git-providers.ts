@@ -454,14 +454,11 @@ export async function getRepoStats(
     const normalizedHost = parsedUrl.hostname
       .replace(/^www\./, "")
       .toLowerCase();
-    if (isPrivateIp(parsedUrl.hostname)) {
+    if (isPrivateIp(normalizedHost)) {
       return { error: "Private IP addresses are not allowed", status: 400 };
     }
     if (parsedUrl.protocol !== "https:") {
       return { error: "Only HTTPS protocol is allowed", status: 400 };
-    }
-    if (normalizedHost !== "github.com" && normalizedHost !== "gitlab.com") {
-      return { error: "Unsupported host", status: 400 };
     }
   } catch {
     return { error: "Invalid URL format", status: 400 };
@@ -469,7 +466,7 @@ export async function getRepoStats(
 
   let owner = "";
   let repo = "";
-  let host = "";
+  let host: string;
 
   const githubMatch = cleanUrl.match(
     /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)/,
@@ -578,7 +575,8 @@ export async function getRepoStats(
       validGitlab = false;
     } else {
       for (const glu of gitlabUrls) {
-        const v = validateUrl(glu, "gitlab");
+        // Pass undefined as provider to allow self-hosted domains
+        const v = validateUrl(glu);
         if (!v.valid) {
           validGitlab = false;
           break;

@@ -12,12 +12,15 @@ type ApiHandler<T, B = unknown> = (
   context: { params: Record<string, string>; user: AuthUser | null; body: B },
 ) => Promise<NextResponse<T> | T | void>;
 
+export type ProjectRole = "creator" | "owner" | "editor" | "viewer";
+
 type ProjectApiHandler<T, B = unknown> = (
   req: NextRequest,
   context: {
     params: Record<string, string>;
     user: AuthUser;
     project: Selectable<projectsTable>;
+    role: ProjectRole;
     body: B;
   },
 ) => Promise<NextResponse<T> | T | void>;
@@ -203,8 +206,12 @@ export function projectAction<T, B = unknown>(
       throw { status: 404, message: "Project not found" };
     }
 
-    // Verify ownership or collaboration
-    if (project.ownerId !== currentUser.id) {
+    // Determine Role
+    let role: ProjectRole | null = null;
+
+    if (project.ownerId === currentUser.id) {
+      role = "creator";
+    } else {
       const collaborator = await db
         .selectFrom("projectCollaborators")
         .select("role")
@@ -212,39 +219,51 @@ export function projectAction<T, B = unknown>(
         .where("userId", "=", currentUser.id)
         .executeTakeFirst();
 
-      if (!collaborator) {
+      if (collaborator) {
+        // Map old 'admin' to 'owner' if exists, though migration should have fixed it
+        const dbRole = collaborator.role as string;
+        role = (dbRole === "admin" ? "owner" : dbRole) as ProjectRole;
+      } else if (project.folderId) {
         // Check folder inheritance
-        let hasFolderAccess = false;
+        const folder = await db
+          .selectFrom("folders")
+          .leftJoin(
+            "folderCollaborators",
+            "folderCollaborators.folderId",
+            "folders.id",
+          )
+          .select([
+            "folders.ownerId",
+            "folderCollaborators.role",
+            "folderCollaborators.userId",
+          ])
+          .where("folders.id", "=", project.folderId)
+          .where((eb) =>
+            eb.or([
+              eb("folders.ownerId", "=", currentUser.id),
+              eb("folderCollaborators.userId", "=", currentUser.id),
+            ]),
+          )
+          .executeTakeFirst();
 
-        if (project.folderId) {
-          const folderAccess = await db
-            .selectFrom("folders")
-            .select("id")
-            .where("id", "=", project.folderId)
-            .where((eb) =>
-              eb.or([
-                eb("ownerId", "=", currentUser.id),
-                eb(
-                  "id",
-                  "in",
-                  eb
-                    .selectFrom("folderCollaborators")
-                    .select("folderId")
-                    .where("userId", "=", currentUser.id),
-                ),
-              ]),
-            )
-            .executeTakeFirst();
-
-          if (folderAccess) hasFolderAccess = true;
-        }
-
-        if (!hasFolderAccess) {
-          throw { status: 403, message: "Forbidden" };
+        if (folder) {
+          if (folder.ownerId === currentUser.id) {
+            role = "owner"; // Folder owner is effectively project owner
+          } else if (folder.role) {
+            // Map folder roles to project roles
+            const folderRole = folder.role as string;
+            role = (
+              folderRole === "admin" ? "owner" : folderRole
+            ) as ProjectRole;
+          }
         }
       }
     }
 
-    return handler(req, { params, user: currentUser, project, body });
+    if (!role) {
+      throw { status: 403, message: "Forbidden" };
+    }
+
+    return handler(req, { params, user: currentUser, project, role, body });
   }, options);
 }

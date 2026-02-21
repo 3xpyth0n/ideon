@@ -17,6 +17,7 @@ interface BlockReactionsProps {
   onRemoveReaction: (emoji: string) => void;
   currentUserId?: string;
   isReadOnly?: boolean;
+  canReact?: boolean;
 }
 
 const PREDEFINED_EMOJIS = ["👍", "👎", "😄", "🎉", "😕", "❤️", "🚀", "👀"];
@@ -27,6 +28,7 @@ export const BlockReactions = ({
   onRemoveReaction,
   currentUserId,
   isReadOnly,
+  canReact = false,
 }: BlockReactionsProps) => {
   const { dict, lang } = useI18n();
   const { resolveUser } = useUserMap();
@@ -72,7 +74,7 @@ export const BlockReactions = ({
 
   const toggleReaction = useCallback(
     (emoji: string) => {
-      if (isReadOnly) return;
+      if (isReadOnly && !canReact) return;
       const existingReaction = reactions.find((r) => r.emoji === emoji);
       const hasReacted =
         existingReaction && currentUserId
@@ -90,10 +92,10 @@ export const BlockReactions = ({
       }
       setShowPicker(false);
     },
-    [isReadOnly, onReact, onRemoveReaction, reactions, currentUserId],
+    [isReadOnly, canReact, onReact, onRemoveReaction, reactions, currentUserId],
   );
 
-  if (reactions.length === 0 && isReadOnly) return null;
+  if (reactions.length === 0 && isReadOnly && !canReact) return null;
 
   return (
     <div className="block-reactions-container">
@@ -141,7 +143,7 @@ export const BlockReactions = ({
                   className={`reaction-badge ${
                     hasReacted ? "active" : "inactive"
                   } group relative`}
-                  disabled={isReadOnly}
+                  disabled={isReadOnly && !canReact}
                 >
                   <span>{reaction.emoji}</span>
                   <span className="font-medium">{reaction.count}</span>
@@ -176,7 +178,7 @@ export const BlockReactions = ({
         )}
 
         {/* Add Reaction Button */}
-        {!isReadOnly && (
+        {(!isReadOnly || canReact) && (
           <div className="add-reaction-group">
             <button
               ref={buttonRef}

@@ -1,5 +1,5 @@
 import { Kysely } from "kysely";
-import type { database } from "../../lib/types/db.ts";
+import type { database } from "@lib/types/db";
 import { nanoid } from "nanoid";
 
 interface BlockMetadata {

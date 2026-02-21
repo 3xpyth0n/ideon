@@ -17,6 +17,7 @@ interface SelectProps {
   dropdownClassName?: string;
   optionClassName?: string;
   align?: "left" | "right";
+  disabled?: boolean;
 }
 
 export function Select({
@@ -28,6 +29,7 @@ export function Select({
   dropdownClassName = "",
   optionClassName = "",
   align = "left",
+  disabled = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -111,8 +113,10 @@ export function Select({
       <button
         ref={triggerRef}
         type="button"
+        disabled={disabled}
         onClick={(e) => {
           e.preventDefault();
+          if (disabled) return;
           if (!isOpen) {
             updateCoords();
             setIsOpen(true);
@@ -120,7 +124,9 @@ export function Select({
             setIsOpen(false);
           }
         }}
-        className={`select-trigger ${triggerClassName}`}
+        className={`select-trigger ${triggerClassName} ${
+          disabled ? "opacity-50 cursor-not-allowed" : ""
+        }`}
       >
         <span>{selectedOption.label}</span>
         <ChevronDown

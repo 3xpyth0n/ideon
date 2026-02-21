@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { BlockData } from "../CanvasBlock";
+import { BlockData } from "@components/project/CanvasBlock";
 import { useI18n } from "@providers/I18nProvider";
 
 interface UseBlockReactionsProps {
@@ -8,6 +8,7 @@ interface UseBlockReactionsProps {
   data: BlockData;
   currentUser?: { id: string; username: string; displayName?: string | null };
   isReadOnly?: boolean;
+  canReact?: boolean;
 }
 
 export const useBlockReactions = ({
@@ -15,13 +16,15 @@ export const useBlockReactions = ({
   data,
   currentUser,
   isReadOnly,
+  canReact = false,
 }: UseBlockReactionsProps) => {
   const { setNodes } = useReactFlow();
   const { dict } = useI18n();
 
   const handleReact = useCallback(
     (emoji: string) => {
-      if (isReadOnly) return;
+      // Allow reaction if explicitly enabled (e.g. for viewers) OR if not read-only
+      if (isReadOnly && !canReact) return;
 
       const currentReactions = data.reactions || [];
       const existingIndex = currentReactions.findIndex(
@@ -107,12 +110,21 @@ export const useBlockReactions = ({
         newReactions,
       );
     },
-    [id, data, isReadOnly, currentUser, dict.project.anonymous, setNodes],
+    [
+      id,
+      data,
+      isReadOnly,
+      canReact,
+      currentUser,
+      dict.project.anonymous,
+      setNodes,
+    ],
   );
 
   const handleRemoveReaction = useCallback(
     (emoji: string) => {
-      if (isReadOnly) return;
+      // Allow reaction removal if explicitly enabled OR if not read-only
+      if (isReadOnly && !canReact) return;
 
       const currentReactions = data.reactions || [];
       const existingIndex = currentReactions.findIndex(
@@ -177,7 +189,15 @@ export const useBlockReactions = ({
         newReactions,
       );
     },
-    [id, data, isReadOnly, currentUser, dict.project.anonymous, setNodes],
+    [
+      id,
+      data,
+      isReadOnly,
+      canReact,
+      currentUser,
+      dict.project.anonymous,
+      setNodes,
+    ],
   );
 
   return { handleReact, handleRemoveReaction };

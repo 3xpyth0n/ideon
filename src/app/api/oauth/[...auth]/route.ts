@@ -1,5 +1,6 @@
 import { initJackson } from "@lib/jackson";
 import { NextRequest, NextResponse } from "next/server";
+import { OAuthReq, OAuthTokenReq } from "@boxyhq/saml-jackson";
 
 export async function GET(
   req: NextRequest,
@@ -12,14 +13,15 @@ export async function GET(
   if (operation === "authorize") {
     const query = Object.fromEntries(req.nextUrl.searchParams.entries());
 
-    // @ts-expect-error - Jackson types might not perfectly align with NextRequest query parsing but this is the standard object
     const { redirect_url, error } = await jackson.oauthController.authorize({
       ...query,
       client_id: query.client_id as string,
       redirect_uri: query.redirect_uri as string,
       response_type: query.response_type as "code",
       state: query.state as string,
-    });
+      code_challenge: query.code_challenge as string,
+      code_challenge_method: query.code_challenge_method as "S256" | "plain",
+    } as OAuthReq);
 
     if (redirect_url) {
       return NextResponse.redirect(redirect_url);
@@ -75,8 +77,9 @@ export async function POST(
     const body = Object.fromEntries(new URLSearchParams(text).entries());
 
     try {
-      // @ts-expect-error - Jackson types
-      const response = await jackson.oauthController.token(body);
+      const response = await jackson.oauthController.token(
+        body as unknown as OAuthTokenReq,
+      );
       return NextResponse.json(response);
     } catch (err) {
       const error = err as Error;

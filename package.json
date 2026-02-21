@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "ideon",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "The Visual Hub for Everything Your Project Needs",
   "license": "AGPL-3.0-or-later",
   "repository": {

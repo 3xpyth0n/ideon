@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
-import { useTouchGestures } from "../project/hooks/useTouchGestures";
+import { useTouchGestures } from "@components/project/hooks/useTouchGestures";
 import { useTouch } from "@providers/TouchProvider";
 
 interface Project {
@@ -37,6 +37,7 @@ interface Project {
   isStarred?: number | boolean;
   deletedAt?: string | null;
   folderId?: string | null;
+  role?: string;
 }
 
 interface Folder {
@@ -1113,7 +1114,9 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setAccessProject(project);
+                    if (project.role !== "viewer") {
+                      setAccessProject(project);
+                    }
                   }}
                   className="project-card-tag transition-colors justify-self-end group/users"
                 >
@@ -1123,7 +1126,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     className="transition-colors"
                   />
                   <span className="transition-colors">
-                    Users: {Number(project.collaboratorCount) || 1}
+                    Users: {Number(project.collaboratorCount || 0) + 1}
                   </span>
                 </button>
               </div>
@@ -1216,20 +1219,22 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
             <Edit2 size={14} />
             <span>Rename</span>
           </button>
-          <button
-            className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
-            onClick={() => {
-              if (contextMenu.folder) {
-                setAccessFolder(contextMenu.folder);
-              } else if (contextMenu.project) {
-                setAccessProject(contextMenu.project);
-              }
-              setContextMenu(null);
-            }}
-          >
-            <Users size={14} />
-            <span>Invite Members</span>
-          </button>
+          {(!contextMenu.project || contextMenu.project.role !== "viewer") && (
+            <button
+              className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
+              onClick={() => {
+                if (contextMenu.folder) {
+                  setAccessFolder(contextMenu.folder);
+                } else if (contextMenu.project) {
+                  setAccessProject(contextMenu.project);
+                }
+                setContextMenu(null);
+              }}
+            >
+              <Users size={14} />
+              <span>Invite Members</span>
+            </button>
+          )}
           <div className="h-[1px] bg-white/10 my-1" />
           <button
             className="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10 text-red-400 flex items-center gap-2"

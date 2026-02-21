@@ -4,9 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
 import { Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
 import { getAvatarUrl } from "@lib/utils";
+import {
+  AccessRequestsList,
+  ProjectRequest,
+} from "@components/project/AccessRequestsList";
+
+import { Select } from "@components/ui/Select";
 
 interface UserProfile {
   id: string;
@@ -34,6 +41,7 @@ export function ProjectAccessModal({
 
   const [collaborators, setCollaborators] = useState<UserProfile[]>([]);
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [loadingCollaborators, setLoadingCollaborators] = useState(true);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,6 +65,35 @@ export function ProjectAccessModal({
     fetchCollaborators();
   }, [fetchCollaborators]);
 
+  const isOwner =
+    collaborators.find((c) => c.id === currentUser?.id)?.role === "owner" ||
+    collaborators.find((c) => c.id === currentUser?.id)?.role === "creator";
+  const currentUserRole = collaborators.find((c) => c.id === currentUser?.id)
+    ?.role;
+  const isCreator = currentUserRole === "creator";
+
+  const fetchRequests = useCallback(async () => {
+    if (!isOwner) return;
+    try {
+      const res = await fetch(`/api/projects/${projectId}/requests`);
+      if (res.ok) {
+        const data = await res.json();
+        setRequests(data);
+      } else {
+        throw new Error("Failed to fetch requests");
+      }
+    } catch (err) {
+      console.error("Failed to fetch requests", err);
+      toast.error(dict.common.error || "Failed to fetch requests");
+    }
+  }, [projectId, isOwner, dict.common.error]);
+
+  useEffect(() => {
+    if (isOwner) {
+      fetchRequests();
+    }
+  }, [isOwner, fetchRequests]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery.length >= 2) {
@@ -64,7 +101,6 @@ export function ProjectAccessModal({
         fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`)
           .then((res) => (res.ok ? res.json() : []))
           .then((data) => {
-            // Filter out existing collaborators from search results
             const filtered = data.filter(
               (user: UserProfile) =>
                 !collaborators.some((c) => c.id === user.id),
@@ -96,9 +132,39 @@ export function ProjectAccessModal({
       if (res.ok) {
         await fetchCollaborators();
         onUpdate?.();
+        toast.success(dict.common.success || "Invitation sent");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || dict.common.error);
       }
     } catch (err) {
       console.error(err);
+      toast.error(dict.common.error);
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    setActionId(userId);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/collaborators`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+
+      if (res.ok) {
+        await fetchCollaborators();
+        onUpdate?.();
+        toast.success(dict.common.success || "Role updated");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || dict.common.error);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(dict.common.error);
     } finally {
       setActionId(null);
     }
@@ -107,25 +173,61 @@ export function ProjectAccessModal({
   const handleRemove = async (userId: string) => {
     setActionId(userId);
     try {
-      const res = await fetch(`/api/projects/${projectId}/collaborators`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
+      const res = await fetch(
+        `/api/projects/${projectId}/collaborators?userId=${userId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (res.ok) {
         await fetchCollaborators();
         onUpdate?.();
+        toast.success(dict.common.success || "User removed");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || dict.common.error);
       }
     } catch (err) {
       console.error(err);
+      toast.error(dict.common.error);
     } finally {
       setActionId(null);
     }
   };
 
-  const isOwner =
-    collaborators.find((c) => c.id === currentUser?.id)?.role === "owner";
+  const handleRequestAction = async (
+    userId: string,
+    action: "approve" | "reject" | "restore",
+  ) => {
+    setActionId(userId);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/requests`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, action }),
+      });
+
+      if (res.ok) {
+        await fetchRequests();
+        if (action === "approve") {
+          await fetchCollaborators();
+          onUpdate?.();
+          toast.success(dict.common.success || "Request approved");
+        } else {
+          toast.success(dict.common.success || "Request rejected");
+        }
+      } else {
+        const data = await res.json();
+        toast.error(data.error || dict.common.error);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(dict.common.error || "Action failed");
+    } finally {
+      setActionId(null);
+    }
+  };
 
   return (
     <Modal
@@ -200,6 +302,23 @@ export function ProjectAccessModal({
         </div>
       )}
 
+      {/* Access Requests List */}
+      {isOwner && requests.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
+            <span>{dict.project.accessRequests || "Access Requests"}</span>
+            <span className="h-[1px] flex-1 bg-white/5"></span>
+            <span>{requests.length}</span>
+          </h3>
+
+          <AccessRequestsList
+            requests={requests}
+            onAction={handleRequestAction}
+            actionId={actionId}
+          />
+        </div>
+      )}
+
       {/* Collaborators List */}
       <div>
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
@@ -241,11 +360,38 @@ export function ProjectAccessModal({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-black tracking-[0.2em] opacity-20 px-2">
-                    {user.role}
-                  </span>
+                  {isOwner &&
+                  user.role !== "creator" &&
+                  (user.role !== "owner" || isCreator) ? (
+                    <div
+                      className={
+                        actionId === user.id
+                          ? "opacity-50 pointer-events-none"
+                          : ""
+                      }
+                    >
+                      <Select
+                        value={user.role || "viewer"}
+                        onChange={(val) => handleUpdateRole(user.id, val)}
+                        options={[
+                          ...(isCreator
+                            ? [{ value: "owner", label: "Owner" }]
+                            : []),
+                          { value: "editor", label: "Editor" },
+                          { value: "viewer", label: "Viewer" },
+                        ]}
+                        className="w-[100px]"
+                        triggerClassName="h-6 text-[10px] uppercase font-bold bg-transparent border-none hover:bg-white/5 justify-end"
+                        align="right"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-[10px] uppercase font-black tracking-[0.2em] opacity-20 px-2">
+                      {user.role}
+                    </span>
+                  )}
 
-                  {user.role !== "owner" && (
+                  {user.role !== "owner" && user.role !== "creator" && (
                     <button
                       onClick={() => handleRemove(user.id)}
                       disabled={actionId === user.id}

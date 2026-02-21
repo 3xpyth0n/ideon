@@ -4,7 +4,7 @@ import { PublicProjectCanvas } from "@components/project/PublicProjectCanvas";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
-import { loadDictionaries } from "../../i18n/loader";
+import { loadDictionaries } from "@i18n/loader";
 import { Node } from "@xyflow/react";
 import { BlockData } from "@components/project/CanvasBlock";
 

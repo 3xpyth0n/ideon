@@ -41,6 +41,9 @@ export type LinkPreviewUpdate = Updateable<linkPreviewsTable>;
 export type ProjectCollaborator = Selectable<projectCollaboratorsTable>;
 export type NewProjectCollaborator = Insertable<projectCollaboratorsTable>;
 
+export type ProjectRequest = Selectable<projectRequestsTable>;
+export type NewProjectRequest = Insertable<projectRequestsTable>;
+
 export interface usersTable {
   id: Generated<string>;
   email: string;
@@ -110,7 +113,7 @@ export interface projectStarsTable {
 export interface projectCollaboratorsTable {
   projectId: string;
   userId: string;
-  role: "owner" | "admin" | "editor" | "viewer";
+  role: "owner" | "editor" | "viewer";
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
@@ -294,6 +297,15 @@ export interface database {
   linkPreviews: linkPreviewsTable;
   userGitTokens: userGitTokensTable;
   blockReactions: blockReactionsTable;
+  projectRequests: projectRequestsTable;
+}
+
+export interface projectRequestsTable {
+  id: Generated<string>;
+  projectId: string;
+  userId: string;
+  status: "pending" | "rejected";
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface githubRepoStatsTable {

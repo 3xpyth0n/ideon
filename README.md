@@ -288,7 +288,13 @@ Contributions of any kind are welcome!
 
 ## Project growth over time
 
-[![Star History Chart](https://api.star-history.com/svg?repos=3xpyth0n/ideon&type=date&legend=bottom-right)](https://www.star-history.com/#3xpyth0n/ideon&type=date&legend=bottom-right)
+<a href="https://www.star-history.com/#3xpyth0n/ideon&type=date&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=3xpyth0n/ideon&type=date&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=3xpyth0n/ideon&type=date&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=3xpyth0n/ideon&type=date&legend=bottom-right" />
+ </picture>
+</a>
 
 ---
 

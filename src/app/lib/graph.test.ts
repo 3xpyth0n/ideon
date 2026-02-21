@@ -3,7 +3,7 @@ import { transformBlock, prepareBlockForDb, DbBlock } from "./graph";
 import {
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
-} from "../components/project/utils/constants";
+} from "@components/project/utils/constants";
 import { Node } from "@xyflow/react";
 
 describe("graph library", () => {

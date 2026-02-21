@@ -12,7 +12,7 @@ import {
 } from "@xyflow/react";
 import { v4 as uuidv4 } from "uuid";
 import { UserPresence } from "./useProjectCanvasState";
-import { BlockData } from "../CanvasBlock";
+import { BlockData } from "@components/project/CanvasBlock";
 import {
   DEFAULT_BLOCK_WIDTH,
   DEFAULT_BLOCK_HEIGHT,
@@ -20,8 +20,8 @@ import {
   CORE_BLOCK_Y,
   CORE_BLOCK_WIDTH,
   CORE_BLOCK_HEIGHT,
-} from "../utils/constants";
-import { getAdjustedPosition } from "../utils/collision";
+} from "@components/project/utils/constants";
+import { getAdjustedPosition } from "@components/project/utils/collision";
 
 interface UseProjectCanvasGraphProps {
   currentUser: UserPresence | null;
@@ -50,6 +50,7 @@ interface UseProjectCanvasGraphProps {
     top: number;
     left: number;
   } | null;
+  isReadOnly?: boolean;
 }
 
 export const useProjectCanvasGraph = ({
@@ -63,6 +64,7 @@ export const useProjectCanvasGraph = ({
   updateMyPresence,
   setContextMenu,
   contextMenu,
+  isReadOnly = false,
 }: UseProjectCanvasGraphProps) => {
   const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
 
@@ -88,6 +90,7 @@ export const useProjectCanvasGraph = ({
   const onEdgeContextMenu = useCallback(
     (event: React.MouseEvent | MouseEvent, edge: Edge) => {
       event.preventDefault();
+      if (isReadOnly) return;
 
       // Select the edge when right-clicked/double-tapped
       setLinks((prevLinks) => {
@@ -108,7 +111,7 @@ export const useProjectCanvasGraph = ({
         left: (event as React.MouseEvent).clientX,
       });
     },
-    [setContextMenu, setLinks],
+    [setContextMenu, setLinks, isReadOnly],
   );
 
   const applyMutation = useCallback(
@@ -146,6 +149,7 @@ export const useProjectCanvasGraph = ({
 
   const handleDeleteBlock = useCallback(
     (blockIdOrIds: string | string[]) => {
+      if (isReadOnly) return;
       const ids = Array.isArray(blockIdOrIds) ? blockIdOrIds : [blockIdOrIds];
 
       // Filter out core blocks from deletion
@@ -167,7 +171,7 @@ export const useProjectCanvasGraph = ({
         deleteLinks(linksToRemove);
       }
     },
-    [deleteBlocks, deleteLinks, blocks, links],
+    [deleteBlocks, deleteLinks, blocks, links, isReadOnly],
   );
 
   const onBlocksChange = useCallback(
@@ -246,6 +250,7 @@ export const useProjectCanvasGraph = ({
 
   const onLinksChange = useCallback(
     (changes: EdgeChange[]) => {
+      if (isReadOnly) return;
       const toRemove = changes
         .filter((c): c is { id: string; type: "remove" } => c.type === "remove")
         .map((c) => c.id);
@@ -256,11 +261,12 @@ export const useProjectCanvasGraph = ({
         setLinks((lks) => applyEdgeChanges(changes, lks || []));
       }
     },
-    [deleteLinks, setLinks],
+    [deleteLinks, setLinks, isReadOnly],
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
+      if (isReadOnly) return;
       if (!params.source || !params.target) return;
 
       const targetBlock = blocks.find((b) => b.id === params.target);
@@ -278,20 +284,22 @@ export const useProjectCanvasGraph = ({
 
       setLinks((lks) => addEdge(link, lks || []));
     },
-    [setLinks, blocks],
+    [setLinks, blocks, isReadOnly],
   );
 
   const onBlockDragStart = useCallback(
     (_: React.MouseEvent, block: Node) => {
+      if (isReadOnly) return;
       if (block.type === "core") return;
       setContextMenu(null);
       updateMyPresence({ draggingBlockId: block.id });
     },
-    [setContextMenu, updateMyPresence],
+    [setContextMenu, updateMyPresence, isReadOnly],
   );
 
   const onBlockDrag = useCallback(
     (_: React.MouseEvent, block: Node) => {
+      if (isReadOnly) return;
       if (block.type === "core") return;
 
       const blockRect = {
@@ -324,6 +332,7 @@ export const useProjectCanvasGraph = ({
 
   const onBlockDragStop = useCallback(
     (_: React.MouseEvent, block: Node) => {
+      if (isReadOnly) return;
       if (block.type === "core") return;
       updateMyPresence({ draggingBlockId: null });
 
@@ -398,6 +407,7 @@ export const useProjectCanvasGraph = ({
       blockId: string,
       params: { width: number; height: number; x?: number; y?: number },
     ) => {
+      if (isReadOnly) return;
       const block = blocks.find((b) => b.id === blockId);
       if (!block || block.type === "core") return;
 
@@ -438,6 +448,7 @@ export const useProjectCanvasGraph = ({
       blockId: string,
       params: { width: number; height: number; x?: number; y?: number },
     ) => {
+      if (isReadOnly) return;
       const block = blocks.find((b) => b.id === blockId);
       if (!block || block.type === "core") return;
 
@@ -476,12 +487,13 @@ export const useProjectCanvasGraph = ({
           ),
       });
     },
-    [applyMutation, blocks],
+    [applyMutation, blocks, isReadOnly],
   );
 
   const onBlockContextMenu = useCallback(
     (event: React.MouseEvent | MouseEvent, block: Node) => {
       event.preventDefault();
+      if (isReadOnly) return;
       if (block.type === "core") {
         setContextMenu(null);
         return;
@@ -512,6 +524,7 @@ export const useProjectCanvasGraph = ({
   const onPaneContextMenu = useCallback(
     (event: React.MouseEvent | MouseEvent) => {
       event.preventDefault();
+      if (isReadOnly) return;
       setContextMenu({
         type: "pane",
         top:
@@ -520,7 +533,7 @@ export const useProjectCanvasGraph = ({
           (event as MouseEvent).clientX ?? (event as React.MouseEvent).clientX,
       });
     },
-    [setContextMenu],
+    [setContextMenu, isReadOnly],
   );
 
   const handleCreateBlock = useCallback(
@@ -541,6 +554,7 @@ export const useProjectCanvasGraph = ({
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
+      if (isReadOnly) return null;
       if (!currentUser) return null;
 
       const isSketch = blockType === "sketch";
@@ -658,11 +672,13 @@ export const useProjectCanvasGraph = ({
       blocks,
       applyMutation,
       setContextMenu,
+      isReadOnly,
     ],
   );
 
   const handleToggleLock = useCallback(
     (blockId: string, isLocked: boolean) => {
+      if (isReadOnly) return;
       applyMutation({
         intent: isLocked ? "Locked block" : "Unlocked block",
         blocksUpdate: (blocks) =>
@@ -684,6 +700,7 @@ export const useProjectCanvasGraph = ({
         color?: string;
       },
     ) => {
+      if (isReadOnly) return;
       applyMutation({
         intent: "Transferred block ownership",
         blocksUpdate: (blocks) =>
@@ -703,7 +720,7 @@ export const useProjectCanvasGraph = ({
           ),
       });
     },
-    [applyMutation],
+    [applyMutation, isReadOnly],
   );
 
   return {

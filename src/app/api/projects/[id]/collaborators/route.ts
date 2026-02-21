@@ -16,7 +16,7 @@ export const GET = projectAction(async (_req, { project }) => {
       "users.displayName as displayName",
       "users.avatarUrl as avatarUrl",
       "users.color as color",
-      sql<string>`'owner'`.as("role"),
+      sql<string>`'creator'`.as("role"),
     ])
     .where("projects.id", "=", project.id)
     .executeTakeFirst();
@@ -47,16 +47,34 @@ export const GET = projectAction(async (_req, { project }) => {
 });
 
 export const POST = projectAction(
-  async (_req, { project, user: auth, body }) => {
+  async (_req, { project, body, role: currentRole }) => {
     const { userId, role } = body as { userId: string; role?: string };
 
     if (!userId || typeof userId !== "string") {
       throw { status: 400, message: "Invalid userId" };
     }
 
-    // Only owner can add collaborators
-    if (project.ownerId !== auth.id) {
-      throw { status: 403, message: "Forbidden" };
+    // Only creator or owner can add collaborators
+    if (currentRole !== "creator" && currentRole !== "owner") {
+      throw {
+        status: 403,
+        message: "Forbidden: Only creator or owner can add collaborators",
+      };
+    }
+
+    const targetRole = (role || "editor") as "owner" | "editor" | "viewer";
+
+    // Only Creator can assign Owner role
+    if (targetRole === "owner" && currentRole !== "creator") {
+      throw {
+        status: 403,
+        message: "Forbidden: Only creator can assign owner role",
+      };
+    }
+
+    // Validate target role
+    if (!["owner", "editor", "viewer"].includes(targetRole)) {
+      throw { status: 400, message: "Invalid role" };
     }
 
     const db = getDb();
@@ -66,12 +84,12 @@ export const POST = projectAction(
       .values({
         projectId: project.id,
         userId: userId,
-        role: (role || "editor") as "owner" | "admin" | "editor" | "viewer",
+        role: targetRole,
         createdAt: new Date().toISOString(),
       })
       .onConflict((oc) =>
         oc.columns(["projectId", "userId"]).doUpdateSet({
-          role: (role || "editor") as "owner" | "admin" | "editor" | "viewer",
+          role: targetRole,
         }),
       )
       .execute();
@@ -80,26 +98,59 @@ export const POST = projectAction(
   },
 );
 
-export const DELETE = projectAction(async (req, { project, user: auth }) => {
-  const url = new URL(req.url);
-  const userId = url.searchParams.get("userId");
+export const DELETE = projectAction(
+  async (req, { project, role: currentRole }) => {
+    const url = new URL(req.url);
+    const userId = url.searchParams.get("userId");
 
-  if (!userId) {
-    throw { status: 400, message: "userId is required" };
-  }
+    if (!userId) {
+      throw { status: 400, message: "userId is required" };
+    }
 
-  // Only owner can remove collaborators
-  if (project.ownerId !== auth.id) {
-    throw { status: 403, message: "Forbidden" };
-  }
+    // Only creator or owner can remove collaborators
+    if (currentRole !== "creator" && currentRole !== "owner") {
+      throw { status: 403, message: "Forbidden" };
+    }
 
-  const db = getDb();
+    const db = getDb();
 
-  await db
-    .deleteFrom("projectCollaborators")
-    .where("projectId", "=", project.id)
-    .where("userId", "=", userId)
-    .execute();
+    // Check target user role
+    const targetCollaborator = await db
+      .selectFrom("projectCollaborators")
+      .select("role")
+      .where("projectId", "=", project.id)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
 
-  return { success: true };
-});
+    if (targetCollaborator) {
+      // Only Creator can remove Owner
+      if (targetCollaborator.role === "owner" && currentRole !== "creator") {
+        throw {
+          status: 403,
+          message: "Forbidden: Only creator can remove owners",
+        };
+      }
+    }
+
+    // Cannot remove creator (implied by table structure, but good for safety if we ever change things)
+    if (userId === project.ownerId) {
+      throw { status: 403, message: "Cannot remove creator" };
+    }
+
+    await db
+      .deleteFrom("projectCollaborators")
+      .where("projectId", "=", project.id)
+      .where("userId", "=", userId)
+      .execute();
+
+    // Kick user from WebSocket
+    const globalWithKick = global as unknown as {
+      kickUser?: (pid: string, uid: string) => void;
+    };
+    if (globalWithKick && typeof globalWithKick.kickUser === "function") {
+      globalWithKick.kickUser(project.id, userId);
+    }
+
+    return { success: true };
+  },
+);

@@ -3,7 +3,7 @@ import { getDb } from "@lib/db";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
-import { loadDictionaries } from "../../i18n/loader";
+import { loadDictionaries } from "@i18n/loader";
 import UsersClient from "./UsersClient";
 
 export async function generateMetadata(): Promise<Metadata> {

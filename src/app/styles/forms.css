@@ -511,7 +511,7 @@ input:-webkit-autofill:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2999;
+  z-index: 10000;
   animation: fadeIn 0.3s ease;
 }
 

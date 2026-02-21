@@ -32,7 +32,7 @@ import "prismjs/themes/prism-tomorrow.css"; // Dark theme
 
 import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
-import { Select, SelectOption } from "../ui/Select";
+import { Select, SelectOption } from "@components/ui/Select";
 import "./snippet-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
@@ -62,8 +62,12 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isViewer = data.userRole === "viewer";
   const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+  const canReact = !isPreviewMode || isViewer;
 
   const edges = getEdges();
   const isHandleConnected = (handleId: string) =>
@@ -155,6 +159,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     data,
     currentUser,
     isReadOnly,
+    canReact,
   });
 
   const handleTitleChange = useCallback(
@@ -401,7 +406,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             >
               <Copy size={14} />
             </button>
-            {language !== "text" && language !== "python" && (
+            {language !== "text" && language !== "python" && !isReadOnly && (
               <button
                 onClick={handleFormat}
                 className="snippet-format-button"
@@ -417,6 +422,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               align="right"
               triggerClassName="!pr-3"
               className="mr-1"
+              disabled={isReadOnly}
             />
           </div>
         </div>
@@ -464,6 +470,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         onRemoveReaction={handleRemoveReaction}
         currentUserId={currentUser?.id}
         isReadOnly={isReadOnly}
+        canReact={canReact}
       />
 
       {/* Handles - Left Side */}

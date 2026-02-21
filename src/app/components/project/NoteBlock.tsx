@@ -31,14 +31,19 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isViewer = data.userRole === "viewer";
   const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+  const canReact = !isPreviewMode || isViewer;
 
   const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
     data,
     currentUser,
     isReadOnly,
+    canReact,
   });
 
   const [title, setTitle] = useState(data.title || "");
@@ -122,15 +127,15 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   return (
     <>
       <NodeResizer
-        isVisible={selected && !data.isPreviewMode}
+        isVisible={selected && !isReadOnly}
         minWidth={200}
         minHeight={180}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
       />
       <div
-        className={`block-card block-type-note ${
-          selected ? "selected" : ""
+        className={`block-card block-type-note ${selected ? "selected" : ""} ${
+          isReadOnly ? "read-only" : ""
         } flex flex-col !p-0`}
       >
         <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
@@ -147,7 +152,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                 onChange={handleTitleChange}
                 className="block-title"
                 placeholder={dict.blocks.title || "..."}
-                disabled={data.isPreviewMode}
+                disabled={isReadOnly}
               />
             </div>
           </div>
@@ -156,7 +161,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             <MarkdownEditor
               content={data.content}
               onChange={handleContentChange}
-              isReadOnly={data.isPreviewMode}
+              isReadOnly={isReadOnly}
               placeholder=""
               className="text-base prosemirror-full-height"
             />
@@ -177,6 +182,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           onRemoveReaction={handleRemoveReaction}
           currentUserId={currentUser?.id}
           isReadOnly={isReadOnly}
+          canReact={canReact}
         />
 
         {/* Handles for connections - Left Side */}

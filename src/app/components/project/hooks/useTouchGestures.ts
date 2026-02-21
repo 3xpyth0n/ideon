@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { RippleHandle } from "../../ui/TouchRipple";
+import { RippleHandle } from "@components/ui/TouchRipple";
 
 interface UseTouchGesturesProps {
   rippleRef?: React.RefObject<RippleHandle | null>;

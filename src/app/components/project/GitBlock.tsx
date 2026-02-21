@@ -68,14 +68,19 @@ const GitBlock = (props: CanvasBlockProps) => {
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
 
+  const isViewer = data.userRole === "viewer";
   const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+  const canReact = !isPreviewMode || isViewer;
 
   const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
     data,
     currentUser,
     isReadOnly,
+    canReact,
   });
 
   const [isEditingGit, setIsEditingGit] = useState(false);
@@ -123,6 +128,12 @@ const GitBlock = (props: CanvasBlockProps) => {
     if (data.title !== undefined) setTitle(data.title);
   }, [data.title]);
 
+  useEffect(() => {
+    if (!isEditingGit && data.content !== content) {
+      setContent(data.content);
+    }
+  }, [data.content, content, isEditingGit]);
+
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
     try {
       if (!data.metadata) return null;
@@ -138,6 +149,23 @@ const GitBlock = (props: CanvasBlockProps) => {
   useEffect(() => {
     metadataRef.current = metadata;
   }, [metadata]);
+
+  // Sync metadata from props (real-time updates)
+  useEffect(() => {
+    try {
+      const incomingMetadata = data.metadata
+        ? typeof data.metadata === "string"
+          ? JSON.parse(data.metadata)
+          : data.metadata
+        : null;
+
+      if (JSON.stringify(incomingMetadata) !== JSON.stringify(metadata)) {
+        setMetadata(incomingMetadata);
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  }, [data.metadata, metadata]);
 
   const linkInputRef = useRef<HTMLInputElement>(null);
 
@@ -659,6 +687,7 @@ const GitBlock = (props: CanvasBlockProps) => {
         onRemoveReaction={handleRemoveReaction}
         currentUserId={currentUser?.id}
         isReadOnly={isReadOnly}
+        canReact={canReact}
       />
 
       <Handle

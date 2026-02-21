@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Trash2, Copy, Check, ChevronDown, RefreshCw } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { Button } from "@components/ui/Button";
-import { useTouchGestures } from "../../components/project/hooks/useTouchGestures";
+import { useTouchGestures } from "@components/project/hooks/useTouchGestures";
 import { useTouch } from "@providers/TouchProvider";
 import { Modal } from "@components/ui/Modal";
 import { Select } from "@components/ui/Select";

@@ -33,14 +33,19 @@ const ProjectCoreBlock = memo(
 
     const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
     const isOwner = currentUser?.id && ownerId === currentUser.id;
+    const isViewer = data.userRole === "viewer";
     const isReadOnly =
-      isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+      isPreviewMode ||
+      isViewer ||
+      (isLocked ? !isOwner && !isProjectOwner : false);
+    const canReact = !isPreviewMode || isViewer;
 
     const { handleReact, handleRemoveReaction } = useBlockReactions({
       id,
       data,
       currentUser,
       isReadOnly,
+      canReact,
     });
 
     const [title, setTitle] = useState(data.content || "");
@@ -192,7 +197,7 @@ const ProjectCoreBlock = memo(
         <div
           className={`core-block relative w-full h-full transition-colors ${
             selected ? "selected" : ""
-          } flex flex-col p-12`}
+          } ${isReadOnly ? "read-only" : ""} flex flex-col p-12`}
         >
           <div className="flex-1 flex flex-col gap-6 justify-center items-center text-center max-w-2xl mx-auto w-full h-full overflow-hidden">
             <div className="space-y-2 w-full shrink-0">
@@ -234,6 +239,7 @@ const ProjectCoreBlock = memo(
             onRemoveReaction={handleRemoveReaction}
             currentUserId={currentUser?.id}
             isReadOnly={isReadOnly}
+            canReact={canReact}
           />
 
           {/* Handles for connections (2.A) */}
@@ -241,8 +247,10 @@ const ProjectCoreBlock = memo(
             id="left"
             type="source"
             position={Position.Left}
-            isConnectable={true}
-            className="block-handle block-handle-left !z-50"
+            isConnectable={!isReadOnly}
+            className={`block-handle block-handle-left !z-50 ${
+              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            }`}
           >
             {!isLeftConnected && <div className="handle-dot" />}
           </Handle>
@@ -250,8 +258,10 @@ const ProjectCoreBlock = memo(
             id="right"
             type="source"
             position={Position.Right}
-            isConnectable={true}
-            className="block-handle block-handle-right !z-50"
+            isConnectable={!isReadOnly}
+            className={`block-handle block-handle-right !z-50 ${
+              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            }`}
           >
             {!isRightConnected && <div className="handle-dot" />}
           </Handle>
@@ -259,8 +269,10 @@ const ProjectCoreBlock = memo(
             id="top"
             type="source"
             position={Position.Top}
-            isConnectable={true}
-            className="block-handle block-handle-top !z-50"
+            isConnectable={!isReadOnly}
+            className={`block-handle block-handle-top !z-50 ${
+              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            }`}
           >
             {!isTopConnected && <div className="handle-dot" />}
           </Handle>
@@ -268,8 +280,10 @@ const ProjectCoreBlock = memo(
             id="bottom"
             type="source"
             position={Position.Bottom}
-            isConnectable={true}
-            className="block-handle block-handle-bottom !z-50"
+            isConnectable={!isReadOnly}
+            className={`block-handle block-handle-bottom !z-50 ${
+              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            }`}
           >
             {!isBottomConnected && <div className="handle-dot" />}
           </Handle>

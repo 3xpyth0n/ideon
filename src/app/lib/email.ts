@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
 import { render } from "@react-email/components";
 import { logger } from "./logger";
-import InviteEmail from "../emails/InviteEmail";
-import ResetPasswordEmail from "../emails/ResetPasswordEmail";
+import InviteEmail from "@emails/InviteEmail";
+import ResetPasswordEmail from "@emails/ResetPasswordEmail";
 
 export async function getInvitationEmailTemplate(inviteUrl: string) {
   const emailHtml = await render(InviteEmail({ inviteLink: inviteUrl }));

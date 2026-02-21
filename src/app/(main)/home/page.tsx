@@ -1,8 +1,8 @@
 import { ProjectList } from "@components/dashboard/ProjectList";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
-import { loadDictionaries } from "../../i18n/loader";
-import { getDb } from "../../lib/db";
+import { loadDictionaries } from "@i18n/loader";
+import { getDb } from "@lib/db";
 
 export async function generateMetadata({
   searchParams,

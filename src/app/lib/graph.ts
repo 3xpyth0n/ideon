@@ -5,7 +5,7 @@ import { z } from "zod";
 import {
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
-} from "../components/project/utils/constants";
+} from "@components/project/utils/constants";
 
 export interface GraphState {
   blocks: Node[];

@@ -192,6 +192,9 @@
     "zoomOut": "Riduci"
   },
   "common": {
+    "approve": "Approva",
+    "accessRevoked": "Accesso revocato",
+    "backToHome": "Torna alla Home",
     "blockTypeGithub": "GitHub",
     "cancel": "Annulla",
     "canvasErrorDescription": "Abbiamo riscontrato un errore durante il rendering del canvas. Potrebbe essere dovuto a un problema temporaneo o a un blocco corrotto.",
@@ -219,6 +222,7 @@
     "notFound": "Non trovato",
     "preview": "Anteprima",
     "refresh": "Aggiorna",
+    "reject": "Rifiuta",
     "reloadPage": "Ricarica Pagina",
     "rename": "Rinomina",
     "restore": "Ripristina",
@@ -388,6 +392,16 @@
     "users": "Utenti"
   },
   "project": {
+    "accessDenied": "Accesso negato",
+    "accessGranted": "Accesso consentito! Reindirizzamento...",
+    "accessRequests": "Richieste di accesso",
+    "requestAccess": "Richiedi accesso",
+    "requestSent": "Richiesta inviata con successo",
+    "requestAlreadyPending": "Richiesta già in attesa",
+    "requestPending": "Richiesta in attesa",
+    "requestPendingDesc": "La tua richiesta è stata inviata al proprietario del progetto.",
+    "requestRejected": "Richiesta respinta",
+    "requestRejectedDesc": "La tua richiesta è stata respinta dal proprietario del progetto.",
     "addUser": "Aggiungi",
     "anonymous": "Anonimo",
     "at": "a",
@@ -401,6 +415,8 @@
     "noDescription": "Nessuna descrizione fornita",
     "onboardingHint": "Incolla un repo Git, un link o un file per iniziare",
     "projectAccess": "Accesso al progetto",
+    "access": "Accesso",
+    "noPendingRequests": "Nessuna richiesta in sospeso",
     "projectDescription": "Descrivi l'obiettivo di questo progetto...",
     "projectDescriptionOptional": "Descrizione (opzionale)",
     "projectName": "Titolo del Progetto",

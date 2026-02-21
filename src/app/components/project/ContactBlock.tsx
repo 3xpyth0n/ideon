@@ -45,14 +45,19 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isViewer = data.userRole === "viewer";
   const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+  const canReact = !isPreviewMode || isViewer;
 
   const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
     data,
     currentUser,
     isReadOnly,
+    canReact,
   });
 
   const isBeingMoved = !!data.movingUserColor;
@@ -367,6 +372,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
         onRemoveReaction={handleRemoveReaction}
         currentUserId={currentUser?.id}
         isReadOnly={isReadOnly}
+        canReact={canReact}
       />
 
       <Handle

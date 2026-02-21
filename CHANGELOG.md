@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-02-21
+
+### Added
+
+- Introduced 4 distinct project roles (Creator, Owner, Editor, Viewer) to separate management privileges from content editing and read-only access.
+
+- A new "Request Access" workflow allows users to ask for an invitation to private projects. Owners can now approve or reject these requests directly from the project settings.
+
+### Fixed
+
+- Resolved a critical privacy issue where private projects could be incorrectly visible to other users on the dashboard. Your projects are now properly secured and only visible to you and your team.
+
 ## [0.4.2] - 2026-02-19
 
 ### Improved

@@ -51,6 +51,7 @@ export const POST = authenticatedAction(
         folder.ownerId === user.id ||
         (await db
           .selectFrom("folderCollaborators")
+          .selectAll()
           .where("folderId", "=", folderId)
           .where("userId", "=", user.id)
           .executeTakeFirst());

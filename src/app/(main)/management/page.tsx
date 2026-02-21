@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { cookies } from "next/headers";
-import { loadDictionaries } from "../../i18n/loader";
+import { loadDictionaries } from "@i18n/loader";
 import { ManagementClient } from "./ManagementClient";
 
 export async function generateMetadata(): Promise<Metadata> {

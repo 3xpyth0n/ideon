@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import * as Y from "yjs";
 import { Node, Edge } from "@xyflow/react";
-import { BlockData } from "../CanvasBlock";
+import { BlockData } from "@components/project/CanvasBlock";
 
 export const useUndoRedo = (
   yDoc: Y.Doc | null,

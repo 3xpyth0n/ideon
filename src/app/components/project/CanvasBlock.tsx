@@ -111,6 +111,7 @@ export type BlockData = {
   projectOwnerId?: string | null;
   initialProjectId?: string;
   currentUser?: { id: string; username: string; displayName?: string | null };
+  userRole?: "creator" | "owner" | "editor" | "viewer";
   yText?: Y.Text;
 };
 
@@ -177,6 +178,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const isPreviewMode = data.isPreviewMode;
 
   const currentUser = data.currentUser;
+  const userRole = data.userRole;
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
   const { setNodes, getNode, getEdges } = useReactFlow();
@@ -185,15 +187,21 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isViewer = userRole === "viewer";
 
   const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+
+  const canReact = !isPreviewMode || isViewer;
 
   const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
     data,
     currentUser,
     isReadOnly,
+    canReact,
   });
 
   const handleContentContextMenu = useCallback(
@@ -243,6 +251,14 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   useEffect(() => {
     if (data.title !== undefined) setTitle(data.title);
   }, [data.title]);
+
+  const [isEditingLink, setIsEditingLink] = useState(false);
+
+  useEffect(() => {
+    if (!isEditingLink && data.content !== content) {
+      setContent(data.content);
+    }
+  }, [data.content, content, isEditingLink]);
 
   // Render loading state for summary blocks
   if (data.isSummary) {
@@ -333,8 +349,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     );
   }
 
-  const [isEditingLink, setIsEditingLink] = useState(false);
-
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
     try {
       if (!data.metadata) return null;
@@ -358,6 +372,23 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   useEffect(() => {
     metadataRef.current = metadata;
   }, [metadata]);
+
+  // Sync metadata from props (real-time updates)
+  useEffect(() => {
+    try {
+      const incomingMetadata = data.metadata
+        ? typeof data.metadata === "string"
+          ? JSON.parse(data.metadata)
+          : data.metadata
+        : null;
+
+      if (JSON.stringify(incomingMetadata) !== JSON.stringify(metadata)) {
+        setMetadata(incomingMetadata);
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  }, [data.metadata, metadata]);
 
   const blockRef = useRef<HTMLDivElement>(null);
   const linkInputRef = useRef<HTMLInputElement>(null);
@@ -969,6 +1000,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         onRemoveReaction={handleRemoveReaction}
         currentUserId={currentUser?.id}
         isReadOnly={isReadOnly}
+        canReact={canReact}
       />
 
       <Handle

@@ -1,5 +1,5 @@
 import { Kysely, sql, Transaction } from "kysely";
-import type { database } from "../../lib/types/db.ts";
+import type { database } from "@lib/types/db";
 
 export async function up(db: Kysely<database>): Promise<void> {
   const isPostgres = await sql`SELECT version()`

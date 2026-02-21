@@ -68,6 +68,21 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
 
+  const currentUser = data.currentUser;
+  const projectOwnerId = data.projectOwnerId;
+  const ownerId = data.ownerId;
+  const isPreviewMode = data.isPreviewMode;
+  const isLocked = data.isLocked;
+
+  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+  const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isViewer = data.userRole === "viewer";
+  const isReadOnly =
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+  const canReact = !isPreviewMode || isViewer;
+
   // State
   const [tool, setTool] = useState<"pen" | "eraser">("pen");
   const [color, setColor] = useState("#ffffff");
@@ -116,9 +131,15 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
       svgString,
     )}") ${hotspot}, crosshair`;
 
+    if (isReadOnly) {
+      canvasContainerRef.current?.style.removeProperty("--sketch-cursor");
+      svgCanvasRef.current?.style.removeProperty("--sketch-cursor");
+      return;
+    }
+
     canvasContainerRef.current?.style.setProperty("--sketch-cursor", url);
     svgCanvasRef.current?.style.setProperty("--sketch-cursor", url);
-  }, [tool]);
+  }, [tool, isReadOnly]);
 
   // Helper to stop propagation
   const stopPropagation = (e: React.SyntheticEvent | Event) => {
@@ -133,22 +154,12 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     onTouchEnd: stopPropagation,
   };
 
-  const currentUser = data.currentUser;
-  const projectOwnerId = data.projectOwnerId;
-  const ownerId = data.ownerId;
-  const isPreviewMode = data.isPreviewMode;
-  const isLocked = data.isLocked;
-
-  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
-  const isOwner = currentUser?.id && ownerId === currentUser.id;
-  const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
-
   const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
     data,
     currentUser,
     isReadOnly,
+    canReact,
   });
 
   const isBeingMoved = !!data.movingUserColor;
@@ -914,6 +925,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
         onRemoveReaction={handleRemoveReaction}
         currentUserId={currentUser?.id}
         isReadOnly={isReadOnly}
+        canReact={canReact}
       />
     </>
   );

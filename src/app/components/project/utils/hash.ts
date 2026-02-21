@@ -1,5 +1,5 @@
 import { Node, Edge } from "@xyflow/react";
-import { BlockData } from "../CanvasBlock";
+import { BlockData } from "@components/project/CanvasBlock";
 
 export const generateStateHash = async (
   blocks: Node<BlockData>[],

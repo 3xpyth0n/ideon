@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import { useRouter } from "next/navigation";
 import { uniqueById } from "@lib/utils";
-import { BlockData } from "../CanvasBlock";
+import { BlockData } from "@components/project/CanvasBlock";
 
 interface UseProjectDataProps {
   initialProjectId?: string;

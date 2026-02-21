@@ -37,14 +37,19 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isViewer = data.userRole === "viewer";
   const isReadOnly =
-    isPreviewMode || (isLocked ? !isOwner && !isProjectOwner : false);
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+  const canReact = !isPreviewMode || isViewer;
 
   const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
     data,
     currentUser,
     isReadOnly,
+    canReact,
   });
 
   const isBeingMoved = !!data.movingUserColor;
@@ -354,6 +359,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         onRemoveReaction={handleRemoveReaction}
         currentUserId={currentUser?.id}
         isReadOnly={isReadOnly}
+        canReact={canReact}
       />
 
       <Handle

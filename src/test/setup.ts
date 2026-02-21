@@ -1,5 +1,5 @@
 import { beforeAll } from "vitest";
-import { runMigrations } from "../app/lib/migrations";
+import { runMigrations } from "@lib/migrations";
 
 beforeAll(async () => {
   // Initialize and migrate

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useRef } from "react";
-import TouchRipple, { RippleHandle } from "../components/ui/TouchRipple";
+import TouchRipple, { RippleHandle } from "@components/ui/TouchRipple";
 
 interface TouchContextType {
   rippleRef: React.RefObject<RippleHandle | null>;

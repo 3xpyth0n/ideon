@@ -1,10 +1,10 @@
-import { createServer } from "http";
+import { createServer, IncomingMessage } from "http";
 import next from "next";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import { createRequire } from "module";
 import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
-import { initDb } from "./app/lib/db";
+import { initDb, getDb } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
 import { validateWebsocketRequest } from "./app/lib/ws-auth";
 
@@ -17,6 +17,71 @@ const {
   setPersistence,
 } = require("y-websocket/bin/utils");
 const { LeveldbPersistence } = require("y-leveldb");
+
+// Global helper to kick user from project
+declare global {
+  var kickUser: (projectId: string, userId: string) => void;
+  var updateProjectRequests: (projectId: string) => Promise<void>;
+  var notifyAccessGranted: (projectId: string, userId: string) => Promise<void>;
+}
+
+global.notifyAccessGranted = async (projectId: string, userId: string) => {
+  const docName = `project-${projectId}-access`;
+  const doc = docs.get(docName);
+
+  if (doc) {
+    try {
+      const metaMap = doc.getMap("meta");
+      // Set access granted for this user with a timestamp
+      metaMap.set(`granted:${userId}`, Date.now());
+    } catch (e) {
+      logger.error(
+        { err: e, projectId, userId },
+        "[NotifyAccess] Failed to notify user",
+      );
+    }
+  }
+};
+
+global.updateProjectRequests = async (projectId: string) => {
+  const docName = `project-${projectId}`;
+  const doc = docs.get(docName);
+
+  if (doc) {
+    try {
+      const db = getDb();
+      const result = await db
+        .selectFrom("projectRequests")
+        .select((eb) => eb.fn.count<number>("id").as("count"))
+        .where("projectId", "=", projectId)
+        .where("status", "=", "pending")
+        .executeTakeFirst();
+
+      const count = Number(result?.count || 0);
+
+      const metaMap = doc.getMap("meta");
+      metaMap.set("pendingRequestsCount", count);
+    } catch (e) {
+      logger.error(
+        { err: e, projectId },
+        "[UpdateRequests] Failed to update requests count",
+      );
+    }
+  }
+};
+
+global.kickUser = (projectId: string, userId: string) => {
+  const docName = `project-${projectId}`;
+  const doc = docs.get(docName);
+  if (doc) {
+    // doc.conns is a Map<WebSocket, any>
+    for (const [ws] of doc.conns) {
+      if ((ws as WebSocket & { userId: string }).userId === userId) {
+        ws.close(4003, "Access Revoked");
+      }
+    }
+  }
+};
 
 const dev = process.env.NODE_ENV === "development";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
@@ -85,13 +150,16 @@ initDb()
         const docName = pathname.split("/").pop() || "default";
 
         // Security: Validate Authentication and Project Access
-        const isAuthorized = await validateWebsocketRequest(request, docName);
+        const userId = await validateWebsocketRequest(request, docName);
 
-        if (!isAuthorized) {
+        if (!userId) {
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
           socket.destroy();
           return;
         }
+
+        // Attach userId to request to pass it to connection handler
+        (request as IncomingMessage & { userId: string }).userId = userId;
 
         wss.handleUpgrade(request, socket, head, (ws) => {
           wss.emit("connection", ws, request);
@@ -108,6 +176,11 @@ initDb()
       const { pathname } = new URL(req.url!, `http://${hostname}:${port}`);
       const docName = pathname?.split("/").pop() || "default";
 
+      // Attach userId to websocket instance
+      (ws as WebSocket & { userId: string }).userId = (
+        req as IncomingMessage & { userId: string }
+      ).userId;
+
       setupWSConnection(ws, req, {
         docName,
         gc: true,
@@ -120,18 +193,12 @@ initDb()
           setTimeout(async () => {
             const currentDoc = docs.get(docName);
             if (currentDoc && currentDoc.conns.size === 0) {
-              logger.info(
-                { docName },
-                "[Cleanup] Compacting and destroying document to free memory.",
-              );
-
               // Compact document: clear history and save snapshot
               try {
                 const snapshot = Y.encodeStateAsUpdate(currentDoc);
                 // Ensure we don't lose data if clear fails, but ldb.clearDocument is standard in y-leveldb
                 await ldb.clearDocument(docName);
                 await ldb.storeUpdate(docName, snapshot);
-                logger.info({ docName }, "[Compaction] Compacted document");
               } catch (err) {
                 logger.error(
                   { err, docName },

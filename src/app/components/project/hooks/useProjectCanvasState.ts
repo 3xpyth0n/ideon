@@ -9,13 +9,13 @@ import { useProjectCanvasGraph } from "./useProjectCanvasGraph";
 import { useProjectCanvasRealtime } from "./useProjectCanvasRealtime";
 import { useUndoRedo } from "./useUndoRedo";
 import { useProjectData } from "./useProjectData";
-import { BlockData } from "../CanvasBlock";
+import { BlockData } from "@components/project/CanvasBlock";
 import {
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
   DEFAULT_BLOCK_WIDTH,
-} from "../utils/constants";
-import { generateStateHash } from "../utils/hash";
+} from "@components/project/utils/constants";
+import { generateStateHash } from "@components/project/utils/hash";
 
 const cleanBlockDataForSync = (
   data: Partial<BlockData>,
@@ -53,6 +53,7 @@ export interface UserPresence {
 export const useProjectCanvasState = (
   initialProjectId: string | undefined,
   currentUser: UserPresence | null,
+  currentUserRole: string | undefined,
   yBlocks: Y.Map<Node<BlockData>> | null,
   yLinks: Y.Map<Edge> | null,
   yContents: Y.Map<Y.Text> | null,
@@ -96,16 +97,18 @@ export const useProjectCanvasState = (
   const lastProjectId = useRef<string | null>(null);
   const lastSnapshotHash = useRef<string | null>(null);
 
+  const isReadOnly = isPreviewMode || currentUserRole === "viewer";
+
   const { undo, redo, canUndo, canRedo, clear } = useUndoRedo(
     yBlocks?.doc || null,
     yBlocks,
     yLinks,
     yContents,
-    isPreviewMode,
+    isReadOnly,
   );
 
   useEffect(() => {
-    if (!yBlocks || !yLinks || !yContents || isPreviewMode) return;
+    if (!yBlocks || !yLinks || !yContents || isReadOnly) return;
 
     const updateBlocksFromYjs = (
       event: Y.YMapEvent<Node<BlockData>>,
@@ -342,6 +345,27 @@ export const useProjectCanvasState = (
           yBlocks.doc?.transact(() => {
             nextBlocks.forEach((block) => {
               const blockToSync = { ...block };
+
+              if (currentUserRole === "viewer") {
+                const existing = yBlocks.get(block.id);
+                if (!existing) return;
+
+                const existingData = existing.data || {};
+                const newData = blockToSync.data || {};
+
+                blockToSync.position = existing.position;
+                blockToSync.width = existing.width;
+                blockToSync.height = existing.height;
+                blockToSync.type = existing.type;
+
+                blockToSync.data = {
+                  ...existingData,
+                  reactions: newData.reactions,
+                  updatedAt: newData.updatedAt,
+                  lastEditor: newData.lastEditor,
+                };
+              }
+
               delete blockToSync.selected;
 
               if (!yContents.has(block.id)) {
@@ -408,7 +432,7 @@ export const useProjectCanvasState = (
 
   const deleteBlocks = useCallback(
     (ids: string[]) => {
-      if (!yBlocks || !yContents) return;
+      if (!yBlocks || !yContents || isReadOnly) return;
 
       yBlocks.doc?.transact(() => {
         ids.forEach((id) => {
@@ -429,7 +453,7 @@ export const useProjectCanvasState = (
       setLinksState((prev) => {
         const nextLinks = typeof update === "function" ? update(prev) : update;
 
-        if (!isPreviewModeRef.current) {
+        if (!isPreviewModeRef.current && currentUserRole !== "viewer") {
           yLinks.doc?.transact(() => {
             nextLinks.forEach((link) => {
               const linkToSync = { ...link };
@@ -464,7 +488,7 @@ export const useProjectCanvasState = (
 
   const deleteLinks = useCallback(
     (ids: string[]) => {
-      if (!yLinks) return;
+      if (!yLinks || isReadOnly) return;
 
       yLinks.doc?.transact(() => {
         ids.forEach((id) => {
@@ -479,7 +503,7 @@ export const useProjectCanvasState = (
 
   const replaceGraph = useCallback(
     (newBlocks: Node<BlockData>[], newLinks: Edge[]) => {
-      if (!yBlocks || !yLinks || !yContents) return;
+      if (!yBlocks || !yLinks || !yContents || isReadOnly) return;
 
       yBlocks.doc?.transact(() => {
         // 1. Delete everything in Yjs
@@ -592,7 +616,7 @@ export const useProjectCanvasState = (
       overrideBlocks?: Node<BlockData>[],
       overrideLinks?: Edge[],
     ): Promise<boolean> => {
-      if (!initialProjectId) return false;
+      if (!initialProjectId || isReadOnly) return false;
       try {
         const blocksToSave = (overrideBlocks || blocks).map((n) => ({
           ...n,
@@ -728,6 +752,7 @@ export const useProjectCanvasState = (
     updateMyPresence: rt.updateMyPresence,
     setContextMenu,
     contextMenu,
+    isReadOnly: isPreviewMode || currentUserRole === "viewer",
   });
 
   const handleCreateBlockWrapper = useCallback(

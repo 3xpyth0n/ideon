@@ -9,7 +9,7 @@ import { IncomingMessage } from "http";
 export async function validateWebsocketRequest(
   req: IncomingMessage,
   docName: string,
-): Promise<boolean> {
+): Promise<string | null> {
   try {
     const headers = req.headers as unknown as Record<string, string>;
     const secret = process.env.SECRET_KEY || process.env.AUTH_SECRET;
@@ -18,7 +18,7 @@ export async function validateWebsocketRequest(
       console.error(
         "[WS Auth] CRITICAL: No SECRET_KEY or AUTH_SECRET found in environment.",
       );
-      return false;
+      return null;
     }
 
     // 1. Try with the forced name from auth.config.ts
@@ -41,13 +41,15 @@ export async function validateWebsocketRequest(
 
     if (!token || !token.sub) {
       console.warn("[WS Auth] No valid session token found.");
-      return false;
+      return null;
     }
 
     const userId = token.sub;
 
-    // docName comes in as "project-<uuid>" but DB stores just "<uuid>"
-    const projectId = docName.replace(/^project-/, "");
+    // docName comes in as "project-<uuid>" or "project-<uuid>-access"
+    // We need to handle the suffix
+    const isAccessChannel = docName.endsWith("-access");
+    const projectId = docName.replace(/^project-/, "").replace(/-access$/, "");
 
     const db = getDb();
 
@@ -60,7 +62,7 @@ export async function validateWebsocketRequest(
       .executeTakeFirst();
 
     if (project) {
-      return true;
+      return userId;
     }
 
     // Check if user is collaborator
@@ -72,7 +74,22 @@ export async function validateWebsocketRequest(
       .executeTakeFirst();
 
     if (collaborator) {
-      return true;
+      return userId;
+    }
+
+    // If accessing the access channel, check for pending requests
+    if (isAccessChannel) {
+      const pendingRequest = await db
+        .selectFrom("projectRequests")
+        .select("id")
+        .where("projectId", "=", projectId)
+        .where("userId", "=", userId)
+        .where("status", "=", "pending")
+        .executeTakeFirst();
+
+      if (pendingRequest) {
+        return userId;
+      }
     }
 
     // Check folder inheritance
@@ -102,16 +119,16 @@ export async function validateWebsocketRequest(
         )
         .executeTakeFirst();
 
-      if (folderAccess) return true;
+      if (folderAccess) return userId;
     }
 
     console.warn(
       `[WS Auth] Access denied for user ${userId} to project ${projectId}`,
     );
-    return false;
+    return null;
   } catch (err) {
     // Log error but fail safe (deny access)
     console.error("[WS Auth] Error validating request:", err);
-    return false;
+    return null;
   }
 }

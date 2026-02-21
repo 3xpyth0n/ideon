@@ -192,6 +192,9 @@
     "zoomOut": "Zoom Out"
   },
   "common": {
+    "approve": "Approve",
+    "accessRevoked": "Access revoked",
+    "backToHome": "Back to Home",
     "blockTypeGithub": "GitHub",
     "cancel": "Cancel",
     "canvasErrorDescription": "We encountered an error while rendering the canvas. This might be due to a temporary glitch or a corrupted block.",
@@ -219,6 +222,7 @@
     "notFound": "Not found",
     "preview": "Preview",
     "refresh": "Refresh",
+    "reject": "Reject",
     "reloadPage": "Reload Page",
     "rename": "Rename",
     "restore": "Restore",
@@ -388,6 +392,16 @@
     "users": "Users"
   },
   "project": {
+    "accessDenied": "Access Denied",
+    "accessGranted": "Access granted! Redirecting...",
+    "accessRequests": "Access Requests",
+    "requestAccess": "Request Access",
+    "requestSent": "Request sent successfully",
+    "requestAlreadyPending": "Request already pending",
+    "requestPending": "Request Pending",
+    "requestPendingDesc": "Your request has been sent to the project owner.",
+    "requestRejected": "Request Rejected",
+    "requestRejectedDesc": "Your request has been rejected by the project owner.",
     "addUser": "Add",
     "anonymous": "Anonymous",
     "at": "at",
@@ -401,6 +415,8 @@
     "noDescription": "No description provided",
     "onboardingHint": "Paste a Git repository, link, or File to start",
     "projectAccess": "Project Access",
+    "access": "Access",
+    "noPendingRequests": "No pending requests",
     "projectDescription": "Describe the objective of this project...",
     "projectDescriptionOptional": "Description (optional)",
     "projectName": "Project Title",

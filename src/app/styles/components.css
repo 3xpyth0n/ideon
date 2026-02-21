@@ -1498,6 +1498,39 @@
   color: #4ade80;
 }
 
+/* Read-only Canvas Cursors & Interaction */
+.project-canvas.read-only .react-flow__pane {
+  cursor: grab !important;
+}
+
+.project-canvas.read-only .react-flow__node,
+.project-canvas.read-only .react-flow__node:hover,
+.project-canvas.read-only .react-flow__node * {
+  cursor: default !important;
+}
+
+/* Exceptions for clickable elements in read-only mode */
+.project-canvas.read-only .react-flow__node button,
+.project-canvas.read-only .react-flow__node a,
+.project-canvas.read-only .react-flow__node [role="button"],
+.project-canvas.read-only .react-flow__node .reaction-button,
+.project-canvas.read-only .react-flow__node .reaction-badge {
+  cursor: pointer !important;
+}
+
+/* Disable interaction with handles to prevent link dragging visual cues */
+.project-canvas.read-only .react-flow__handle {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* Force specific editors to respect read-only cursor */
+.project-canvas.read-only .ProseMirror,
+.project-canvas.read-only textarea,
+.project-canvas.read-only input {
+  cursor: default !important;
+}
+
 /* Command Palette */
 .command-palette-overlay {
   position: fixed;

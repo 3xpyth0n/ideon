@@ -1,5 +1,35 @@
-import { Kysely, sql } from "kysely";
+import { Kysely, sql, ExpressionBuilder } from "kysely";
 import { database } from "./types/db";
+
+export function getProjectAccessCondition(
+  eb: ExpressionBuilder<database, "projects">,
+  userId: string,
+) {
+  return eb.or([
+    eb("projects.ownerId", "=", userId),
+    eb(
+      "projects.id",
+      "in",
+      eb
+        .selectFrom("projectCollaborators")
+        .select("projectId")
+        .where("userId", "=", userId),
+    ),
+    eb(
+      "projects.folderId",
+      "in",
+      eb
+        .selectFrom("folderCollaborators")
+        .select("folderId")
+        .where("userId", "=", userId),
+    ),
+    eb(
+      "projects.folderId",
+      "in",
+      eb.selectFrom("folders").select("id").where("ownerId", "=", userId),
+    ),
+  ]);
+}
 
 export function getProjectsQuery(
   db: Kysely<database>,
@@ -31,10 +61,29 @@ export function getProjectsQuery(
       "users.displayName as ownerDisplayName",
       "users.avatarUrl as ownerAvatarUrl",
       "users.color as ownerColor",
+      sql<number>`(
+        SELECT COUNT(*)
+        FROM "projectCollaborators"
+        WHERE "projectCollaborators"."projectId" = "projects"."id"
+      )`.as("collaboratorCount"),
       sql<number>`CASE WHEN "projectStars"."projectId" IS NOT NULL THEN 1 ELSE 0 END`.as(
         "isStarred",
       ),
+      sql<string>`(
+        CASE
+          WHEN "projects"."ownerId" = ${userId} THEN 'creator'
+          ELSE (
+            SELECT "role"
+            FROM "projectCollaborators"
+            WHERE "projectCollaborators"."projectId" = "projects"."id"
+            AND "projectCollaborators"."userId" = ${userId}
+          )
+        END
+      )`.as("role"),
     ]);
+
+  // Global Access Control: User must be owner OR collaborator (direct/folder)
+  query = query.where((eb) => getProjectAccessCondition(eb, userId));
 
   // Handle Trash
   if (view === "trash") {
@@ -52,29 +101,8 @@ export function getProjectsQuery(
   if (view === "starred") {
     query = query.where("projectStars.projectId", "is not", null);
   } else if (view === "shared") {
+    // Already filtered by access control, so just exclude owned projects
     query = query.where("projects.ownerId", "!=", userId);
-
-    // Explicitly check for collaboration
-    query = query.where((eb) =>
-      eb.or([
-        eb(
-          "projects.id",
-          "in",
-          eb
-            .selectFrom("projectCollaborators")
-            .select("projectId")
-            .where("userId", "=", userId),
-        ),
-        eb(
-          "projects.folderId",
-          "in",
-          eb
-            .selectFrom("folderCollaborators")
-            .select("folderId")
-            .where("userId", "=", userId),
-        ),
-      ]),
-    );
   } else if (view === "my-projects") {
     query = query.where("projects.ownerId", "=", userId);
   }

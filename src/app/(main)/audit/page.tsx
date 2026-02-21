@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
-import { loadDictionaries } from "../../i18n/loader";
+import { loadDictionaries } from "@i18n/loader";
 
 export async function generateMetadata(): Promise<Metadata> {
   const cookieStore = await cookies();

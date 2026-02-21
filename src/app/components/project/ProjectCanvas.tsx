@@ -8,7 +8,6 @@ import {
   Panel,
   Background,
   BackgroundVariant,
-  SelectionMode,
   ConnectionMode,
   useViewport,
   Node,
@@ -37,6 +36,8 @@ import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { useUser } from "@providers/UserProvider";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   useState,
   useEffect,
@@ -67,6 +68,7 @@ import {
   Share2,
   PenTool,
   Github,
+  Loader2,
 } from "lucide-react";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
@@ -96,6 +98,8 @@ const RemoteCursors = ({
   currentUserId?: string;
 }) => {
   const { x: vX, y: vY, zoom } = useViewport();
+
+  if (!activeUsers) return null;
 
   return (
     <>
@@ -163,8 +167,42 @@ const linkTypes = {
 function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const { dict } = useI18n();
   const { user } = useUser();
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserPresence | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [isLocalSynced, setIsLocalSynced] = useState(false);
+  const [isAccessValidated, setIsAccessValidated] = useState(false);
+
+  useEffect(() => {
+    // Validate access on mount to prevent cached access
+    const validateAccess = async () => {
+      try {
+        const res = await fetch(`/api/projects/${initialProjectId}`);
+        if (!res.ok) {
+          throw new Error("Access denied");
+        }
+        const data = await res.json();
+        setCurrentUserRole(data.role);
+        setIsAccessValidated(true);
+      } catch {
+        toast.error(dict.common.accessRevoked || "Access revoked");
+        router.push("/home");
+      }
+    };
+
+    validateAccess();
+
+    // Handle BFCache
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setIsAccessValidated(false);
+        validateAccess();
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [initialProjectId, router, dict]);
 
   useEffect(() => {
     if (user) {
@@ -195,6 +233,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       doc,
       { connect: true, params: {} },
     );
+
+    // Listen for access revocation
+    wsProvider.on("connection-close", (event: { code?: number } | null) => {
+      if (event && event.code === 4003) {
+        wsProvider.disconnect(); // Stop reconnection attempts
+        toast.error(dict.common.accessRevoked || "Access revoked");
+        router.push("/home");
+      }
+    });
 
     const indexeddbProvider = new IndexeddbPersistence(
       `project-${initialProjectId}`,
@@ -293,6 +340,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   } = useProjectCanvasState(
     initialProjectId,
     currentUser,
+    currentUserRole || undefined,
     yBlocks,
     yLinks,
     yContents,
@@ -300,11 +348,76 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     isLocalSynced,
   );
 
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  useEffect(() => {
+    if (
+      !currentUser ||
+      !projectOwnerId ||
+      currentUser.id !== projectOwnerId ||
+      !initialProjectId
+    )
+      return;
+
+    const fetchRequests = async () => {
+      try {
+        const res = await fetch(`/api/projects/${initialProjectId}/requests`);
+        if (res.ok) {
+          const requests = await res.json();
+          // Filter for pending requests
+          const pending = Array.isArray(requests)
+            ? requests.filter((r: { status: string }) => r.status === "pending")
+                .length
+            : 0;
+          setPendingRequestsCount(pending);
+        }
+      } catch (e) {
+        console.error("Failed to fetch requests count", e);
+      }
+    };
+
+    fetchRequests();
+  }, [initialProjectId, currentUser, projectOwnerId]);
+
+  // Listen for pending requests updates via WebSocket
+  useEffect(() => {
+    if (
+      !yDoc ||
+      !currentUser ||
+      !projectOwnerId ||
+      currentUser.id !== projectOwnerId
+    )
+      return;
+
+    const metaMap = yDoc.getMap("meta");
+
+    const handleMetaUpdate = () => {
+      const count = metaMap.get("pendingRequestsCount");
+      if (typeof count === "number") {
+        setPendingRequestsCount(count);
+      }
+    };
+
+    metaMap.observe(handleMetaUpdate);
+
+    // Check if value already exists
+    const currentCount = metaMap.get("pendingRequestsCount");
+    if (typeof currentCount === "number") {
+      setPendingRequestsCount(currentCount);
+    }
+
+    return () => {
+      metaMap.unobserve(handleMetaUpdate);
+    };
+  }, [yDoc, currentUser, projectOwnerId]);
+
+  const isReadOnly = isPreviewMode || currentUserRole === "viewer";
+
   const { rippleRef } = useTouch();
 
   const onLongPress = useCallback(
     (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
-      if (isPreviewMode) return;
+      if (isReadOnly) return;
 
       // Clear any existing selection to prevent text selection on long press
       if (window.getSelection) {
@@ -343,12 +456,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         } as unknown as React.MouseEvent);
       }
     },
-    [isPreviewMode, blocks, onBlockContextMenu, onPaneContextMenu],
+    [isReadOnly, blocks, onBlockContextMenu, onPaneContextMenu],
   );
 
   const onDoubleTap = useCallback(
     (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
-      if (isPreviewMode) return;
+      if (isReadOnly) return;
 
       const target = e.target as HTMLElement;
       const edgeElement = target.closest(".react-flow__edge");
@@ -370,7 +483,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         }
       }
     },
-    [isPreviewMode, links, onEdgeContextMenu],
+    [isReadOnly, links, onEdgeContextMenu],
   );
 
   const touchHandlers = useTouchGestures({
@@ -419,7 +532,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   const onLinkDoubleClick = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
-      if (isPreviewMode) return;
+      if (isReadOnly) return;
       _setLinks((eds) =>
         eds.map((e) => {
           if (e.id === edge.id) {
@@ -437,11 +550,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         }),
       );
     },
-    [isPreviewMode, _setLinks, handleEdgeLabelSubmit, handleEdgeLabelCancel],
+    [isReadOnly, _setLinks, handleEdgeLabelSubmit, handleEdgeLabelCancel],
   );
 
   const commands = useMemo<Command[]>(() => {
-    if (isPreviewMode) return [];
+    if (isReadOnly) return [];
 
     const createCommands: Command[] = [
       {
@@ -546,7 +659,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     ];
 
     return [...createCommands, ...navigateCommands];
-  }, [dict, handleCreateBlock, handleFitView, isPreviewMode]);
+  }, [dict, handleCreateBlock, handleFitView, isReadOnly]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -627,9 +740,18 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         ...block.data,
         isPreviewMode,
         currentUser: currentUser || undefined,
+        userRole: currentUserRole || undefined,
       },
     }));
-  }, [blocks, isPreviewMode, currentUser]);
+  }, [blocks, isPreviewMode, currentUser, currentUserRole]);
+
+  if (!isAccessValidated) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -693,18 +815,18 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             minZoom={0.1}
             maxZoom={4}
             deleteKeyCode={null}
-            selectionOnDrag={!isPreviewMode}
-            selectionMode={SelectionMode.Partial}
-            selectionKeyCode={isPreviewMode ? null : "Shift"}
-            nodesDraggable={!isPreviewMode}
-            nodesConnectable={!isPreviewMode}
-            elementsSelectable={!isPreviewMode}
-            edgesReconnectable={!isPreviewMode}
+            selectionOnDrag={!isReadOnly}
+            selectionKeyCode={null}
+            nodesDraggable={!isReadOnly}
+            nodesConnectable={!isReadOnly}
+            elementsSelectable={true}
+            edgesReconnectable={!isReadOnly}
             panOnScroll
             panOnDrag={true}
             multiSelectionKeyCode="Control"
             fitView
-            className="project-canvas"
+            className={`project-canvas ${isReadOnly ? "read-only" : ""}`}
+            proOptions={{ hideAttribution: true }}
           >
             <div
               className={`canvas-cursor-overlay ${
@@ -850,13 +972,22 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => setIsInviteModalOpen(true)}
-                    className="btn-primary"
-                    disabled={isPreviewMode}
-                  >
-                    {dict.auth.invite.toUpperCase()}
-                  </Button>
+                  {currentUserRole !== "viewer" && (
+                    <div className="relative">
+                      <Button
+                        onClick={() => setIsInviteModalOpen(true)}
+                        className="btn-primary"
+                        disabled={isPreviewMode}
+                      >
+                        {(dict.project.access || "Access").toUpperCase()}
+                      </Button>
+                      {pendingRequestsCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                          {pendingRequestsCount}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {currentUser?.id === projectOwnerId && (
                     <Button
                       onClick={() => setIsShareModalOpen(true)}
@@ -1124,6 +1255,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
           projectId={initialProjectId!}
+          isOwner={currentUserRole === "owner" || currentUserRole === "creator"}
+          currentUserRole={currentUserRole}
         />
 
         <ShareModal

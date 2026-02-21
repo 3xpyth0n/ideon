@@ -1,5 +1,5 @@
 import { Kysely } from "kysely";
-import type { database } from "../../lib/types/db.ts";
+import type { database } from "@lib/types/db";
 
 export async function up(db: Kysely<database>): Promise<void> {
   await db.schema.alterTable("links").addColumn("label", "text").execute();

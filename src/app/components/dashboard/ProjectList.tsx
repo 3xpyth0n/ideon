@@ -830,7 +830,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                       )}
                     </div>
                     {!isTrash && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         {folder.ownerId === currentUser?.id &&
                           renamingFolderId !== folder.id && (
                             <button
@@ -841,7 +841,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                               }}
                               className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
                             >
-                              <Edit2 size={12} />
+                              <Edit2 size={14} />
                             </button>
                           )}
                         <button
@@ -1021,7 +1021,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   <h3 className="project-card-title mb-0">{project.name}</h3>
                 )}
                 {!isTrash && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     {project.ownerId === currentUser?.id &&
                       renamingProjectId !== project.id && (
                         <button
@@ -1035,7 +1035,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                           }}
                           className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
                         >
-                          <Edit2 size={12} />
+                          <Edit2 size={14} />
                         </button>
                       )}
                     <button

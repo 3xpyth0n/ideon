@@ -3,6 +3,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -17,10 +18,12 @@
   from {
     transform: translateX(100%);
   }
+
   to {
     transform: translateX(0);
   }
 }
+
 /* Ripple Effect */
 .ripple-container {
   position: fixed;
@@ -66,6 +69,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -97,7 +101,8 @@
 }
 
 .temporal-trigger:hover,
-.temporal-trigger.active {
+.temporal-trigger.active, /* Group behavior simulation */
+.group:hover .group-hover\:opacity-100 {
   opacity: 1;
 }
 
@@ -106,6 +111,7 @@
     opacity: 0;
     transform: translateY(-1rem);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -116,6 +122,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -130,6 +137,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -151,6 +159,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -234,7 +243,8 @@
   padding: 0;
 }
 
-.password-toggle:hover {
+.password-toggle:hover,
+.auth-footer-link:hover {
   color: var(--text-main);
 }
 
@@ -296,10 +306,6 @@
   transition: color 0.2s;
 }
 
-.auth-footer-link:hover {
-  color: var(--text-main);
-}
-
 .auth-initializing-container {
   display: flex;
   align-items: center;
@@ -320,6 +326,7 @@
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -341,6 +348,7 @@
     transform: translateY(-16px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -355,6 +363,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -374,11 +383,6 @@
   animation-duration: 500ms;
 }
 
-/* Group behavior simulation */
-.group:hover .group-hover\:opacity-100 {
-  opacity: 1;
-}
-
 .group .group-hover\:opacity-100 {
   opacity: 0;
   transition: opacity 0.2s;
@@ -389,6 +393,7 @@
     opacity: 0;
     transform: translateY(20px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -442,6 +447,7 @@
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -515,6 +521,7 @@
   from {
     stroke-dashoffset: 10;
   }
+
   to {
     stroke-dashoffset: 0;
   }
@@ -531,16 +538,14 @@
 }
 
 @keyframes pulse-dot {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.2);
-  }
+  0%,
   100% {
     opacity: 1;
     transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2);
   }
 }

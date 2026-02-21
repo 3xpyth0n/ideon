@@ -164,12 +164,23 @@ export function Sidebar({
               <div
                 className={`nav-item flex items-stretch p-0 overflow-hidden ${
                   pathname === "/home" && !currentView ? "active" : ""
-                }`}
+                } ${projectsExpanded ? "expanded" : ""}`}
               >
                 <Link
                   href="/home"
                   className="flex-1 flex items-center gap-3 px-3 py-2.5 text-inherit no-underline"
                   title={isCollapsed ? dict.dashboard.home : ""}
+                  onClick={(e) => {
+                    if (!isCollapsed && pathname === "/home" && !currentView) {
+                      e.preventDefault();
+                      const newState = !projectsExpanded;
+                      setProjectsExpanded(newState);
+                      localStorage.setItem(
+                        "projectsExpanded",
+                        String(newState),
+                      );
+                    }
+                  }}
                 >
                   <House size={20} />
                   {!isCollapsed && <span>{dict.dashboard.home}</span>}
@@ -192,9 +203,7 @@ export function Sidebar({
                   >
                     <ChevronDown
                       size={14}
-                      className={`nav-item-expand transition-transform duration-200 ${
-                        projectsExpanded ? "rotate-180" : ""
-                      }`}
+                      className="nav-item-expand transition-transform duration-200"
                     />
                   </button>
                 )}
@@ -271,7 +280,7 @@ export function Sidebar({
                 <div
                   className={`nav-item flex items-stretch p-0 overflow-hidden ${
                     isActive("/management") ? "active" : ""
-                  }`}
+                  } ${managementExpanded ? "expanded" : ""}`}
                 >
                   <button
                     onClick={() => {
@@ -310,9 +319,7 @@ export function Sidebar({
                     >
                       <ChevronDown
                         size={14}
-                        className={`nav-item-expand transition-transform duration-200 ${
-                          managementExpanded ? "rotate-180" : ""
-                        }`}
+                        className="nav-item-expand transition-transform duration-200"
                       />
                     </button>
                   )}

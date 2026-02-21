@@ -48,7 +48,10 @@ export function AccessRequestsList({
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-white/5 flex items-center justify-center overflow-hidden rounded-full border border-white/10">
               <img
-                src={getAvatarUrl(req.avatarUrl, req.username || req.displayName)}
+                src={getAvatarUrl(
+                  req.avatarUrl,
+                  req.username || req.displayName,
+                )}
                 alt=""
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"

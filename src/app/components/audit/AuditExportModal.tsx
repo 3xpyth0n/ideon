@@ -105,42 +105,32 @@ export function AuditExportModal({
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           <label className="modal-label">{dict.modals.exportFormat}</label>
-          <div className="flex flex-col gap-2">
-            <button
+          <div className="export-format-grid">
+            <div
               onClick={() => setFormat("json")}
-              className={`flex items-center gap-3 p-4 rounded-lg border transition-all text-left ${
-                format === "json"
-                  ? "border-blue-500 bg-blue-500/10"
-                  : "border-white/10 hover:bg-white/5"
+              className={`export-format-card ${
+                format === "json" ? "active" : ""
               }`}
             >
-              <FileJson
-                className={format === "json" ? "text-blue-500" : "opacity-50"}
-              />
-              <div className="flex flex-col">
-                <span className="font-bold text-sm">
-                  {dict.providers.formatJson}
-                </span>
-              </div>
-            </button>
+              <FileJson className="export-format-icon" />
+              <span className="export-format-label">
+                {dict.providers.formatJson}
+              </span>
+              <span className="export-format-description">.json</span>
+            </div>
 
-            <button
+            <div
               onClick={() => setFormat("csv")}
-              className={`flex items-center gap-3 p-4 rounded-lg border transition-all text-left ${
-                format === "csv"
-                  ? "border-blue-500 bg-blue-500/10"
-                  : "border-white/10 hover:bg-white/5"
+              className={`export-format-card ${
+                format === "csv" ? "active" : ""
               }`}
             >
-              <FileText
-                className={format === "csv" ? "text-blue-500" : "opacity-50"}
-              />
-              <div className="flex flex-col">
-                <span className="font-bold text-sm">
-                  {dict.providers.formatCsv}
-                </span>
-              </div>
-            </button>
+              <FileText className="export-format-icon" />
+              <span className="export-format-label">
+                {dict.providers.formatCsv}
+              </span>
+              <span className="export-format-description">.csv</span>
+            </div>
           </div>
         </div>
 

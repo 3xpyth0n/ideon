@@ -29,7 +29,10 @@
   transition: all 0.2s ease;
 }
 
-.temporal-save-btn:hover {
+.temporal-save-btn:hover,
+.project-card:hover .project-meta,
+.modal-back-btn:hover,
+.user-role-trigger:hover {
   opacity: 1;
 }
 
@@ -55,7 +58,8 @@
   border: 1px solid var(--border);
 }
 
-.history-item:hover {
+.history-item:hover,
+.context-menu-item:hover {
   background-color: var(--bg-sidebar);
 }
 
@@ -71,6 +75,75 @@
 
 .history-item-container:last-child {
   margin-bottom: 0;
+}
+
+/* Audit Export Modal Styles */
+.export-format-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.export-format-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  height: 160px;
+}
+
+.export-format-card:hover {
+  border-color: var(--text-muted);
+  background-color: rgba(128, 128, 128, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.export-format-card.active {
+  border-color: var(--accent);
+  background-color: rgba(0, 0, 128, 0.05);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+[data-theme="dark"] .export-format-card.active {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.export-format-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.export-format-card:hover .export-format-icon,
+.export-format-card.active .export-format-icon,
+.git-check-icon,
+.copy-btn-absolute:hover {
+  color: var(--accent);
+}
+
+.export-format-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.export-format-description {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -8px;
 }
 
 .history-active-indicator {
@@ -172,10 +245,6 @@
   color: #ef4444;
 }
 
-.context-menu-item:hover {
-  background-color: var(--bg-sidebar);
-}
-
 .context-menu-item.danger:hover {
   background-color: rgba(239, 68, 68, 0.1);
   color: #dc2626;
@@ -264,6 +333,7 @@
   padding-left: 40px;
   padding-right: 40px;
 }
+
 .min-w-\[200px\] {
   min-width: 200px;
 }
@@ -299,7 +369,8 @@
   border-radius: 0;
 }
 
-.img-cover {
+.img-cover,
+.user-details-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -309,13 +380,15 @@
 .git-footer {
   margin-top: auto;
   padding: 8px;
+  padding-top: 0px !important;
   font-size: 8px;
   opacity: 0.2;
   text-align: right;
 }
 
-.block-card.read-only .git-widget,
-.block-card.read-only .block-file-widget {
+.git-widget,
+.block-card.read-only,
+.block-file-widget {
   cursor: default;
 }
 
@@ -393,7 +466,8 @@
   transition: all 0.2s ease;
 }
 
-.error-message:hover {
+.error-message:hover,
+.git-stat-item:hover {
   background-color: rgba(128, 128, 128, 0.1);
 }
 
@@ -422,10 +496,6 @@
   transition: background-color 0.2s ease;
 }
 
-.git-stat-item:hover {
-  background-color: rgba(128, 128, 128, 0.1);
-}
-
 .git-stat-item.active {
   background-color: rgba(128, 128, 128, 0.15);
 }
@@ -442,10 +512,6 @@
 
 .git-stat-label {
   font-size: 0.875rem;
-}
-
-.git-check-icon {
-  color: var(--accent);
 }
 
 .git-widget {
@@ -502,16 +568,11 @@
 
 .git-stats-grid {
   padding: 16px;
+  padding-bottom: 0px !important;
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* 2x3 layout */
   gap: 16px;
   overflow-y: auto;
-}
-
-@container (max-width: 250px) {
-  .git-stats-grid {
-    grid-template-columns: 1fr; /* 1x6 layout */
-  }
 }
 
 @container (min-width: 400px) and (max-height: 350px) {
@@ -520,12 +581,22 @@
   }
 }
 
-@container (max-height: 180px) {
+@container (min-width: 300px) and (max-height: 180px) {
   .git-stats-grid {
     grid-template-columns: repeat(6, 1fr); /* 6x1 layout */
     padding: 8px 16px;
     gap: 8px;
   }
+}
+
+@container (max-width: 250px) {
+  .git-stats-grid {
+    grid-template-columns: 1fr; /* 1x6 layout */
+  }
+}
+
+.save-context-menu {
+  position: absolute;
 }
 
 .git-loading {
@@ -549,6 +620,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -557,7 +629,6 @@
 .git-stat-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
   padding: 8px;
   background-color: rgba(128, 128, 128, 0.05);
@@ -580,14 +651,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.git-footer {
-  margin-top: auto;
-  padding: 8px;
-  font-size: 8px;
-  opacity: 0.2;
-  text-align: right;
 }
 
 /* Alerts */
@@ -650,10 +713,10 @@
 
 .new-project-card {
   border: 2px dashed var(--border);
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 16px;
+  width: 400px;
   opacity: 0.6;
 }
 
@@ -672,10 +735,6 @@
   align-items: center;
   opacity: 0.3;
   transition: opacity 0.3s;
-}
-
-.project-card:hover .project-meta {
-  opacity: 1;
 }
 
 .zen-label {
@@ -734,10 +793,6 @@
   cursor: pointer;
 }
 
-.modal-back-btn:hover {
-  opacity: 1;
-}
-
 /* Template Grid */
 .template-grid {
   display: grid;
@@ -757,8 +812,8 @@
   gap: 12px;
   background: rgba(255, 255, 255, 0.02);
   text-align: left;
-  position: relative;
-  overflow: hidden;
+  z-index: 2000;
+  transform-origin: top right;
 }
 
 .template-card:hover {
@@ -768,9 +823,8 @@
 }
 
 .template-card.selected {
-  border-color: var(--accent);
   background: rgba(var(--accent-rgb), 0.08);
-  box-shadow: 0 0 0 1px var(--accent);
+  text-decoration: underline;
 }
 
 .template-card.selected::after {
@@ -838,13 +892,6 @@
   letter-spacing: 0.2em;
 }
 
-.modal-content p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 32px;
-}
-
 /* User Details Modal Styles */
 .user-details-container {
   display: flex;
@@ -868,12 +915,6 @@
   border-radius: 12px;
   overflow: hidden;
   border: 2px solid rgba(0, 66, 37, 0.2);
-}
-
-.user-details-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .user-details-info {
@@ -913,6 +954,7 @@
   background: rgba(0, 66, 37, 0.1);
   color: var(--accent);
   border: 1px solid rgba(0, 66, 37, 0.2);
+  vertical-align: middle;
 }
 
 .user-details-grid {
@@ -1001,10 +1043,6 @@
   opacity: 0.4;
   transition: opacity 0.2s;
   cursor: pointer;
-}
-
-.user-role-trigger:hover {
-  opacity: 1;
 }
 
 .user-role-dropdown {
@@ -1137,14 +1175,18 @@
   top: 50%;
   transform: translateY(-50%);
   padding: 8px;
-  transition: color 0.2s;
+  padding: 12px;
   background: transparent;
   border: none;
   cursor: pointer;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
 }
 
 .copy-btn-absolute:hover {
-  color: var(--accent);
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
 }
 
 .modal-description-center {
@@ -1361,7 +1403,6 @@
 }
 
 .emoji-option-btn {
-  font-size: 16px;
   padding: 6px;
   border-radius: 6px;
   cursor: pointer;
@@ -1416,7 +1457,7 @@
   transition: all 0.2s ease;
   overflow: hidden;
   text-decoration: none;
-  color: var(--text-main);
+  background-color: var(--bg-sidebar);
 }
 
 .project-card:hover {
@@ -1441,7 +1482,7 @@
 
 .project-card-desc {
   font-size: 0.85rem;
-  color: var(--text-muted);
+  border-color: var(--accent);
   line-height: 1.6;
   margin-bottom: auto;
   line-clamp: 3;
@@ -1476,17 +1517,14 @@
   color: var(--text-main);
 }
 
-.auth-submit-btn:disabled {
-  opacity: 0.5;
-}
-
+.auth-submit-btn:disabled,
 .auth-submit-btn .button-content span {
   opacity: 0.5;
 }
 
 .auth-msg {
   font-size: 14px;
-  text-align: center;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   margin-top: 0.5rem;
 }
 
@@ -1505,7 +1543,10 @@
 
 .project-canvas.read-only .react-flow__node,
 .project-canvas.read-only .react-flow__node:hover,
-.project-canvas.read-only .react-flow__node * {
+.project-canvas.read-only .react-flow__node *, /* Force specific editors to respect read-only cursor */
+.project-canvas.read-only .ProseMirror,
+.project-canvas.read-only textarea,
+.project-canvas.read-only input {
   cursor: default !important;
 }
 
@@ -1521,13 +1562,6 @@
 /* Disable interaction with handles to prevent link dragging visual cues */
 .project-canvas.read-only .react-flow__handle {
   pointer-events: none !important;
-  cursor: default !important;
-}
-
-/* Force specific editors to respect read-only cursor */
-.project-canvas.read-only .ProseMirror,
-.project-canvas.read-only textarea,
-.project-canvas.read-only input {
   cursor: default !important;
 }
 
@@ -1678,4 +1712,118 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
+}
+
+@keyframes spin {
+}
+
+.git-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background-color: rgba(128, 128, 128, 0.05);
+  border-radius: 4px;
+}
+
+.new-project-card {
+  border: 2px dashed var(--border);
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  opacity: 0.6;
+}
+
+.template-card {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  padding: 16px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.template-card.selected {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.modal-content p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.user-details-role-badge {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  padding: 4px 12px;
+  background: rgba(0, 66, 37, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(0, 66, 37, 0.2);
+}
+
+.copy-btn-absolute {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 8px;
+  transition: color 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.emoji-option-btn {
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.project-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 200px;
+  padding: 1.5rem;
+  background: var(--bg-island);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text-main);
+}
+
+.project-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: auto;
+  line-clamp: 3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.auth-msg {
+  font-size: 14px;
+  text-align: center;
+  margin-top: 0.5rem;
 }

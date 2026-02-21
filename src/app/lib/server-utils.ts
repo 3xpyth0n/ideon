@@ -146,8 +146,8 @@ export function handleError(error: unknown, req: NextRequest) {
   if (error instanceof z.ZodError) {
     return NextResponse.json(
       {
-        error: error.errors[0]?.message || "Invalid request body",
-        details: error.errors,
+        error: error.issues[0]?.message || "Invalid request body",
+        details: error.issues,
       },
       { status: 400 },
     );

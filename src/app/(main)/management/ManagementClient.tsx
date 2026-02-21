@@ -6,17 +6,15 @@ import {
   Shield,
   Key,
   Mail,
-  Slack,
-  Gitlab,
-  Disc,
   Globe,
-  Cloud,
   Lock,
   UserPlus,
   Loader2,
   ChevronRight,
   Download,
 } from "lucide-react";
+import { FaGoogle, FaDiscord, FaSlack, FaGitlab } from "react-icons/fa";
+import { BsMicrosoft } from "react-icons/bs";
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
 import { AuditTable, type AuditLog } from "@components/audit/AuditTable";
@@ -252,12 +250,12 @@ export function ManagementClient() {
     icon: React.ElementType;
     color: string;
   }[] = [
-    { key: "google", icon: Globe, color: "#4285F4" },
-    { key: "entra", icon: Cloud, color: "#0078D4" },
-    { key: "slack", icon: Slack, color: "#4A154B" },
+    { key: "google", icon: FaGoogle, color: "#B10202" },
+    { key: "entra", icon: BsMicrosoft, color: "#0078D4" },
+    { key: "slack", icon: FaSlack, color: "#4A154B" },
     { key: "oidc", icon: Key, color: "#F78C40" },
-    { key: "discord", icon: Disc, color: "#5865F2" },
-    { key: "gitlab", icon: Gitlab, color: "#FC6D26" },
+    { key: "discord", icon: FaDiscord, color: "#5865F2" },
+    { key: "gitlab", icon: FaGitlab, color: "#FC6D26" },
     { key: "magicLink", icon: Mail, color: "#EA4335" },
     { key: "saml", icon: Shield, color: "#8E44AD" },
   ];

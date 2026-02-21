@@ -1,22 +1,19 @@
 import { createServer, IncomingMessage } from "http";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
-import { createRequire } from "module";
+import * as Y from "yjs";
 import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
 import { initDb, getDb } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
 import { validateWebsocketRequest } from "./app/lib/ws-auth";
 
-const require = createRequire(import.meta.url);
-const Y = require("yjs");
-
-const {
+import {
   setupWSConnection,
   docs,
   setPersistence,
-} = require("y-websocket/bin/utils");
-const { LeveldbPersistence } = require("y-leveldb");
+} from "./lib/y-websocket/utils";
+import { LeveldbPersistence } from "y-leveldb";
 
 // Global helper to kick user from project
 declare global {

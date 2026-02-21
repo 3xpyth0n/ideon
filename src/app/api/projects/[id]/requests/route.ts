@@ -14,114 +14,133 @@ const updateSchema = z.object({
   action: z.enum(["approve", "reject", "restore"]),
 });
 
-export const GET = authenticatedAction<unknown>(async (req, { params, user }) => {
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const GET = authenticatedAction<unknown>(
+  async (req, { params, user }) => {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const db = await getDb();
+    const db = await getDb();
 
-  // Verify ownership
-  const project = await db
-    .selectFrom("projects")
-    .select("ownerId")
-    .where("id", "=", params.id)
-    .executeTakeFirst();
+    // Verify ownership
+    const project = await db
+      .selectFrom("projects")
+      .select("ownerId")
+      .where("id", "=", params.id)
+      .executeTakeFirst();
 
-  if (!project || project.ownerId !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+    if (!project || project.ownerId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  const requests = await db
-    .selectFrom("projectRequests")
-    .innerJoin("users", "users.id", "projectRequests.userId")
-    .select([
-      "projectRequests.id",
-      "projectRequests.projectId",
-      "projectRequests.userId",
-      "projectRequests.status",
-      "projectRequests.createdAt",
-      "users.email",
-      "users.username",
-      "users.displayName",
-      "users.avatarUrl",
-    ])
-    .where("projectRequests.projectId", "=", params.id)
-    .orderBy("projectRequests.createdAt", "desc")
-    .execute();
+    const requests = await db
+      .selectFrom("projectRequests")
+      .innerJoin("users", "users.id", "projectRequests.userId")
+      .select([
+        "projectRequests.id",
+        "projectRequests.projectId",
+        "projectRequests.userId",
+        "projectRequests.status",
+        "projectRequests.createdAt",
+        "users.email",
+        "users.username",
+        "users.displayName",
+        "users.avatarUrl",
+      ])
+      .where("projectRequests.projectId", "=", params.id)
+      .orderBy("projectRequests.createdAt", "desc")
+      .execute();
 
-  return NextResponse.json(requests);
-}, { requireUser: true });
+    return NextResponse.json(requests);
+  },
+  { requireUser: true },
+);
 
-export const PATCH = authenticatedAction<unknown, z.infer<typeof updateSchema>>(async (req, { params, user, body }) => {
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const PATCH = authenticatedAction<unknown, z.infer<typeof updateSchema>>(
+  async (req, { params, user, body }) => {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const { userId, action } = body;
-  const db = await getDb();
-  const projectId = params.id;
+    const { userId, action } = body;
+    const db = await getDb();
+    const projectId = params.id;
 
-  // Verify ownership
-  const project = await db
-    .selectFrom("projects")
-    .select("ownerId")
-    .where("id", "=", projectId)
-    .executeTakeFirst();
+    // Verify ownership
+    const project = await db
+      .selectFrom("projects")
+      .select("ownerId")
+      .where("id", "=", projectId)
+      .executeTakeFirst();
 
-  if (!project || project.ownerId !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+    if (!project || project.ownerId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  if (action === "approve") {
-    await db.transaction().execute(async (trx) => {
-      // Add to collaborators (ignore if already exists)
-      const existing = await trx.selectFrom("projectCollaborators")
-        .selectAll()
-        .where("projectId", "=", projectId)
-        .where("userId", "=", userId)
-        .executeTakeFirst();
+    if (action === "approve") {
+      await db.transaction().execute(async (trx) => {
+        // Add to collaborators (ignore if already exists)
+        const existing = await trx
+          .selectFrom("projectCollaborators")
+          .selectAll()
+          .where("projectId", "=", projectId)
+          .where("userId", "=", userId)
+          .executeTakeFirst();
 
-      if (!existing) {
-        await trx.insertInto("projectCollaborators")
-          .values({
-            projectId,
-            userId,
-            role: "editor",
-            createdAt: new Date().toISOString(),
-          })
+        if (!existing) {
+          await trx
+            .insertInto("projectCollaborators")
+            .values({
+              projectId,
+              userId,
+              role: "editor",
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+        }
+
+        // Delete request
+        await trx
+          .deleteFrom("projectRequests")
+          .where("projectId", "=", projectId)
+          .where("userId", "=", userId)
           .execute();
-      }
+      });
 
-      // Delete request
-      await trx.deleteFrom("projectRequests")
+      // Notify the user that access is granted
+      try {
+        if (global.notifyAccessGranted) {
+          await global.notifyAccessGranted(projectId, userId);
+        }
+      } catch (wsError) {
+        console.error("Access granted notification failed:", wsError);
+      }
+    } else if (action === "reject") {
+      await db
+        .updateTable("projectRequests")
+        .set({ status: "rejected" })
         .where("projectId", "=", projectId)
         .where("userId", "=", userId)
         .execute();
-    });
-
-    // Notify the user that access is granted
-    if (global.notifyAccessGranted) {
-      await global.notifyAccessGranted(projectId, userId);
+    } else if (action === "restore") {
+      await db
+        .updateTable("projectRequests")
+        .set({ status: "pending" })
+        .where("projectId", "=", projectId)
+        .where("userId", "=", userId)
+        .execute();
     }
-  } else if (action === "reject") {
-    await db.updateTable("projectRequests")
-      .set({ status: "rejected" })
-      .where("projectId", "=", projectId)
-      .where("userId", "=", userId)
-      .execute();
-  } else if (action === "restore") {
-    await db.updateTable("projectRequests")
-      .set({ status: "pending" })
-      .where("projectId", "=", projectId)
-      .where("userId", "=", userId)
-      .execute();
-  }
 
-  // Notify WebSocket clients
-  if (global.updateProjectRequests) {
-    await global.updateProjectRequests(projectId);
-  }
+    // Notify WebSocket clients
+    try {
+      if (global.updateProjectRequests) {
+        await global.updateProjectRequests(projectId);
+      }
+    } catch (wsError) {
+      console.error("WebSocket update failed:", wsError);
+    }
 
-  return NextResponse.json({ success: true });
-}, { schema: updateSchema, requireUser: true });
+    return NextResponse.json({ success: true });
+  },
+  { schema: updateSchema, requireUser: true },
+);

@@ -26,11 +26,10 @@ input:-webkit-autofill:active {
   object-fit: contain;
 }
 
-[data-theme="dark"] .bg-logo.light {
-  display: none;
-}
-
-[data-theme="light"] .bg-logo.dark {
+[data-theme="dark"] .bg-logo.light,
+[data-theme="light"] .bg-logo.dark,
+[data-theme="dark"] .auth-logo-layer.light,
+[data-theme="light"] .auth-logo-layer.dark {
   display: none;
 }
 
@@ -75,19 +74,11 @@ input:-webkit-autofill:active {
   object-fit: contain;
 }
 
-[data-theme="dark"] .auth-logo-layer.light {
-  display: none;
-}
-
-[data-theme="light"] .auth-logo-layer.dark {
-  display: none;
-}
-
 .auth-logo-text {
-  font-size: 1.75rem;
-  letter-spacing: 0.1em;
-  color: var(--text-main);
   font-family: var(--font-branding);
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  font-size: 28px;
 }
 
 .auth-card {
@@ -194,7 +185,11 @@ input:-webkit-autofill:active {
   transition: all 0.2s;
 }
 
-.zen-input:focus {
+.zen-input:focus,
+.zen-textarea:focus,
+.btn-minimal:hover .btn-text,
+.link-input:focus,
+.select-trigger:hover {
   border-bottom-color: var(--text-main);
 }
 
@@ -218,10 +213,6 @@ input:-webkit-autofill:active {
   outline: none;
   transition: all 0.2s;
   resize: none;
-}
-
-.zen-textarea:focus {
-  border-bottom-color: var(--text-main);
 }
 
 .modal-close-btn {
@@ -384,12 +375,9 @@ input:-webkit-autofill:active {
   transition: all 0.2s ease;
 }
 
-.btn-minimal:hover {
+.btn-minimal:hover,
+.lang-select-trigger:hover {
   color: var(--text-main);
-}
-
-.btn-minimal:hover .btn-text {
-  border-bottom-color: var(--text-main);
 }
 
 /* Modal Core */
@@ -592,10 +580,6 @@ input:-webkit-autofill:active {
   color: var(--text-main);
 }
 
-.link-input:focus {
-  border-bottom-color: var(--text-main);
-}
-
 .project-canvas .react-flow__node {
   background: transparent;
   border: none;
@@ -694,10 +678,6 @@ input:-webkit-autofill:active {
   transition: all 0.2s;
 }
 
-.select-trigger:hover {
-  border-bottom-color: var(--text-main);
-}
-
 .select-dropdown {
   background: var(--bg-island);
   border: 1px solid var(--border);
@@ -726,10 +706,6 @@ input:-webkit-autofill:active {
   padding: 0.5rem;
   border-radius: 0;
   transition: all 0.2s;
-}
-
-.lang-select-trigger:hover {
-  color: var(--text-main);
 }
 
 .lang-select-trigger svg.chevron {

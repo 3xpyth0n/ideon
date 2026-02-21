@@ -49,7 +49,7 @@ const BlockDataSchema = z
         "checklist",
       ])
       .optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 
@@ -60,7 +60,9 @@ const NodeSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   selected: z.boolean().optional(),
-  data: z.union([BlockDataSchema, z.record(z.unknown())]).optional(),
+  data: z
+    .union([BlockDataSchema, z.record(z.string(), z.unknown())])
+    .optional(),
 });
 
 export function transformBlock(block: DbBlock): Node {

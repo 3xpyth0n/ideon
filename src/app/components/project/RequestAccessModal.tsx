@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -42,20 +41,22 @@ export function RequestAccessModal({
       }/yjs`,
       `project-${projectId}-access`,
       doc,
-      { connect: true, params: {} }
+      { connect: true, params: {} },
     );
 
     const metaMap = doc.getMap("meta");
     const checkAccess = () => {
       const granted = metaMap.get(`granted:${user.id}`);
       if (granted) {
-        toast.success(dict.project.accessGranted || "Access granted! Redirecting...");
+        toast.success(
+          dict.project.accessGranted || "Access granted! Redirecting...",
+        );
         router.refresh();
       }
     };
 
     metaMap.observe(checkAccess);
-    
+
     // Check initial state
     if (metaMap.get(`granted:${user.id}`)) {
       checkAccess();
@@ -83,7 +84,9 @@ export function RequestAccessModal({
           setStatus("rejected");
         } else if (data.status === "pending") {
           setStatus("pending");
-          toast.info(dict.project.requestAlreadyPending || "Request already pending");
+          toast.info(
+            dict.project.requestAlreadyPending || "Request already pending",
+          );
         } else {
           // Generic error handling
           const errorMsg = data.error || res.statusText;
@@ -110,11 +113,11 @@ export function RequestAccessModal({
         <div className="flex justify-center mb-6 text-muted bg-muted/10 p-4 rounded-full">
           <Lock size={32} />
         </div>
-        
+
         <h2 className="text-xl font-bold mb-2">
           {dict.project.accessDenied || "Access Denied"}
         </h2>
-        
+
         <p className="text-muted mb-8 max-w-[80%] mx-auto text-sm">
           {projectName
             ? `You don't have access to "${projectName}".`

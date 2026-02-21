@@ -1,9 +1,8 @@
 /* Sidebar - Balanced Spacing */
-.sidebar.no-transition {
-  transition: none;
-}
-
-.sidebar.no-transition * {
+.sidebar.no-transition,
+.sidebar.no-transition *,
+[data-sidebar-collapsed="true"] .sidebar.no-transition,
+[data-sidebar-collapsed="true"] .sidebar.no-transition * {
   transition: none;
 }
 
@@ -13,6 +12,7 @@
   display: flex;
   flex-direction: column;
   padding: 32px 0px;
+  padding-top: 24px !important;
   position: relative;
   z-index: 2000;
   user-select: none;
@@ -22,15 +22,7 @@
   height: 100%;
 }
 
-.sidebar.collapsed {
-  width: 0px;
-  margin-right: -12px;
-  padding: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Force collapsed state via HTML attribute to avoid flash */
+.sidebar.collapsed,
 [data-sidebar-collapsed="true"] .sidebar {
   width: 0px;
   margin-right: -12px;
@@ -131,11 +123,6 @@
   height: 36px;
 }
 
-[data-sidebar-collapsed="true"] .sidebar.no-transition,
-[data-sidebar-collapsed="true"] .sidebar.no-transition * {
-  transition: none;
-}
-
 .sidebar-header {
   padding: 0 12px 48px 12px;
   cursor: pointer;
@@ -173,20 +160,18 @@
   object-fit: contain;
 }
 
-[data-theme="dark"] .logo-layer.light {
-  display: none;
-}
-
-[data-theme="light"] .logo-layer.dark {
+[data-theme="dark"] .logo-layer.light,
+[data-theme="light"] .logo-layer.dark,
+.nav-section::-webkit-scrollbar {
   display: none;
 }
 
 .sidebar-logo-text {
   font-family: var(--font-branding);
-  font-size: 24px;
-  font-weight: 400;
+  font-size: 25px;
   color: var(--text-main);
   letter-spacing: -0.02em;
+  padding-top: 6px;
 }
 
 .nav-section {
@@ -197,10 +182,6 @@
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-}
-
-.nav-section::-webkit-scrollbar {
-  display: none;
 }
 
 .nav-group {
@@ -228,12 +209,22 @@
   position: relative;
 }
 
+/* Fix spacing for collapsible nav items */
+.nav-item > a.flex-1,
+.nav-item > button.flex-1 {
+  padding: 10px 16px !important;
+}
+
 .collapsed .nav-item {
   justify-content: center;
   padding: 12px 0;
 }
 
-.nav-item:hover {
+.nav-item:hover,
+.nav-sub-item:hover,
+[data-theme="dark"] .management-tab-btn:hover,
+[data-theme="dark"] .management-nav-item:hover,
+[data-theme="dark"] .management-nav-item.active {
   color: var(--text-main);
 }
 
@@ -267,10 +258,6 @@
   border-radius: 0;
 }
 
-.nav-sub-item:hover {
-  color: var(--text-main);
-}
-
 .nav-sub-item.active {
   color: var(--text-main);
   font-weight: 700;
@@ -280,6 +267,7 @@
   margin-left: auto;
   transition: transform 0.2s;
   opacity: 0.5;
+  transform-origin: center;
 }
 
 .nav-item.expanded .nav-item-expand {
@@ -372,17 +360,14 @@
   width: calc(100% - 16px);
 }
 
-.sidebar-profile:hover {
+.sidebar-profile:hover,
+.sidebar-profile.active:hover {
   background: transparent;
 }
 
 .sidebar-profile.active {
   background: transparent;
   border-bottom: none;
-}
-
-.sidebar-profile.active:hover {
-  background: transparent;
 }
 
 .sidebar-profile-avatar {
@@ -680,7 +665,9 @@
   border-top: none;
 }
 
-.management-tab-btn:hover {
+.management-tab-btn:hover,
+.management-nav-item:hover,
+.management-nav-item.active {
   color: #000000;
   background: var(--bg-island);
 }
@@ -688,10 +675,6 @@
 .management-tab-btn.active {
   color: #000000;
   border-bottom-color: #000000;
-}
-
-[data-theme="dark"] .management-tab-btn:hover {
-  color: var(--text-main);
 }
 
 [data-theme="dark"] .management-tab-btn.active {
@@ -740,21 +723,6 @@
   width: 100%;
   text-align: left;
   cursor: pointer;
-}
-
-.management-nav-item:hover {
-  color: #000000;
-  background: var(--bg-island);
-}
-
-.management-nav-item.active {
-  color: #000000;
-  background: var(--bg-island);
-}
-
-[data-theme="dark"] .management-nav-item:hover,
-[data-theme="dark"] .management-nav-item.active {
-  color: var(--text-main);
 }
 
 .management-content-wrapper {
@@ -888,7 +856,8 @@
   transition: all 0.2s;
 }
 
-.zen-switch.active {
+.zen-switch.active,
+.zen-switch-small.active {
   background: #fafafa;
 }
 
@@ -906,10 +875,6 @@
   position: relative;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.zen-switch-small.active {
-  background: #fafafa;
 }
 
 .zen-switch-small.active .switch-thumb {

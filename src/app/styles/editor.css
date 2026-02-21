@@ -12,6 +12,7 @@
   outline: 0;
   box-shadow: none;
 }
+
 /* Remote Cursor Styles */
 .remote-cursor {
   position: absolute;
@@ -83,7 +84,10 @@
 }
 
 .user-presence-item:hover .user-presence-tooltip,
-.reaction-badge:hover .user-presence-tooltip {
+.reaction-badge:hover .user-presence-tooltip,
+.block-status-trigger:hover,
+.selected .resizer-line,
+.group:hover .canvas-context-badge {
   opacity: 1;
 }
 
@@ -118,7 +122,9 @@
   -webkit-touch-callout: default;
 }
 
-.block-file-container {
+.block-file-container, .preview-mode .react-flow__node,
+.preview-mode .react-flow__edge, /* Force block-card content to have default cursor in preview mode */
+.preview-mode .block-card * {
   cursor: default !important;
 }
 
@@ -256,10 +262,7 @@
   box-shadow: 0 0 20px 2px #ffffff26;
 }
 
-.resizer-line-core {
-  display: none !important;
-}
-
+.resizer-line-core,
 .resizer-handle-core {
   display: none !important;
 }
@@ -271,9 +274,11 @@
 .pt-2 {
   padding-top: 8px;
 }
+
 .pt-4 {
   padding-top: 16px;
 }
+
 .px-2 {
   padding-left: 8px;
   padding-right: 8px;
@@ -374,6 +379,7 @@
   from {
     stroke-dashoffset: 10;
   }
+
   to {
     stroke-dashoffset: 0;
   }
@@ -424,7 +430,8 @@
   transition: background 0.2s;
 }
 
-.breadcrumb-item:hover {
+.breadcrumb-item:hover,
+.notion-btn:hover {
   background: rgba(0, 0, 0, 0.05);
 }
 
@@ -445,10 +452,6 @@
   background: transparent;
   border: none;
   color: var(--text-main);
-}
-
-.notion-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
 }
 
 /* Minimap */
@@ -673,12 +676,15 @@
 .block-intent-icon.task {
   color: #10b981;
 }
+
 .block-intent-icon.decision {
   color: #f59e0b;
 }
+
 .block-intent-icon.milestone {
   color: #8b5cf6;
 }
+
 .block-intent-icon.note {
   color: #6b7280;
 }
@@ -703,9 +709,11 @@
 .block-card.task {
   border-left: 4px solid #10b981;
 }
+
 .block-card.decision {
   border-left: 4px solid #f59e0b;
 }
+
 .block-card.milestone {
   border-left: 4px solid #8b5cf6;
 }
@@ -713,9 +721,11 @@
 [data-theme="dark"] .block-card.task {
   border-left-color: #059669;
 }
+
 [data-theme="dark"] .block-card.decision {
   border-left-color: #d97706;
 }
+
 [data-theme="dark"] .block-card.milestone {
   border-left-color: #7c3aed;
 }
@@ -787,10 +797,6 @@
   cursor: pointer;
   color: var(--text-main);
   transition: opacity 0.2s;
-}
-
-.block-status-trigger:hover {
-  opacity: 1;
 }
 
 .block-status-dropdown {
@@ -927,10 +933,6 @@
   opacity: 0;
 }
 
-.selected .resizer-line {
-  opacity: 1;
-}
-
 .resizer-handle {
   width: 40px !important;
   height: 40px !important;
@@ -959,7 +961,8 @@
   border: none !important;
 }
 
-.react-flow__node-core .react-flow__resize-control.handle.top.left {
+.react-flow__node-core .react-flow__resize-control.handle.top.left,
+.preview-mode .react-flow__edgeupdater {
   display: none !important;
   pointer-events: none !important;
 }
@@ -979,10 +982,6 @@
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
   pointer-events: none;
-}
-
-.group:hover .canvas-context-badge {
-  opacity: 1;
 }
 
 [data-theme="dark"] .canvas-context-badge {
@@ -1030,16 +1029,6 @@
   opacity: 0 !important;
 }
 
-.preview-mode .react-flow__edgeupdater {
-  display: none !important;
-  pointer-events: none !important;
-}
-
-.preview-mode .react-flow__node,
-.preview-mode .react-flow__edge {
-  cursor: default !important;
-}
-
 .preview-mode .react-flow__pane {
   cursor: grab !important;
   cursor: -webkit-grab !important;
@@ -1048,11 +1037,6 @@
 .preview-mode .react-flow__pane:active {
   cursor: grabbing !important;
   cursor: -webkit-grabbing !important;
-}
-
-/* Force block-card content to have default cursor in preview mode */
-.preview-mode .block-card * {
-  cursor: default !important;
 }
 
 /* Allow scrolling in content if needed */

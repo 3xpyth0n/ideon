@@ -82,7 +82,8 @@
       "node-gyp": "^12.2.0",
       "y-leveldb": "^0.2.0",
       "socks": "^2.8.7",
-      "encoding": "^0.1.13"
+      "encoding": "^0.1.13",
+      "@auth/core": "0.41.1"
     }
   },
   "overrides": {
@@ -101,7 +102,8 @@
     "socks": "^2.8.7",
     "encoding": "^0.1.13",
     "cross-spawn": "^7.0.6",
-    "minimatch": "^10.2.1"
+    "minimatch": "^10.2.1",
+    "@auth/core": "0.41.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.4.2",

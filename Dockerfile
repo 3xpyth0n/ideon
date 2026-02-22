@@ -1,5 +1,5 @@
 FROM node:24.11-alpine AS base
-RUN apk add --no-cache libc6-compat
+RUN apk update && apk add --no-cache libc6-compat openssl
 
 # 1. Install all dependencies (for building)
 FROM base AS deps
@@ -35,23 +35,26 @@ ENV HOSTNAME="0.0.0.0"
 # Install tini for better signal handling, curl for healthchecks and su-exec for permission management
 RUN apk add --no-cache curl tini su-exec
 RUN adduser -D -u 1001 appuser && \
-    mkdir -p storage/avatars storage/yjs storage/uploads && \
-    chown -R appuser:appuser storage
+    mkdir -p /app/storage/avatars /app/storage/yjs /app/storage/uploads
 # Copy pruned node_modules from prod-deps
-COPY --from=prod-deps --chown=appuser:appuser /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 # Copy build artifacts
-COPY --from=builder --chown=appuser:appuser /app/dist ./dist
-COPY --from=builder --chown=appuser:appuser /app/.next ./.next
-COPY --from=builder --chown=appuser:appuser /app/public ./public
-COPY --from=builder --chown=appuser:appuser /app/package.json ./package.json
-COPY --from=builder --chown=appuser:appuser /app/src/app/i18n ./src/app/i18n
-COPY --from=builder --chown=appuser:appuser /app/src/app/db/migrations ./src/app/db/migrations
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/src/app/i18n ./src/app/i18n
+COPY --from=builder /app/src/app/db/migrations ./src/app/db/migrations
 
 # Copy entrypoint script and make it executable
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 3000
+
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 # Use tini as entrypoint for proper signal forwarding and entrypoint script for permission management
 ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]

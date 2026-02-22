@@ -126,6 +126,13 @@ export const GET = authenticatedAction(
     const items = await db
       .selectFrom("invitations")
       .leftJoin("users", "users.id", "invitations.invitedBy")
+      // Filter out invitations for users that already exist
+      .leftJoin(
+        "users as existingUser",
+        "existingUser.email",
+        "invitations.email",
+      )
+      .where("existingUser.id", "is", null)
       .select([
         "invitations.id",
         "invitations.email",

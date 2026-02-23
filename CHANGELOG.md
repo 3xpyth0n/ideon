@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-02-23
+
+### Fixed
+
+- Resolved a race condition during project loading where blocks would briefly appear and then disappear. The system now waits for remote synchronization before initializing the canvas, ensuring a stable and consistent view for large projects.
+
 ## [0.4.3] - 2026-02-21
 
 ### Added

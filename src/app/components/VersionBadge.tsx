@@ -115,7 +115,6 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
             style={{
               top: tooltipPos.top,
               left: tooltipPos.left,
-              transform: "translateX(-50%)",
             }}
             onTransitionEnd={handleTransitionEnd}
           >

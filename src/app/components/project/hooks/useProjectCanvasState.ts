@@ -59,6 +59,7 @@ export const useProjectCanvasState = (
   yContents: Y.Map<Y.Text> | null,
   awareness: Awareness | null,
   isLocalSynced: boolean = false,
+  isRemoteSynced: boolean = false,
 ) => {
   const { dict } = useI18n();
   const { fitView, getZoom, zoomTo, setViewport, screenToFlowPosition } =
@@ -1057,6 +1058,19 @@ export const useProjectCanvasState = (
         return;
       }
 
+      // If local Yjs is empty, wait for remote sync or timeout before fetching
+      if (!isRemoteSynced) {
+        const timer = setTimeout(() => {
+          if (!isInitialized.current) {
+            isInitialized.current = false;
+            lastProjectId.current = initialProjectId;
+            io.fetchGraph();
+          }
+        }, 2000); // 2s timeout for remote sync
+
+        return () => clearTimeout(timer);
+      }
+
       isInitialized.current = false;
       lastProjectId.current = initialProjectId;
       io.fetchGraph();
@@ -1068,6 +1082,7 @@ export const useProjectCanvasState = (
     yBlocks,
     yContents,
     isLocalSynced,
+    isRemoteSynced,
   ]);
 
   const handleFitView = useCallback(() => {

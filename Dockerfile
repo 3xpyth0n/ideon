@@ -1,22 +1,22 @@
 FROM node:24.11-alpine AS base
-RUN apk update && apk add --no-cache libc6-compat openssl
 
 # 1. Install all dependencies (for building)
 FROM base AS deps
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 
 # 2. Install production dependencies (for running)
 FROM base AS prod-deps
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 # 3. Build the application
 FROM base AS builder
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

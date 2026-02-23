@@ -171,6 +171,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const [currentUser, setCurrentUser] = useState<UserPresence | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [isLocalSynced, setIsLocalSynced] = useState(false);
+  const [isRemoteSynced, setIsRemoteSynced] = useState(false);
   const [isAccessValidated, setIsAccessValidated] = useState(false);
 
   useEffect(() => {
@@ -234,6 +235,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       { connect: true, params: {} },
     );
 
+    wsProvider.on("sync", (data: boolean) => {
+      try {
+        setIsRemoteSynced(data);
+      } catch (error) {
+        console.error("Failed to update remote sync status:", error);
+      }
+    });
+
     // Listen for access revocation
     wsProvider.on("connection-close", (event: { code?: number } | null) => {
       if (event && event.code === 4003) {
@@ -259,6 +268,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       indexeddbProvider.destroy();
       doc.destroy();
       setIsLocalSynced(false);
+      setIsRemoteSynced(false);
     };
   }, [initialProjectId]);
 
@@ -346,6 +356,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     yContents,
     provider?.awareness || null,
     isLocalSynced,
+    isRemoteSynced,
   );
 
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
@@ -835,7 +846,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             />
             <Panel
               position="top-left"
-              className="pointer-events-none !m-0"
+              className="pointer-events-none m-0!"
               style={{ width: "100%", height: "100%", zIndex: 1500 }}
             >
               <RemoteCursors
@@ -875,11 +886,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             )}
             <Panel
               position="top-left"
-              className="!m-6 !ml-12 !mt-3"
+              className="m-6! ml-12! mt-3!"
               style={{ zIndex: 2000 }}
             >
               {!isPreviewMode && (
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-3 mt-2">
                   <span className="text-sm font-bold opacity-40 select-none">
                     {dict.project.shareCursor}
                   </span>
@@ -898,7 +909,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
             <Panel
               position="top-right"
-              className="flex items-center gap-2 !m-6"
+              className="flex items-center gap-2 m-6!"
               style={{ zIndex: 2000 }}
             >
               {isPreviewMode && (
@@ -942,7 +953,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     {activeUsers.map((u) => (
                       <div
                         key={u.id}
-                        className="user-presence-item relative flex-shrink-0"
+                        className="user-presence-item relative shrink-0"
                       >
                         <div
                           className="user-presence-avatar"
@@ -991,7 +1002,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   {currentUser?.id === projectOwnerId && (
                     <Button
                       onClick={() => setIsShareModalOpen(true)}
-                      className="btn-secondary !px-3"
+                      className="btn-secondary px-3!"
                       disabled={isPreviewMode}
                       title={dict.project.share || "Share"}
                     >

@@ -1638,7 +1638,7 @@
 }
 
 .version-tooltip {
-  position: absolute;
+  position: fixed;
   background-color: var(--text-main);
   color: var(--bg-page);
   padding: 4px 8px;

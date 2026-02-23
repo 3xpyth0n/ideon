@@ -269,7 +269,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                 }}
               >
                 <div className="flex items-center gap-6">
-                  <div className="avatar-container bg-border/5 flex-shrink-0 border border-border/10">
+                  <div className="avatar-container bg-border/5 shrink-0 border border-border/10">
                     <img
                       src={getAvatarUrl(user.avatarUrl, user.username)}
                       alt={user.username || ""}
@@ -334,7 +334,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                           {openUserRoleId === user.id && (
                             <>
                               <div
-                                className="fixed inset-0 z-[90]"
+                                className="fixed inset-0 z-90"
                                 onClick={() => setOpenUserRoleId(null)}
                               />
                               <div className="user-role-dropdown">
@@ -421,7 +421,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                       {invite.email}
                     </span>
                     <span
-                      className={`role-badge !m-0 !py-0.5 inline-block ${
+                      className={`role-badge m-0! py-0.5! inline-block ${
                         invite.role === "admin"
                           ? "role-badge-admin"
                           : "role-badge-member"

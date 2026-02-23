@@ -340,7 +340,7 @@ const FileBlock = (props: CanvasBlockProps) => {
     <div
       className={`block-card block-type-file ${selected ? "selected" : ""} ${
         isReadOnly ? "read-only" : ""
-      } flex flex-col !p-0 relative w-full h-full`}
+      } flex flex-col p-0! relative w-full h-full`}
     >
       <NodeResizer
         minWidth={250}
@@ -495,7 +495,7 @@ const FileBlock = (props: CanvasBlockProps) => {
                         />
                       </div>
                     ) : (
-                      <div className="block-file-icon-container p-3 rounded bg-white/5 flex-shrink-0">
+                      <div className="block-file-icon-container p-3 rounded bg-white/5 shrink-0">
                         <Icon size={32} className="opacity-60" />
                       </div>
                     )}
@@ -548,8 +548,8 @@ const FileBlock = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Left}
         isConnectable={!isReadOnly}
-        className={`block-handle block-handle-left !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-left z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         <div className="handle-dot" />
@@ -560,8 +560,8 @@ const FileBlock = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={!isReadOnly}
-        className={`block-handle block-handle-right !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-right z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         <div className="handle-dot" />
@@ -572,8 +572,8 @@ const FileBlock = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Top}
         isConnectable={!isReadOnly}
-        className={`block-handle block-handle-top !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-top z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         <div className="handle-dot" />
@@ -584,8 +584,8 @@ const FileBlock = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={!isReadOnly}
-        className={`block-handle block-handle-bottom !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-bottom z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         <div className="handle-dot" />

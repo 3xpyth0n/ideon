@@ -364,7 +364,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     <div
       className={`block-card block-type-snippet ${selected ? "selected" : ""} ${
         isBeingMoved ? "is-moving" : ""
-      } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0`}
+      } ${isReadOnly ? "read-only" : ""} flex flex-col p-0!`}
       style={
         isBeingMoved
           ? ({ "--block-border-color": borderColor } as React.CSSProperties)
@@ -395,7 +395,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
-              className="block-title mr-2 !max-w-[120px]"
+              className="block-title mr-2 max-w-[120px]!"
               placeholder="..."
               readOnly={isReadOnly}
             />
@@ -420,7 +420,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               options={LANGUAGE_OPTIONS}
               onChange={handleLanguageChange}
               align="right"
-              triggerClassName="!pr-3"
+              triggerClassName="pr-3!"
               className="mr-1"
               disabled={isReadOnly}
             />
@@ -479,7 +479,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         type="source"
         position={Position.Left}
         isConnectable={true}
-        className="block-handle block-handle-left !z-50"
+        className="block-handle block-handle-left z-50!"
       >
         {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -490,7 +490,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="block-handle block-handle-right !z-50"
+        className="block-handle block-handle-right z-50!"
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -501,7 +501,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         type="source"
         position={Position.Top}
         isConnectable={true}
-        className="block-handle block-handle-top !z-50"
+        className="block-handle block-handle-top z-50!"
       >
         {!isTopSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -512,7 +512,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={true}
-        className="block-handle block-handle-bottom !z-50"
+        className="block-handle block-handle-bottom z-50!"
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}
       </Handle>

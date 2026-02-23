@@ -852,7 +852,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           </div>
         )}
         {metadata?.image && !previewImageError ? (
-          <div className="block-link-preview w-full aspect-video overflow-hidden relative flex-shrink-0">
+          <div className="block-link-preview w-full aspect-video overflow-hidden relative shrink-0">
             <img
               src={`/api/proxy/image?url=${encodeURIComponent(metadata.image)}`}
               alt={metadata.title || "Link preview"}
@@ -873,7 +873,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             )}
           </div>
         ) : (
-          <div className="block-link-placeholder w-full aspect-video flex items-center justify-center bg-white/5 relative flex-shrink-0">
+          <div className="block-link-placeholder w-full aspect-video flex items-center justify-center bg-white/5 relative shrink-0">
             {metadata?.error ? (
               <AlertCircle size={48} className="opacity-20 text-red-500" />
             ) : (
@@ -932,7 +932,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         isBeingMoved ? "is-moving" : ""
       } ${
         isReadOnly ? "read-only" : ""
-      } flex flex-col !p-0 relative w-full h-full`}
+      } flex flex-col p-0! relative w-full h-full`}
       style={
         {
           "--block-border-color": borderColor,
@@ -1008,8 +1008,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Left}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-left !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-left z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         {!isLeftSourceConnected && <div className="handle-dot" />}
@@ -1020,8 +1020,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-right !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-right z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
@@ -1032,8 +1032,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Top}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-top !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-top z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         {!isTopSourceConnected && <div className="handle-dot" />}
@@ -1044,8 +1044,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={isConnectable}
-        className={`block-handle block-handle-bottom !z-50 ${
-          isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+        className={`block-handle block-handle-bottom z-50! ${
+          isReadOnly ? "opacity-0! pointer-events-none!" : ""
         }`}
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}

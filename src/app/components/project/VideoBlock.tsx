@@ -270,7 +270,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     <div
       className={`block-card block-type-video ${selected ? "selected" : ""} ${
         isBeingMoved ? "is-moving" : ""
-      } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0`}
+      } ${isReadOnly ? "read-only" : ""} flex flex-col p-0!`}
       style={{ "--block-border-color": borderColor } as React.CSSProperties}
       {...touchHandlers}
     >
@@ -367,7 +367,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         type="source"
         position={Position.Left}
         isConnectable={true}
-        className="block-handle block-handle-left !z-50"
+        className="block-handle block-handle-left z-50!"
       >
         {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -376,7 +376,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="block-handle block-handle-right !z-50"
+        className="block-handle block-handle-right z-50!"
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -387,7 +387,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         type="source"
         position={Position.Top}
         isConnectable={true}
-        className="block-handle block-handle-top !z-50"
+        className="block-handle block-handle-top z-50!"
       >
         {!isTopSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -398,7 +398,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={true}
-        className="block-handle block-handle-bottom !z-50"
+        className="block-handle block-handle-bottom z-50!"
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}
       </Handle>

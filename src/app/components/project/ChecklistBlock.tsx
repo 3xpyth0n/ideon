@@ -270,7 +270,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         selected ? "selected" : ""
       } ${isBeingMoved ? "is-moving" : ""} ${isReadOnly ? "read-only" : ""} ${
         total > 0 ? "has-progress" : ""
-      } flex flex-col !p-0`}
+      } flex flex-col p-0!`}
       style={
         {
           "--block-border-color": borderColor,
@@ -407,7 +407,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         type="source"
         position={Position.Left}
         isConnectable={true}
-        className="block-handle block-handle-left !z-50"
+        className="block-handle block-handle-left z-50!"
       >
         {!isLeftSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -418,7 +418,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="block-handle block-handle-right !z-50"
+        className="block-handle block-handle-right z-50!"
       >
         {!isRightSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -429,7 +429,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         type="source"
         position={Position.Top}
         isConnectable={true}
-        className="block-handle block-handle-top !z-50"
+        className="block-handle block-handle-top z-50!"
       >
         {!isTopSourceConnected && <div className="handle-dot" />}
       </Handle>
@@ -440,7 +440,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         type="source"
         position={Position.Bottom}
         isConnectable={true}
-        className="block-handle block-handle-bottom !z-50"
+        className="block-handle block-handle-bottom z-50!"
       >
         {!isBottomSourceConnected && <div className="handle-dot" />}
       </Handle>

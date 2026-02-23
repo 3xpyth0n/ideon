@@ -21,28 +21,28 @@ export function AuditTable({ logs, loading }: AuditTableProps) {
   const { dict } = useI18n();
 
   return (
-    <div className="overflow-x-auto border border-[var(--border)] bg-[var(--island-bg)]">
+    <div className="overflow-x-auto border border-(--border) bg-(--island-bg)">
       <table className="w-full text-left text-sm">
-        <thead className="bg-[var(--bg-sidebar)] uppercase tracking-wider text-[10px] font-bold text-[var(--text-muted)]">
+        <thead className="bg-(--bg-sidebar) uppercase tracking-wider text-[10px] font-bold text-(--text-muted)">
           <tr>
-            <th className="p-4 border-b border-[var(--border)]">
+            <th className="p-4 border-b border-(--border)">
               {dict.management.timestamp}
             </th>
-            <th className="p-4 border-b border-[var(--border)]">
+            <th className="p-4 border-b border-(--border)">
               {dict.management.action}
             </th>
-            <th className="p-4 border-b border-[var(--border)]">
+            <th className="p-4 border-b border-(--border)">
               {dict.management.status}
             </th>
-            <th className="p-4 border-b border-[var(--border)]">
+            <th className="p-4 border-b border-(--border)">
               {dict.auth.email}
             </th>
-            <th className="p-4 border-b border-[var(--border)]">
+            <th className="p-4 border-b border-(--border)">
               {dict.modals.ipAddress}
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[var(--border)]">
+        <tbody className="divide-y divide-(--border)">
           {loading ? (
             <tr>
               <td colSpan={5} className="p-12 text-center">
@@ -65,12 +65,12 @@ export function AuditTable({ logs, loading }: AuditTableProps) {
               return (
                 <tr
                   key={log.id}
-                  className="hover:bg-[var(--bg-sidebar)] transition-colors"
+                  className="hover:bg-(--bg-sidebar) transition-colors"
                 >
                   <td className="p-4 font-mono opacity-50 text-[12px]">
                     {new Date(log.createdAt as string).toLocaleString()}
                   </td>
-                  <td className="p-4 font-bold text-[var(--text-main)]">
+                  <td className="p-4 font-bold text-(--text-main)">
                     {log.action}
                   </td>
                   <td className="p-4">

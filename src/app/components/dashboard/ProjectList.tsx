@@ -789,8 +789,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   isTrash ? "cursor-default opacity-75" : ""
                 } ${
                   dragOverFolderId === folder.id
-                    ? "!border-blue-500 !bg-blue-800 dark:!bg-blue-500/20"
-                    : "!border-blue-500/20 hover:!border-blue-500/50 !bg-blue-950 hover:!bg-blue-900 dark:!bg-blue-500/5 dark:hover:!bg-blue-500/10"
+                    ? "border-blue-500! bg-blue-800! dark:bg-blue-500/20!"
+                    : "border-blue-500/20! hover:border-blue-500/50! bg-blue-950! hover:bg-blue-900! dark:bg-blue-500/5! dark:hover:bg-blue-500/10!"
                 }`}
               >
                 <div>
@@ -866,7 +866,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   </p>
                 </div>
 
-                <div className="project-card-footer !grid grid-cols-3 w-full items-center mt-auto">
+                <div className="project-card-footer grid! grid-cols-3 w-full items-center mt-auto">
                   <div className="project-card-tag justify-self-start">
                     <Calendar size={10} strokeWidth={3} />
                     <span>
@@ -1079,7 +1079,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 </p>
               )}
 
-              <div className="project-card-footer !grid grid-cols-3 w-full items-center">
+              <div className="project-card-footer grid! grid-cols-3 w-full items-center">
                 <div className="project-card-tag justify-self-start">
                   <Calendar size={10} strokeWidth={3} />
                   <span>
@@ -1235,7 +1235,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               <span>Invite Members</span>
             </button>
           )}
-          <div className="h-[1px] bg-white/10 my-1" />
+          <div className="h-px bg-white/10 my-1" />
           <button
             className="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10 text-red-400 flex items-center gap-2"
             onClick={() => {

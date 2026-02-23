@@ -136,7 +136,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       <div
         className={`block-card block-type-note ${selected ? "selected" : ""} ${
           isReadOnly ? "read-only" : ""
-        } flex flex-col !p-0`}
+        } flex flex-col p-0!`}
       >
         <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
           <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
@@ -191,7 +191,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           type="source"
           position={Position.Left}
           isConnectable={true}
-          className="block-handle block-handle-left !z-50"
+          className="block-handle block-handle-left z-50!"
         >
           {!isLeftSourceConnected && <div className="handle-dot" />}
         </Handle>
@@ -202,7 +202,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           type="source"
           position={Position.Right}
           isConnectable={true}
-          className="block-handle block-handle-right !z-50"
+          className="block-handle block-handle-right z-50!"
         >
           {!isRightSourceConnected && <div className="handle-dot" />}
         </Handle>
@@ -213,7 +213,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           type="source"
           position={Position.Top}
           isConnectable={true}
-          className="block-handle block-handle-top !z-50"
+          className="block-handle block-handle-top z-50!"
         >
           {!isTopSourceConnected && <div className="handle-dot" />}
         </Handle>
@@ -224,7 +224,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           type="source"
           position={Position.Bottom}
           isConnectable={true}
-          className="block-handle block-handle-bottom !z-50"
+          className="block-handle block-handle-bottom z-50!"
         >
           {!isBottomSourceConnected && <div className="handle-dot" />}
         </Handle>

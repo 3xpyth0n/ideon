@@ -248,8 +248,8 @@ const ProjectCoreBlock = memo(
             type="source"
             position={Position.Left}
             isConnectable={!isReadOnly}
-            className={`block-handle block-handle-left !z-50 ${
-              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            className={`block-handle block-handle-left z-50! ${
+              isReadOnly ? "opacity-0! pointer-events-none!" : ""
             }`}
           >
             {!isLeftConnected && <div className="handle-dot" />}
@@ -259,8 +259,8 @@ const ProjectCoreBlock = memo(
             type="source"
             position={Position.Right}
             isConnectable={!isReadOnly}
-            className={`block-handle block-handle-right !z-50 ${
-              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            className={`block-handle block-handle-right z-50! ${
+              isReadOnly ? "opacity-0! pointer-events-none!" : ""
             }`}
           >
             {!isRightConnected && <div className="handle-dot" />}
@@ -270,8 +270,8 @@ const ProjectCoreBlock = memo(
             type="source"
             position={Position.Top}
             isConnectable={!isReadOnly}
-            className={`block-handle block-handle-top !z-50 ${
-              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            className={`block-handle block-handle-top z-50! ${
+              isReadOnly ? "opacity-0! pointer-events-none!" : ""
             }`}
           >
             {!isTopConnected && <div className="handle-dot" />}
@@ -281,8 +281,8 @@ const ProjectCoreBlock = memo(
             type="source"
             position={Position.Bottom}
             isConnectable={!isReadOnly}
-            className={`block-handle block-handle-bottom !z-50 ${
-              isReadOnly ? "!opacity-0 !pointer-events-none" : ""
+            className={`block-handle block-handle-bottom z-50! ${
+              isReadOnly ? "opacity-0! pointer-events-none!" : ""
             }`}
           >
             {!isBottomConnected && <div className="handle-dot" />}

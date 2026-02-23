@@ -43,7 +43,7 @@ export function AccessRequestsList({
       {requests.map((req) => (
         <div
           key={req.id}
-          className="user-card flex items-center justify-between p-3 border border-white/5 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors"
+          className="user-card flex items-center justify-between p-3 border border-white/5 bg-white/2 rounded-lg hover:bg-white/4 transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-white/5 flex items-center justify-center overflow-hidden rounded-full border border-white/10">

@@ -133,7 +133,7 @@ function PublicProjectCanvasContent({
           className="opacity-20"
         />
 
-        <Panel position="top-left" className="!m-6">
+        <Panel position="top-left" className="m-6!">
           <div className="flex flex-col">
             <span className="text-lg font-bold">{projectName}</span>
             <span className="text-[10px] uppercase font-bold opacity-40 tracking-widest">

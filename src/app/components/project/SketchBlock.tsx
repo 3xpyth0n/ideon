@@ -443,7 +443,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
       <div
         className={`block-card ${selected ? "selected" : ""} ${
           isBeingMoved ? "is-moving" : ""
-        } ${isReadOnly ? "read-only" : ""} flex flex-col !p-0 select-none`}
+        } ${isReadOnly ? "read-only" : ""} flex flex-col p-0! select-none`}
         style={{ "--block-border-color": borderColor } as React.CSSProperties}
       >
         <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
@@ -468,7 +468,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
 
           {!isReadOnly && (
             <div
-              className="flex items-center gap-1 px-2 pb-1 border-b border-[var(--border)] nowheel nodrag flex-wrap relative z-50"
+              className="flex items-center gap-1 px-2 pb-1 border-b border-(--border) nowheel nodrag flex-wrap relative z-50"
               {...preventDrag}
               onClick={stopPropagation}
             >
@@ -488,8 +488,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   {...preventDrag}
                   className={`p-1 rounded-t-sm transition-colors border-b-2 ${
                     tool === "pen"
-                      ? "border-[var(--text-main)] text-[var(--text-main)]"
-                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      ? "border-(--text-main) text-(--text-main)"
+                      : "border-transparent text-(--text-muted) hover:text-(--text-main)"
                   }`}
                   title="Pen"
                 >
@@ -497,7 +497,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 </button>
                 {activePopup === "pen" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-[var(--border)] rounded-lg shadow-xl flex gap-1 z-[100] min-w-max pointer-events-auto bg-[var(--bg-island)]"
+                    className="absolute top-full left-0 mt-2 p-2 border border-(--border) rounded-lg shadow-xl flex gap-1 z-100 min-w-max pointer-events-auto bg-(--bg-island)"
                     {...preventDrag}
                     onClick={stopPropagation}
                   >
@@ -554,8 +554,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   {...preventDrag}
                   className={`p-1 rounded-t-sm transition-colors border-b-2 ${
                     tool === "eraser"
-                      ? "border-[var(--text-main)] text-[var(--text-main)]"
-                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      ? "border-(--text-main) text-(--text-main)"
+                      : "border-transparent text-(--text-muted) hover:text-(--text-main)"
                   }`}
                   title="Eraser"
                 >
@@ -563,7 +563,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 </button>
                 {activePopup === "eraser" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-[var(--border)] rounded-lg shadow-xl flex gap-1 z-[100] min-w-max pointer-events-auto bg-[var(--bg-island)]"
+                    className="absolute top-full left-0 mt-2 p-2 border border-(--border) rounded-lg shadow-xl flex gap-1 z-100 min-w-max pointer-events-auto bg-(--bg-island)"
                     {...preventDrag}
                     onClick={stopPropagation}
                   >
@@ -601,10 +601,10 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 )}
               </div>
 
-              <div className="w-px h-4 bg-[var(--border)] mx-1" />
+              <div className="w-px h-4 bg-(--border) mx-1" />
 
               {/* Color Picker */}
-              <div className="relative z-[60]">
+              <div className="relative z-60">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -612,17 +612,17 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                     setActivePopup(activePopup === "color" ? null : "color");
                   }}
                   {...preventDrag}
-                  className="p-1 rounded-md transition-colors text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1"
+                  className="p-1 rounded-md transition-colors text-(--text-muted) hover:text-(--text-main) flex items-center gap-1"
                   title="Color"
                 >
                   <div
-                    className="w-4 h-4 rounded-full border border-[var(--border)]"
+                    className="w-4 h-4 rounded-full border border-(--border)"
                     style={{ backgroundColor: color }}
                   />
                 </button>
                 {activePopup === "color" && (
                   <div
-                    className="absolute top-full left-0 mt-2 p-2 border border-[var(--border)] rounded-lg shadow-xl flex gap-1"
+                    className="absolute top-full left-0 mt-2 p-2 border border-(--border) rounded-lg shadow-xl flex gap-1"
                     {...preventDrag}
                     onClick={stopPropagation}
                     style={{
@@ -644,8 +644,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                         {...preventDrag}
                         className={`w-6 h-6 rounded-full border ${
                           color === c
-                            ? "border-[var(--text-main)]"
-                            : "border-[var(--border)]"
+                            ? "border-(--text-main)"
+                            : "border-(--border)"
                         }`}
                         style={{ backgroundColor: c }}
                       />
@@ -666,8 +666,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 disabled={history.length === 0}
                 className={`p-1 rounded-md transition-all duration-200 ${
                   history.length === 0
-                    ? "text-[var(--text-muted)] cursor-not-allowed opacity-30"
-                    : "text-[var(--text-main)] hover:text-[var(--text-main)] hover:bg-[var(--border)] opacity-100"
+                    ? "text-(--text-muted) cursor-not-allowed opacity-30"
+                    : "text-(--text-main) hover:text-(--text-main) hover:bg-(--border) opacity-100"
                 }`}
                 title="Undo"
               >
@@ -682,8 +682,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 disabled={redoStack.length === 0}
                 className={`p-1 rounded-md transition-all duration-200 ${
                   redoStack.length === 0
-                    ? "text-[var(--text-muted)] cursor-not-allowed opacity-30"
-                    : "text-[var(--text-main)] hover:text-[var(--text-main)] hover:bg-[var(--border)] opacity-100"
+                    ? "text-(--text-muted) cursor-not-allowed opacity-30"
+                    : "text-(--text-main) hover:text-(--text-main) hover:bg-(--border) opacity-100"
                 }`}
                 title="Redo"
               >
@@ -695,7 +695,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   stopPropagation(e);
                 }}
                 {...preventDrag}
-                className="p-1 rounded-md text-[var(--text-muted)] hover:text-red-400"
+                className="p-1 rounded-md text-(--text-muted) hover:text-red-400"
                 title="Clear"
               >
                 <Trash2 size={14} />
@@ -887,7 +887,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           type="source"
           position={Position.Left}
           isConnectable={true}
-          className="block-handle block-handle-left !z-50"
+          className="block-handle block-handle-left z-50!"
         >
           {!isHandleConnected("left") && <div className="handle-dot" />}
         </Handle>
@@ -896,7 +896,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           type="source"
           position={Position.Right}
           isConnectable={true}
-          className="block-handle block-handle-right !z-50"
+          className="block-handle block-handle-right z-50!"
         >
           {!isHandleConnected("right") && <div className="handle-dot" />}
         </Handle>
@@ -905,7 +905,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           type="source"
           position={Position.Top}
           isConnectable={true}
-          className="block-handle block-handle-top !z-50"
+          className="block-handle block-handle-top z-50!"
         >
           {!isHandleConnected("top") && <div className="handle-dot" />}
         </Handle>
@@ -914,7 +914,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
           type="source"
           position={Position.Bottom}
           isConnectable={true}
-          className="block-handle block-handle-bottom !z-50"
+          className="block-handle block-handle-bottom z-50!"
         >
           {!isHandleConnected("bottom") && <div className="handle-dot" />}
         </Handle>

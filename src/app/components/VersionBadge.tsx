@@ -107,7 +107,7 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
       {isMounted &&
         createPortal(
           <div
-            className={`version-tooltip fixed -translate-x-1/2 z-[9999] transition-all ease-in-out ${
+            className={`version-tooltip fixed -translate-x-1/2 z-9999 transition-all ease-in-out ${
               showTooltip
                 ? "duration-500 opacity-100 visible translate-y-0"
                 : "duration-200 opacity-0 invisible translate-y-1"

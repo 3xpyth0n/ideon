@@ -4,6 +4,9 @@ services:
     container_name: ideon-app
     env_file:
       - ${ENV_FILE:-.env}
+    # environment:
+    # PUID: 1000 # Optional: User ID for file ownership (default: 1001)
+    # PGID: 1000 # Optional: Group ID for file ownership (default: 1001)
     depends_on:
       ideon-db:
         condition: service_healthy

@@ -33,7 +33,8 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS='--max-old-space-size=8192'
 ENV HOSTNAME="0.0.0.0"
 # Install tini for better signal handling, curl for healthchecks and su-exec for permission management
-RUN apk add --no-cache curl tini su-exec
+# shadow is needed for usermod/groupmod in entrypoint to support custom PUID/PGID
+RUN apk add --no-cache curl tini su-exec shadow
 RUN adduser -D -u 1001 appuser && \
     mkdir -p /app/storage/avatars /app/storage/yjs /app/storage/uploads
 # Copy pruned node_modules from prod-deps
@@ -51,10 +52,6 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 3000
-
-RUN chown -R appuser:appuser /app
-
-USER appuser
 
 # Use tini as entrypoint for proper signal forwarding and entrypoint script for permission management
 ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]

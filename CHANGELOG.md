@@ -11,6 +11,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added support for Tables and Task Lists (checkboxes) in the Markdown editor (Note Block).
 
+### Fixed
+
+- Resolved Docker permission issues and significantly improved build times by optimizing the entrypoint script (#45).
+
 ## [0.4.4] - 2026-02-23
 
 ### Fixed

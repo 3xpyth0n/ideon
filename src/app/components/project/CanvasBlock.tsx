@@ -39,6 +39,7 @@ import { BlockFooter } from "./BlockFooter";
 export type BlockData = {
   title?: string;
   content: string;
+  yText?: Y.Text;
   updatedAt: string;
   lastEditor: string;
   authorName?: string;
@@ -112,7 +113,6 @@ export type BlockData = {
   initialProjectId?: string;
   currentUser?: { id: string; username: string; displayName?: string | null };
   userRole?: "creator" | "owner" | "editor" | "viewer";
-  yText?: Y.Text;
 };
 
 export interface BlockMetadata {

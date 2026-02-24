@@ -72,9 +72,13 @@
 
 /* Link Styles */
 .markdown-editor-container .ProseMirror a {
-  color: var(--accent, #3b82f6);
+  color: #2563eb;
   text-decoration: underline;
   cursor: pointer;
+}
+
+[data-theme="dark"] .markdown-editor-container .ProseMirror a {
+  color: #5ba3fc;
 }
 
 /* Tiptap Bubble Menu Styles (matching context-menu) */
@@ -153,4 +157,85 @@
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Table Styles */
+.markdown-editor-container .ProseMirror table {
+  border-collapse: collapse;
+  margin: 0;
+  overflow: hidden;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.markdown-editor-container .ProseMirror td,
+.markdown-editor-container .ProseMirror th {
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  min-width: 1em;
+  padding: 6px 8px;
+  position: relative;
+  vertical-align: top;
+}
+
+.markdown-editor-container .ProseMirror th {
+  background: rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .markdown-editor-container .ProseMirror th {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Table Column Resizing */
+.markdown-editor-container .ProseMirror .column-resize-handle {
+  background-color: #2563eb;
+  bottom: -2px;
+  pointer-events: none;
+  position: absolute;
+  right: -1px;
+  top: 0;
+  width: 2px;
+  z-index: 20;
+}
+
+.markdown-editor-container .ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Task List Styles */
+.markdown-editor-container .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
+}
+
+.markdown-editor-container .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+}
+
+.markdown-editor-container .ProseMirror ul[data-type="taskList"] li > label {
+  display: flex;
+  align-items: center;
+  margin-right: 0.5em;
+  user-select: none;
+}
+
+.markdown-editor-container
+  .ProseMirror
+  ul[data-type="taskList"]
+  li
+  > label
+  input[type="checkbox"] {
+  margin: 0;
+  margin-right: 0.5em;
+}
+
+/* Delete button styling */
+.bubble-menu .delete-button {
+  color: #ef4444 !important; /* red-500 */
+}
+
+.bubble-menu .delete-button:hover {
+  color: #f87171 !important; /* red-400 */
 }

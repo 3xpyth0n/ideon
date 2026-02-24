@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed a critical issue where project pages would return 404 on PostgreSQL by ensuring all queries run within an authenticated RLS session (#46).
 - Resolved Docker permission issues and significantly improved build times by optimizing the entrypoint script (#45).
 
 ## [0.4.4] - 2026-02-23

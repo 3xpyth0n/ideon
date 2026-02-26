@@ -1,13 +1,24 @@
 <p align="center">
-  <img src="https://www.theideon.com/images/ideon-text-logo.png" alt="Ideon logo" height="100" />
+<a href="https://www.theideon.com/">
+ <picture>
+   <source  media="(prefers-color-scheme: dark)" srcset="https://www.theideon.com/ideon-text-logo-black.png" height="90px" />
+   <source media="(prefers-color-scheme: light)" srcset="https://www.theideon.com/ideon-text-logo.png" height="90px" />
+   <img alt="Ideon Logo" src="https://www.theideon.com/ideon-text-logo-black.png" height="90px" />
+ </picture>
+</a>
 </p>
 
 <p align="center">
-  <strong>The Visual Hub for Everything Your Project Needs</strong><br/>
-  A shared space to see, connect, and remember what your project is really about.
+  <strong>The self-hosted visual workspace for your projects.</strong><br/>
+  Organize repositories, notes, links and more on a shared infinite canvas.
 </p>
 
 <p align="center">
+  <img
+    src="https://www.theideon.com/images/features/real-usage.png"
+    alt="Ideon workspace overview"
+    width="100%"
+  />
   <a href="https://github.com/prettier/prettier">
     <img src="https://img.shields.io/badge/code_style-prettier-pink.svg" alt="Prettier">
   </a>
@@ -25,216 +36,39 @@
   </a>
 </p>
 
----
+## Overview
 
-## What problem does Ideon solve?
+Ideon replaces abstract folders with spatial organization. Instead of navigating tabs, you see your entire project context: Git repositories, design notes, and tasks, **on a single map**.
 
-Most projects do not fail because of bad execution.  
-They fail because the context disappears.
+## Features
 
-Code lives in repositories.  
-Designs live in design tools.  
-Decisions live in chat threads.  
-Links live in bookmarks.  
-Notes live everywhere and nowhere.
-
-After a few days away, the mental model is gone.  
-People waste time reloading context instead of moving forward.
-
-Ideon exists to reduce the cognitive cost of coming back to a project.
-
----
-
-## What Ideon looks like in practice
-
-<p align="center">
-  <img
-    src="https://www.theideon.com/images/features/real-usage.png"
-    alt="Ideon workspace overview"
-    width="900"
-  />
-</p>
-
-This is a real Ideon workspace.
-
-Each card is a live block.
-Here you see the GitHub repository tracking active issues side-by-side with the roadmap note planning the next features.
-
-Nothing is hidden behind folders or menus.
-The entire project context is visible at a glance.
-
-This is how we're building Ideon using Ideon.
-
----
-
-## What Ideon is (and what it is not)
-
-Ideon is a self-hosted visual workspace where everything related to a project lives on the same canvas.
-
-It is not a replacement for GitHub, Figma, or your editor.  
-It is the place where their relationships become explicit.
-
-Instead of navigating folders and tabs, you look at a map.
-
----
-
-## The core idea: projects as spaces, not directories
-
-Ideon replaces abstract hierarchies with spatial organization.
-
-You place blocks on a canvas:
-
-- repositories
-- notes
-- links
-- files
-- people
-- references
-- anything that matters to the project
-
-What is close is related.  
-What is far is separate.  
-What is connected is intentional.
-
-The structure matches how humans actually think about projects.
-
----
-
-## Core concepts
-
-### Blocks
-
-Each block represents one concrete thing:
-
-- a GitHub repository
-- a design mockup
-- a document
-- a contact or stakeholder
-- plain text
-- a link or file
-
-Blocks are simple, explicit, and visible.
-
----
-
-### Spatial organization
-
-There is no imposed hierarchy.
-
-You decide:
-
-- what belongs together
-- what depends on what
-- what deserves focus
-- what can stay in the background
-
-The canvas becomes a shared mental model.
-
----
-
-### Snapshots (time matters)
-
-Ideon keeps snapshots of the entire workspace.
-
-You can go back in time and see:
-
-- what existed before a pivot
-- how decisions evolved
-- what context was present when a choice was made
-
-This is not versioning of files.  
-It is versioning of understanding.
-
----
-
-### Multiplayer collaboration
-
-Multiple people can work on the same space in real time.
-
-Everyone sees:
-
-- changes instantly
-- where others are working
-- how the project is structured
-
-The project stops living in one person’s head.
-
----
-
-### Magic Paste
-
-Paste almost anything into Ideon:
-
-- a Github URL
-- text
-- an image
-- or any link/file
-
-Ideon turns it into a structured block automatically.
-
-Less friction.  
-More structure, faster.
-
----
-
-## Who is Ideon for?
-
-Anyone who works on something that evolves over time:
-
-- developers
-- designers
-- founders
-- freelancers
-- open-source maintainers
-- students
-- people who just want to organize their ideas or links
-
-If context matters to you, Ideon is useful.
-
----
+- **Spatial Canvas:** Place blocks anywhere. What is close is related.
+- **Live Integrations:** Embed repositories and issues directly on the canvas (GitHub, GitLab, Gitea, Forgejo).
+- **Rich Media:** Support for Markdown notes, images, links, and files.
+- **Multiplayer:** Real-time collaboration with your team.
+- **Time Travel:** View historical snapshots of your workspace to trace decisions.
+- **Self-Hosted:** You own your data.
 
 ## Demo
 
-You can try Ideon instantly using the hosted demo:
+Try the hosted demo instantly (no setup required):
 
-- URL: https://demo.theideon.com
-- Username: `ideon-demo`
-- Password: `ideon-demo`
+- **URL:** https://demo.theideon.com
+- **User:** `ideon-demo`
+- **Pass:** `ideon-demo`
 
-No setup. No commitment.
+## Getting Started
 
----
+Requires **Docker**.
 
-## Requirements
-
-- Docker
-
-If you can run containers, you can run Ideon.
-
----
-
-## Deployment
-
-### Quick start
+Run this command to install and start Ideon:
 
 ```bash
 curl -fsSL https://install.theideon.com | sh
 ```
 
-The installer:
-
-- checks system requirements
-- generates secure secrets
-- creates configuration files
-- starts the application and database containers
-
-Access Ideon at:
-
-```
-http://localhost:3000
-```
-
----
+The installer will set up the containers and generate secure secrets.
+Once running, access the dashboard at: `http://localhost:3000`
 
 ## Contributing
 
@@ -247,8 +81,6 @@ Start here:
 - read [CONTRIBUTING.md](CONTRIBUTING.md)
 - open an issue
 - submit a pull request
-
-Ideon grows through real use and real feedback.
 
 ---
 
@@ -270,7 +102,7 @@ Thanks go to these wonderful people:
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://zorinos.com/ "><img src="https://avatars.githubusercontent.com/u/34811668?v=4?s=100" width="100px;" alt="albanobattistella"/><br /><sub><b>albanobattistella</b></sub></a><br /><a href="#translation-albanobattistella" title="Translation">🌍</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://zorinos.com/ "><img src="https://avatars.githubusercontent.com/u/34811668?v=4?s=100" width="75px;" alt="albanobattistella"/><br /><sub><b>albanobattistella</b></sub></a><br /><a href="#translation-albanobattistella" title="Translation">🌍</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Solirix"><img src="https://avatars.githubusercontent.com/u/99198915?v=4?s=100" width="100px;" alt="Solirix"/><br /><sub><b>Solirix</b></sub></a><br /><a href="#security-Solirix" title="Security">🛡️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/flooryyyy"><img src="https://avatars.githubusercontent.com/u/67979730?v=4?s=100" width="100px;" alt="floory"/><br /><sub><b>floory</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/issues?q=author%3Aflooryyyy" title="Bug reports">🐛</a></td>
     </tr>

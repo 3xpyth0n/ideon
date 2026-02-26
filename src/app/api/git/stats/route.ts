@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     // Check for user session to find relevant tokens
     const session = await auth();
     let token: string | undefined;
+    let providerHint: string | undefined;
 
     if (session?.user?.id) {
       const db = getDb();
@@ -52,6 +53,7 @@ export async function GET(req: NextRequest) {
       });
 
       if (matchedToken) {
+        providerHint = matchedToken.provider;
         try {
           token = decryptApiKey(matchedToken.token, session.user.id).trim();
         } catch (e) {
@@ -65,7 +67,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const result = await getRepoStats(url, token);
+    const result = await getRepoStats(url, token, providerHint);
 
     if (result.error) {
       return NextResponse.json(result, { status: result.status || 500 });

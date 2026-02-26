@@ -21,6 +21,129 @@ export default function AccountPage() {
   const [isLangOpen, setIsLangOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Table of contents items
+  const toc = [
+    { id: "language", label: dict.account.language },
+    { id: "identity", label: dict.account.identity },
+    { id: "security", label: dict.account.security },
+    { id: "git-tokens", label: dict.gitTokens.title },
+  ];
+
+  const isScrollingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleTocClick = (id: string) => {
+    isScrollingRef.current = true;
+    setActiveId(id);
+
+    if (id === toc[0].id && containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Release lock after animation
+    timeoutRef.current = setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (loading || !containerRef.current) return;
+
+    const container = containerRef.current;
+    const ids = toc.map((t) => t.id);
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (sections.length === 0) return;
+
+    // Track visibility of all sections to determine the active one
+    const visibilityMap = new Map<string, IntersectionObserverEntry>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrollingRef.current) return;
+
+        entries.forEach((entry) => {
+          visibilityMap.set(entry.target.id, entry);
+        });
+
+        let maxIntersectHeight = 0;
+        let visibleId: string | null = null;
+
+        ids.forEach((id) => {
+          const entry = visibilityMap.get(id);
+          if (entry && entry.isIntersecting) {
+            const height = entry.intersectionRect.height;
+            if (height > maxIntersectHeight) {
+              maxIntersectHeight = height;
+              visibleId = id;
+            }
+          }
+        });
+
+        if (visibleId) {
+          setActiveId(visibleId);
+        }
+      },
+      {
+        root: null,
+        rootMargin: "-10% 0px -70% 0px",
+        threshold: Array.from({ length: 11 }, (_, i) => i * 0.1),
+      },
+    );
+
+    sections.forEach((s) => observer.observe(s));
+
+    const handleScroll = () => {
+      if (isScrollingRef.current) return;
+
+      const scrollTop = container.scrollTop;
+      const clientHeight = container.clientHeight;
+      const scrollHeight = container.scrollHeight;
+
+      // If at the very top, force first section
+      if (scrollTop < 50) {
+        setActiveId(ids[0]);
+        return;
+      }
+
+      if (Math.abs(scrollHeight - clientHeight - scrollTop) < 5) {
+        setActiveId(ids[ids.length - 1]);
+        return;
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      observer.disconnect();
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [dict, loading]);
+
   useEffect(() => {
     if (user) {
       setUsername(user.username || "");
@@ -30,8 +153,6 @@ export default function AccountPage() {
       setLoading(false);
     }
   }, [user]);
-
-  // Removed direct fetch, using UserProvider instead
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -57,7 +178,7 @@ export default function AccountPage() {
       const data = await res.json();
       setAvatarUrl(data.avatarUrl);
       toast(dict.common.success);
-      await refreshUser(); // Update global user state
+      await refreshUser();
       window.dispatchEvent(new CustomEvent("user-data-updated"));
     } catch {
       toast(dict.common.error);
@@ -76,7 +197,7 @@ export default function AccountPage() {
       if (!res.ok) throw new Error();
       setAvatarUrl(null);
       toast(dict.common.success);
-      await refreshUser(); // Update global user state
+      await refreshUser();
       window.dispatchEvent(new CustomEvent("user-data-updated"));
     } catch {
       toast(dict.common.error);
@@ -140,7 +261,49 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="island-content">
+    <div className="island-content relative" ref={containerRef}>
+      {/* Table of contents */}
+      <nav
+        className="fixed top-32 right-8 z-50 hidden lg:flex flex-col gap-2 rounded-md px-2 py-2"
+        aria-label={dict.account.tableOfContents}
+      >
+        {toc.map((item) => {
+          const isActive = activeId === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleTocClick(item.id)}
+              aria-current={isActive ? "true" : undefined}
+              className={`text-xs transition-colors px-0 py-1 text-right flex items-center justify-end gap-3 w-full ${
+                isActive ? "text-text-main" : "text-muted hover:text-text-main"
+              }`}
+              style={{ background: "none", border: "none" }}
+            >
+              {/* label wrapper: contains ripple and underline */}
+              <span className="relative truncate max-w-48 flex-1 overflow-hidden">
+                {/* underline: grows from left using width */}
+                <span
+                  className="absolute left-0 bottom-0 h-[2px] bg-white z-10"
+                  style={{
+                    width: isActive ? "100%" : "0%",
+                    transition: "width 420ms cubic-bezier(.2,.8,.2,1)",
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {/* label text */}
+                <span
+                  className={`relative z-20 block truncate ${
+                    isActive ? "font-semibold" : ""
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </nav>
       <div className="zen-container max-w-5xl py-12 animate-in fade-in duration-700">
         <header className="mb-12">
           <h1 className="zen-title text-2xl mb-1">{dict.layout.settings}</h1>
@@ -151,7 +314,10 @@ export default function AccountPage() {
 
         <div className="flex flex-col gap-12">
           {/* Language Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
+          <section
+            id="language"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+          >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.language}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
@@ -204,7 +370,10 @@ export default function AccountPage() {
           </section>
 
           {/* Identity Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
+          <section
+            id="identity"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+          >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.identity}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
@@ -319,7 +488,10 @@ export default function AccountPage() {
           </section>
 
           {/* Security Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
+          <section
+            id="security"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+          >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.security}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
@@ -365,14 +537,17 @@ export default function AccountPage() {
           </section>
 
           {/* Git Tokens Section */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12">
+          <section
+            id="git-tokens"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+          >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.gitTokens.title}</h2>
               <p className="text-xs text-muted opacity-40 leading-relaxed">
                 {dict.gitTokens.description}
               </p>
             </div>
-            <div className="md:col-span-8">
+            <div className="md:col-span-8 max-w-md">
               <GitTokenManager />
             </div>
           </section>

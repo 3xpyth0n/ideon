@@ -150,6 +150,11 @@ const GitBlock = (props: CanvasBlockProps) => {
     metadataRef.current = metadata;
   }, [metadata]);
 
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   // Sync metadata from props (real-time updates)
   useEffect(() => {
     try {
@@ -196,14 +201,15 @@ const GitBlock = (props: CanvasBlockProps) => {
       const metadataString = newMetadata
         ? JSON.stringify(newMetadata)
         : undefined;
-      data.onContentChange?.(
+      const currentData = dataRef.current;
+      currentData.onContentChange?.(
         id,
         content,
         now,
         editor,
         metadataString,
         title,
-        data.reactions,
+        currentData.reactions,
       );
 
       if (setNodes) {
@@ -223,14 +229,14 @@ const GitBlock = (props: CanvasBlockProps) => {
         );
       }
     },
-    [currentUser, dict.project.anonymous, data, id, content, title, setNodes],
+    [currentUser, dict.project.anonymous, id, content, title, setNodes],
   );
 
   const [gitError, setGitError] = useState<string | null>(null);
   const [isFetchingGit, setIsFetchingGit] = useState(false);
 
   const fetchGitStats = useCallback(
-    async (url: string) => {
+    async (url: string, signal?: AbortSignal) => {
       if (!url) return;
 
       let cleanedUrl = url.trim();
@@ -267,20 +273,22 @@ const GitBlock = (props: CanvasBlockProps) => {
           currentUser?.displayName ||
           currentUser?.username ||
           dict.project.anonymous;
-        data.onContentChange?.(
+        const currentData = dataRef.current;
+        currentData.onContentChange?.(
           id,
           cleanedUrl,
           now,
           editor,
           currentMetadata ? JSON.stringify(currentMetadata) : undefined,
           title,
-          data.reactions,
+          currentData.reactions,
         );
       }
 
       try {
         const res = await fetch(
           `/api/git/stats?url=${encodeURIComponent(cleanedUrl)}`,
+          { signal },
         );
         let result = null;
         let error = null;
@@ -319,7 +327,12 @@ const GitBlock = (props: CanvasBlockProps) => {
         } else {
           setGitError(error || "Failed to fetch stats");
         }
-      } catch (error) {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // Reset throttle if aborted so next try can proceed
+          gitFetchThrottle.delete(cleanedUrl);
+          return;
+        }
         console.error("Failed to fetch git stats:", error);
         setGitError("Network error");
       } finally {
@@ -330,13 +343,20 @@ const GitBlock = (props: CanvasBlockProps) => {
       content,
       currentUser,
       dict.project.anonymous,
-      data,
       id,
       title,
       syncToYjs,
       updateMetadata,
     ],
   );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (content && !isEditingGit) {
+      fetchGitStats(content, controller.signal);
+    }
+    return () => controller.abort();
+  }, [content, isEditingGit, fetchGitStats]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);

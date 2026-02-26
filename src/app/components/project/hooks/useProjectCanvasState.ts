@@ -831,7 +831,8 @@ export const useProjectCanvasState = (
               size: fileData.size,
               type: fileData.type,
               lastModified: file.lastModified,
-              // status: 'uploading' removed implies success
+              status: "success",
+              url: fileData.url,
             };
 
             // Update block with real data
@@ -851,7 +852,6 @@ export const useProjectCanvasState = (
             );
           } else {
             toast.error(dict.blocks.uploadError || "Upload failed");
-            // Remove block or show error state? For now, leave as is but maybe user can delete
           }
         } catch (error) {
           console.error("Paste upload error:", error);

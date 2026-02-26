@@ -344,6 +344,7 @@ async function fetchGitea(
   urls: string[],
   repoUrl: string,
   token?: string,
+  provider: GitProvider = "gitea",
 ): Promise<FetchResult> {
   const headers: Record<string, string> = {};
   if (token) {
@@ -426,7 +427,7 @@ async function fetchGitea(
         openIssues: repoData.open_issues_count,
         openPulls: repoData.open_pr_counter || getCountFromHeader(pullsRes),
         contributors: getCountFromHeader(contributorsRes),
-        provider: "gitea",
+        provider: provider,
         repoUrl: repoUrl,
       },
     };
@@ -439,6 +440,7 @@ async function fetchGitea(
 export async function getRepoStats(
   url: string,
   token?: string,
+  providerHint?: string,
 ): Promise<FetchResult> {
   if (!url) {
     return { error: "URL is required", status: 400 };
@@ -554,7 +556,17 @@ export async function getRepoStats(
     }
 
     if (validGitea) {
-      const result = await fetchGitea(giteaUrls, cleanUrl, token);
+      // Determine provider label: prioritize hint, then check for known Forgejo domains
+      let provider: GitProvider = "gitea";
+      if (providerHint === "forgejo") {
+        provider = "forgejo";
+      } else if (
+        ALLOWED_PROVIDERS.forgejo.domains.includes(host.toLowerCase())
+      ) {
+        provider = "forgejo";
+      }
+
+      const result = await fetchGitea(giteaUrls, cleanUrl, token, provider);
       if (result.stats) return result;
     }
 

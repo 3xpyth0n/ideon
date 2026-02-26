@@ -14,6 +14,7 @@
     "identityDescription": "Manage your profile information.",
     "language": "Interface Language",
     "languageDescription": "Choose your preferred language for the interface.",
+    "tableOfContents": "Table of contents",
     "newPassword": "New Password",
     "profilePicture": "Profile Picture",
     "rotatePassword": "Update",

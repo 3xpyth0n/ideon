@@ -51,7 +51,6 @@ export function Sidebar({
   const isAdminOrSuper =
     effectiveRole === "admin" || effectiveRole === "superadmin";
 
-  // Removed redundant fetchUser useEffect, using UserProvider instead
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isInitialized, setIsInitialized] = useState(false);

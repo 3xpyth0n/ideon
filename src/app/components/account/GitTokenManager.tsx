@@ -149,6 +149,21 @@ export function GitTokenManager() {
     }
   };
 
+  const getProviderLabel = (provider: string) => {
+    switch (provider) {
+      case "github":
+        return "GitHub";
+      case "gitlab":
+        return "GitLab";
+      case "gitea":
+        return "Gitea";
+      case "forgejo":
+        return "Forgejo";
+      default:
+        return provider;
+    }
+  };
+
   if (isLoading)
     return <div className="animate-pulse h-20 bg-border/5 rounded-lg" />;
 
@@ -229,11 +244,7 @@ export function GitTokenManager() {
                 <div className="flex items-center gap-2">
                   {getIcon(provider)}
                   <span className="capitalize">
-                    {provider === "gitea"
-                      ? "Gitea / Forgejo"
-                      : provider === "github"
-                        ? "GitHub"
-                        : "GitLab"}
+                    {getProviderLabel(provider)}
                   </span>
                 </div>
                 <ChevronDown

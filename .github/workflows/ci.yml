@@ -25,15 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IS_NEXT_BUILD: "1"
-      DB_USER: ci_user
-      DB_PASS: ci_pass
-      DB_NAME: ci_db
-      SECRET_KEY: ci_secret_key_fixed
-      NEXT_TELEMETRY_DISABLED: 1
+      SECRET_KEY: ci_secret_key_ideon
       APP_PORT: ${{ vars.APP_PORT }}
       APP_URL: http://localhost:${{ vars.APP_PORT }}
-      COMPOSE_PROJECT_NAME: ideon_ci
-      ENV_FILE: .env.ci
 
     steps:
       - name: Check out repository
@@ -59,6 +53,24 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+  docker-validate:
+    name: Docker Validation
+    runs-on: ubuntu-latest
+    env:
+      IS_NEXT_BUILD: "1"
+      DB_USER: ci_user
+      DB_PASS: ci_pass
+      DB_NAME: ci_db
+      SECRET_KEY: ci_secret_key_ideon
+      NEXT_TELEMETRY_DISABLED: 1
+      APP_PORT: ${{ vars.APP_PORT }}
+      APP_URL: http://localhost:${{ vars.APP_PORT }}
+      COMPOSE_PROJECT_NAME: ideon_ci
+      ENV_FILE: .env.ci
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
       - name: Setup CI Environment
         run: |

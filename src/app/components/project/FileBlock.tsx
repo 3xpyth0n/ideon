@@ -1,6 +1,6 @@
 "use client";
 import { memo, useState, useEffect, useRef, useCallback } from "react";
-import { Handle, Position, NodeResizer, useReactFlow } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import {
   File as FileIcon,
   Upload,
@@ -19,6 +19,7 @@ import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 interface BlockMetadata {
   name?: string;
@@ -365,10 +366,10 @@ const FileBlock = (props: CanvasBlockProps) => {
         isReadOnly ? "read-only" : ""
       } flex flex-col p-0! relative w-full h-full`}
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

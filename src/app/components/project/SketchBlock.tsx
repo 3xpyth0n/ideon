@@ -7,7 +7,6 @@ import { BlockFooter } from "./BlockFooter";
 import {
   Handle,
   Position,
-  NodeResizer,
   type NodeProps,
   type Node,
   useReactFlow,
@@ -17,6 +16,7 @@ import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import { getStroke } from "perfect-freehand";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 type SketchBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -430,10 +430,10 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
 
   return (
     <>
-      <NodeResizer
-        minWidth={300}
-        minHeight={200}
-        isVisible={selected && !isReadOnly}
+      <CustomNodeResizer
+        minWidth={250}
+        minHeight={180}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

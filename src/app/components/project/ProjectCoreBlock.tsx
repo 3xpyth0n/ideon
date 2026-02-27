@@ -6,7 +6,6 @@ import {
   Position,
   type NodeProps,
   type Node,
-  NodeResizer,
   ResizeParams,
   useReactFlow,
   useStore,
@@ -17,6 +16,7 @@ import MarkdownEditor from "./MarkdownEditor";
 import { CORE_BLOCK_WIDTH, CORE_BLOCK_HEIGHT } from "./utils/constants";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 export type ProjectCoreBlockProps = NodeProps<Node<BlockData, "core">>;
 
@@ -176,14 +176,12 @@ const ProjectCoreBlock = memo(
 
     return (
       <>
-        <NodeResizer
-          isVisible={selected && !isReadOnly}
+        <CustomNodeResizer
+          isVisible={!isReadOnly}
           minWidth={300}
           minHeight={200}
           handleClassName="core-resizer-handle"
           handleStyle={{
-            width: 20,
-            height: 20,
             borderRadius: "50%",
             backgroundColor: "transparent",
             border: "none",

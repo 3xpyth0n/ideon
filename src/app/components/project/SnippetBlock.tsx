@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import {
   Handle,
   Position,
-  NodeResizer,
   type NodeProps,
   type Node,
   useReactFlow,
@@ -36,6 +35,7 @@ import { Select, SelectOption } from "@components/ui/Select";
 import "./snippet-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 type SnippetBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -372,10 +372,10 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       }
       {...touchHandlers}
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

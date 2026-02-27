@@ -12,7 +12,6 @@ import {
   Position,
   type NodeProps,
   type Node,
-  NodeResizer,
   useReactFlow,
 } from "@xyflow/react";
 import {
@@ -30,6 +29,7 @@ import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import * as Y from "yjs";
 import { UserPresence } from "./hooks/useProjectCanvasState";
 import ProjectCoreBlock from "./ProjectCoreBlock";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 import NoteBlock from "./NoteBlock";
 import { BlockReactions } from "./BlockReactions";
@@ -939,10 +939,10 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         } as React.CSSProperties
       }
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

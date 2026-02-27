@@ -20,6 +20,7 @@ import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 interface GitStats {
   stars: number;
@@ -652,10 +653,10 @@ const GitBlock = (props: CanvasBlockProps) => {
         isReadOnly ? "read-only" : ""
       } flex flex-col p-0! relative w-full h-full`}
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

@@ -10,7 +10,6 @@ import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
-  NodeResizer,
   type NodeProps,
   type Node,
   useReactFlow,
@@ -21,6 +20,7 @@ import ColorPicker from "./ColorPicker";
 import "./palette-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 type PaletteBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -282,10 +282,10 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
       } ${isReadOnly ? "read-only" : ""} flex flex-col p-0!`}
       style={{ "--block-border-color": borderColor } as React.CSSProperties}
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

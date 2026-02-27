@@ -17,7 +17,6 @@ import { useTouchGestures } from "./hooks/useTouchGestures";
 import {
   Handle,
   Position,
-  NodeResizer,
   type NodeProps,
   type Node,
   useReactFlow,
@@ -27,6 +26,7 @@ import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import "./checklist-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 type ChecklistBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -126,6 +126,8 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
   const [title, setTitle] = useState(data.title || "");
+  const [isDragOverContainer, setIsDragOverContainer] = useState(false);
+  const dragCounter = useRef(0);
 
   useEffect(() => {
     if (data.title !== undefined && data.title !== title) {
@@ -413,13 +415,50 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const handleDragOver = (e: React.DragEvent) => {
     if (isReadOnly) return;
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleItemDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleItemDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleContainerDragOver = (e: React.DragEvent) => {
+    if (isReadOnly) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleContainerDragEnter = (e: React.DragEvent) => {
+    if (isReadOnly) return;
+    e.preventDefault();
+    dragCounter.current += 1;
+    if (dragCounter.current === 1) {
+      setIsDragOverContainer(true);
+    }
+  };
+
+  const handleContainerDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragOverContainer(false);
+    }
   };
 
   const handleDrop = useCallback(
     (e: React.DragEvent, targetIndex: number) => {
       if (isReadOnly) return;
       e.preventDefault();
+      e.stopPropagation();
+      setIsDragOverContainer(false);
+      dragCounter.current = 0;
 
       try {
         const dataStr = e.dataTransfer.getData("application/json");
@@ -574,10 +613,10 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       }
       {...touchHandlers}
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}
@@ -629,14 +668,22 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         )}
 
         <div className="block-content flex-1 flex flex-col min-h-0">
-          <div className="checklist-block-container nowheel nodrag h-full">
+          <div
+            className="checklist-block-container nowheel nodrag h-full"
+            onDragOver={handleContainerDragOver}
+            onDragEnter={handleContainerDragEnter}
+            onDragLeave={handleContainerDragLeave}
+            onDrop={(e) => handleDrop(e, total)}
+          >
             {items.map((item, index) => (
               <div
                 key={item.id}
                 className="checklist-item group"
                 draggable={!isReadOnly}
                 onDragStart={(e) => handleDragStart(e, item)}
+                onDragEnter={handleItemDragEnter}
                 onDragOver={handleDragOver}
+                onDragLeave={handleItemDragLeave}
                 onDrop={(e) => handleDrop(e, index)}
                 style={{ paddingLeft: `${(item.depth || 0) * 24}px` }}
                 data-item-index={index}
@@ -677,6 +724,10 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                 )}
               </div>
             ))}
+
+            {isDragOverContainer && !isReadOnly && (
+              <div className="checklist-drop-placeholder" />
+            )}
 
             {!isReadOnly && (
               <button

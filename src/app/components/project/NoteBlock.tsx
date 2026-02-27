@@ -15,7 +15,6 @@ import {
   Position,
   type NodeProps,
   type Node,
-  NodeResizer,
   useReactFlow,
 } from "@xyflow/react";
 import {
@@ -44,6 +43,7 @@ import MarkdownEditor from "./MarkdownEditor";
 import { BlockFooter } from "./BlockFooter";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 import "./markdown-editor.css";
 
 type NoteBlockProps = NodeProps<Node<BlockData, "text">>;
@@ -519,8 +519,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   return (
     <>
-      <NodeResizer
-        isVisible={selected && !isReadOnly}
+      <CustomNodeResizer
+        isVisible={!isReadOnly}
         minWidth={200}
         minHeight={180}
         lineClassName="resizer-line"

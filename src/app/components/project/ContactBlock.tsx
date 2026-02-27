@@ -9,7 +9,6 @@ import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
-  NodeResizer,
   type NodeProps,
   type Node,
   useReactFlow,
@@ -19,6 +18,7 @@ import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import "./contact-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 type ContactBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -268,10 +268,10 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       style={{ "--block-border-color": borderColor } as React.CSSProperties}
       {...touchHandlers}
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

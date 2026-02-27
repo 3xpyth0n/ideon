@@ -1,0 +1,129 @@
+.handle {
+  background: transparent !important;
+  border: none !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  touch-action: none;
+  opacity: 1 !important;
+  /* Default size for handles if not overridden (fallback) */
+  width: var(--hitbox-size, 48px);
+  height: var(--hitbox-size, 48px);
+}
+
+/* Common hitbox style */
+.handle::before {
+  content: "";
+  position: absolute;
+  /* background-color: rgba(255, 0, 0, 0.05); Removed debug color */
+  border-radius: 4px;
+  z-index: -1;
+  pointer-events: auto;
+}
+
+/* Corners: Square hitbox centered */
+:global(.react-flow__resize-control.top.left),
+:global(.react-flow__resize-control.top.right),
+:global(.react-flow__resize-control.bottom.left),
+:global(.react-flow__resize-control.bottom.right) {
+  width: var(--hitbox-size, 48px) !important;
+  height: var(--hitbox-size, 48px) !important;
+}
+
+:global(.react-flow__resize-control.top.left)::before,
+:global(.react-flow__resize-control.top.right)::before,
+:global(.react-flow__resize-control.bottom.left)::before,
+:global(.react-flow__resize-control.bottom.right)::before {
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+/* Edges: Full length bars */
+/* Top & Bottom: Width 100%, Height = Hitbox Size */
+:global(.react-flow__resize-control.top):not(:global(.left)):not(
+    :global(.right)
+  ),
+:global(.react-flow__resize-control.bottom):not(:global(.left)):not(
+    :global(.right)
+  ) {
+  width: 100% !important;
+  height: var(--hitbox-size) !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+:global(.react-flow__resize-control.top):not(:global(.left)):not(
+    :global(.right)
+  ) {
+  top: 0 !important;
+}
+
+:global(.react-flow__resize-control.bottom):not(:global(.left)):not(
+    :global(.right)
+  ) {
+  bottom: 0 !important;
+  transform: translate(-50%, 50%) !important;
+}
+
+:global(.react-flow__resize-control.top):not(:global(.left)):not(
+    :global(.right)
+  )::before,
+:global(.react-flow__resize-control.bottom):not(:global(.left)):not(
+    :global(.right)
+  )::before {
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+/* Left & Right: Height 100%, Width = Hitbox Size */
+:global(.react-flow__resize-control.left):not(:global(.top)):not(
+    :global(.bottom)
+  ),
+:global(.react-flow__resize-control.right):not(:global(.top)):not(
+    :global(.bottom)
+  ) {
+  height: 100% !important;
+  width: var(--hitbox-size) !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+:global(.react-flow__resize-control.left):not(:global(.top)):not(
+    :global(.bottom)
+  ) {
+  left: 0 !important;
+}
+
+:global(.react-flow__resize-control.right):not(:global(.top)):not(
+    :global(.bottom)
+  ) {
+  right: 0 !important;
+  transform: translate(50%, -50%) !important;
+}
+
+:global(.react-flow__resize-control.left):not(:global(.top)):not(
+    :global(.bottom)
+  )::before,
+:global(.react-flow__resize-control.right):not(:global(.top)):not(
+    :global(.bottom)
+  )::before {
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+/* Visual Dot removed as per request */
+.handle::after {
+  display: none;
+}
+
+.handle:hover::before {
+  /* background-color: rgba(0, 0, 0, 0.1); Removed debug hover effect */
+}

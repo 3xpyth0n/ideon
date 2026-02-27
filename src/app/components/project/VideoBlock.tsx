@@ -10,7 +10,6 @@ import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
-  NodeResizer,
   type NodeProps,
   type Node,
   useReactFlow,
@@ -19,6 +18,7 @@ import { BlockData } from "./CanvasBlock";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
+import CustomNodeResizer from "./CustomNodeResizer";
 
 type VideoBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -278,10 +278,10 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
       style={{ "--block-border-color": borderColor } as React.CSSProperties}
       {...touchHandlers}
     >
-      <NodeResizer
+      <CustomNodeResizer
         minWidth={250}
         minHeight={180}
-        isVisible={selected && !isReadOnly}
+        isVisible={!isReadOnly}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}

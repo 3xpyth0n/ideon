@@ -391,39 +391,41 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               {dict.blocks.blockTypeSnippet || "Snippet"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
             <input
               value={title}
               onChange={handleTitleChange}
-              className="block-title mr-2 max-w-[120px]!"
-              placeholder="..."
+              className="block-title mr-2"
+              placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />
-            <button
-              onClick={handleCopy}
-              className="snippet-format-button"
-              title={dict.blocks.copyCode || "Copy Code"}
-            >
-              <Copy size={14} />
-            </button>
-            {language !== "text" && language !== "python" && !isReadOnly && (
+            <div className="flex items-center gap-1 shrink-0">
               <button
-                onClick={handleFormat}
+                onClick={handleCopy}
                 className="snippet-format-button"
-                title={dict.blocks.formatCode || "Format code"}
+                title={dict.blocks.copyCode || "Copy Code"}
               >
-                <Brush size={14} />
+                <Copy size={14} />
               </button>
-            )}
-            <Select
-              value={language}
-              options={LANGUAGE_OPTIONS}
-              onChange={handleLanguageChange}
-              align="right"
-              triggerClassName="pr-3!"
-              className="mr-1"
-              disabled={isReadOnly}
-            />
+              {language !== "text" && language !== "python" && !isReadOnly && (
+                <button
+                  onClick={handleFormat}
+                  className="snippet-format-button"
+                  title={dict.blocks.formatCode || "Format code"}
+                >
+                  <Brush size={14} />
+                </button>
+              )}
+              <Select
+                value={language}
+                options={LANGUAGE_OPTIONS}
+                onChange={handleLanguageChange}
+                align="right"
+                triggerClassName="pr-3!"
+                className="ml-1"
+                disabled={isReadOnly}
+              />
+            </div>
           </div>
         </div>
 

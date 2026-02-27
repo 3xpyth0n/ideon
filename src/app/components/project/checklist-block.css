@@ -9,11 +9,32 @@
 
 .checklist-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Align to top for multiline */
   gap: 8px;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.checklist-item.is-dragging {
+  opacity: 0.5;
+  background: var(--bg-muted);
+}
+
+.checklist-drag-handle {
+  margin-top: 6px; /* Align with checkbox */
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: grab;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.checklist-item:hover .checklist-drag-handle {
+  opacity: 1;
 }
 
 .checklist-checkbox {
+  margin-top: 4px; /* Align with text */
   width: 16px;
   height: 16px;
   border: 1px solid var(--border);
@@ -24,6 +45,7 @@
   cursor: pointer;
   background: transparent;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .checklist-checkbox.checked {
@@ -34,14 +56,20 @@
 
 .checklist-input {
   flex: 1;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  padding: 4px 0;
+  background: #00000006;
+  border-radius: 5px;
+  padding: 2px 0;
   font-size: 14px;
   color: var(--text-main);
   outline: none;
   transition: border-color 0.2s ease;
+  min-height: 24px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+[data-theme="dark"] .checklist-input {
+  background: #ffffff06;
 }
 
 .checklist-input:focus {
@@ -54,6 +82,7 @@
 }
 
 .checklist-delete-btn {
+  margin-top: 2px;
   opacity: 0;
   transition: opacity 0.2s ease;
   color: var(--text-muted);
@@ -61,6 +90,7 @@
   background: transparent;
   border: none;
   padding: 4px;
+  flex-shrink: 0;
 }
 
 .checklist-item:hover .checklist-delete-btn {

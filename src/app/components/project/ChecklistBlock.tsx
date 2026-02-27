@@ -1,7 +1,15 @@
 "use client";
 
-import { memo, useState, useCallback, useMemo, useEffect } from "react";
-import { Check, Plus, Trash2 } from "lucide-react";
+import {
+  memo,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+} from "react";
+import { Check, Plus, Trash2, GripVertical } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
 import { useTouch } from "@providers/TouchProvider";
@@ -28,7 +36,63 @@ interface ChecklistItem {
   id: string;
   text: string;
   checked: boolean;
+  depth?: number;
 }
+
+const AutoResizeTextarea = ({
+  value,
+  onChange,
+  className,
+  placeholder,
+  readOnly,
+  onKeyDown,
+  onFocus,
+  autoFocus,
+  onBlur,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  className?: string;
+  placeholder?: string;
+  readOnly?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  onFocus?: () => void;
+  autoFocus?: boolean;
+  onBlur?: () => void;
+}) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = useCallback(() => {
+    if (ref.current) {
+      ref.current.style.height = "auto";
+      ref.current.style.height = `${ref.current.scrollHeight}px`;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    adjustHeight();
+  }, [value, adjustHeight]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => {
+        adjustHeight();
+        onChange(e);
+      }}
+      className={className}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      rows={1}
+      onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      autoFocus={autoFocus}
+      style={{ resize: "none", overflow: "hidden" }}
+    />
+  );
+};
 
 const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const { dict, lang } = useI18n();
@@ -68,6 +132,24 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       setTitle(data.title);
     }
   }, [data.title]);
+
+  // Blur inputs when block is deselected
+  useEffect(() => {
+    if (!selected) {
+      // Find any active element within this block and blur it
+      const activeElement = document.activeElement;
+      const blockElement = document.querySelector(
+        `.block-card[data-id="${id}"]`,
+      );
+      if (
+        activeElement &&
+        blockElement &&
+        blockElement.contains(activeElement)
+      ) {
+        (activeElement as HTMLElement).blur();
+      }
+    }
+  }, [selected, id]);
 
   const items: ChecklistItem[] = useMemo(() => {
     try {
@@ -155,15 +237,28 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     [id, data, currentUser, dict, title],
   );
 
-  const handleAddItem = useCallback(() => {
-    if (isReadOnly) return;
-    const newItem: ChecklistItem = {
-      id: crypto.randomUUID(),
-      text: "",
-      checked: false,
-    };
-    updateItems([...items, newItem]);
-  }, [items, updateItems, isReadOnly]);
+  const handleAddItem = useCallback(
+    (afterIndex: number = -1, depth: number = 0) => {
+      if (isReadOnly) return;
+      const newItem: ChecklistItem = {
+        id: crypto.randomUUID(),
+        text: "",
+        checked: false,
+        depth,
+      };
+
+      let newItems;
+      if (afterIndex === -1) {
+        newItems = [...items, newItem];
+      } else {
+        newItems = [...items];
+        newItems.splice(afterIndex + 1, 0, newItem);
+      }
+
+      updateItems(newItems);
+    },
+    [items, updateItems, isReadOnly],
+  );
 
   const handleToggleItem = useCallback(
     (itemId: string) => {
@@ -187,6 +282,31 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     [items, updateItems, isReadOnly],
   );
 
+  const handleChangeItemDepth = useCallback(
+    (itemId: string, delta: number) => {
+      if (isReadOnly) return;
+      const index = items.findIndex((i) => i.id === itemId);
+      if (index === -1) return;
+
+      const item = items[index];
+      const newDepth = Math.max(0, (item.depth || 0) + delta);
+
+      // Constraint: Cannot indent deeper than previous item + 1
+      if (delta > 0 && index > 0) {
+        const prevItem = items[index - 1];
+        if (newDepth > (prevItem.depth || 0) + 1) return;
+      } else if (delta > 0 && index === 0) {
+        // Cannot indent first item
+        return;
+      }
+
+      const newItems = [...items];
+      newItems[index] = { ...item, depth: newDepth };
+      updateItems(newItems);
+    },
+    [items, updateItems, isReadOnly],
+  );
+
   const handleDeleteItem = useCallback(
     (itemId: string) => {
       if (isReadOnly) return;
@@ -194,6 +314,176 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       updateItems(newItems);
     },
     [items, updateItems, isReadOnly],
+  );
+
+  const handleItemKeyDown = useCallback(
+    (e: React.KeyboardEvent, itemId: string, index: number) => {
+      if (isReadOnly) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        (e.target as HTMLElement).blur();
+        return;
+      }
+
+      if (e.key === "Enter") {
+        if (e.shiftKey) return;
+        e.stopPropagation();
+        return;
+      } else if (e.key === "Backspace" && items[index].text === "") {
+        e.preventDefault();
+        handleDeleteItem(itemId);
+        // Focus previous
+        if (index > 0) {
+          const prevInput = document.querySelector(
+            `[data-item-index="${index - 1}"] textarea`,
+          ) as HTMLTextAreaElement;
+          prevInput?.focus();
+        }
+      } else if (e.key === "Tab") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.shiftKey) {
+          // Shift + Tab: Outdent OR Focus Previous
+          // First check if we can outdent
+          const currentDepth = items[index].depth || 0;
+          if (currentDepth > 0) {
+            handleChangeItemDepth(itemId, -1);
+          } else {
+            // If already at depth 0, standard Shift+Tab behavior (Focus Previous)
+            if (index > 0) {
+              const prevInput = document.querySelector(
+                `[data-item-index="${index - 1}"] textarea`,
+              ) as HTMLTextAreaElement;
+              prevInput?.focus();
+            }
+          }
+        } else {
+          handleChangeItemDepth(itemId, 1);
+        }
+      } else if (e.key === "ArrowUp") {
+        if (index > 0) {
+          e.preventDefault();
+          const prevInput = document.querySelector(
+            `[data-item-index="${index - 1}"] textarea`,
+          ) as HTMLTextAreaElement;
+          prevInput?.focus();
+        }
+      } else if (e.key === "ArrowDown") {
+        if (index < items.length - 1) {
+          e.preventDefault();
+          const nextInput = document.querySelector(
+            `[data-item-index="${index + 1}"] textarea`,
+          ) as HTMLTextAreaElement;
+          nextInput?.focus();
+        } else {
+          // Create new if last? User said "next task, or creat on if last"
+          e.preventDefault();
+          const currentDepth = items[index].depth || 0;
+          handleAddItem(index, currentDepth);
+          setTimeout(() => {
+            const nextInput = document.querySelector(
+              `[data-item-index="${index + 1}"] textarea`,
+            ) as HTMLTextAreaElement;
+            nextInput?.focus();
+          }, 10);
+        }
+      }
+    },
+    [items, isReadOnly, handleAddItem, handleDeleteItem, handleChangeItemDepth],
+  );
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, item: ChecklistItem) => {
+    if (isReadOnly) return;
+    e.dataTransfer.setData(
+      "application/json",
+      JSON.stringify({
+        itemId: item.id,
+        sourceBlockId: id,
+        text: item.text,
+        checked: item.checked,
+        depth: item.depth || 0,
+      }),
+    );
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (isReadOnly) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetIndex: number) => {
+      if (isReadOnly) return;
+      e.preventDefault();
+
+      try {
+        const dataStr = e.dataTransfer.getData("application/json");
+        if (!dataStr) return;
+
+        const { itemId, sourceBlockId, text, checked, depth } =
+          JSON.parse(dataStr);
+
+        if (sourceBlockId === id) {
+          // Reorder locally
+          const oldIndex = items.findIndex((i) => i.id === itemId);
+          if (oldIndex === -1) return;
+
+          const newItems = [...items];
+          const [movedItem] = newItems.splice(oldIndex, 1);
+          // Adjust target index if we moved from above
+          const adjustedTargetIndex =
+            oldIndex < targetIndex ? targetIndex - 1 : targetIndex;
+          newItems.splice(adjustedTargetIndex, 0, movedItem);
+          updateItems(newItems);
+        } else {
+          // Cross-block move
+          // 1. Add to this block
+          const newItem: ChecklistItem = {
+            id: itemId, // Keep ID or generate new? Keeping ID is fine unless conflicts.
+            text,
+            checked,
+            depth: depth || 0,
+          };
+
+          const newItems = [...items];
+          newItems.splice(targetIndex, 0, newItem);
+          updateItems(newItems);
+
+          // 2. Remove from source block
+          const sourceNode = getNode(sourceBlockId);
+          if (sourceNode && sourceNode.data) {
+            const sourceData = sourceNode.data as BlockData;
+            const sourceMeta =
+              typeof sourceData.metadata === "string"
+                ? JSON.parse(sourceData.metadata)
+                : sourceData.metadata || {};
+
+            const sourceItems = sourceMeta.items || [];
+            const newSourceItems = sourceItems.filter(
+              (i: ChecklistItem) => i.id !== itemId,
+            );
+
+            data.onContentChange?.(
+              sourceBlockId,
+              sourceData.content,
+              new Date().toISOString(),
+              currentUser?.displayName || "Anonymous",
+              JSON.stringify({ ...sourceMeta, items: newSourceItems }),
+              sourceData.title,
+              sourceData.reactions,
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Drop failed", err);
+      }
+    },
+    [id, items, updateItems, isReadOnly, getNode, data, currentUser],
   );
 
   const handleResize = useCallback(
@@ -314,12 +604,12 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
             <input
               value={title}
               onChange={handleTitleChange}
               className="block-title"
-              placeholder="..."
+              placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />
           </div>
@@ -340,8 +630,25 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
 
         <div className="block-content flex-1 flex flex-col min-h-0">
           <div className="checklist-block-container nowheel nodrag h-full">
-            {items.map((item) => (
-              <div key={item.id} className="checklist-item">
+            {items.map((item, index) => (
+              <div
+                key={item.id}
+                className="checklist-item group"
+                draggable={!isReadOnly}
+                onDragStart={(e) => handleDragStart(e, item)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, index)}
+                style={{ paddingLeft: `${(item.depth || 0) * 24}px` }}
+                data-item-index={index}
+              >
+                {!isReadOnly && (
+                  <div
+                    className="checklist-drag-handle"
+                    title={dict.common?.dragToReorder || "Drag to reorder"}
+                  >
+                    <GripVertical size={12} />
+                  </div>
+                )}
                 <button
                   className={`checklist-checkbox ${
                     item.checked ? "checked" : ""
@@ -350,8 +657,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                 >
                   {item.checked && <Check size={10} strokeWidth={4} />}
                 </button>
-                <input
-                  type="text"
+                <AutoResizeTextarea
                   value={item.text}
                   onChange={(e) =>
                     handleChangeItemText(item.id, e.target.value)
@@ -359,6 +665,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                   className={`checklist-input ${item.checked ? "checked" : ""}`}
                   placeholder={dict.blocks.taskPlaceholder || "Task..."}
                   readOnly={isReadOnly}
+                  onKeyDown={(e) => handleItemKeyDown(e, item.id, index)}
                 />
                 {!isReadOnly && (
                   <button
@@ -374,7 +681,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             {!isReadOnly && (
               <button
                 className="checklist-add-button"
-                onClick={handleAddItem}
+                onClick={() => handleAddItem()}
                 title={dict.blocks.addTask || "Add task"}
               >
                 <Plus size={16} />

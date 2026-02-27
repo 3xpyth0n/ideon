@@ -174,7 +174,6 @@
   "canvas": {
     "apply": "Apply",
     "cleanupLayout": "Cleanup Layout",
-    "commandPalettePlaceholder": "Search for a command...",
     "coreBlockPlaceholder": "Paste a link or drop an image to get started...",
     "fitView": "Fit View",
     "navigate": "Navigate",
@@ -194,6 +193,7 @@
   },
   "common": {
     "approve": "Approve",
+    "dragToReorder": "Drag to reorder",
     "accessRevoked": "Access revoked",
     "backToHome": "Back to Home",
     "blockTypeGithub": "GitHub",

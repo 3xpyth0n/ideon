@@ -174,7 +174,6 @@
   "canvas": {
     "apply": "Appliquer",
     "cleanupLayout": "Nettoyer la disposition",
-    "commandPalettePlaceholder": "Rechercher une commande...",
     "coreBlockPlaceholder": "Collez un lien ou déposez une image pour commencer...",
     "fitView": "Ajuster la vue",
     "navigate": "Naviguer",
@@ -194,6 +193,7 @@
   },
   "common": {
     "approve": "Approuver",
+    "dragToReorder": "Glisser pour réorganiser",
     "accessRevoked": "Accès révoqué",
     "backToHome": "Retour à l'accueil",
     "blockTypeGithub": "GitHub",

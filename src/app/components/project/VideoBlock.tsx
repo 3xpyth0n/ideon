@@ -108,18 +108,22 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     return () => yText.unobserve(observer);
   }, [data.yText, isEditing, url]);
 
-  const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
-    const target = e.target as HTMLElement;
-    const event = new MouseEvent("contextmenu", {
-      bubbles: true,
-      cancelable: true,
-      clientX:
-        "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX,
-      clientY:
-        "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY,
-    });
-    target.dispatchEvent(event);
-  }, []);
+  const handleContentContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (isReadOnly) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setIsEditing(true);
+    },
+    [isReadOnly],
+  );
+
+  const onLongPress = useCallback(
+    (e: React.TouchEvent | TouchEvent) => {
+      handleContentContextMenu(e as unknown as React.MouseEvent);
+    },
+    [handleContentContextMenu],
+  );
 
   const touchHandlers = useTouchGestures({
     rippleRef,
@@ -293,30 +297,30 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
               {dict.blocks.blockTypeVideo || "Video"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
             <input
               value={title}
               onChange={handleTitleChange}
               className="block-title"
-              placeholder="..."
+              placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />
-            {!isReadOnly && (
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="text-[10px] opacity-50 hover:opacity-100 uppercase font-bold tracking-wider"
-              >
-                {isEditing
-                  ? dict.common.done || "Done"
-                  : dict.common.edit || "Edit"}
-              </button>
-            )}
           </div>
         </div>
 
-        <div className="block-content flex-1 flex flex-col min-h-0 relative">
+        <div
+          className="block-content flex-1 flex flex-col min-h-0 relative group"
+          onContextMenu={handleContentContextMenu}
+        >
+          {!isReadOnly && !isEditing && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <span className="canvas-context-badge">
+                {dict.canvas?.rightClickToEdit || "Right click to edit"}
+              </span>
+            </div>
+          )}
           {isEditing ? (
-            <div className="flex items-center justify-center h-full w-full px-4">
+            <div className="flex items-center justify-center h-full w-full px-4 relative">
               <input
                 type="text"
                 value={url}
@@ -325,16 +329,24 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
                 className="link-input nodrag"
                 readOnly={isReadOnly}
                 autoFocus
+                onBlur={() => setIsEditing(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === "Escape") {
+                    setIsEditing(false);
+                  }
+                }}
               />
             </div>
           ) : embedUrl ? (
-            <div className="w-full h-full bg-black/20">
+            <div className="w-full h-full bg-black/20 relative">
               <iframe
                 src={embedUrl}
                 frameBorder="0"
                 allowFullScreen
                 className="w-full h-full pointer-events-auto"
-                style={{ pointerEvents: selected ? "none" : "auto" }}
+                style={{
+                  pointerEvents: selected || isEditing ? "none" : "auto",
+                }}
               />
             </div>
           ) : (

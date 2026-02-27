@@ -50,30 +50,20 @@ import {
   Plus,
   Minus,
   Maximize,
-  FileCode,
   ArrowLeft,
   Check,
   RefreshCw,
-  FileText,
-  Link as LinkIcon,
   File as FileIcon,
-  GitGraph,
-  Palette,
-  User,
-  Video,
-  ListTodo,
   Undo2,
   Redo2,
   Figma,
   Share2,
-  PenTool,
   Github,
   Loader2,
 } from "lucide-react";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
 import { DownloadButton } from "./DownloadButton";
-import { CommandPalette, type Command } from "./CommandPalette";
 
 import { Modal } from "@components/ui/Modal";
 import {
@@ -503,7 +493,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onDoubleTap,
   });
 
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -563,126 +552,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     },
     [isReadOnly, _setLinks, handleEdgeLabelSubmit, handleEdgeLabelCancel],
   );
-
-  const commands = useMemo<Command[]>(() => {
-    if (isReadOnly) return [];
-
-    const createCommands: Command[] = [
-      {
-        id: "create-text",
-        label: dict.blocks.newBlock || "New Note",
-        icon: <FileText size={18} />,
-        keywords: ["text", "note", "markdown"],
-        action: () => handleCreateBlock(undefined, undefined, "text"),
-        category: "create",
-      },
-      {
-        id: "create-sketch",
-        label: dict.blocks.newSketch || "New Sketch",
-        icon: <PenTool size={18} />,
-        keywords: ["sketch", "draw", "whiteboard", "canvas"],
-        action: () => handleCreateBlock(undefined, undefined, "sketch"),
-        category: "create",
-      },
-      {
-        id: "create-link",
-        label: dict.blocks.newLink || "New Link",
-        icon: <LinkIcon size={18} />,
-        keywords: ["link", "url", "website", "bookmark"],
-        action: () => handleCreateBlock(undefined, undefined, "link"),
-        category: "create",
-      },
-      {
-        id: "create-file",
-        label: dict.blocks.newFile || "New File",
-        icon: <FileIcon size={18} />,
-        keywords: ["file", "upload", "document", "image"],
-        action: () => handleCreateBlock(undefined, undefined, "file"),
-        category: "create",
-      },
-      {
-        id: "create-github",
-        label: dict.blocks.newGit || "New Git Repo",
-        icon: <GitGraph size={18} />,
-        keywords: [
-          "git",
-          "repo",
-          "github",
-          "gitlab",
-          "bitbucket",
-          "issue",
-          "pr",
-        ],
-        action: () => handleCreateBlock(undefined, undefined, "github"),
-        category: "create",
-      },
-      {
-        id: "create-palette",
-        label: dict.blocks.newPalette || "New Palette",
-        icon: <Palette size={18} />,
-        keywords: ["palette", "color", "design", "theme"],
-        action: () => handleCreateBlock(undefined, undefined, "palette"),
-        category: "create",
-      },
-      {
-        id: "create-contact",
-        label: dict.blocks.newContact || "New Contact",
-        icon: <User size={18} />,
-        keywords: ["contact", "person", "user", "phone", "email"],
-        action: () => handleCreateBlock(undefined, undefined, "contact"),
-        category: "create",
-      },
-      {
-        id: "create-video",
-        label: dict.blocks.newVideo || "New Video",
-        icon: <Video size={18} />,
-        keywords: ["video", "youtube", "loom", "media"],
-        action: () => handleCreateBlock(undefined, undefined, "video"),
-        category: "create",
-      },
-      {
-        id: "create-snippet",
-        label: dict.blocks.newSnippet || "New Snippet",
-        icon: <FileCode size={18} />,
-        keywords: ["snippet", "code", "dev", "script"],
-        action: () => handleCreateBlock(undefined, undefined, "snippet"),
-        category: "create",
-      },
-      {
-        id: "create-checklist",
-        label: dict.blocks.newChecklist || "New Checklist",
-        icon: <ListTodo size={18} />,
-        keywords: ["checklist", "todo", "task", "list"],
-        action: () => handleCreateBlock(undefined, undefined, "checklist"),
-        category: "create",
-      },
-    ];
-
-    const navigateCommands: Command[] = [
-      {
-        id: "nav-home",
-        label: dict.canvas.fitView || "Fit View",
-        icon: <Maximize size={18} />,
-        keywords: ["home", "reset", "fit", "view"],
-        action: () => handleFitView(),
-        category: "navigate",
-      },
-    ];
-
-    return [...createCommands, ...navigateCommands];
-  }, [dict, handleCreateBlock, handleFitView, isReadOnly]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   const isValidConnection = useCallback(
     (connection: { source: string; target: string }) => {
@@ -1299,12 +1168,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             }}
           />
         )}
-
-        <CommandPalette
-          isOpen={isCommandPaletteOpen}
-          onClose={() => setIsCommandPaletteOpen(false)}
-          commands={commands}
-        />
 
         <Modal
           isOpen={!!blockToDelete || blocksToDelete.length > 0}

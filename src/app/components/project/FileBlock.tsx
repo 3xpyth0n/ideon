@@ -334,6 +334,29 @@ const FileBlock = (props: CanvasBlockProps) => {
     [data, id],
   );
 
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      const now = new Date().toISOString();
+      const editor =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.project.anonymous;
+
+      data.onContentChange?.(
+        id,
+        content,
+        now,
+        editor,
+        metadata ? JSON.stringify(metadata) : undefined,
+        newTitle,
+        data.reactions,
+      );
+    },
+    [id, data, currentUser, dict, content, metadata],
+  );
+
   const Icon = getFileIcon(metadata?.name || "", metadata?.type as string);
 
   return (
@@ -360,6 +383,15 @@ const FileBlock = (props: CanvasBlockProps) => {
             <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
               {dict.blocks.blockTypeFile || "FILE"}
             </span>
+          </div>
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+            <input
+              value={title}
+              onChange={handleTitleChange}
+              className="block-title"
+              placeholder={dict.blocks.title || "..."}
+              readOnly={isReadOnly}
+            />
           </div>
 
           <div className="flex items-center gap-2">

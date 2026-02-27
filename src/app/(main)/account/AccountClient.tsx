@@ -261,62 +261,34 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="island-content relative" ref={containerRef}>
-      {/* Table of contents */}
-      <nav
-        className="fixed top-32 right-8 z-50 hidden lg:flex flex-col gap-2 rounded-md px-2 py-2"
-        aria-label={dict.account.tableOfContents}
-      >
-        {toc.map((item) => {
-          const isActive = activeId === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleTocClick(item.id)}
-              aria-current={isActive ? "true" : undefined}
-              className={`text-xs transition-colors px-0 py-1 text-right flex items-center justify-end gap-3 w-full ${
-                isActive ? "text-text-main" : "text-muted hover:text-text-main"
-              }`}
-              style={{ background: "none", border: "none" }}
-            >
-              {/* label wrapper: contains ripple and underline */}
-              <span className="relative truncate max-w-48 flex-1 overflow-hidden">
-                {/* underline: grows from left using width */}
-                <span
-                  className="absolute left-0 bottom-0 h-[2px] bg-white z-10"
-                  style={{
-                    width: isActive ? "100%" : "0%",
-                    transition: "width 420ms cubic-bezier(.2,.8,.2,1)",
-                    pointerEvents: "none",
-                  }}
-                />
-
-                {/* label text */}
-                <span
-                  className={`relative z-20 block truncate ${
-                    isActive ? "font-semibold" : ""
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+    <div className="island-content relative pt-0!" ref={containerRef}>
       <div className="zen-container max-w-5xl py-12 animate-in fade-in duration-700">
-        <header className="mb-12">
+        <header className="mb-8">
           <h1 className="zen-title text-2xl mb-1">{dict.layout.settings}</h1>
           <p className="zen-subtitle text-sm opacity-40">
             {dict.account.accountSubtitle}
           </p>
         </header>
 
+        <div className="account-tabs-nav">
+          {toc.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleTocClick(item.id)}
+              className={`management-tab-btn ${
+                activeId === item.id ? "active" : ""
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-col gap-12">
           {/* Language Section */}
           <section
             id="language"
-            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 scroll-mt-24"
           >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.language}</h2>
@@ -345,7 +317,7 @@ export default function AccountPage() {
                   />
                 </button>
                 {isLangOpen && (
-                  <div className="select-dropdown absolute top-full left-0 z-[100] w-full mt-2 rounded-none overflow-hidden border-border/10 bg-background/80 backdrop-blur-xl shadow-2xl">
+                  <div className="select-dropdown absolute top-full left-0 z-100 w-full mt-2 rounded-none overflow-hidden border-border/10 bg-background/80 backdrop-blur-xl shadow-2xl">
                     {availableLanguages.map((l, index) => (
                       <button
                         key={l.code}
@@ -372,7 +344,7 @@ export default function AccountPage() {
           {/* Identity Section */}
           <section
             id="identity"
-            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 scroll-mt-24"
           >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.identity}</h2>
@@ -490,7 +462,7 @@ export default function AccountPage() {
           {/* Security Section */}
           <section
             id="security"
-            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 scroll-mt-24"
           >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.account.security}</h2>
@@ -539,7 +511,7 @@ export default function AccountPage() {
           {/* Git Tokens Section */}
           <section
             id="git-tokens"
-            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 scroll-mt-24"
           >
             <div className="md:col-span-4">
               <h2 className="section-title mb-1">{dict.gitTokens.title}</h2>

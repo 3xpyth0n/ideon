@@ -299,31 +299,26 @@ const GitBlock = (props: CanvasBlockProps) => {
         }
 
         if (result) {
-          // Deep check if stats actually changed before updating metadata
-          const statsChanged =
-            JSON.stringify(result) !==
-            JSON.stringify(currentMetadata?.github?.lastStats);
+          const currentEnabled = currentMetadata?.github?.enabledStats || [
+            "stars",
+            "release",
+            "commit",
+            "issues",
+            "pulls",
+            "contributors",
+          ];
 
-          if (statsChanged) {
-            const currentEnabled = currentMetadata?.github?.enabledStats || [
-              "stars",
-              "release",
-              "commit",
-              "issues",
-              "pulls",
-              "contributors",
-            ];
-
-            updateMetadata({
-              ...currentMetadata,
-              github: {
-                url: cleanedUrl,
-                enabledStats: currentEnabled,
-                lastStats: result,
-                lastFetched: new Date().toISOString(),
-              },
-            });
-          }
+          // Always update metadata with new fetch time and results
+          // This ensures we respect the 1-minute throttle on subsequent reloads
+          updateMetadata({
+            ...currentMetadata,
+            github: {
+              url: cleanedUrl,
+              enabledStats: currentEnabled,
+              lastStats: result,
+              lastFetched: new Date().toISOString(),
+            },
+          });
         } else {
           setGitError(error || "Failed to fetch stats");
         }
@@ -677,12 +672,12 @@ const GitBlock = (props: CanvasBlockProps) => {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
             <input
               value={title}
               onChange={handleTitleChange}
               className="block-title"
-              placeholder="..."
+              placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />
           </div>

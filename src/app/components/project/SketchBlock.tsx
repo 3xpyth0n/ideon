@@ -455,12 +455,12 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 {dict.blocks.blockTypeSketch || "Sketch"}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
               <input
                 value={title}
                 onChange={handleTitleChange}
                 className="block-title"
-                placeholder="..."
+                placeholder={dict.blocks.title || "..."}
                 readOnly={isReadOnly}
               />
             </div>

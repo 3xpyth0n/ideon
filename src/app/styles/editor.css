@@ -749,10 +749,13 @@
   outline: none;
   border: none;
   border-bottom: 1px solid var(--border);
-  padding: 4px 0;
+  padding: 4px 8px;
   margin-bottom: 8px;
   color: var(--text-main);
   border-radius: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 [data-theme="dark"] .block-title {

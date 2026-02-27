@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.X] - 2026-0X-XX
+
+### Added
+
+- Added drag-and-drop reordering for checklist items.
+- Added keyboard navigation for the canvas (Arrow keys and Vim keys h/j/k/l).
+- Added `Enter` shortcut to enter edit mode on a selected block.
+- Added `Escape` shortcut to unselect all blocks.
+
+### Improved
+
+- Improved block title layout to handle long text gracefully (ellipsis, better resizing).
+- Improved scrolling behavior in Account settings with better section positioning.
+
 ## [0.4.5] - 2026-02-25
 
 ### Added

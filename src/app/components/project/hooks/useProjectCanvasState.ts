@@ -1212,6 +1212,162 @@ export const useProjectCanvasState = (
         }
       }
 
+      // Handle Escape to unselect
+      if (e.key === "Escape") {
+        setBlocks((nds) => nds.map((n) => ({ ...n, selected: false })));
+        setLinks((eds) => eds.map((e) => ({ ...e, selected: false })));
+        return;
+      }
+
+      // Handle Enter to edit
+      if (e.key === "Enter" && !isEditing) {
+        const selectedBlocks = blocks.filter((n) => n.selected);
+        if (selectedBlocks.length === 1) {
+          e.preventDefault();
+          const block = selectedBlocks[0];
+          const blockId = block.id;
+
+          // Use a slight timeout to ensure ReactFlow updates are settled if any
+          setTimeout(() => {
+            const blockEl = document.querySelector(`[data-id="${blockId}"]`);
+            if (blockEl) {
+              // Priority selection based on block type
+              let input: HTMLElement | null = null;
+
+              if (block.type === "checklist") {
+                // Focus the first checklist item input, or add button if empty?
+                // Let's try to focus the first textarea
+                input = blockEl.querySelector(
+                  "textarea.checklist-input",
+                ) as HTMLElement;
+                if (!input) {
+                  // If no items, maybe focus the title or the add button?
+                  // User said "Enter enters the text box".
+                  // If checklist is empty, maybe we should focus the title?
+                  // But user specifically complained about title focus for note block.
+                  // Let's try to find any input that is NOT the title.
+                  // The title usually has class 'block-title' or similar.
+                }
+              } else if (block.type === "text") {
+                // NoteBlock
+                // Focus the editor content
+                input = blockEl.querySelector(".ProseMirror") as HTMLElement;
+              }
+
+              // Fallback to generic search if specific one failed
+              if (!input) {
+                // Exclude block-title from initial focus if possible, unless it's the only input
+                const allInputs = Array.from(
+                  blockEl.querySelectorAll(
+                    'input, textarea, [contenteditable="true"]',
+                  ),
+                );
+                const contentInput = allInputs.find(
+                  (el) => !el.classList.contains("block-title"),
+                );
+                input = (contentInput || allInputs[0]) as HTMLElement;
+              }
+
+              if (input) {
+                input.focus();
+              }
+            }
+          }, 10);
+        }
+        return;
+      }
+
+      // Handle Arrow Keys (and Vim keys) for navigation
+      const isArrowKey = [
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+      ].includes(e.key);
+      const isVimKey = ["h", "j", "k", "l"].includes(e.key);
+
+      if ((isArrowKey || isVimKey) && !isEditing) {
+        // Prevent default only if we actually navigate
+        // e.preventDefault();
+
+        const selectedBlocks = blocks.filter((n) => n.selected);
+        const currentBlock =
+          selectedBlocks.length > 0
+            ? selectedBlocks[selectedBlocks.length - 1]
+            : null;
+
+        if (!currentBlock) {
+          if (blocks.length > 0) {
+            e.preventDefault();
+            setBlocks((nds) =>
+              nds.map((n, i) => ({ ...n, selected: i === 0 })),
+            );
+          }
+          return;
+        }
+
+        e.preventDefault(); // valid navigation attempt
+
+        const center = {
+          x:
+            currentBlock.position.x +
+            (currentBlock.width || DEFAULT_BLOCK_WIDTH) / 2,
+          y: currentBlock.position.y + (currentBlock.height || 100) / 2, // 100 is approx height
+        };
+
+        let bestCandidate: Node<BlockData> | null = null;
+        let minDistance = Infinity;
+
+        blocks.forEach((other) => {
+          if (other.id === currentBlock.id) return;
+
+          const otherCenter = {
+            x: other.position.x + (other.width || DEFAULT_BLOCK_WIDTH) / 2,
+            y: other.position.y + (other.height || 100) / 2,
+          };
+
+          const dx = otherCenter.x - center.x;
+          const dy = otherCenter.y - center.y;
+
+          // Check direction with cone logic (45 degrees)
+          let isValid = false;
+
+          // Right (ArrowRight or l)
+          if (e.key === "ArrowRight" || e.key === "l")
+            isValid = dx > 0 && Math.abs(dy) < dx * 1.5;
+
+          // Left (ArrowLeft or h)
+          if (e.key === "ArrowLeft" || e.key === "h")
+            isValid = dx < 0 && Math.abs(dy) < -dx * 1.5;
+
+          // Down (ArrowDown or j)
+          if (e.key === "ArrowDown" || e.key === "j")
+            isValid = dy > 0 && Math.abs(dx) < dy * 1.5;
+
+          // Up (ArrowUp or k)
+          if (e.key === "ArrowUp" || e.key === "k")
+            isValid = dy < 0 && Math.abs(dx) < -dy * 1.5;
+
+          if (isValid) {
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestCandidate = other;
+            }
+          }
+        });
+
+        if (bestCandidate) {
+          setBlocks((nds) =>
+            nds.map((n) => ({
+              ...n,
+              selected: n.id === (bestCandidate as Node<BlockData>).id,
+            })),
+          );
+        }
+        return;
+      }
+
       // Handle Tab to create child block
       if (e.key === "Tab" && !isEditing) {
         e.preventDefault();

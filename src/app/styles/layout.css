@@ -640,10 +640,24 @@
 
 .management-tabs-nav {
   display: flex;
+  justify-content: center;
   gap: 0.5rem;
   padding: 0 3rem;
   background: var(--bg-sidebar);
   border-bottom: 1px solid var(--border);
+}
+
+.account-tabs-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0;
+  background: var(--bg-island);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin-bottom: 3rem;
 }
 
 .management-tab-btn {

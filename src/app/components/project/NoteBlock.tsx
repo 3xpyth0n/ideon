@@ -476,16 +476,28 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     const previousUrl = editor.getAttributes("link").href;
     setLinkUrl(previousUrl || "");
     setIsEditingLink(true);
+    setShowBubbleMenu(true);
   }, [editor]);
 
   const applyLink = useCallback(() => {
     if (!editor) return;
     if (linkUrl) {
+      let finalUrl = linkUrl.trim();
+      // If the URL doesn't start with a protocol (http://, https://, mailto:, etc.), prepend https://
+      if (
+        finalUrl &&
+        !/^https?:\/\//i.test(finalUrl) &&
+        !/^mailto:/i.test(finalUrl) &&
+        !/^tel:/i.test(finalUrl)
+      ) {
+        finalUrl = `https://${finalUrl}`;
+      }
+
       editor
         .chain()
         .focus()
         .extendMarkRange("link")
-        .setLink({ href: linkUrl })
+        .setLink({ href: finalUrl })
         .run();
     } else {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -553,6 +565,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
               placeholder=""
               className="text-base prosemirror-full-height"
               onEditorReady={setEditor}
+              onLinkShortcut={openLinkModal}
             />
           </div>
 

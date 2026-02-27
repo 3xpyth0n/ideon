@@ -6,6 +6,8 @@ import {
   EditorContext,
   type Editor,
 } from "@tiptap/react";
+import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import React, { useEffect, useState } from "react";
 import { Markdown } from "tiptap-markdown";
@@ -21,6 +23,100 @@ import TableHeader from "@tiptap/extension-table-header";
 
 import "./markdown-editor.css";
 
+const KeyboardShortcuts = Extension.create({
+  name: "keyboardShortcuts",
+
+  addOptions() {
+    return {
+      onLinkShortcut: () => {},
+    };
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      "Mod-b": () => this.editor.commands.toggleBold(),
+      "Mod-i": () => this.editor.commands.toggleItalic(),
+      "Mod-u": () => this.editor.commands.toggleUnderline(),
+      "Mod-Shift-x": () => this.editor.commands.toggleStrike(),
+      "Mod-e": () => this.editor.commands.toggleCode(),
+      "Mod-z": () => this.editor.commands.undo(),
+      "Mod-y": () => this.editor.commands.redo(),
+      "Mod-Shift-z": () => this.editor.commands.redo(),
+      "Mod-k": () => {
+        this.options.onLinkShortcut();
+        return true;
+      },
+    };
+  },
+});
+
+const SmartCode = Extension.create({
+  name: "smartCode",
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey("smartCode"),
+        appendTransaction: (transactions, oldState, newState) => {
+          const tr = newState.tr;
+          let modified = false;
+
+          // Check if any transaction added text
+          const hasInput = transactions.some((t) => t.docChanged);
+          if (!hasInput) return;
+
+          const { selection } = newState;
+          const { $from } = selection;
+          const node = $from.parent;
+
+          if (!node.isTextblock) return;
+
+          // Get the text content of the current block
+          const text = node.textContent;
+          const startPos = $from.start();
+
+          // Regex to match `code` pattern
+          const regex = /(?:^|[^`])(`([^`]+)`)(?:[^`]|$)/g;
+          let match;
+          const matches: RegExpExecArray[] = [];
+
+          while ((match = regex.exec(text)) !== null) {
+            matches.push(match);
+          }
+
+          // Process matches in reverse order to avoid index shifting issues
+          for (let i = matches.length - 1; i >= 0; i--) {
+            const match = matches[i];
+            const matchStartInText = match.index + match[0].indexOf(match[1]);
+            const matchEndInText = matchStartInText + match[1].length;
+
+            const from = startPos + matchStartInText;
+            const to = startPos + matchEndInText;
+
+            const hasCodeMark = newState.doc.rangeHasMark(
+              from,
+              to,
+              newState.schema.marks.code,
+            );
+
+            if (!hasCodeMark) {
+              const codeText = match[2];
+              const codeMark = newState.schema.marks.code.create();
+              const textNode = newState.schema.text(codeText, [codeMark]);
+
+              tr.replaceWith(from, to, textNode);
+              modified = true;
+            }
+          }
+
+          if (modified) return tr;
+          return null;
+        },
+      }),
+    ];
+  },
+});
+
 interface MarkdownEditorProps {
   content?: string;
   onChange?: (content: string) => void;
@@ -30,6 +126,7 @@ interface MarkdownEditorProps {
   onFocus?: () => void;
   onBlur?: () => void;
   onEditorReady?: (editor: Editor) => void;
+  onLinkShortcut?: () => void;
 }
 
 const MarkdownEditor = ({
@@ -41,9 +138,16 @@ const MarkdownEditor = ({
   onFocus,
   onBlur,
   onEditorReady,
+  onLinkShortcut,
 }: MarkdownEditorProps) => {
   const [, setIsFocused] = useState(false);
   const isSyncingRef = React.useRef(false);
+
+  const onLinkShortcutRef = React.useRef(onLinkShortcut);
+
+  useEffect(() => {
+    onLinkShortcutRef.current = onLinkShortcut;
+  }, [onLinkShortcut]);
 
   // Type definition for Markdown storage
   interface MarkdownStorage {
@@ -80,6 +184,14 @@ const MarkdownEditor = ({
         placeholder: placeholder || "",
         emptyEditorClass: "is-editor-empty",
       }),
+      KeyboardShortcuts.configure({
+        onLinkShortcut: () => {
+          if (onLinkShortcutRef.current) {
+            onLinkShortcutRef.current();
+          }
+        },
+      }),
+      SmartCode,
     ],
     editable: !isReadOnly,
     editorProps: {

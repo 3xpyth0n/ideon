@@ -14,11 +14,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `Enter` shortcut to enter edit mode on a selected block.
 - Added `Escape` shortcut to unselect all blocks.
 - Added common keyboard shortcuts (Ctrl+B/I/U/K, Undo/Redo) to the Markdown editor.
+- Added `GIT_ALLOWED_HOSTS` environment variable to allow fetching stats from internal/private Git repositories (bypassing SSRF protection for specified hosts).
 
 ### Improved
 
 - Improved block title layout to handle long text gracefully (ellipsis, better resizing).
 - Improved scrolling behavior in Account settings with better section positioning.
+
+### Fixed
+
+- Fixed Git block stats not refreshing correctly by disabling aggressive caching and ensuring timestamp updates even when stats are unchanged. Added error indicator for failed fetches.
 
 ## [0.4.5] - 2026-02-25
 

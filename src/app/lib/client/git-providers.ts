@@ -49,7 +49,21 @@ const PRIVATE_IP_RANGES = [
   /^fe80:/,
 ];
 
+function isAllowedHost(host: string): boolean {
+  if (typeof process === "undefined" || !process.env.GIT_ALLOWED_HOSTS) {
+    return false;
+  }
+  const h = host.trim().toLowerCase();
+  const withoutPort = h.split(":")[0];
+  const allowed = process.env.GIT_ALLOWED_HOSTS.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return allowed.includes(withoutPort) || allowed.includes(h);
+}
+
 function isPrivateIp(hostname: string): boolean {
+  if (isAllowedHost(hostname)) return false;
+
   if (!hostname || hostname === "localhost") return true;
 
   // Check if hostname is an IP address
@@ -139,6 +153,8 @@ function ensureAllowedApiUrl(
 
 // Basic SSRF protection: reject obvious local or private hosts.
 function isPrivateOrLocalHost(host: string): boolean {
+  if (isAllowedHost(host)) return false;
+
   const h = host.trim().toLowerCase();
 
   // Strip port if present
@@ -213,13 +229,14 @@ async function fetchGithub(
   }
 
   try {
+    const fetchOptions: RequestInit = { headers, cache: "no-store" };
     const [repoRes, releaseRes, commitRes, pullsRes, contributorsRes] =
       await Promise.all([
-        fetch(safeUrls[0], { headers }),
-        fetch(safeUrls[1], { headers }),
-        fetch(safeUrls[2], { headers }),
-        fetch(safeUrls[3], { headers }),
-        fetch(safeUrls[4], { headers }),
+        fetch(safeUrls[0], fetchOptions),
+        fetch(safeUrls[1], fetchOptions),
+        fetch(safeUrls[2], fetchOptions),
+        fetch(safeUrls[3], fetchOptions),
+        fetch(safeUrls[4], fetchOptions),
       ]);
 
     if (!repoRes.ok) {
@@ -287,13 +304,14 @@ async function fetchGitlab(
   }
 
   try {
+    const fetchOptions: RequestInit = { headers, cache: "no-store" };
     const [projectRes, releasesRes, commitsRes, mrsRes, contributorsRes] =
       await Promise.all([
-        fetch(urls[0], { headers }),
-        fetch(urls[1], { headers }),
-        fetch(urls[2], { headers }),
-        fetch(urls[3], { headers }),
-        fetch(urls[4], { headers }),
+        fetch(urls[0], fetchOptions),
+        fetch(urls[1], fetchOptions),
+        fetch(urls[2], fetchOptions),
+        fetch(urls[3], fetchOptions),
+        fetch(urls[4], fetchOptions),
       ]);
 
     if (!projectRes.ok) {
@@ -384,13 +402,14 @@ async function fetchGitea(
       }
     }
 
+    const fetchOptions: RequestInit = { headers, cache: "no-store" };
     const [repoRes, releaseRes, commitsRes, pullsRes, contributorsRes] =
       await Promise.all([
-        fetch(urls[0], { headers }),
-        fetch(urls[1], { headers }),
-        fetch(urls[2], { headers }),
-        fetch(urls[3], { headers }),
-        fetch(urls[4], { headers }),
+        fetch(urls[0], fetchOptions),
+        fetch(urls[1], fetchOptions),
+        fetch(urls[2], fetchOptions),
+        fetch(urls[3], fetchOptions),
+        fetch(urls[4], fetchOptions),
       ]);
 
     if (!repoRes.ok) {

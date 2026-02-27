@@ -438,6 +438,23 @@
   color: var(--danger);
 }
 
+.git-error-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  background-color: var(--bg-island);
+  color: red;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+}
+
 .error-message-hint {
   display: block;
   width: 100%;

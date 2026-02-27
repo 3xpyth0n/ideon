@@ -1,6 +1,6 @@
 "use client";
 import { memo, useState, useEffect, useRef, useCallback } from "react";
-import { Handle, Position, NodeResizer, useReactFlow } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import {
   Github,
   Gitlab,
@@ -588,6 +588,18 @@ const GitBlock = (props: CanvasBlockProps) => {
             </h4>
             <span className="git-repo-url">{repoUrl}</span>
           </div>
+          {gitError && !isEditingGit && (
+            <div
+              className="text-red-500 relative group flex items-center justify-center"
+              role="img"
+              aria-label={gitError || "Git fetch error"}
+            >
+              <AlertCircle size={16} />
+              <div className="git-error-tooltip opacity-0 group-hover:opacity-100 transition-opacity">
+                {gitError}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="git-stats-grid">

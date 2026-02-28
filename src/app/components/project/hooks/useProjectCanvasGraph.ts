@@ -637,7 +637,7 @@ export const useProjectCanvasGraph = ({
             target: newBlockId,
             type: "connection",
             sourceHandle: isRight ? "right" : "left",
-            targetHandle: isRight ? "left-target" : "right-target",
+            targetHandle: isRight ? "left" : "right",
             markerEnd: "connection-arrow",
             data: {
               sourceX,

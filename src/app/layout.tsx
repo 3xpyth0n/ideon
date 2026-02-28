@@ -4,6 +4,7 @@ import "./styles/components.css";
 import "./styles/forms.css";
 import "./styles/editor.css";
 import "./styles/animations.css";
+import "./styles/cmdk.css";
 import { I18nProvider } from "@providers/I18nProvider";
 import { ThemeProvider } from "@providers/ThemeProvider";
 import { UserProvider } from "@providers/UserProvider";

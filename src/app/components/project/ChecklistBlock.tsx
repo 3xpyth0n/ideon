@@ -380,7 +380,6 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           ) as HTMLTextAreaElement;
           nextInput?.focus();
         } else {
-          // Create new if last? User said "next task, or creat on if last"
           e.preventDefault();
           const currentDepth = items[index].depth || 0;
           handleAddItem(index, currentDepth);

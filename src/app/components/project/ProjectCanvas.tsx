@@ -28,6 +28,7 @@ import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
 import CanvasEdge from "./CanvasEdge";
 import { InviteUserModal } from "./InviteUserModal";
+import CommandPalette from "./CommandPalette";
 import { TransferBlockModal } from "./TransferBlockModal";
 import { ProjectCanvasErrorBoundary } from "./ProjectCanvasErrorBoundary";
 import { useI18n } from "@providers/I18nProvider";
@@ -349,6 +350,32 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     isRemoteSynced,
   );
 
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        const target = e.target as HTMLElement;
+        const isEditing =
+          ["INPUT", "TEXTAREA"].includes(target.tagName) ||
+          target.isContentEditable;
+        if (!isEditing) {
+          if (e.key === "p") {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsPaletteOpen((v) => !v);
+          } else if (e.key === "h") {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsHistoryOpen((v) => !v);
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, []);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -772,6 +799,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       setShareCursor(e.target.checked);
                     }}
                   />
+                  <button
+                    className="command-palette-hint"
+                    onClick={() => setIsPaletteOpen(true)}
+                  >
+                    <kbd>Ctrl + P</kbd>
+                    <span>{dict.canvas.commandPalette}</span>
+                  </button>
                 </div>
               )}
             </Panel>
@@ -889,6 +923,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     selectedStateId={selectedStateId}
                     projectOwnerId={projectOwnerId}
                     currentUserId={currentUser?.id}
+                    isHistoryOpen={isHistoryOpen}
+                    onHistoryOpenChange={setIsHistoryOpen}
                   />
                 </div>
               </div>
@@ -1223,6 +1259,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             </Button>
           </div>
         </Modal>
+
+        <CommandPalette
+          isOpen={isPaletteOpen}
+          onClose={() => setIsPaletteOpen(false)}
+        />
       </div>
     </>
   );

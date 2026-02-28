@@ -44,6 +44,8 @@ interface DecisionHistoryProps {
   selectedStateId: string | null;
   projectOwnerId?: string | null;
   currentUserId?: string;
+  isHistoryOpen?: boolean;
+  onHistoryOpenChange?: (open: boolean) => void;
 }
 
 export function DecisionHistory({
@@ -56,11 +58,21 @@ export function DecisionHistory({
   selectedStateId,
   projectOwnerId,
   currentUserId,
+  isHistoryOpen,
+  onHistoryOpenChange,
 }: DecisionHistoryProps) {
   const { dict, lang } = useI18n();
   const [history, setHistory] = useState<TemporalState[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = isHistoryOpen !== undefined ? isHistoryOpen : internalIsOpen;
+  const setIsOpen = (open: boolean) => {
+    if (onHistoryOpenChange) {
+      onHistoryOpenChange(open);
+    } else {
+      setInternalIsOpen(open);
+    }
+  };
   const [isSaving, setIsSaving] = useState(false);
   const [visibleHistoryCount, setVisibleHistoryCount] = useState(10);
   const [showBottomGradient, setShowBottomGradient] = useState(false);

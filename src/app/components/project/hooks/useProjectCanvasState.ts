@@ -1177,6 +1177,13 @@ export const useProjectCanvasState = (
         return;
       }
 
+      // Fit View
+      if ((e.ctrlKey || e.metaKey) && e.key === "0" && !isEditing) {
+        e.preventDefault();
+        handleFitView();
+        return;
+      }
+
       if ((e.key === "Delete" || e.key === "Backspace") && !isEditing) {
         const selectedBlocks = blocks.filter((n) => n.selected);
         const selectedLinks = links.filter((l) => l.selected);
@@ -1235,18 +1242,10 @@ export const useProjectCanvasState = (
               let input: HTMLElement | null = null;
 
               if (block.type === "checklist") {
-                // Focus the first checklist item input, or add button if empty?
-                // Let's try to focus the first textarea
                 input = blockEl.querySelector(
                   "textarea.checklist-input",
                 ) as HTMLElement;
                 if (!input) {
-                  // If no items, maybe focus the title or the add button?
-                  // User said "Enter enters the text box".
-                  // If checklist is empty, maybe we should focus the title?
-                  // But user specifically complained about title focus for note block.
-                  // Let's try to find any input that is NOT the title.
-                  // The title usually has class 'block-title' or similar.
                 }
               } else if (block.type === "text") {
                 // NoteBlock
@@ -1392,7 +1391,15 @@ export const useProjectCanvasState = (
         }
       }
     },
-    [blocks, links, currentUser, dict.common, graph, projectOwnerId],
+    [
+      blocks,
+      links,
+      currentUser,
+      dict.common,
+      graph,
+      projectOwnerId,
+      handleFitView,
+    ],
   );
 
   const confirmDelete = useCallback(() => {

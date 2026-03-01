@@ -1,5 +1,5 @@
 import { getToken } from "next-auth/jwt";
-import { getDb } from "./db";
+import { getDb, withAuthenticatedSession } from "./db";
 import { IncomingMessage } from "http";
 
 /**
@@ -51,81 +51,83 @@ export async function validateWebsocketRequest(
     const isAccessChannel = docName.endsWith("-access");
     const projectId = docName.replace(/^project-/, "").replace(/-access$/, "");
 
-    const db = getDb();
+    return withAuthenticatedSession(userId, async () => {
+      const db = getDb();
 
-    // Check if user is owner
-    const project = await db
-      .selectFrom("projects")
-      .select("id")
-      .where("id", "=", projectId)
-      .where("ownerId", "=", userId)
-      .executeTakeFirst();
-
-    if (project) {
-      return userId;
-    }
-
-    // Check if user is collaborator
-    const collaborator = await db
-      .selectFrom("projectCollaborators")
-      .select("userId")
-      .where("projectId", "=", projectId)
-      .where("userId", "=", userId)
-      .executeTakeFirst();
-
-    if (collaborator) {
-      return userId;
-    }
-
-    // If accessing the access channel, check for pending requests
-    if (isAccessChannel) {
-      const pendingRequest = await db
-        .selectFrom("projectRequests")
+      // Check if user is owner
+      const project = await db
+        .selectFrom("projects")
         .select("id")
-        .where("projectId", "=", projectId)
-        .where("userId", "=", userId)
-        .where("status", "=", "pending")
+        .where("id", "=", projectId)
+        .where("ownerId", "=", userId)
         .executeTakeFirst();
 
-      if (pendingRequest) {
+      if (project) {
         return userId;
       }
-    }
 
-    // Check folder inheritance
-    const projectInFolder = await db
-      .selectFrom("projects")
-      .select("folderId")
-      .where("id", "=", projectId)
-      .executeTakeFirst();
-
-    if (projectInFolder?.folderId) {
-      const folderAccess = await db
-        .selectFrom("folders")
-        .select("id")
-        .where("id", "=", projectInFolder.folderId)
-        .where((eb) =>
-          eb.or([
-            eb("ownerId", "=", userId),
-            eb(
-              "id",
-              "in",
-              eb
-                .selectFrom("folderCollaborators")
-                .select("folderId")
-                .where("userId", "=", userId),
-            ),
-          ]),
-        )
+      // Check if user is collaborator
+      const collaborator = await db
+        .selectFrom("projectCollaborators")
+        .select("userId")
+        .where("projectId", "=", projectId)
+        .where("userId", "=", userId)
         .executeTakeFirst();
 
-      if (folderAccess) return userId;
-    }
+      if (collaborator) {
+        return userId;
+      }
 
-    console.warn(
-      `[WS Auth] Access denied for user ${userId} to project ${projectId}`,
-    );
-    return null;
+      // If accessing the access channel, check for pending requests
+      if (isAccessChannel) {
+        const pendingRequest = await db
+          .selectFrom("projectRequests")
+          .select("id")
+          .where("projectId", "=", projectId)
+          .where("userId", "=", userId)
+          .where("status", "=", "pending")
+          .executeTakeFirst();
+
+        if (pendingRequest) {
+          return userId;
+        }
+      }
+
+      // Check folder inheritance
+      const projectInFolder = await db
+        .selectFrom("projects")
+        .select("folderId")
+        .where("id", "=", projectId)
+        .executeTakeFirst();
+
+      if (projectInFolder?.folderId) {
+        const folderAccess = await db
+          .selectFrom("folders")
+          .select("id")
+          .where("id", "=", projectInFolder.folderId)
+          .where((eb) =>
+            eb.or([
+              eb("ownerId", "=", userId),
+              eb(
+                "id",
+                "in",
+                eb
+                  .selectFrom("folderCollaborators")
+                  .select("folderId")
+                  .where("userId", "=", userId),
+              ),
+            ]),
+          )
+          .executeTakeFirst();
+
+        if (folderAccess) return userId;
+      }
+
+      console.warn(
+        `[WS Auth] Access denied for user ${userId} to project ${projectId}`,
+      );
+      return null;
+    });
   } catch (err) {
     // Log error but fail safe (deny access)
     console.error("[WS Auth] Error validating request:", err);

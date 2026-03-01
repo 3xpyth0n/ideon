@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRepoStats } from "@lib/client/git-providers";
-import { getDb } from "@lib/db";
+import { getDb, withAuthenticatedSession } from "@lib/db";
 import { auth } from "@auth";
 import { decryptApiKey } from "@lib/crypto";
 
@@ -29,37 +29,40 @@ export async function GET(req: NextRequest) {
     let providerHint: string | undefined;
 
     if (session?.user?.id) {
-      const db = getDb();
+      const userId = session.user.id;
+      await withAuthenticatedSession(userId, async () => {
+        const db = getDb();
 
-      // Fetch all enabled tokens for the user to do flexible matching in JS
-      const userTokens = await db
-        .selectFrom("userGitTokens")
-        .select(["host", "token", "provider"])
-        .where("userId", "=", session.user.id)
-        .where("enabled", "=", 1)
-        .execute();
+        // Fetch all enabled tokens for the user to do flexible matching in JS
+        const userTokens = await db
+          .selectFrom("userGitTokens")
+          .select(["host", "token", "provider"])
+          .where("userId", "=", userId)
+          .where("enabled", "=", 1)
+          .execute();
 
-      // Normalize current host (remove www., protocol, lowercase)
-      const targetHost = host.replace(/^www\./, "").toLowerCase();
+        // Normalize current host (remove www., protocol, lowercase)
+        const targetHost = host.replace(/^www\./, "").toLowerCase();
 
-      // Find matching token
-      const matchedToken = userTokens.find((t) => {
-        const tHost = t.host
-          .replace(/^https?:\/\//, "")
-          .replace(/^www\./, "")
-          .replace(/\/$/, "")
-          .toLowerCase();
-        return tHost === targetHost;
-      });
+        // Find matching token
+        const matchedToken = userTokens.find((t) => {
+          const tHost = t.host
+            .replace(/^https?:\/\//, "")
+            .replace(/^www\./, "")
+            .replace(/\/$/, "")
+            .toLowerCase();
+          return tHost === targetHost;
+        });
 
-      if (matchedToken) {
-        providerHint = matchedToken.provider;
-        try {
-          token = decryptApiKey(matchedToken.token, session.user.id).trim();
-        } catch (e) {
-          console.error("[GitStats] Failed to decrypt token:", e);
+        if (matchedToken) {
+          providerHint = matchedToken.provider;
+          try {
+            token = decryptApiKey(matchedToken.token, userId).trim();
+          } catch (e) {
+            console.error("[GitStats] Failed to decrypt token:", e);
+          }
         }
-      }
+      });
     } else {
       return NextResponse.json(
         { error: "Authentication required to access repository stats" },

@@ -93,6 +93,21 @@ jobs:
       - name: Start Stack (Production Simulation)
         run: docker compose -f docker-compose.ci.yml up -d --build --wait
 
+      - name: Validate application health
+        run: |
+          PORT=${APP_PORT:-3000}
+          HEALTH=$(curl -sf http://localhost:${PORT}/api/health)
+          echo "Health response: $HEALTH"
+          echo "$HEALTH" | grep -q '"status":"ok"' || (echo "Health check failed" && exit 1)
+
+          # Fail if the app logged any startup errors
+          LOGS=$(docker compose -f docker-compose.ci.yml logs ideon-app 2>&1)
+          if echo "$LOGS" | grep -q '"msg":"Failed to start server"'; then
+            echo "App reported startup failure in logs"
+            echo "$LOGS"
+            exit 1
+          fi
+
       - name: Show logs on failure
         if: failure()
         run: docker compose -f docker-compose.ci.yml logs

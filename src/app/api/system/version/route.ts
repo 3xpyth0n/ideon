@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const revalidate = 600; // Cache for 10 minutes
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -11,7 +11,7 @@ export async function GET() {
           Accept: "application/vnd.github.v3+json",
           "User-Agent": "Ideon-System-Check",
         },
-        next: { revalidate: 600 },
+        cache: "no-store",
       },
     );
 

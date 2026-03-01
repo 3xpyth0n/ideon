@@ -1,58 +1,45 @@
 FROM node:24.11-alpine AS base
-
-# 1. Install all dependencies (for building)
-FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
+
+# 1. Install dependencies and build app
+FROM base AS builder
+RUN apk add --no-cache libc6-compat python3 make g++
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
-
-# 2. Install production dependencies (for running)
-FROM base AS prod-deps
-RUN apk add --no-cache libc6-compat python3 make g++
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
-
-# 3. Build the application
-FROM base AS builder
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
 RUN IS_NEXT_BUILD=1 npm run build
-RUN rm -rf .next/standalone .next/cache
+RUN rm -rf .next/cache
 
-# Production image, copy all the files and run next
+# 2. Install only the packages nft misses
+FROM base AS server-runtime
+RUN apk add --no-cache libc6-compat python3 make g++
+COPY package-lock.json ./
+RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kysely":"*","nanoid":"*"}}' > package.json \
+    && npm install --no-audit --no-fund
+
+# 3. Production image
 FROM base AS runner
-WORKDIR /app
-
-ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-ENV NODE_OPTIONS='--max-old-space-size=8192'
-ENV HOSTNAME="0.0.0.0"
-# Install tini for better signal handling, curl for healthchecks and su-exec for permission management
-# shadow is needed for usermod/groupmod in entrypoint to support custom PUID/PGID
-RUN apk add --no-cache curl tini su-exec shadow
-RUN adduser -D -u 1001 appuser && \
-    mkdir -p /app/storage/avatars /app/storage/yjs /app/storage/uploads
-# Copy pruned node_modules from prod-deps
-COPY --from=prod-deps /app/node_modules ./node_modules
-# Copy build artifacts
+RUN apk add --no-cache tini curl su-exec shadow
+RUN adduser -D -u 1001 appuser \
+    && mkdir -p /app/storage/avatars /app/storage/yjs /app/storage/uploads \
+    && mkdir -p /app/.next/cache \
+    && chown -R appuser:appuser /app/storage /app/.next/cache
+
+# standalone already contains the nft-traced node_modules
+COPY --from=builder /app/.next/standalone ./
+COPY --from=server-runtime /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/next ./node_modules/next
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/src/app/i18n ./src/app/i18n
 COPY --from=builder /app/src/app/db/migrations ./src/app/db/migrations
-
-# Copy entrypoint script and make it executable
+COPY --from=builder /app/next.config.mjs ./next.config.mjs
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+
 RUN chmod +x /app/docker-entrypoint.sh
-
 EXPOSE 3000
-
-# Use tini as entrypoint for proper signal forwarding and entrypoint script for permission management
 ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]
 CMD ["node", "dist/server.cjs"]

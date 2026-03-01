@@ -25,6 +25,17 @@ export function LoginClient() {
   const [sendingMagic, setSendingMagic] = useState(false);
   const [showMagicInput, setShowMagicInput] = useState(false);
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const identifierRef = React.useRef<HTMLInputElement>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAutofill =
+    (setter: (v: string) => void) =>
+    (e: React.AnimationEvent<HTMLInputElement>) => {
+      if (e.animationName === "autofill-start") {
+        setter((e.target as HTMLInputElement).value);
+      }
+    };
+
   const [settings, setSettings] = useState<{
     passwordLoginEnabled: boolean;
     publicRegistrationEnabled: boolean;
@@ -225,10 +236,12 @@ export function LoginClient() {
             <div className="auth-field">
               <label className="auth-label">{dict.auth.identifierLabel}</label>
               <input
+                ref={identifierRef}
                 className="auth-input"
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
+                onAnimationStart={handleAutofill(setIdentifier)}
                 placeholder={dict.auth.identifierPlaceholder}
                 autoComplete="username"
                 required
@@ -239,10 +252,12 @@ export function LoginClient() {
               <label className="auth-label">{dict.auth.password}</label>
               <div className="auth-input-wrapper">
                 <input
+                  ref={passwordRef}
                   className="auth-input auth-input-password"
                   type={show ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onAnimationStart={handleAutofill(setPassword)}
                   placeholder={dict.auth.passwordPlaceholder}
                   autoComplete="current-password"
                   required

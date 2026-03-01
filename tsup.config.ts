@@ -1,12 +1,21 @@
 import { defineConfig } from "tsup";
 
+const externalPackages = [
+  "next",
+  "better-sqlite3",
+  "argon2",
+  "pg-native",
+  "classic-level",
+];
+
 export default defineConfig({
   entry: ["src/server.ts"],
   format: ["cjs"],
   target: "node20",
   outDir: "dist",
   clean: true,
-  skipNodeModulesBundle: true,
   sourcemap: true,
-  shims: true, // Inject shims for __dirname, __filename, etc.
+  shims: true,
+  external: externalPackages,
+  noExternal: [new RegExp(`^(?!(${externalPackages.join("|")})($|/))`)],
 });

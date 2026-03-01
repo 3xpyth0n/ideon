@@ -1245,8 +1245,6 @@ export const useProjectCanvasState = (
                 input = blockEl.querySelector(
                   "textarea.checklist-input",
                 ) as HTMLElement;
-                if (!input) {
-                }
               } else if (block.type === "text") {
                 // NoteBlock
                 // Focus the editor content

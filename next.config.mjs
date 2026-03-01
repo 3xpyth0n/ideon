@@ -1,7 +1,6 @@
-import type { NextConfig } from "next";
 import path from "path";
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
   turbopack: {},
@@ -14,7 +13,7 @@ const nextConfig: NextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      yjs: path.resolve(__dirname, "node_modules/yjs/dist/yjs.cjs"),
+      yjs: path.resolve(import.meta.dirname, "node_modules/yjs/dist/yjs.cjs"),
     };
     return config;
   },

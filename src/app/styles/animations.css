@@ -215,6 +215,18 @@
   transition: all 0.2s;
 }
 
+@keyframes autofill-start {
+  from {
+  }
+  to {
+  }
+}
+
+.auth-input:-webkit-autofill {
+  animation-name: autofill-start;
+  animation-duration: 1ms;
+}
+
 .auth-input::placeholder {
   color: var(--text-muted);
   opacity: 0.5;

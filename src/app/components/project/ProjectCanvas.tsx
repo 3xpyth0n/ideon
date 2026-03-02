@@ -24,11 +24,13 @@ import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
 import SketchBlock from "./SketchBlock";
+import ShellBlock from "./ShellBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
 import CanvasEdge from "./CanvasEdge";
 import { InviteUserModal } from "./InviteUserModal";
 import CommandPalette from "./CommandPalette";
+import AddBlockModal from "./AddBlockModal";
 import { TransferBlockModal } from "./TransferBlockModal";
 import { ProjectCanvasErrorBoundary } from "./ProjectCanvasErrorBoundary";
 import { useI18n } from "@providers/I18nProvider";
@@ -148,6 +150,7 @@ const blockTypes = {
   snippet: SnippetBlock,
   checklist: ChecklistBlock,
   sketch: SketchBlock,
+  shell: ShellBlock,
   core: ProjectCoreBlock,
 };
 
@@ -351,7 +354,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   );
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [newBlockId, setNewBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -365,6 +370,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             e.preventDefault();
             e.stopPropagation();
             setIsPaletteOpen((v) => !v);
+          } else if (e.key === "a") {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsAddBlockOpen((v) => !v);
           } else if (e.key === "h") {
             e.preventDefault();
             e.stopPropagation();
@@ -643,6 +652,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const blocksWithPreview = useMemo(() => {
     return blocks.map((block) => ({
       ...block,
+      className:
+        block.id === newBlockId ? "block-just-created" : block.className || "",
       data: {
         ...block.data,
         isPreviewMode,
@@ -650,7 +661,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         userRole: currentUserRole || undefined,
       },
     }));
-  }, [blocks, isPreviewMode, currentUser, currentUserRole]);
+  }, [blocks, isPreviewMode, currentUser, currentUserRole, newBlockId]);
 
   if (!isAccessValidated) {
     return (
@@ -799,6 +810,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       setShareCursor(e.target.checked);
                     }}
                   />
+                  <button
+                    className="command-palette-hint"
+                    onClick={() => setIsAddBlockOpen(true)}
+                  >
+                    <kbd>Ctrl + A</kbd>
+                    <span>{dict.canvas.addBlock}</span>
+                  </button>
                   <button
                     className="command-palette-hint"
                     onClick={() => setIsPaletteOpen(true)}
@@ -995,84 +1013,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     {!isPreviewMode && (
                       <>
                         <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "text")
-                          }
+                          onClick={() => {
+                            setIsAddBlockOpen(true);
+                            setContextMenu(null);
+                          }}
                           className="context-menu-item"
                         >
-                          {dict.blocks.newBlock || "New Note"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "link")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newLink || "New Link"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "file")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newFile || "New File"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "github")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newGit || "New GitHub"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "palette")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newPalette || "New Palette"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "contact")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newContact || "New Contact"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "video")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newVideo || "New Video"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "snippet")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newSnippet || "New Snippet"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "checklist")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newChecklist || "New Checklist"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCreateBlock(undefined, undefined, "sketch")
-                          }
-                          className="context-menu-item"
-                        >
-                          {dict.blocks.newSketch || "New Sketch"}
+                          {dict.canvas.addBlock || "Add Block"}
                         </button>
                         <div className="context-menu-separator" />
                       </>
@@ -1263,6 +1210,34 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         <CommandPalette
           isOpen={isPaletteOpen}
           onClose={() => setIsPaletteOpen(false)}
+        />
+
+        <AddBlockModal
+          isOpen={isAddBlockOpen}
+          onClose={() => setIsAddBlockOpen(false)}
+          onAddBlock={(blockType) => {
+            const id = handleCreateBlock(
+              undefined,
+              undefined,
+              blockType as
+                | "text"
+                | "link"
+                | "file"
+                | "github"
+                | "palette"
+                | "contact"
+                | "video"
+                | "snippet"
+                | "checklist"
+                | "sketch"
+                | "shell",
+            );
+            if (id) {
+              setNewBlockId(id);
+              setTimeout(() => setNewBlockId(null), 800);
+            }
+            setIsAddBlockOpen(false);
+          }}
         />
       </div>
     </>

@@ -550,7 +550,8 @@ export const useProjectCanvasGraph = ({
         | "video"
         | "snippet"
         | "checklist"
-        | "sketch" = "text",
+        | "sketch"
+        | "shell" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
@@ -565,20 +566,17 @@ export const useProjectCanvasGraph = ({
         ? DEFAULT_BLOCK_HEIGHT * 1.5
         : DEFAULT_BLOCK_HEIGHT;
 
+      const screenPos = pos
+        ? null
+        : {
+            x: contextMenu?.left ?? window.innerWidth / 2,
+            y: contextMenu?.top ?? window.innerHeight / 2,
+          };
+
       const position = getAdjustedPosition(
         {
-          x: pos
-            ? pos.x
-            : screenToFlowPosition({
-                x: contextMenu?.left || 0,
-                y: contextMenu?.top || 0,
-              }).x,
-          y: pos
-            ? pos.y
-            : screenToFlowPosition({
-                x: contextMenu?.left || 0,
-                y: contextMenu?.top || 0,
-              }).y,
+          x: pos ? pos.x : screenToFlowPosition(screenPos!).x,
+          y: pos ? pos.y : screenToFlowPosition(screenPos!).y,
           width: blockWidth,
           height: blockHeight,
         },

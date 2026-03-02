@@ -56,7 +56,8 @@ export type BlockData = {
     | "video"
     | "snippet"
     | "checklist"
-    | "sketch";
+    | "sketch"
+    | "shell";
   label?: string;
   metadata?: string;
   isLocked?: boolean;
@@ -140,6 +141,7 @@ export type CanvasBlockProps = NodeProps<
     | "snippet"
     | "checklist"
     | "sketch"
+    | "shell"
   >
 >;
 

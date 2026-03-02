@@ -6,6 +6,7 @@ const externalPackages = [
   "argon2",
   "pg-native",
   "classic-level",
+  "node-pty",
 ];
 
 export default defineConfig({

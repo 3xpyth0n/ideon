@@ -15,7 +15,7 @@ RUN rm -rf .next/cache
 FROM base AS server-runtime
 RUN apk add --no-cache libc6-compat python3 make g++
 COPY package-lock.json ./
-RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kysely":"*","nanoid":"*"}}' > package.json \
+RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kysely":"*","nanoid":"*","node-pty":"*"}}' > package.json \
     && npm install --no-audit --no-fund
 
 # 3. Production image

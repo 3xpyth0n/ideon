@@ -1,0 +1,81 @@
+"use client";
+
+import { Command } from "cmdk";
+import { Modal } from "@components/ui/Modal";
+import { useI18n } from "@providers/I18nProvider";
+import {
+  FileText,
+  Link,
+  File,
+  Github,
+  Palette,
+  Contact,
+  Video,
+  Code,
+  CheckSquare,
+  PenTool,
+  Terminal,
+} from "lucide-react";
+
+interface AddBlockModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAddBlock: (blockType: string) => void;
+}
+
+const BLOCK_TYPES = [
+  { type: "text", icon: FileText, labelKey: "blockTypeText" },
+  { type: "link", icon: Link, labelKey: "blockTypeLink" },
+  { type: "file", icon: File, labelKey: "blockTypeFile" },
+  { type: "github", icon: Github, labelKey: "blockTypeGit" },
+  { type: "palette", icon: Palette, labelKey: "blockTypePalette" },
+  { type: "contact", icon: Contact, labelKey: "blockTypeContact" },
+  { type: "video", icon: Video, labelKey: "blockTypeVideo" },
+  { type: "snippet", icon: Code, labelKey: "blockTypeSnippet" },
+  { type: "checklist", icon: CheckSquare, labelKey: "blockTypeChecklist" },
+  { type: "sketch", icon: PenTool, labelKey: "blockTypeSketch" },
+  { type: "shell", icon: Terminal, labelKey: "blockTypeShell" },
+] as const;
+
+export default function AddBlockModal({
+  isOpen,
+  onClose,
+  onAddBlock,
+}: AddBlockModalProps) {
+  const { dict } = useI18n();
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="add-block-modal"
+      showCloseButton={false}
+    >
+      <Command label={dict.canvas.addBlock}>
+        <Command.Input
+          placeholder={dict.canvas.addBlockPlaceholder}
+          autoFocus
+        />
+        <Command.List>
+          <Command.Empty>{dict.canvas.noBlocksFound}</Command.Empty>
+          <Command.Group heading={dict.canvas.addBlock}>
+            {BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
+              <Command.Item
+                key={type}
+                value={
+                  dict.blocks[labelKey as keyof typeof dict.blocks] as string
+                }
+                onSelect={() => onAddBlock(type)}
+              >
+                <Icon className="add-block-icon" />
+                <span className="add-block-label">
+                  {dict.blocks[labelKey as keyof typeof dict.blocks]}
+                </span>
+              </Command.Item>
+            ))}
+          </Command.Group>
+        </Command.List>
+      </Command>
+    </Modal>
+  );
+}

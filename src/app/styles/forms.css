@@ -590,6 +590,22 @@ input:-webkit-autofill:active {
   border-radius: 1rem;
 }
 
+/* Block creation entrance animation */
+@keyframes block-enter {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.project-canvas .react-flow__node.block-just-created {
+  animation: block-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 .project-canvas .react-flow__node.selected,
 .project-canvas .react-flow__node:focus,
 .project-canvas .react-flow__node:focus-visible {

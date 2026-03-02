@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-03-02
+
+### Added
+
+- **Create Block Modal** — replaced the context menu block list with a searchable grid modal (`Ctrl+A`) for adding blocks. Features all block types with icons and a search input
+- **Shell Block** — a fully interactive terminal embedded in the canvas, powered by xterm.js and node-pty. Supports start/stop/kill lifecycle: **Stop** pauses the session while preserving the scrollback buffer for instant resume, **Kill** destroys the session entirely. Zero RAM consumption when stopped. Restricted to project creators and owners.
+
 ## [0.5.1] - 2026-02-28
 
 ### Added

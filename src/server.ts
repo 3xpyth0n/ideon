@@ -7,6 +7,7 @@ import { logger } from "./app/lib/logger";
 import { initDb, getDb } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
 import { validateWebsocketRequest } from "./app/lib/ws-auth";
+import * as pty from "node-pty";
 
 import {
   setupWSConnection,
@@ -80,6 +81,222 @@ global.kickUser = (projectId: string, userId: string) => {
   }
 };
 
+// Shell PTY session management
+interface ShellSession {
+  pty: pty.IPty;
+  projectId: string;
+  userId: string;
+  blockId: string;
+  ws: WebSocket;
+}
+
+const shellSessions = new Map<string, ShellSession>();
+
+const DEFAULT_SHELL_MAX_SESSIONS = 2;
+const rawShellMaxSessions = process.env.SHELL_MAX_SESSIONS;
+const parsedShellMaxSessions = rawShellMaxSessions
+  ? Number.parseInt(rawShellMaxSessions, 10)
+  : DEFAULT_SHELL_MAX_SESSIONS;
+const SHELL_MAX_SESSIONS =
+  Number.isInteger(parsedShellMaxSessions) && parsedShellMaxSessions >= 0
+    ? parsedShellMaxSessions
+    : DEFAULT_SHELL_MAX_SESSIONS;
+
+function getProjectShellCount(projectId: string): number {
+  let count = 0;
+  for (const session of shellSessions.values()) {
+    if (session.projectId === projectId) count++;
+  }
+  return count;
+}
+
+function killShellSession(blockId: string) {
+  const session = shellSessions.get(blockId);
+  if (!session) return;
+  try {
+    session.pty.kill();
+  } catch {
+    // Already dead
+  }
+  shellSessions.delete(blockId);
+}
+
+async function validateShellAccess(
+  userId: string,
+  projectId: string,
+): Promise<boolean> {
+  try {
+    const db = getDb();
+
+    const project = await db
+      .selectFrom("projects")
+      .select(["id", "ownerId"])
+      .where("id", "=", projectId)
+      .executeTakeFirst();
+
+    if (!project) return false;
+
+    if (project.ownerId === userId) return true;
+
+    const collaborator = await db
+      .selectFrom("projectCollaborators")
+      .select("role")
+      .where("projectId", "=", projectId)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
+
+    if (!collaborator) return false;
+
+    const role = collaborator.role as string;
+    return role === "owner" || role === "admin";
+  } catch (err) {
+    logger.error({ err }, "[Shell] Failed to validate access");
+    return false;
+  }
+}
+
+function handleShellConnection(
+  ws: WebSocket,
+  userId: string,
+  projectId: string,
+) {
+  const typedWs = ws as WebSocket & { shellBlockId?: string };
+
+  ws.on("message", async (raw) => {
+    let msg: {
+      type: string;
+      blockId?: string;
+      data?: string;
+      cols?: number;
+      rows?: number;
+    };
+    try {
+      msg = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
+
+    if (msg.type === "shell:start" && msg.blockId) {
+      const blockId = msg.blockId;
+
+      // Kill existing session for this block if any
+      killShellSession(blockId);
+
+      // Check max sessions per project
+      if (getProjectShellCount(projectId) >= SHELL_MAX_SESSIONS) {
+        ws.send(
+          JSON.stringify({
+            type: "shell:error",
+            blockId,
+            message: "Maximum concurrent shell sessions reached",
+          }),
+        );
+        ws.close(4029, "Max sessions");
+        return;
+      }
+
+      // Verify permission
+      const hasAccess = await validateShellAccess(userId, projectId);
+      if (!hasAccess) {
+        ws.send(
+          JSON.stringify({
+            type: "shell:error",
+            blockId,
+            message: "Permission denied",
+          }),
+        );
+        ws.close(4003, "Permission denied");
+        return;
+      }
+
+      // Detect shell
+      const shell =
+        process.platform === "win32"
+          ? "powershell.exe"
+          : process.env.SHELL || "/bin/bash";
+
+      try {
+        const ptyProcess = pty.spawn(shell, [], {
+          name: "xterm-256color",
+          cols: 80,
+          rows: 24,
+          cwd: process.env.HOME || "/",
+          env: {
+            ...process.env,
+            TERM: "xterm-256color",
+          } as Record<string, string>,
+        });
+
+        const session: ShellSession = {
+          pty: ptyProcess,
+          projectId,
+          userId,
+          blockId,
+          ws,
+        };
+
+        shellSessions.set(blockId, session);
+        typedWs.shellBlockId = blockId;
+
+        ptyProcess.onData((data: string) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "shell:data", blockId, data }));
+          }
+        });
+
+        ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
+          shellSessions.delete(blockId);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "shell:exit", blockId, exitCode }));
+          }
+        });
+      } catch (err) {
+        logger.error({ err, userId, projectId }, "[Shell] Failed to spawn PTY");
+        ws.send(
+          JSON.stringify({
+            type: "shell:error",
+            blockId,
+            message: "Failed to start shell",
+          }),
+        );
+      }
+    } else if (msg.type === "shell:data" && msg.blockId && msg.data) {
+      const session = shellSessions.get(msg.blockId);
+      if (session && session.userId === userId) {
+        session.pty.write(msg.data);
+      }
+    } else if (
+      msg.type === "shell:resize" &&
+      msg.blockId &&
+      msg.cols &&
+      msg.rows
+    ) {
+      const session = shellSessions.get(msg.blockId);
+      if (session && session.userId === userId) {
+        try {
+          session.pty.resize(msg.cols, msg.rows);
+        } catch {
+          // Ignore resize errors
+        }
+      }
+    } else if (msg.type === "shell:stop" && msg.blockId) {
+      const session = shellSessions.get(msg.blockId);
+      if (session && session.userId === userId) {
+        killShellSession(msg.blockId);
+      }
+    }
+  });
+
+  ws.on("close", () => {
+    // Kill all sessions owned by this connection
+    for (const [blockId, session] of shellSessions.entries()) {
+      if (session.ws === ws) {
+        killShellSession(blockId);
+      }
+    }
+  });
+}
+
 const dev = process.env.NODE_ENV === "development";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = parseInt(process.env.PORT || process.env.APP_PORT || "3000", 10);
@@ -122,6 +339,7 @@ initDb()
     });
 
     const wss = new WebSocketServer({ noServer: true });
+    const shellWss = new WebSocketServer({ noServer: true });
     const nextUpgradeHandler = app.getUpgradeHandler();
 
     server.on("upgrade", async (request, socket, head) => {
@@ -141,9 +359,45 @@ initDb()
         }
       }
 
-      const { pathname } = new URL(request.url!, `http://${hostname}:${port}`);
+      const parsedUrl = new URL(request.url!, `http://${hostname}:${port}`);
+      const pathname = parsedUrl.pathname;
 
-      if (pathname?.startsWith("/yjs")) {
+      if (pathname?.startsWith("/shell")) {
+        const projectId = parsedUrl.searchParams.get("projectId");
+        const blockId = parsedUrl.searchParams.get("blockId");
+
+        if (!projectId || !blockId) {
+          socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+
+        // Reuse Yjs auth to validate the user has project access
+        const userId = await validateWebsocketRequest(
+          request,
+          `project-${projectId}`,
+        );
+
+        if (!userId) {
+          socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+
+        (
+          request as IncomingMessage & {
+            userId: string;
+            shellProjectId: string;
+          }
+        ).userId = userId;
+        (
+          request as IncomingMessage & { shellProjectId: string }
+        ).shellProjectId = projectId;
+
+        shellWss.handleUpgrade(request, socket, head, (ws) => {
+          shellWss.emit("connection", ws, request);
+        });
+      } else if (pathname?.startsWith("/yjs")) {
         const docName = pathname.split("/").pop() || "default";
 
         // Security: Validate Authentication and Project Access
@@ -209,6 +463,14 @@ initDb()
           }, 600000);
         }
       });
+    });
+
+    shellWss.on("connection", (ws, req) => {
+      const typedReq = req as IncomingMessage & {
+        userId: string;
+        shellProjectId: string;
+      };
+      handleShellConnection(ws, typedReq.userId, typedReq.shellProjectId);
     });
 
     server.listen(port, () => {

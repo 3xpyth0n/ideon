@@ -213,7 +213,7 @@ function handleShellConnection(
       const shell =
         process.platform === "win32"
           ? "powershell.exe"
-          : process.env.SHELL || "/bin/bash";
+          : process.env.SHELL || "/bin/sh";
 
       try {
         const ptyProcess = pty.spawn(shell, [], {

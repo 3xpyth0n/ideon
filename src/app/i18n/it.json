@@ -513,7 +513,10 @@
   "subtitle": "OS Visivo del Progetto",
   "system": {
     "upToDate": "L'applicazione è aggiornata",
-    "updateAvailable": "Aggiornamento disponibile: {version}"
+    "updateAvailable": "Aggiornamento disponibile: {version}",
+    "seeChanges": "Vedi le modifiche",
+    "changelog": "Registro delle modifiche",
+    "changelogError": "Impossibile caricare il registro"
   },
   "title": "Ideon"
 }

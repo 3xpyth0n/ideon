@@ -513,7 +513,10 @@
   "subtitle": "Visual Project OS",
   "system": {
     "upToDate": "App is up to date",
-    "updateAvailable": "Update available: {version}"
+    "updateAvailable": "Update available: {version}",
+    "seeChanges": "See changes",
+    "changelog": "Changelog",
+    "changelogError": "Failed to load changelog"
   },
   "title": "Ideon"
 }

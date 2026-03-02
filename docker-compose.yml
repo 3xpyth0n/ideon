@@ -31,6 +31,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ideon-db-data:/var/lib/postgresql/data
     healthcheck:

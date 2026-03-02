@@ -7,6 +7,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.3] - 2026-03-XX
 
+### Changed
+
+- **PostgreSQL 16 → 18**: upgraded the officially supported PostgreSQL version. Existing PostgreSQL 16 deployments continue to work without any changes. If you want to upgrade, see the [migration guide](https://www.theideon.com/docs/migrations/upgrade-postgresql).
+
 ### Fixed
 
 - Fixed all remaining Row-Level Security (RLS) issues, including critical failures when running on PostgreSQL 18. These fixes pave the way for migrating Ideon's officially supported PostgreSQL version from 16 to 18.

@@ -472,7 +472,6 @@
   will-change: transform;
   top: 0;
   left: 0;
-  transform: translate3d(var(--cursor-x), var(--cursor-y), 0);
 }
 
 .remote-cursor-name {

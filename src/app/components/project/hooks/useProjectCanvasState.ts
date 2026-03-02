@@ -739,7 +739,7 @@ export const useProjectCanvasState = (
       mousePosRef.current = { x: e.clientX, y: e.clientY };
       rt.onPointerMove(e);
     },
-    [rt],
+    [rt.onPointerMove],
   );
 
   const graph = useProjectCanvasGraph({
@@ -974,13 +974,13 @@ export const useProjectCanvasState = (
 
   const blocksWithPresence = useMemo(() => {
     const processedBlocks = blocks.map((block) => {
-      const typingUsers = rt.activeUsers.filter(
+      const typingUsers = rt.presenceUsers.filter(
         (u) =>
           u.isTyping &&
           u.typingBlockId === block.id &&
           u.id !== currentUser?.id,
       );
-      const movingUser = rt.activeUsers.find(
+      const movingUser = rt.presenceUsers.find(
         (u) => u.draggingBlockId === block.id && u.id !== currentUser?.id,
       );
       const isLocked = !!block.data?.isLocked;
@@ -1019,7 +1019,10 @@ export const useProjectCanvasState = (
     return uniqueById(processedBlocks);
   }, [
     blocks,
-    rt,
+    rt.presenceUsers,
+    rt.onFocus,
+    rt.onBlur,
+    rt.onCaretMove,
     currentUser,
     isPreviewMode,
     graph,
@@ -1115,9 +1118,16 @@ export const useProjectCanvasState = (
     [getZoom, zoomTo],
   );
 
+  const zoomRAF = useRef<number | null>(null);
+
   const onViewportChange = useCallback(
     (v: { x: number; y: number; zoom: number }) => {
-      setZoom(Math.round(v.zoom * 100));
+      if (zoomRAF.current === null) {
+        zoomRAF.current = requestAnimationFrame(() => {
+          zoomRAF.current = null;
+          setZoom(Math.round(v.zoom * 100));
+        });
+      }
       debouncedCheckVisibleBlocks(v);
     },
     [debouncedCheckVisibleBlocks],
@@ -1125,10 +1135,9 @@ export const useProjectCanvasState = (
 
   const onMove = useCallback(
     (_e: unknown, v: { x: number; y: number; zoom: number }) => {
-      setZoom(Math.round(getZoom() * 100));
       if (v) debouncedCheckVisibleBlocks(v);
     },
-    [getZoom, debouncedCheckVisibleBlocks],
+    [debouncedCheckVisibleBlocks],
   );
 
   const handleToggleLock = useCallback(
@@ -1504,7 +1513,8 @@ export const useProjectCanvasState = (
     onBlockClick: () => setContextMenu(null),
     onLinkClick: () => setContextMenu(null),
     handleCreateBlock: handleCreateBlockWrapper,
-    activeUsers: rt.activeUsers,
+    presenceUsers: rt.presenceUsers,
+    remoteCursorsRef: rt.remoteCursorsRef,
     shareCursor,
     setShareCursor,
     projectOwnerId,

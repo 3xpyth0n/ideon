@@ -9,7 +9,7 @@ import {
   Background,
   BackgroundVariant,
   ConnectionMode,
-  useViewport,
+  useReactFlow as useReactFlowHook,
   Node,
   Edge,
 } from "@xyflow/react";
@@ -48,6 +48,7 @@ import {
   useLayoutEffect,
   useRef,
   useCallback,
+  memo,
 } from "react";
 import {
   Plus,
@@ -82,62 +83,151 @@ const FIXED_EXTENT: [[number, number], [number, number]] = [
 ];
 import { ProjectCanvasProps } from "./utils/types";
 import { UserMapProvider } from "./UserMapContext";
+import type { CursorPosition } from "./hooks/useProjectCanvasRealtime";
 
-const RemoteCursors = ({
-  activeUsers,
+/**
+ * Imperative remote cursors — bypasses React rendering entirely.
+ * Reads cursor positions from a ref (updated by awareness) and viewport
+ * from useReactFlow().getViewport() inside a rAF loop. Uses JS lerp
+ * interpolation for smooth cursor movement (no CSS transitions).
+ */
+/** Ease-out cursor interpolation: fast catch-up, gentle braking */
+const LERP_MIN = 0.12;
+const LERP_MAX = 0.45;
+const LERP_DIST_SCALE = 200;
+const SNAP_THRESHOLD = 0.3;
+
+const RemoteCursors = memo(function RemoteCursors({
+  presenceUsers,
   currentUserId,
+  remoteCursorsRef,
 }: {
-  activeUsers: UserPresence[];
+  presenceUsers: UserPresence[];
   currentUserId?: string;
-}) => {
-  const { x: vX, y: vY, zoom } = useViewport();
+  remoteCursorsRef: React.RefObject<Map<string, CursorPosition>>;
+}) {
+  const { getViewport } = useReactFlowHook();
+  const cursorElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const displayedRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const rafRef = useRef<number | null>(null);
 
-  if (!activeUsers) return null;
+  const remoteUsers = useMemo(
+    () => presenceUsers.filter((u) => u.id !== currentUserId),
+    [presenceUsers, currentUserId],
+  );
+
+  const setCursorRef = useCallback(
+    (userId: string, el: HTMLDivElement | null) => {
+      if (el) cursorElsRef.current.set(userId, el);
+      else {
+        cursorElsRef.current.delete(userId);
+        displayedRef.current.delete(userId);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (remoteUsers.length === 0) {
+      rafRef.current = null;
+      return;
+    }
+
+    let running = true;
+
+    const animate = () => {
+      if (!running) return;
+      const vp = getViewport();
+      const cursors = remoteCursorsRef.current;
+
+      cursorElsRef.current.forEach((el, userId) => {
+        const pos = cursors?.get(userId);
+        if (!pos) {
+          el.style.display = "none";
+          return;
+        }
+
+        const targetX = pos.x * vp.zoom + vp.x;
+        const targetY = pos.y * vp.zoom + vp.y;
+        if (isNaN(targetX) || isNaN(targetY)) {
+          el.style.display = "none";
+          return;
+        }
+
+        let displayed = displayedRef.current.get(userId);
+        if (!displayed) {
+          displayed = { x: targetX, y: targetY };
+          displayedRef.current.set(userId, displayed);
+        }
+
+        const dx = targetX - displayed.x;
+        const dy = targetY - displayed.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < SNAP_THRESHOLD) {
+          displayed.x = targetX;
+          displayed.y = targetY;
+        } else {
+          // Distance-based lerp: fast when far, slow braking when close
+          const t =
+            LERP_MIN +
+            (LERP_MAX - LERP_MIN) * Math.min(1, dist / LERP_DIST_SCALE);
+          displayed.x += dx * t;
+          displayed.y += dy * t;
+        }
+
+        el.style.display = "";
+        el.style.transform = `translate3d(${displayed.x}px, ${displayed.y}px, 0)`;
+      });
+
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      running = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [remoteUsers, getViewport, remoteCursorsRef]);
+
+  if (remoteUsers.length === 0) return null;
 
   return (
     <>
-      {activeUsers.map((user) => {
-        if (!user.cursor || user.id === currentUserId) return null;
-        const x = user.cursor.x * zoom + vX;
-        const y = user.cursor.y * zoom + vY;
-
-        if (isNaN(x) || isNaN(y)) return null;
-
-        return (
-          <div
-            key={user.id}
-            className="remote-cursor"
-            style={
-              {
-                "--cursor-x": `${x}px`,
-                "--cursor-y": `${y}px`,
-                "--user-color": user.color || "#000",
-              } as React.CSSProperties
-            }
-          >
-            {!user.isTyping && (
-              <>
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="remote-cursor-svg"
-                >
-                  <path d="M0 0L14 14L7 14L0 21V0Z" fill="currentColor" />
-                </svg>
-                <div className="remote-cursor-name">
-                  {user.displayName || user.username}
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })}
+      {remoteUsers.map((user) => (
+        <div
+          key={user.id}
+          ref={(el) => setCursorRef(user.id, el)}
+          className="remote-cursor"
+          style={
+            {
+              display: "none",
+              "--user-color": user.color || "#000",
+            } as React.CSSProperties
+          }
+        >
+          {!user.isTyping && (
+            <>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="remote-cursor-svg"
+              >
+                <path d="M0 0L14 14L7 14L0 21V0Z" fill="currentColor" />
+              </svg>
+              <div className="remote-cursor-name">
+                {user.displayName || user.username}
+              </div>
+            </>
+          )}
+        </div>
+      ))}
     </>
   );
-};
+});
 
 const blockTypes = {
   text: CanvasBlock,
@@ -332,7 +422,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onBlockClick,
     onLinkClick,
     handleCreateBlock,
-    activeUsers,
+    remoteCursorsRef,
+    presenceUsers,
     shareCursor,
     setShareCursor,
     projectOwnerId,
@@ -598,8 +689,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   const isTyping = useMemo(() => {
     if (!currentUser) return false;
-    return activeUsers.some((u) => u.id === currentUser.id && u.isTyping);
-  }, [activeUsers, currentUser]);
+    return presenceUsers.some((u) => u.id === currentUser.id && u.isTyping);
+  }, [presenceUsers, currentUser]);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -702,7 +793,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           </div>
         )}
 
-        <UserMapProvider activeUsers={activeUsers}>
+        <UserMapProvider activeUsers={presenceUsers}>
           <ReactFlow
             nodes={blocksWithPreview}
             edges={links}
@@ -757,8 +848,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               style={{ width: "100%", height: "100%", zIndex: 1500 }}
             >
               <RemoteCursors
-                activeUsers={activeUsers}
+                presenceUsers={presenceUsers}
                 currentUserId={currentUser?.id}
+                remoteCursorsRef={remoteCursorsRef}
               />
             </Panel>
             <Background
@@ -871,7 +963,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               <div className="flex items-center gap-2">
                 {!isPreviewMode && (
                   <div className="flex gap-2 mr-2">
-                    {activeUsers.map((u) => (
+                    {presenceUsers.map((u) => (
                       <div
                         key={u.id}
                         className="user-presence-item relative shrink-0"

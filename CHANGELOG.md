@@ -14,6 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fixed all remaining Row-Level Security (RLS) issues, including critical failures when running on PostgreSQL 18. These fixes pave the way for migrating Ideon's officially supported PostgreSQL version from 16 to 18.
+- Improved overall CPU usage when working inside the canvas.
 
 ## [0.5.2] - 2026-03-02
 

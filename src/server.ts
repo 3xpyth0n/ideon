@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import * as Y from "yjs";
 import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
-import { initDb, getDb } from "./app/lib/db";
+import { initDb, getDb, withAuthenticatedSession, getGlobalDb } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
 import { validateWebsocketRequest } from "./app/lib/ws-auth";
 import * as pty from "node-pty";
@@ -47,13 +47,21 @@ global.updateProjectRequests = async (projectId: string) => {
 
   if (doc) {
     try {
-      const db = getDb();
-      const result = await db
-        .selectFrom("projectRequests")
-        .select((eb) => eb.fn.count<number>("id").as("count"))
-        .where("projectId", "=", projectId)
-        .where("status", "=", "pending")
-        .executeTakeFirst();
+      // Use a system session so RLS policies on projectRequests are satisfied.
+      // The query reads all pending requests for the project (owner's perspective),
+      // so we use a dedicated system user ID rather than a specific user's context.
+      const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
+      const result = await withAuthenticatedSession(
+        SYSTEM_USER_ID,
+        async (db) =>
+          db
+            .selectFrom("projectRequests")
+            .select((eb) => eb.fn.count<number>("id").as("count"))
+            .where("projectId", "=", projectId)
+            .where("status", "=", "pending")
+            .executeTakeFirst(),
+        getGlobalDb(),
+      );
 
       const count = Number(result?.count || 0);
 
@@ -126,29 +134,35 @@ async function validateShellAccess(
   projectId: string,
 ): Promise<boolean> {
   try {
-    const db = getDb();
+    // Must use withAuthenticatedSession so that FORCE ROW LEVEL SECURITY on
+    // `projects` and `projectCollaborators` is satisfied.
+    return await withAuthenticatedSession(
+      userId,
+      async (db) => {
+        const project = await db
+          .selectFrom("projects")
+          .select(["id", "ownerId"])
+          .where("id", "=", projectId)
+          .executeTakeFirst();
 
-    const project = await db
-      .selectFrom("projects")
-      .select(["id", "ownerId"])
-      .where("id", "=", projectId)
-      .executeTakeFirst();
+        if (!project) return false;
 
-    if (!project) return false;
+        if (project.ownerId === userId) return true;
 
-    if (project.ownerId === userId) return true;
+        const collaborator = await db
+          .selectFrom("projectCollaborators")
+          .select("role")
+          .where("projectId", "=", projectId)
+          .where("userId", "=", userId)
+          .executeTakeFirst();
 
-    const collaborator = await db
-      .selectFrom("projectCollaborators")
-      .select("role")
-      .where("projectId", "=", projectId)
-      .where("userId", "=", userId)
-      .executeTakeFirst();
+        if (!collaborator) return false;
 
-    if (!collaborator) return false;
-
-    const role = collaborator.role as string;
-    return role === "owner" || role === "admin";
+        const role = collaborator.role as string;
+        return role === "owner" || role === "admin";
+      },
+      getGlobalDb(),
+    );
   } catch (err) {
     logger.error({ err }, "[Shell] Failed to validate access");
     return false;

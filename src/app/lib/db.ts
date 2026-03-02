@@ -269,6 +269,29 @@ export function getGlobalDb(): Kysely<database> {
   return getDb();
 }
 
+/**
+ * Opens a transaction for a public share-link request (no authenticated user).
+ * Sets `app.share_token` so that the `*_share_select` RLS policies on
+ * `projects`, `blocks`, and `links` can verify the token, while keeping
+ * `app.current_user_id` empty (the policies only need the token).
+ */
+export async function withShareTokenSession<T>(
+  shareToken: string,
+  callback: (tx: Kysely<database>) => Promise<T>,
+  dbOverride?: Kysely<database>,
+): Promise<T> {
+  const db = dbOverride || getDb();
+
+  if (state.activeType === "sqlite") {
+    return callback(db);
+  }
+
+  return db.transaction().execute(async (tx) => {
+    await sql`SELECT set_config('app.share_token', ${shareToken}, true)`.execute(tx);
+    return dbStore.run(tx, () => callback(tx));
+  });
+}
+
 export function getDb(): Kysely<database> {
   // Check if we are inside a transaction context (RLS)
   const storeDb = dbStore.getStore();

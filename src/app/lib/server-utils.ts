@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getAuthUser, AuthUser } from "@auth";
-import { getDb, withAuthenticatedSession } from "./db";
+import { getDb, withAuthenticatedSession, getGlobalDb } from "./db";
 import { logger } from "./logger";
 import { Selectable } from "kysely";
 import { projectsTable } from "./types/db";
@@ -111,12 +111,19 @@ export function authenticatedAction<T, B = unknown>(
 
 // Helper: Update lastOnline
 export function updateLastOnline(userId: string) {
-  const db = getDb();
-  db.updateTable("users")
-    .set({ lastOnline: new Date().toISOString() })
-    .where("id", "=", userId)
-    .execute()
-    .catch((err) => logger.error({ err, userId }, "lastOnline update error"));
+  // Run in its own session so the fire-and-forget promise does not escape the
+  // caller's AsyncLocalStorage context (which will have already exited by the
+  // time the query runs) and satisfies the RLS policy on `users`.
+  withAuthenticatedSession(
+    userId,
+    (db) =>
+      db
+        .updateTable("users")
+        .set({ lastOnline: new Date().toISOString() })
+        .where("id", "=", userId)
+        .execute(),
+    getGlobalDb(),
+  ).catch((err) => logger.error({ err, userId }, "lastOnline update error"));
 }
 
 // Helper: Parse Body

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-03-XX
+
+### Fixed
+
+- Fixed all remaining Row-Level Security (RLS) issues, including critical failures when running on PostgreSQL 18. These fixes pave the way for migrating Ideon's officially supported PostgreSQL version from 16 to 18.
+
 ## [0.5.2] - 2026-03-02
 
 ### Added

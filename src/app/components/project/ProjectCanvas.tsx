@@ -28,7 +28,7 @@ import ShellBlock from "./ShellBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
 import CanvasEdge from "./CanvasEdge";
-import { InviteUserModal } from "./InviteUserModal";
+import { ProjectAccessModal } from "./ProjectAccessModal";
 import CommandPalette from "./CommandPalette";
 import AddBlockModal from "./AddBlockModal";
 import { TransferBlockModal } from "./TransferBlockModal";
@@ -1114,7 +1114,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           </ReactFlow>
         </UserMapProvider>
 
-        <InviteUserModal
+        <ProjectAccessModal
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
           projectId={initialProjectId!}

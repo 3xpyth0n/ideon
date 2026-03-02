@@ -17,7 +17,7 @@ import {
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
 import { ProjectModal } from "./ProjectModal";
-import { ProjectAccessModal } from "./ProjectAccessModal";
+import { ProjectAccessModal } from "@components/project/ProjectAccessModal";
 import { FolderAccessModal } from "./FolderAccessModal";
 import { getRecentProjects } from "@lib/utils";
 import { toast } from "sonner";
@@ -1173,6 +1173,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
 
       {accessProject && (
         <ProjectAccessModal
+          isOpen={!!accessProject}
           projectId={accessProject.id}
           projectName={accessProject.name}
           onClose={() => setAccessProject(null)}

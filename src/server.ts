@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import * as Y from "yjs";
 import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
-import { initDb, getDb } from "./app/lib/db";
+import { initDb, getDb, getPool } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
 import { validateWebsocketRequest } from "./app/lib/ws-auth";
 import * as pty from "node-pty";
@@ -126,6 +126,50 @@ async function validateShellAccess(
   projectId: string,
 ): Promise<boolean> {
   try {
+    // Bypass FORCE RLS with raw pool query
+    const pool = getPool();
+    if (pool) {
+      const db = getDb();
+
+      const projectQuery = db
+        .selectFrom("projects")
+        .select(["id", "ownerId"])
+        .where("id", "=", projectId)
+        .compile();
+
+      const projResult = await pool.query(
+        projectQuery.sql,
+        projectQuery.parameters as unknown[],
+      );
+
+      const project = (projResult.rows[0] ?? null) as {
+        id: string;
+        ownerId: string;
+      } | null;
+
+      if (!project) return false;
+      if (project.ownerId === userId) return true;
+
+      const collaboratorQuery = db
+        .selectFrom("projectCollaborators")
+        .select("role")
+        .where("projectId", "=", projectId)
+        .where("userId", "=", userId)
+        .compile();
+
+      const collabResult = await pool.query(
+        collaboratorQuery.sql,
+        collaboratorQuery.parameters as unknown[],
+      );
+
+      const collaborator = (collabResult.rows[0] ?? null) as {
+        role: string;
+      } | null;
+      if (!collaborator) return false;
+      return collaborator.role === "owner" || collaborator.role === "admin";
+    }
+
+    // SQLite fallback (no RLS)
     const db = getDb();
 
     const project = await db

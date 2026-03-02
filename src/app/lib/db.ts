@@ -265,6 +265,24 @@ export async function withAuthenticatedSession<T>(
   });
 }
 
+export async function withShareTokenSession<T>(
+  token: string,
+  callback: (tx: Kysely<database>) => Promise<T>,
+): Promise<T> {
+  const db = getDb();
+
+  // SQLite has no RLS — run the callback directly
+  if (state.activeType === "sqlite") {
+    return callback(db);
+  }
+
+  // For Postgres, set app.share_token so share-link RLS policies can match
+  return db.transaction().execute(async (tx) => {
+    await sql`SELECT set_config('app.share_token', ${token}, true)`.execute(tx);
+    return dbStore.run(tx, () => callback(tx));
+  });
+}
+
 export function getGlobalDb(): Kysely<database> {
   return getDb();
 }

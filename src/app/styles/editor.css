@@ -353,6 +353,14 @@
 
 /* Connection handles styles */
 
+.project-canvas[class~="project-canvas"] .react-flow__edge {
+  z-index: 0;
+}
+
+.project-canvas[class~="project-canvas"] .react-flow__edges {
+  z-index: 0;
+}
+
 .mental-canvas .react-flow__edge-path {
   stroke: var(--text-main);
   opacity: 0.3;

@@ -443,6 +443,7 @@
     "at": "a",
     "blocksCount": "{count} blocchi",
     "currentCollaborators": "Collaboratori Attuali",
+    "membersAndRequests": "Membri e Richieste",
     "editProject": "Modifica Progetto",
     "forbidden": "Non hai il permesso di accedere a questo progetto",
     "importExport": "Importa / Esporta Progetto",

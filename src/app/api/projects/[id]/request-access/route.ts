@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@lib/db";
+import { getDb, getPool } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import crypto from "crypto";
 
@@ -10,15 +10,26 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
     }
 
     const projectId = params.id;
-    const db = await getDb();
+    const db = getDb();
 
-    // Check if project exists
+    let project: { id: string; ownerId: string } | null;
     try {
-      const project = await db
-        .selectFrom("projects")
-        .selectAll()
-        .where("id", "=", projectId)
-        .executeTakeFirst();
+      const pool = getPool();
+      if (pool) {
+        const result = await pool.query<{ id: string; ownerId: string }>(
+          'SELECT id, "ownerId" FROM projects WHERE id = $1',
+          [projectId],
+        );
+        project = result.rows[0] ?? null;
+      } else {
+        // SQLite fallback (no RLS)
+        const row = await db
+          .selectFrom("projects")
+          .select(["id", "ownerId"])
+          .where("id", "=", projectId)
+          .executeTakeFirst();
+        project = row ?? null;
+      }
 
       if (!project) {
         return NextResponse.json(
@@ -123,7 +134,7 @@ export const GET = authenticatedAction(
   async (req, { params, user }) => {
     if (!user) return NextResponse.json({ status: null });
 
-    const db = await getDb();
+    const db = getDb();
     const request = await db
       .selectFrom("projectRequests")
       .select("status")

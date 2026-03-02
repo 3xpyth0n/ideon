@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@lib/db";
+import { getDb, getPool } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import crypto from "crypto";
 
@@ -10,17 +10,42 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
     }
 
     const projectId = params.id;
-    const db = await getDb();
+    const db = getDb();
 
-    // Check if project exists
+    // Check if project exists and who owns it.
+    // This query intentionally bypasses FORCE ROW LEVEL SECURITY: the requesting
+    // user may not be a collaborator yet (that's the whole point of this route),
+    // so their RLS session would return no rows even for a valid project.
+    // We only need an existence + owner check here — access control is enforced
+    // separately by the projectRequests table and the owner-approval flow.
     try {
-      const project = await db
-        .selectFrom("projects")
-        .selectAll()
-        .where("id", "=", projectId)
-        .executeTakeFirst();
+      let ownerId: string | null = null;
+      let projectExists = false;
 
-      if (!project) {
+      const pool = getPool();
+      if (pool) {
+        const result = await pool.query<{ ownerId: string }>(
+          `SELECT "ownerId" FROM projects WHERE id = $1`,
+          [projectId],
+        );
+        if (result.rows[0]) {
+          projectExists = true;
+          ownerId = result.rows[0].ownerId;
+        }
+      } else {
+        // SQLite fallback (no RLS)
+        const project = await db
+          .selectFrom("projects")
+          .select("ownerId")
+          .where("id", "=", projectId)
+          .executeTakeFirst();
+        if (project) {
+          projectExists = true;
+          ownerId = project.ownerId;
+        }
+      }
+
+      if (!projectExists) {
         return NextResponse.json(
           { error: "Project not found" },
           { status: 404 },
@@ -28,7 +53,7 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
       }
 
       // Check if user is owner
-      if (project.ownerId === user.id) {
+      if (ownerId === user.id) {
         return NextResponse.json(
           { error: "You are the owner of this project" },
           { status: 400 },
@@ -123,7 +148,7 @@ export const GET = authenticatedAction(
   async (req, { params, user }) => {
     if (!user) return NextResponse.json({ status: null });
 
-    const db = await getDb();
+    const db = getDb();
     const request = await db
       .selectFrom("projectRequests")
       .select("status")

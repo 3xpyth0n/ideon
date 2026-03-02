@@ -2,7 +2,8 @@ import { ProjectList } from "@components/dashboard/ProjectList";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { loadDictionaries } from "@i18n/loader";
-import { getDb } from "@lib/db";
+import { withAuthenticatedSession } from "@lib/db";
+import { getAuthUser } from "@auth";
 
 export async function generateMetadata({
   searchParams,
@@ -16,17 +17,21 @@ export async function generateMetadata({
   const dict = dictionaries[lang] || dictionaries["en"];
 
   if (folderId) {
-    const db = getDb();
-    const folder = await db
-      .selectFrom("folders")
-      .select("name")
-      .where("id", "=", folderId)
-      .executeTakeFirst();
+    const user = await getAuthUser();
+    if (user) {
+      const folder = await withAuthenticatedSession(user.id, async (tx) => {
+        return tx
+          .selectFrom("folders")
+          .select("name")
+          .where("id", "=", folderId)
+          .executeTakeFirst();
+      });
 
-    if (folder) {
-      return {
-        title: folder.name,
-      };
+      if (folder) {
+        return {
+          title: folder.name,
+        };
+      }
     }
   }
 

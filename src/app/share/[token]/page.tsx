@@ -1,4 +1,4 @@
-import { getDb } from "@lib/db";
+import { withShareTokenSession } from "@lib/db";
 import { transformBlock, transformLink, DbBlock } from "@lib/graph";
 import { PublicProjectCanvas } from "@components/project/PublicProjectCanvas";
 import { notFound } from "next/navigation";
@@ -13,50 +13,50 @@ interface PageProps {
 }
 
 async function getProjectData(token: string) {
-  const db = getDb();
+  return withShareTokenSession(token, async (db) => {
+    const project = await db
+      .selectFrom("projects")
+      .select(["id", "name", "description", "ownerId"])
+      .where("shareToken", "=", token)
+      .where("shareEnabled", "=", 1)
+      .executeTakeFirst();
 
-  const project = await db
-    .selectFrom("projects")
-    .select(["id", "name", "description", "ownerId"])
-    .where("shareToken", "=", token)
-    .where("shareEnabled", "=", 1)
-    .executeTakeFirst();
+    if (!project) return null;
 
-  if (!project) return null;
+    const blocks = await db
+      .selectFrom("blocks")
+      .leftJoin("users", "users.id", "blocks.ownerId")
+      .select([
+        "blocks.id",
+        "blocks.blockType",
+        "blocks.positionX",
+        "blocks.positionY",
+        "blocks.width",
+        "blocks.height",
+        "blocks.selected",
+        "blocks.content",
+        "blocks.data",
+        "blocks.metadata",
+        "blocks.ownerId",
+        "blocks.updatedAt",
+        "users.username as authorName",
+        "users.color as authorColor",
+      ])
+      .where("blocks.projectId", "=", project.id)
+      .execute();
 
-  const blocks = await db
-    .selectFrom("blocks")
-    .leftJoin("users", "users.id", "blocks.ownerId")
-    .select([
-      "blocks.id",
-      "blocks.blockType",
-      "blocks.positionX",
-      "blocks.positionY",
-      "blocks.width",
-      "blocks.height",
-      "blocks.selected",
-      "blocks.content",
-      "blocks.data",
-      "blocks.metadata",
-      "blocks.ownerId",
-      "blocks.updatedAt",
-      "users.username as authorName",
-      "users.color as authorColor",
-    ])
-    .where("blocks.projectId", "=", project.id)
-    .execute();
+    const links = await db
+      .selectFrom("links")
+      .selectAll()
+      .where("projectId", "=", project.id)
+      .execute();
 
-  const links = await db
-    .selectFrom("links")
-    .selectAll()
-    .where("projectId", "=", project.id)
-    .execute();
-
-  return {
-    project,
-    blocks: blocks.map((b) => transformBlock(b as unknown as DbBlock)),
-    links: links.map((l) => transformLink(l)),
-  };
+    return {
+      project,
+      blocks: blocks.map((b) => transformBlock(b as unknown as DbBlock)),
+      links: links.map((l) => transformLink(l)),
+    };
+  });
 }
 
 export async function generateMetadata({

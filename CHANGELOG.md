@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Create Block Modal** — replaced the context menu block list with a searchable grid modal (`Ctrl+A`) for adding blocks. Features all block types with icons and a search input
 - **Shell Block** — a fully interactive terminal embedded in the canvas, powered by xterm.js and node-pty. Supports start/stop/kill lifecycle: **Stop** pauses the session while preserving the scrollback buffer for instant resume, **Kill** destroys the session entirely. Zero RAM consumption when stopped. Restricted to project creators and owners.
+- **Changelog Viewer** — when an update is available, the version badge tooltip now includes a "See changes" link. Clicking it opens a modal that fetches the changelog directly from Internet, with all versions newer than the current one subtly highlighted.
 
 ## [0.5.1] - 2026-02-28
 

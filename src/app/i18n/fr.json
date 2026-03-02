@@ -513,7 +513,10 @@
   "subtitle": "OS de Projet Visuel",
   "system": {
     "upToDate": "L'application est à jour",
-    "updateAvailable": "Mise à jour disponible : {version}"
+    "updateAvailable": "Mise à jour disponible : {version}",
+    "seeChanges": "Voir les changements",
+    "changelog": "Journal des modifications",
+    "changelogError": "Impossible de charger le journal"
   },
   "title": "Ideon"
 }

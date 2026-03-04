@@ -68,6 +68,8 @@ import {
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
 import { DownloadButton } from "./DownloadButton";
+import { SyncIndicator } from "./SyncIndicator";
+import { useAutoSnapshot, AutoSnapshotIntent } from "@/hooks/useAutoSnapshot";
 
 import { Modal } from "@components/ui/Modal";
 import {
@@ -306,8 +308,35 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     provider: WebsocketProvider;
   } | null>(null);
 
+  // Ref to persist Yjs resources across StrictMode double-mount.
+  // Without this, StrictMode destroys the WebSocket on fake cleanup,
+  // and the browser throttles the reconnection for ~30-40s.
+  const yjsRef = useRef<{
+    projectId: string;
+    yDoc: Y.Doc;
+    provider: WebsocketProvider;
+    idb: IndexeddbPersistence;
+  } | null>(null);
+
   useEffect(() => {
     if (typeof window === "undefined" || !initialProjectId) return;
+
+    // StrictMode re-mount: reuse existing resources if same project
+    if (yjsRef.current && yjsRef.current.projectId === initialProjectId) {
+      setYjsData({
+        yDoc: yjsRef.current.yDoc,
+        provider: yjsRef.current.provider,
+      });
+      return;
+    }
+
+    // Different project or first mount — clean up old resources if any
+    if (yjsRef.current) {
+      yjsRef.current.provider.destroy();
+      yjsRef.current.idb.destroy();
+      yjsRef.current.yDoc.destroy();
+      yjsRef.current = null;
+    }
 
     const doc = new Y.Doc();
     const wsProvider = new WebsocketProvider(
@@ -330,7 +359,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     // Listen for access revocation
     wsProvider.on("connection-close", (event: { code?: number } | null) => {
       if (event && event.code === 4003) {
-        wsProvider.disconnect(); // Stop reconnection attempts
+        wsProvider.disconnect();
         toast.error(dict.common.accessRevoked || "Access revoked");
         router.push("/home");
       }
@@ -345,16 +374,32 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       setIsLocalSynced(true);
     });
 
+    yjsRef.current = {
+      projectId: initialProjectId,
+      yDoc: doc,
+      provider: wsProvider,
+      idb: indexeddbProvider,
+    };
+
     setYjsData({ yDoc: doc, provider: wsProvider });
 
-    return () => {
-      wsProvider.destroy();
-      indexeddbProvider.destroy();
-      doc.destroy();
-      setIsLocalSynced(false);
-      setIsRemoteSynced(false);
-    };
+    // No cleanup here — resources are managed via yjsRef.
+    // True cleanup happens when projectId changes (above) or on unmount (below).
   }, [initialProjectId]);
+
+  // True cleanup only on component unmount (route change)
+  useEffect(() => {
+    return () => {
+      if (yjsRef.current) {
+        yjsRef.current.provider.destroy();
+        yjsRef.current.idb.destroy();
+        yjsRef.current.yDoc.destroy();
+        yjsRef.current = null;
+        setIsLocalSynced(false);
+        setIsRemoteSynced(false);
+      }
+    };
+  }, []);
 
   const { yDoc, provider } = yjsData || { yDoc: null, provider: null };
 
@@ -372,6 +417,30 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     if (!yDoc) return null;
     return yDoc.getMap("contents") as Y.Map<Y.Text>;
   }, [yDoc]);
+
+  const handleSaveStateRef = useRef<
+    | ((
+        intent?: string,
+        overrideBlocks?: Node<BlockData>[],
+        overrideLinks?: Edge[],
+        options?: { isAuto?: boolean },
+      ) => Promise<boolean>)
+    | null
+  >(null);
+
+  const { triggerAutoSnapshot } = useAutoSnapshot({
+    handleSaveStateRef,
+    isPreviewMode: false,
+    isReadOnly: currentUserRole === "viewer",
+    isRemoteSynced,
+  });
+
+  const onGraphMutationCallback = useCallback(
+    (intent: string) => {
+      triggerAutoSnapshot(intent as AutoSnapshotIntent);
+    },
+    [triggerAutoSnapshot],
+  );
 
   const {
     blocks,
@@ -442,7 +511,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     provider?.awareness || null,
     isLocalSynced,
     isRemoteSynced,
+    onGraphMutationCallback,
   );
+
+  useEffect(() => {
+    handleSaveStateRef.current = handleSaveState;
+  }, [handleSaveState]);
+
+  const isReadOnly = isPreviewMode || currentUserRole === "viewer";
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
@@ -539,7 +615,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
   }, [yDoc, currentUser, projectOwnerId]);
 
-  const isReadOnly = isPreviewMode || currentUserRole === "viewer";
+  const onConnectWithSnapshot = useCallback(
+    (...args: Parameters<typeof onConnect>) => {
+      onConnect(...args);
+      triggerAutoSnapshot("Connection created");
+    },
+    [onConnect, triggerAutoSnapshot],
+  );
 
   const { rippleRef } = useTouch();
 
@@ -802,7 +884,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             onNodeDragStart={isPreviewMode ? undefined : onBlockDragStart}
             onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
             onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
-            onConnect={isPreviewMode ? undefined : onConnect}
+            onConnect={isPreviewMode ? undefined : onConnectWithSnapshot}
             isValidConnection={isValidConnection}
             onPointerMove={onPointerMove}
             onPointerLeave={onPointerLeave}
@@ -963,6 +1045,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               <div className="flex items-center gap-2">
                 {!isPreviewMode && (
                   <div className="flex gap-2 mr-2">
+                    <SyncIndicator />
                     {presenceUsers.map((u) => (
                       <div
                         key={u.id}
@@ -1193,6 +1276,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         onClick={() => {
                           _deleteLinks([edgeId]);
                           setContextMenu(null);
+                          triggerAutoSnapshot("Connection deleted");
                         }}
                         className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
@@ -1240,6 +1324,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 displayName: "",
               });
               setTransferBlock(null);
+              triggerAutoSnapshot("Block transferred");
             }}
           />
         )}
@@ -1291,6 +1376,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   localStorage.setItem("ideon_skip_delete_confirm", "true");
                 }
                 confirmDelete();
+                triggerAutoSnapshot("Block deleted");
               }}
               className="btn-danger"
             >
@@ -1327,6 +1413,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             if (id) {
               setNewBlockId(id);
               setTimeout(() => setNewBlockId(null), 800);
+              triggerAutoSnapshot("Block created");
             }
             setIsAddBlockOpen(false);
           }}

@@ -141,7 +141,7 @@ export function Select({
         createPortal(
           <div
             ref={dropdownRef}
-            className="portal-dropdown-wrapper fixed z-[99999] w-auto"
+            className="portal-dropdown-wrapper fixed z-99999 w-auto"
             style={{
               top: `${coords.top + 4}px`,
               left:

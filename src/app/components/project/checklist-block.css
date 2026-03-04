@@ -171,8 +171,7 @@
   transition: border-color 0.2s ease;
 }
 
-.block-type-checklist.has-progress:hover,
-.block-type-checklist.has-progress.selected {
+.block-type-checklist.has-progress:hover {
   border-color: var(--checklist-accent-color, var(--border));
 }
 

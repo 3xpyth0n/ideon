@@ -60,6 +60,7 @@ export const useProjectCanvasState = (
   awareness: Awareness | null,
   isLocalSynced: boolean = false,
   isRemoteSynced: boolean = false,
+  onGraphMutation?: (intent: string) => void,
 ) => {
   const { dict } = useI18n();
   const { fitView, getZoom, zoomTo, setViewport, screenToFlowPosition } =
@@ -616,8 +617,10 @@ export const useProjectCanvasState = (
       intent?: string,
       overrideBlocks?: Node<BlockData>[],
       overrideLinks?: Edge[],
+      options?: { isAuto?: boolean },
     ): Promise<boolean> => {
       if (!initialProjectId || isReadOnly) return false;
+      const isAuto = options?.isAuto ?? false;
       try {
         const blocksToSave = (overrideBlocks || blocks).map((n) => ({
           ...n,
@@ -633,7 +636,9 @@ export const useProjectCanvasState = (
         );
 
         if (lastSnapshotHash.current === currentHash) {
-          toast.info(dict.modals.noChanges || "No changes to save");
+          if (!isAuto) {
+            toast.info(dict.modals.noChanges || "No changes to save");
+          }
           return false;
         }
 
@@ -645,14 +650,17 @@ export const useProjectCanvasState = (
             blocks: blocksToSave,
             links: overrideLinks || links,
             intent,
+            isAuto,
           }),
         });
 
         if (!res.ok) {
-          if (res.status === 403) {
-            toast.error(dict.auth.unauthorized || "Unauthorized action");
-          } else {
-            toast.error(dict.modals.saveError || "Failed to save changes");
+          if (!isAuto) {
+            if (res.status === 403) {
+              toast.error(dict.auth.unauthorized || "Unauthorized action");
+            } else {
+              toast.error(dict.modals.saveError || "Failed to save changes");
+            }
           }
           return false;
         }
@@ -660,7 +668,9 @@ export const useProjectCanvasState = (
         lastSnapshotHash.current = currentHash;
         return true;
       } catch {
-        toast.error(dict.modals.saveError || "Failed to save changes");
+        if (!isAuto) {
+          toast.error(dict.modals.saveError || "Failed to save changes");
+        }
         return false;
       }
     },
@@ -763,9 +773,16 @@ export const useProjectCanvasState = (
       if (!hasSeenOnboarding) {
         markOnboardingSeen();
       }
-      return graph.handleCreateBlock(...args);
+      const id = graph.handleCreateBlock(...args);
+      if (id) onGraphMutation?.("Block created");
+      return id;
     },
-    [graph.handleCreateBlock, hasSeenOnboarding, markOnboardingSeen],
+    [
+      graph.handleCreateBlock,
+      hasSeenOnboarding,
+      markOnboardingSeen,
+      onGraphMutation,
+    ],
   );
 
   useEffect(() => {
@@ -1162,8 +1179,9 @@ export const useProjectCanvasState = (
     ) => {
       graph.handleTransferBlock(id, target);
       toast.success(dict.blocks.blockTransferred);
+      onGraphMutation?.("Block transferred");
     },
-    [graph, dict.common],
+    [graph, dict.common, onGraphMutation],
   );
 
   const onKeyDown = useCallback(
@@ -1415,7 +1433,8 @@ export const useProjectCanvasState = (
     graph.handleDeleteBlock(ids);
     setBlockToDelete(null);
     setBlocksToDelete([]);
-  }, [blockToDelete, blocksToDelete, graph]);
+    onGraphMutation?.("Block deleted");
+  }, [blockToDelete, blocksToDelete, graph, onGraphMutation]);
 
   return {
     blocks: blocksWithPresence,

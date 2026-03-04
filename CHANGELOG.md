@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2026-03-04
+
+### Added
+
+- **Automated Snapshots**: the canvas now automatically saves snapshots after significant actions.
+- **Sync Status Indicator**: a real-time connection indicator shows the current sync state.
+- **Sketch Block Eraser Customization**: the eraser tool now supports custom size input (1-100px) in addition to the preset sizes.
+
 ## [0.5.3] - 2026-03-02
 
 ### Changed

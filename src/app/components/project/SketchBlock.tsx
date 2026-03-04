@@ -88,6 +88,7 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   const [color, setColor] = useState("#ffffff");
   const [penSize, setPenSize] = useState(4);
   const [eraserSize, setEraserSize] = useState(12);
+  const [customEraserInput, setCustomEraserInput] = useState<string>("");
   const [activePopup, setActivePopup] = useState<
     "pen" | "eraser" | "color" | null
   >(null);
@@ -369,6 +370,17 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     triggerSave([]);
   };
 
+  const handleApplyCustomEraserSize = () => {
+    const parsed = parseInt(customEraserInput, 10);
+    if (isNaN(parsed)) return;
+
+    // Clamp between 1 and 100
+    const validSize = Math.max(1, Math.min(100, parsed));
+    setEraserSize(validSize);
+    setCustomEraserInput("");
+    setActivePopup(null);
+  };
+
   const handleResize = useCallback(
     (
       _evt: unknown,
@@ -597,6 +609,48 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                         />
                       </button>
                     ))}
+                    <div className="w-px h-8 bg-(--border) mx-1" />
+                    <input
+                      type="number"
+                      value={customEraserInput}
+                      onChange={(e) => {
+                        stopPropagation(e);
+                        setCustomEraserInput(e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        stopPropagation(e);
+                        if (e.key === "Enter") {
+                          handleApplyCustomEraserSize();
+                        }
+                      }}
+                      {...preventDrag}
+                      placeholder="Custom"
+                      className="w-20 px-2 py-1 text-sm rounded border border-(--border) bg-transparent text-(--text-main)"
+                      style={{
+                        appearance: "textfield",
+                      }}
+                      min="1"
+                      max="50"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        stopPropagation(e);
+                        handleApplyCustomEraserSize();
+                      }}
+                      {...preventDrag}
+                      disabled={
+                        !customEraserInput ||
+                        isNaN(parseInt(customEraserInput, 10))
+                      }
+                      className="px-2 py-1 text-sm rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: "var(--border)",
+                        color: "var(--text-main)",
+                      }}
+                    >
+                      ✓
+                    </button>
                   </div>
                 )}
               </div>
@@ -870,6 +924,25 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   );
                 });
               })()}
+
+              {/* Show eraser preview while drawing */}
+              {currentPoints && tool === "eraser" && (
+                <path
+                  d={getSvgPathFromStroke(
+                    getStroke(currentPoints, {
+                      size: eraserSize,
+                      thinning: 0.5,
+                      smoothing: 0.5,
+                      streamline: 0.5,
+                      simulatePressure: true,
+                    }),
+                  )}
+                  fill="rgba(200, 100, 100, 0.1)"
+                  stroke="rgba(200, 100, 100, 0.6)"
+                  strokeWidth="2"
+                  strokeDasharray="4 2"
+                />
+              )}
             </svg>
           </div>
 

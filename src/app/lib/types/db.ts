@@ -214,6 +214,7 @@ export interface temporalStatesTable {
   intent: string;
   diff: string; // JSON patch or similar
   isSnapshot: number; // 0 or 1
+  isAuto: number; // 0 or 1
   timestamp: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 

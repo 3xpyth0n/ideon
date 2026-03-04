@@ -26,6 +26,8 @@ export const GET = projectAction(async (req, { project }) => {
         "temporalStates.id",
         "temporalStates.parentId",
         "temporalStates.intent",
+        "temporalStates.isSnapshot",
+        "temporalStates.isAuto",
         "temporalStates.timestamp",
         "users.username as authorName",
         "users.color as authorColor",
@@ -85,13 +87,20 @@ const postSchema = z.object({
   blocks: z.array(z.any()).optional(),
   links: z.array(z.any()).optional(),
   intent: z.string().optional(),
+  isAuto: z.boolean().optional(),
 });
 
 export const POST = projectAction(
   async (_req, { user: auth, project, body }) => {
     const projectId = project.id;
     const db = getDb();
-    const { action, blocks: inputBlocks, links: inputLinks, intent } = body;
+    const {
+      action,
+      blocks: inputBlocks,
+      links: inputLinks,
+      intent,
+      isAuto,
+    } = body;
 
     if (action === "create") {
       const snapshotId = crypto.randomUUID();
@@ -175,6 +184,7 @@ export const POST = projectAction(
             intent: intent || "manualSnapshot",
             diff: diff,
             isSnapshot: 1,
+            isAuto: isAuto ? 1 : 0,
             timestamp: new Date().toISOString(),
           })
           .execute();
@@ -295,6 +305,7 @@ export const POST = projectAction(
               },
             ]),
             isSnapshot: 1,
+            isAuto: 0,
             timestamp: new Date().toISOString(),
           })
           .execute();

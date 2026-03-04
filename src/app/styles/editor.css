@@ -334,6 +334,49 @@
   z-index: 1000;
 }
 
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--bg-island);
+  border: 1px solid var(--border);
+  pointer-events: auto;
+  cursor: default;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sync-dot-synced {
+  background: #22c55e;
+}
+
+.sync-dot-offline {
+  background: #ef4444;
+}
+
+.sync-indicator-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 0.5;
+}
+
+.sync-indicator-text {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.5;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
 .react-flow__controls-button:hover {
   background: var(--bg-sidebar) !important ;
   color: var(--text-main) !important ;

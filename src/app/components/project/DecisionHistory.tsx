@@ -18,6 +18,7 @@ import {
   Trash2,
   Pencil,
   User,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTouchGestures } from "./hooks/useTouchGestures";
@@ -30,6 +31,7 @@ interface TemporalState {
   intent: string;
   timestamp: string;
   isSnapshot: boolean;
+  isAuto?: boolean;
   authorName?: string;
 }
 
@@ -313,7 +315,7 @@ export function DecisionHistory({
       {isOpen && (
         <div className="save-context-menu">
           {/* Header */}
-          <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/30 flex-shrink-0">
+          <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/30 shrink-0">
             <div className="flex items-center gap-2">
               <History className="w-4 h-4 text-primary" />
               <h3 className="font-semibold text-sm">
@@ -330,7 +332,7 @@ export function DecisionHistory({
             </Button>
           </div>
 
-          <div className="p-3 border-b border-border/40 flex-shrink-0">
+          <div className="p-3 border-b border-border/40 shrink-0">
             <Button
               className="w-full h-10 rounded-xl flex items-center justify-center gap-2 shadow-sm temporal-save-btn"
               onClick={handleSave}
@@ -350,9 +352,7 @@ export function DecisionHistory({
           <div className="scroll-container">
             <div
               ref={listRef}
-              className={`p-2 min-h-0 ${
-                shouldEnableScroll ? "max-h-[400px]" : ""
-              }`}
+              className={`p-2 min-h-0 ${shouldEnableScroll ? "max-h-100" : ""}`}
               onScroll={checkScroll}
             >
               {isLoading ? (
@@ -388,12 +388,12 @@ export function DecisionHistory({
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                            <User className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            <User className="w-3 h-3 text-muted-foreground shrink-0" />
                             <span className="text-xs font-semibold truncate text-foreground">
                               {state.authorName || dict.project.anonymous}
                             </span>
                           </div>
-                          <span className="text-[10px] text-muted-foreground tabular-nums font-medium flex-shrink-0">
+                          <span className="text-[10px] text-muted-foreground tabular-nums font-medium shrink-0">
                             {formatDate(state.timestamp)}
                           </span>
                         </div>
@@ -428,10 +428,10 @@ export function DecisionHistory({
                               {state.intent || dict.project.noDescription}
                             </span>
                           )}
-                          {state.isSnapshot && (
-                            <div className="flex items-center gap-1 bg-primary/10 text-primary text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                              <Save className="w-2 h-2" />
-                              <span>{dict.modals.milestone}</span>
+                          {!!state.isAuto && (
+                            <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                              <Zap className="w-2 h-2" />
+                              <span>{dict.canvas.autoSnapshot}</span>
                             </div>
                           )}
                         </div>

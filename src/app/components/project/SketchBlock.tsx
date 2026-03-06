@@ -1,7 +1,9 @@
 "use client";
 
-import { memo, useState, useCallback, useEffect, useRef } from "react";
-import { PenTool, Pen, Eraser, Undo2, Redo2, Trash2 } from "lucide-react";
+import { memo, useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useYjsStrokes } from "./useYjsStrokes";
+import * as Y from "yjs";
+import { PenTool, Pen, Eraser, Trash2 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
 import {
@@ -12,6 +14,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import { BlockData } from "./CanvasBlock";
+import { useYDoc } from "./YDocContext";
 import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import { getStroke } from "perfect-freehand";
 import { BlockReactions } from "./BlockReactions";
@@ -20,6 +23,7 @@ import CustomNodeResizer from "./CustomNodeResizer";
 
 type SketchBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
+  yDoc?: Y.Doc;
 };
 
 interface Point {
@@ -36,18 +40,17 @@ interface Stroke {
 }
 
 const COLORS = [
-  "#000000", // Black
-  "#ef4444", // Red
-  "#3b82f6", // Blue
-  "#22c55e", // Green
-  "#eab308", // Yellow
-  "#a855f7", // Purple
-  "#ffffff", // White
+  "#000000",
+  "#ef4444",
+  "#3b82f6",
+  "#22c55e",
+  "#eab308",
+  "#a855f7",
+  "#ffffff",
 ];
 
 const STROKE_SIZES = [2, 4, 8, 12, 16];
 
-// Helper to convert stroke points to SVG path
 function getSvgPathFromStroke(stroke: number[][]) {
   if (!stroke.length) return "";
 
@@ -64,7 +67,8 @@ function getSvgPathFromStroke(stroke: number[][]) {
   return d.join(" ");
 }
 
-const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
+const SketchBlock = memo((props: SketchBlockProps) => {
+  const { id, data, selected } = props;
   const { dict, lang } = useI18n();
   const { setNodes, getNode, getEdges } = useReactFlow();
 
@@ -83,7 +87,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     (isLocked ? !isOwner && !isProjectOwner : false);
   const canReact = !isPreviewMode || isViewer;
 
-  // State
   const [tool, setTool] = useState<"pen" | "eraser">("pen");
   const [color, setColor] = useState("#ffffff");
   const [penSize, setPenSize] = useState(4);
@@ -94,18 +97,71 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   >(null);
   const [title, setTitle] = useState(data.title || "");
 
-  // Drawing state
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentPoints, setCurrentPoints] = useState<Point[] | null>(null);
-  const [history, setHistory] = useState<Stroke[][]>([]);
-  const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
+  // Use yDoc from context (enterprise pattern)
+  const yDoc = useYDoc();
+  const userId = currentUser?.id || "";
+  const { strokes, addStroke, drafts, setDraft } = useYjsStrokes(yDoc, id);
 
+  let updateMyPresence: ((presence: Partial<unknown>) => void) | undefined =
+    undefined;
+  try {
+    // @ts-expect-error window.ideonUpdateMyPresence is injected at runtime for live cursor updates
+    if (typeof window !== "undefined" && window.ideonUpdateMyPresence) {
+      // @ts-expect-error window.ideonUpdateMyPresence is injected at runtime for live cursor updates
+      updateMyPresence = window.ideonUpdateMyPresence;
+    }
+  } catch {
+    // ignore
+  }
+
+  const handleClearSketch = useCallback(() => {
+    const yArr = yDoc.getArray<Stroke>(`sketch-strokes-${id}`);
+    yArr.delete(0, yArr.length);
+    const yDrafts = yDoc.getMap<Stroke>(`sketch-drafts-${id}`);
+    yDrafts.clear();
+  }, [yDoc, id]);
+
+  const otherDrafts = useMemo(() => {
+    return Object.entries(drafts)
+      .filter(([clientId]) => clientId !== userId)
+      .map(([, draft]) => draft);
+  }, [drafts, userId]);
+
+  useEffect(() => {
+    if (isReadOnly || !userId) return;
+    if (currentPoints && currentPoints.length > 0) {
+      setDraft(userId, {
+        points: currentPoints,
+        color: tool === "eraser" ? "#000000" : color,
+        size: tool === "pen" ? penSize : eraserSize,
+        isEraser: tool === "eraser",
+      });
+    } else {
+      setDraft(userId, null);
+    }
+  }, [
+    currentPoints,
+    isReadOnly,
+    userId,
+    tool,
+    color,
+    penSize,
+    eraserSize,
+    setDraft,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (userId) setDraft(userId, null);
+    };
+  }, [userId, setDraft]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>(null);
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const svgCanvasRef = useRef<SVGSVGElement | null>(null);
+  const lastCursorUpdate = useRef(0);
+  const pendingCursorRAF = useRef<number | null>(null);
 
-  // Refs for tracking state without triggering effects
   const strokesRef = useRef(strokes);
   const currentPointsRef = useRef(currentPoints);
 
@@ -114,7 +170,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     currentPointsRef.current = currentPoints;
   }, [strokes, currentPoints]);
 
-  // Close popup when block is deselected
   useEffect(() => {
     if (!selected) {
       setActivePopup(null);
@@ -142,7 +197,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     svgCanvasRef.current?.style.setProperty("--sketch-cursor", url);
   }, [tool, isReadOnly]);
 
-  // Helper to stop propagation
   const stopPropagation = (e: React.SyntheticEvent | Event) => {
     e.stopPropagation();
   };
@@ -189,56 +243,18 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     [id, data, currentUser, dict, strokes],
   );
 
-  // Sync title
   useEffect(() => {
     if (data.title !== undefined && data.title !== title) {
       setTitle(data.title);
     }
   }, [data.title]);
 
-  // Initialize from metadata
   useEffect(() => {
-    if (data.metadata) {
+    if (
+      data.metadata &&
+      (!isLoaded || isReadOnly || !currentPointsRef.current)
+    ) {
       try {
-        const parsed =
-          typeof data.metadata === "string"
-            ? JSON.parse(data.metadata)
-            : data.metadata;
-
-        let newStrokes: Stroke[] = [];
-        if (parsed.strokes) {
-          // New format
-          newStrokes = parsed.strokes;
-        } else if (parsed.paths) {
-          // Legacy format conversion (react-sketch-canvas)
-          const legacyStrokes: Stroke[] = parsed.paths.map(
-            (p: {
-              paths: { x: number; y: number }[];
-              strokeColor: string;
-              strokeWidth: number;
-              drawMode: boolean;
-            }) => ({
-              points: p.paths.map((pt: { x: number; y: number }) => ({
-                x: pt.x,
-                y: pt.y,
-                p: 0.5,
-              })),
-              color: p.strokeColor,
-              size: p.strokeWidth,
-              isEraser: p.drawMode === false, // approximation
-            }),
-          );
-          newStrokes = legacyStrokes;
-        }
-
-        // Check if content differs
-        if (JSON.stringify(newStrokes) !== JSON.stringify(strokesRef.current)) {
-          // Update if read-only or not currently drawing
-          if (isReadOnly || !currentPointsRef.current) {
-            setStrokes(newStrokes);
-          }
-        }
-
         if (!isLoaded) setIsLoaded(true);
       } catch (e) {
         console.error("Failed to load sketch data", e);
@@ -248,51 +264,35 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     }
   }, [data.metadata, isLoaded, isReadOnly]);
 
-  const save = useCallback(
-    (newStrokes: Stroke[]) => {
-      try {
-        const now = new Date().toISOString();
-        const editorName =
-          currentUser?.displayName ||
-          currentUser?.username ||
-          dict.project.anonymous;
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!data.onContentChange) return;
+    if (!isReadOnly && currentPointsRef.current) return;
+    try {
+      const now = new Date().toISOString();
+      const editorName =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.project.anonymous;
+      data.onContentChange(
+        id,
+        data.content,
+        now,
+        editorName,
+        JSON.stringify({ strokes }),
+        title,
+        data.reactions,
+      );
+    } catch (e) {
+      console.error("Failed to save sketch", e);
+    }
+  }, [JSON.stringify(strokes), title, isReadOnly]);
 
-        data.onContentChange?.(
-          id,
-          data.content,
-          now,
-          editorName,
-          JSON.stringify({ strokes: newStrokes }),
-          title,
-          data.reactions,
-        );
-      } catch (e) {
-        console.error("Failed to save sketch", e);
-      }
-    },
-    [data, id, currentUser, dict, title],
-  );
-
-  const triggerSave = useCallback(
-    (newStrokes: Stroke[]) => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      saveTimeoutRef.current = setTimeout(() => {
-        save(newStrokes);
-      }, 1000);
-    },
-    [save],
-  );
-
-  // Helper to get consistent coordinates regardless of zoom level
   const getPointFromEvent = (e: React.PointerEvent<Element>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const el = e.currentTarget;
-
     const scaleX = rect.width > 0 ? el.clientWidth / rect.width : 1;
     const scaleY = rect.height > 0 ? el.clientHeight / rect.height : 1;
-
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY,
@@ -300,13 +300,11 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
     };
   };
 
-  // Interaction Handlers
   const handlePointerDown = (e: React.PointerEvent) => {
     if (isReadOnly) return;
     setActivePopup(null); // Close popup when drawing starts
     e.currentTarget.setPointerCapture(e.pointerId);
     e.stopPropagation(); // Stop ReactFlow panning
-
     const point = getPointFromEvent(e);
     setCurrentPoints([point]);
   };
@@ -314,67 +312,64 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
   const handlePointerMove = (e: React.PointerEvent) => {
     if (isReadOnly || !currentPoints) return;
     e.stopPropagation();
-
     const point = getPointFromEvent(e);
     setCurrentPoints((pts) => [...(pts || []), point]);
+    if (updateMyPresence) {
+      const now = performance.now();
+      if (now - lastCursorUpdate.current < 33) {
+        if (pendingCursorRAF.current === null) {
+          const svg = svgCanvasRef.current;
+          const clientX = e.clientX;
+          const clientY = e.clientY;
+          pendingCursorRAF.current = requestAnimationFrame(() => {
+            pendingCursorRAF.current = null;
+            if (performance.now() - lastCursorUpdate.current >= 33) {
+              lastCursorUpdate.current = performance.now();
+              if (svg) {
+                const rect = svg.getBoundingClientRect();
+                const x = (clientX - rect.left) / rect.width;
+                const y = (clientY - rect.top) / rect.height;
+                updateMyPresence({ cursor: { x, y } });
+              }
+            }
+          });
+        }
+        return;
+      }
+      lastCursorUpdate.current = now;
+      const svg = svgCanvasRef.current;
+      if (svg) {
+        const rect = svg.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        updateMyPresence({ cursor: { x, y } });
+      }
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (updateMyPresence) {
+      if (pendingCursorRAF.current !== null) {
+        cancelAnimationFrame(pendingCursorRAF.current);
+        pendingCursorRAF.current = null;
+      }
+      updateMyPresence({ cursor: undefined });
+    }
     if (isReadOnly || !currentPoints) return;
     e.currentTarget.releasePointerCapture(e.pointerId);
     e.stopPropagation();
-
-    const newStroke: Stroke = {
+    addStroke({
       points: currentPoints,
       color: tool === "eraser" ? "#121212" : color,
       size: tool === "pen" ? penSize : eraserSize,
       isEraser: tool === "eraser",
-    };
-
-    const newStrokes = [...strokes, newStroke];
-
-    // History
-    setHistory((prev) => [...prev, strokes]);
-    setRedoStack([]); // Clear redo
-
-    setStrokes(newStrokes);
+    });
     setCurrentPoints(null);
-    triggerSave(newStrokes);
-  };
-
-  const handleUndo = () => {
-    if (history.length === 0) return;
-    const previous = history[history.length - 1];
-    const newHistory = history.slice(0, -1);
-
-    setRedoStack((prev) => [strokes, ...prev]);
-    setHistory(newHistory);
-    setStrokes(previous);
-    triggerSave(previous);
-  };
-
-  const handleRedo = () => {
-    if (redoStack.length === 0) return;
-    const next = redoStack[0];
-    const newRedoStack = redoStack.slice(1);
-
-    setHistory((prev) => [...prev, strokes]);
-    setRedoStack(newRedoStack);
-    setStrokes(next);
-    triggerSave(next);
-  };
-
-  const handleClear = () => {
-    setHistory((prev) => [...prev, strokes]);
-    setStrokes([]);
-    triggerSave([]);
   };
 
   const handleApplyCustomEraserSize = () => {
     const parsed = parseInt(customEraserInput, 10);
     if (isNaN(parsed)) return;
-
-    // Clamp between 1 and 100
     const validSize = Math.max(1, Math.min(100, parsed));
     setEraserSize(validSize);
     setCustomEraserInput("");
@@ -711,46 +706,15 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
               <div className="flex-1" />
 
               {/* Actions */}
+              {/* Clear/Trash Button */}
               <button
+                type="button"
                 onClick={(e) => {
-                  handleUndo();
                   stopPropagation(e);
+                  handleClearSketch();
                 }}
-                {...preventDrag}
-                disabled={history.length === 0}
-                className={`p-1 rounded-md transition-all duration-200 ${
-                  history.length === 0
-                    ? "text-(--text-muted) cursor-not-allowed opacity-30"
-                    : "text-(--text-main) hover:text-(--text-main) hover:bg-(--border) opacity-100"
-                }`}
-                title="Undo"
-              >
-                <Undo2 size={14} />
-              </button>
-              <button
-                onClick={(e) => {
-                  handleRedo();
-                  stopPropagation(e);
-                }}
-                {...preventDrag}
-                disabled={redoStack.length === 0}
-                className={`p-1 rounded-md transition-all duration-200 ${
-                  redoStack.length === 0
-                    ? "text-(--text-muted) cursor-not-allowed opacity-30"
-                    : "text-(--text-main) hover:text-(--text-main) hover:bg-(--border) opacity-100"
-                }`}
-                title="Redo"
-              >
-                <Redo2 size={14} />
-              </button>
-              <button
-                onClick={(e) => {
-                  handleClear();
-                  stopPropagation(e);
-                }}
-                {...preventDrag}
-                className="p-1 rounded-md text-(--text-muted) hover:text-red-400"
-                title="Clear"
+                className="p-1 rounded-t-sm transition-colors border-b-2 border-transparent text-(--text-muted) hover:text-red-500"
+                style={{ marginLeft: 4 }}
               >
                 <Trash2 size={14} />
               </button>
@@ -852,8 +816,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                 })()}
               </defs>
 
-              {/* Render Groups */}
-              {(() => {
+              {/* Render Groups: local + remote drafts (memoized for perf) */}
+              {useMemo(() => {
                 const allStrokes = [...strokes];
                 if (currentPoints) {
                   allStrokes.push({
@@ -863,7 +827,9 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                     isEraser: tool === "eraser",
                   });
                 }
-
+                if (otherDrafts.length > 0) {
+                  allStrokes.push(...otherDrafts);
+                }
                 const groups: {
                   type: "draw" | "erase";
                   strokes: Stroke[];
@@ -874,7 +840,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                   strokes: Stroke[];
                   id: string;
                 } | null = null;
-
                 allStrokes.forEach((stroke, i) => {
                   const type = stroke.isEraser ? "erase" : "draw";
                   if (!currentGroup || currentGroup.type !== type) {
@@ -888,10 +853,8 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                     currentGroup.strokes.push(stroke);
                   }
                 });
-
                 return groups.map((group, i) => {
-                  if (group.type === "erase") return null; // Erasers are only used in masks
-
+                  if (group.type === "erase") return null;
                   const subsequentErasers = groups
                     .slice(i + 1)
                     .filter((g) => g.type === "erase");
@@ -899,7 +862,6 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                     subsequentErasers.length > 0
                       ? `mask-${group.id}`
                       : undefined;
-
                   return (
                     <g
                       key={group.id}
@@ -923,7 +885,15 @@ const SketchBlock = memo(({ id, data, selected }: SketchBlockProps) => {
                     </g>
                   );
                 });
-              })()}
+              }, [
+                strokes,
+                currentPoints,
+                tool,
+                color,
+                penSize,
+                eraserSize,
+                otherDrafts,
+              ])}
 
               {/* Show eraser preview while drawing */}
               {currentPoints && tool === "eraser" && (

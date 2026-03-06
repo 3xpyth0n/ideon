@@ -17,6 +17,7 @@ import "@xyflow/react/dist/style.css";
 
 import { getAvatarUrl } from "@lib/utils";
 import CanvasBlock, { BlockData } from "./CanvasBlock";
+import { YDocContext } from "./YDocContext";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 import PaletteBlock from "./PaletteBlock";
 import ContactBlock from "./ContactBlock";
@@ -86,6 +87,7 @@ const FIXED_EXTENT: [[number, number], [number, number]] = [
 import { ProjectCanvasProps } from "./utils/types";
 import { UserMapProvider } from "./UserMapContext";
 import type { CursorPosition } from "./hooks/useProjectCanvasRealtime";
+import { DraftsProvider } from "./DraftsContext";
 
 /**
  * Imperative remote cursors — bypasses React rendering entirely.
@@ -493,6 +495,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     handleCreateBlock,
     remoteCursorsRef,
     presenceUsers,
+    draftsByBlock,
+    getDraftsForBlock,
+    writeDraft,
+    deleteDraft,
     shareCursor,
     setShareCursor,
     projectOwnerId,
@@ -508,6 +514,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     yBlocks,
     yLinks,
     yContents,
+    yDoc,
     provider?.awareness || null,
     isLocalSynced,
     isRemoteSynced,
@@ -845,581 +852,598 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   }
 
   return (
-    <>
-      <svg className="absolute w-0 h-0 pointer-events-none">
-        <defs>
-          <marker
-            id="connection-arrow"
-            viewBox="0 0 20 10"
-            refX="19"
-            refY="5"
-            markerWidth="16"
-            markerHeight="8"
-            orient="auto"
-          >
-            <path d="M 0 0 L 19 5 L 0 10 L 4 5 Z" fill="var(--text-main)" />
-          </marker>
-        </defs>
-      </svg>
-      <div
-        className={`project-canvas-container ${
-          isPreviewMode ? "preview-mode" : ""
-        }`}
-        onKeyDown={onKeyDown}
-        tabIndex={0}
-        {...touchHandlers}
-      >
-        {isLoading && (
-          <div className="loading-overlay">
-            <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        )}
-
-        <UserMapProvider activeUsers={presenceUsers}>
-          <ReactFlow
-            nodes={blocksWithPreview}
-            edges={links}
-            onNodesChange={isPreviewMode ? undefined : onBlocksChange}
-            onEdgesChange={isPreviewMode ? undefined : onLinksChange}
-            onNodeDragStart={isPreviewMode ? undefined : onBlockDragStart}
-            onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
-            onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
-            onConnect={isPreviewMode ? undefined : onConnectWithSnapshot}
-            isValidConnection={isValidConnection}
-            onPointerMove={onPointerMove}
-            onPointerLeave={onPointerLeave}
-            onPaneContextMenu={onPaneContextMenu}
-            onNodeContextMenu={onBlockContextMenu}
-            onEdgeContextMenu={onEdgeContextMenu}
-            onPaneClick={onPaneClick}
-            onNodeClick={onBlockClick}
-            onEdgeClick={onLinkClick}
-            onEdgeDoubleClick={onLinkDoubleClick}
-            onMove={onMove}
-            onViewportChange={onViewportChange}
-            nodeTypes={blockTypes}
-            edgeTypes={linkTypes}
-            defaultViewport={DEFAULT_VIEWPORT}
-            connectionMode={ConnectionMode.Loose}
-            connectionRadius={30}
-            translateExtent={FIXED_EXTENT}
-            minZoom={0.1}
-            maxZoom={4}
-            deleteKeyCode={null}
-            selectionOnDrag={!isReadOnly}
-            selectionKeyCode={null}
-            nodesDraggable={!isReadOnly}
-            nodesConnectable={!isReadOnly}
-            elementsSelectable={true}
-            edgesReconnectable={!isReadOnly}
-            panOnScroll
-            panOnDrag={true}
-            multiSelectionKeyCode="Control"
-            fitView
-            className={`project-canvas ${isReadOnly ? "read-only" : ""}`}
-            proOptions={{ hideAttribution: true }}
-          >
-            <div
-              className={`canvas-cursor-overlay ${
-                isTyping ? "hide-native-cursor" : ""
-              }`}
-            />
-            <Panel
-              position="top-left"
-              className="pointer-events-none m-0!"
-              style={{ width: "100%", height: "100%", zIndex: 1500 }}
+    <YDocContext.Provider value={yDoc}>
+      <>
+        <svg className="absolute w-0 h-0 pointer-events-none">
+          <defs>
+            <marker
+              id="connection-arrow"
+              viewBox="0 0 20 10"
+              refX="19"
+              refY="5"
+              markerWidth="16"
+              markerHeight="8"
+              orient="auto"
             >
-              <RemoteCursors
-                presenceUsers={presenceUsers}
-                currentUserId={currentUser?.id}
-                remoteCursorsRef={remoteCursorsRef}
-              />
-            </Panel>
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={25}
-              size={1.5}
-              color="var(--text-muted)"
-              className="opacity-20"
-            />
+              <path d="M 0 0 L 19 5 L 0 10 L 4 5 Z" fill="var(--text-main)" />
+            </marker>
+          </defs>
+        </svg>
+        <div
+          className={`project-canvas-container ${
+            isPreviewMode ? "preview-mode" : ""
+          }`}
+          onKeyDown={onKeyDown}
+          tabIndex={0}
+          {...touchHandlers}
+        >
+          {isLoading && (
+            <div className="loading-overlay">
+              <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
 
-            {!hasSeenOnboarding && isCoreOnly && !isPreviewMode && (
-              <Panel
-                position="bottom-center"
-                className="onboarding-panel"
-                role="status"
-                aria-label="Magic Paste Onboarding Hint"
+          <UserMapProvider activeUsers={presenceUsers}>
+            <DraftsProvider
+              value={{
+                draftsByBlock,
+                getDraftsForBlock,
+                writeDraft,
+                deleteDraft,
+              }}
+            >
+              <ReactFlow
+                nodes={blocksWithPreview}
+                edges={links}
+                onNodesChange={isPreviewMode ? undefined : onBlocksChange}
+                onEdgesChange={isPreviewMode ? undefined : onLinksChange}
+                onNodeDragStart={isPreviewMode ? undefined : onBlockDragStart}
+                onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
+                onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
+                onConnect={isPreviewMode ? undefined : onConnectWithSnapshot}
+                isValidConnection={isValidConnection}
+                onPointerMove={onPointerMove}
+                onPointerLeave={onPointerLeave}
+                onPaneContextMenu={onPaneContextMenu}
+                onNodeContextMenu={onBlockContextMenu}
+                onEdgeContextMenu={onEdgeContextMenu}
+                onPaneClick={onPaneClick}
+                onNodeClick={onBlockClick}
+                onEdgeClick={onLinkClick}
+                onEdgeDoubleClick={onLinkDoubleClick}
+                onMove={onMove}
+                onViewportChange={onViewportChange}
+                nodeTypes={blockTypes}
+                edgeTypes={linkTypes}
+                defaultViewport={DEFAULT_VIEWPORT}
+                connectionMode={ConnectionMode.Loose}
+                connectionRadius={30}
+                translateExtent={FIXED_EXTENT}
+                minZoom={0.1}
+                maxZoom={4}
+                deleteKeyCode={null}
+                selectionOnDrag={!isReadOnly}
+                selectionKeyCode={null}
+                nodesDraggable={!isReadOnly}
+                nodesConnectable={!isReadOnly}
+                elementsSelectable={true}
+                edgesReconnectable={!isReadOnly}
+                panOnScroll
+                panOnDrag={true}
+                multiSelectionKeyCode="Control"
+                fitView
+                className={`project-canvas ${isReadOnly ? "read-only" : ""}`}
+                proOptions={{ hideAttribution: true }}
               >
-                <div className="onboarding-content">
-                  <div className="onboarding-icons">
-                    <Github size={20} />
-                    <div className="separator" />
-                    <Figma size={20} />
-                    <div className="separator" />
-                    <FileIcon size={20} />
-                  </div>
-                  <div className="onboarding-text">
-                    <h3>Magic Paste</h3>
-                    <p>{dict.project.onboardingHint}</p>
-                  </div>
-                </div>
-              </Panel>
-            )}
-            <Panel
-              position="top-left"
-              className="m-6! ml-12! mt-3!"
-              style={{ zIndex: 2000 }}
-            >
-              {!isPreviewMode && (
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-sm font-bold opacity-40 select-none">
-                    {dict.project.shareCursor}
-                  </span>
-                  <input
-                    type="checkbox"
-                    className="theme-checkbox"
-                    checked={shareCursor}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setShareCursor(e.target.checked);
-                    }}
+                <div
+                  className={`canvas-cursor-overlay ${
+                    isTyping ? "hide-native-cursor" : ""
+                  }`}
+                />
+                <Panel
+                  position="top-left"
+                  className="pointer-events-none m-0!"
+                  style={{ width: "100%", height: "100%", zIndex: 1500 }}
+                >
+                  <RemoteCursors
+                    presenceUsers={presenceUsers}
+                    currentUserId={currentUser?.id}
+                    remoteCursorsRef={remoteCursorsRef}
                   />
-                  <button
-                    className="command-palette-hint"
-                    onClick={() => setIsAddBlockOpen(true)}
+                </Panel>
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={25}
+                  size={1.5}
+                  color="var(--text-muted)"
+                  className="opacity-20"
+                />
+
+                {!hasSeenOnboarding && isCoreOnly && !isPreviewMode && (
+                  <Panel
+                    position="bottom-center"
+                    className="onboarding-panel"
+                    role="status"
+                    aria-label="Magic Paste Onboarding Hint"
                   >
-                    <kbd>Ctrl + A</kbd>
-                    <span>{dict.canvas.addBlock}</span>
-                  </button>
-                  <button
-                    className="command-palette-hint"
-                    onClick={() => setIsPaletteOpen(true)}
-                  >
-                    <kbd>Ctrl + P</kbd>
-                    <span>{dict.canvas.commandPalette}</span>
-                  </button>
-                </div>
-              )}
-            </Panel>
-
-            <Panel
-              position="top-right"
-              className="flex items-center gap-2 m-6!"
-              style={{ zIndex: 2000 }}
-            >
-              {isPreviewMode && (
-                <div className="preview-mode-banner">
-                  <span className="preview-mode-text">
-                    {dict.canvas.previewMode}
-                  </span>
-                  <div className="preview-mode-actions">
-                    <button
-                      onClick={() => handlePreview(null)}
-                      className="preview-action-btn preview-return-btn"
-                      title={dict.canvas.returnToPresent}
-                    >
-                      <ArrowLeft size={14} />
-                      <span className="preview-btn-text">
-                        {dict.canvas.return}
-                      </span>
-                    </button>
-                    {currentUser?.id === projectOwnerId && (
-                      <button
-                        onClick={() =>
-                          selectedStateId && handleApplyState(selectedStateId)
-                        }
-                        className="preview-action-btn preview-apply-btn"
-                        title={dict.canvas.apply}
-                        disabled={!selectedStateId}
-                      >
-                        <Check size={14} />
-                        <span className="preview-btn-text">
-                          {dict.canvas.apply}
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                {!isPreviewMode && (
-                  <div className="flex gap-2 mr-2">
-                    <SyncIndicator />
-                    {presenceUsers.map((u) => (
-                      <div
-                        key={u.id}
-                        className="user-presence-item relative shrink-0"
-                      >
-                        <div
-                          className="user-presence-avatar"
-                          style={{ borderColor: u.color || "#000" }}
-                        >
-                          <img
-                            src={getAvatarUrl(u.avatarUrl, u.username)}
-                            alt={u.displayName || u.username}
-                            className="user-presence-avatar-img"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-
-                        <div
-                          className="user-presence-tooltip"
-                          style={
-                            {
-                              "--user-color": u.color || "#000",
-                            } as React.CSSProperties
-                          }
-                        >
-                          {u.displayName || u.username}
-                          <div className="user-presence-tooltip-arrow" />
-                        </div>
+                    <div className="onboarding-content">
+                      <div className="onboarding-icons">
+                        <Github size={20} />
+                        <div className="separator" />
+                        <Figma size={20} />
+                        <div className="separator" />
+                        <FileIcon size={20} />
                       </div>
-                    ))}
-                  </div>
+                      <div className="onboarding-text">
+                        <h3>Magic Paste</h3>
+                        <p>{dict.project.onboardingHint}</p>
+                      </div>
+                    </div>
+                  </Panel>
                 )}
-                <div className="flex items-center gap-2">
-                  {currentUserRole !== "viewer" && (
-                    <div className="relative">
-                      <Button
-                        onClick={() => setIsInviteModalOpen(true)}
-                        className="btn-primary"
-                        disabled={isPreviewMode}
+                <Panel
+                  position="top-left"
+                  className="m-6! ml-12! mt-3!"
+                  style={{ zIndex: 2000 }}
+                >
+                  {!isPreviewMode && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-sm font-bold opacity-40 select-none">
+                        {dict.project.shareCursor}
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="theme-checkbox"
+                        checked={shareCursor}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setShareCursor(e.target.checked);
+                        }}
+                      />
+                      <button
+                        className="command-palette-hint"
+                        onClick={() => setIsAddBlockOpen(true)}
                       >
-                        {(dict.project.access || "Access").toUpperCase()}
-                      </Button>
-                      {pendingRequestsCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                          {pendingRequestsCount}
-                        </span>
-                      )}
+                        <kbd>Ctrl + A</kbd>
+                        <span>{dict.canvas.addBlock}</span>
+                      </button>
+                      <button
+                        className="command-palette-hint"
+                        onClick={() => setIsPaletteOpen(true)}
+                      >
+                        <kbd>Ctrl + P</kbd>
+                        <span>{dict.canvas.commandPalette}</span>
+                      </button>
                     </div>
                   )}
-                  {currentUser?.id === projectOwnerId && (
-                    <Button
-                      onClick={() => setIsShareModalOpen(true)}
-                      className="btn-secondary px-3!"
-                      disabled={isPreviewMode}
-                      title={dict.project.share || "Share"}
-                    >
-                      <Share2 size={16} />
-                    </Button>
-                  )}
-                  <DecisionHistory
-                    projectId={initialProjectId!}
-                    onPreview={handlePreview}
-                    onApply={handleApplyState}
-                    onSave={handleSaveState}
-                    onDelete={handleDeleteState}
-                    onRename={handleRenameState}
-                    isPreviewing={isPreviewMode}
-                    selectedStateId={selectedStateId}
-                    projectOwnerId={projectOwnerId}
-                    currentUserId={currentUser?.id}
-                    isHistoryOpen={isHistoryOpen}
-                    onHistoryOpenChange={setIsHistoryOpen}
-                  />
-                </div>
-              </div>
-            </Panel>
+                </Panel>
 
-            <div className="zoom-indicator">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold opacity-40 tabular-nums">
-                  {zoom}%
-                </span>
-              </div>
-            </div>
-
-            <Controls
-              showInteractive={false}
-              showZoom={false}
-              showFitView={false}
-              position="bottom-right"
-            >
-              <ControlButton
-                onClick={undo}
-                disabled={!canUndo || isPreviewMode}
-                title={dict.canvas.undo || "Undo"}
-              >
-                <Undo2 />
-              </ControlButton>
-              <ControlButton
-                onClick={redo}
-                disabled={!canRedo || isPreviewMode}
-                title={dict.canvas.redo || "Redo"}
-              >
-                <Redo2 />
-              </ControlButton>
-              <ControlButton onClick={handleZoomIn} title={dict.canvas.zoomIn}>
-                <Plus />
-              </ControlButton>
-              <ControlButton
-                onClick={handleZoomOut}
-                title={dict.canvas.zoomOut}
-              >
-                <Minus />
-              </ControlButton>
-              <ControlButton
-                onClick={handleFitView}
-                title={dict.canvas.fitView}
-              >
-                <Maximize />
-              </ControlButton>
-              <DownloadButton />
-            </Controls>
-
-            {contextMenu && (
-              <div
-                ref={contextMenuRef}
-                className="context-menu"
-                style={
-                  {
-                    "--menu-top": `${contextMenu.top}px`,
-                    "--menu-left": `${contextMenu.left}px`,
-                    opacity: 1,
-                  } as React.CSSProperties
-                }
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {contextMenu.type === "pane" ? (
-                  <>
-                    {!isPreviewMode && (
-                      <>
+                <Panel
+                  position="top-right"
+                  className="flex items-center gap-2 m-6! mt-3!"
+                  style={{ zIndex: 2000 }}
+                >
+                  {isPreviewMode && (
+                    <div className="preview-mode-banner">
+                      <span className="preview-mode-text">
+                        {dict.canvas.previewMode}
+                      </span>
+                      <div className="preview-mode-actions">
                         <button
-                          onClick={() => {
-                            setIsAddBlockOpen(true);
-                            setContextMenu(null);
-                          }}
-                          className="context-menu-item"
+                          onClick={() => handlePreview(null)}
+                          className="preview-action-btn preview-return-btn"
+                          title={dict.canvas.returnToPresent}
                         >
-                          {dict.canvas.addBlock || "Add Block"}
+                          <ArrowLeft size={14} />
+                          <span className="preview-btn-text">
+                            {dict.canvas.return}
+                          </span>
                         </button>
-                        <div className="context-menu-separator" />
-                      </>
-                    )}
-                  </>
-                ) : contextMenu.type === "block" ? (
-                  (() => {
-                    const block = contextMenuBlock;
-                    if (!block || !currentUser) return null;
-                    const isOwner =
-                      currentUser.id &&
-                      (block.data as BlockData)?.ownerId === currentUser.id;
-                    const isProjectOwner =
-                      currentUser.id && projectOwnerId === currentUser.id;
-                    const canManage = isOwner || isProjectOwner;
-                    const isLocked = !!(block.data as BlockData).isLocked;
+                        {currentUser?.id === projectOwnerId && (
+                          <button
+                            onClick={() =>
+                              selectedStateId &&
+                              handleApplyState(selectedStateId)
+                            }
+                            className="preview-action-btn preview-apply-btn"
+                            title={dict.canvas.apply}
+                            disabled={!selectedStateId}
+                          >
+                            <Check size={14} />
+                            <span className="preview-btn-text">
+                              {dict.canvas.apply}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                    return (
+                  <div className="flex items-center gap-2">
+                    {!isPreviewMode && (
+                      <div className="flex gap-2 mr-2">
+                        <SyncIndicator />
+                        {presenceUsers.map((u) => (
+                          <div
+                            key={u.id}
+                            className="user-presence-item relative shrink-0"
+                          >
+                            <div
+                              className="user-presence-avatar"
+                              style={{ borderColor: u.color || "#000" }}
+                            >
+                              <img
+                                src={getAvatarUrl(u.avatarUrl, u.username)}
+                                alt={u.displayName || u.username}
+                                className="user-presence-avatar-img"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+
+                            <div
+                              className="user-presence-tooltip"
+                              style={
+                                {
+                                  "--user-color": u.color || "#000",
+                                } as React.CSSProperties
+                              }
+                            >
+                              {u.displayName || u.username}
+                              <div className="user-presence-tooltip-arrow" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      {currentUserRole !== "viewer" && (
+                        <div className="relative">
+                          <Button
+                            onClick={() => setIsInviteModalOpen(true)}
+                            className="btn-primary"
+                            disabled={isPreviewMode}
+                          >
+                            {(dict.project.access || "Access").toUpperCase()}
+                          </Button>
+                          {pendingRequestsCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                              {pendingRequestsCount}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {currentUser?.id === projectOwnerId && (
+                        <Button
+                          onClick={() => setIsShareModalOpen(true)}
+                          className="btn-secondary px-3!"
+                          disabled={isPreviewMode}
+                          title={dict.project.share || "Share"}
+                        >
+                          <Share2 size={16} />
+                        </Button>
+                      )}
+                      <DecisionHistory
+                        projectId={initialProjectId!}
+                        onPreview={handlePreview}
+                        onApply={handleApplyState}
+                        onSave={handleSaveState}
+                        onDelete={handleDeleteState}
+                        onRename={handleRenameState}
+                        isPreviewing={isPreviewMode}
+                        selectedStateId={selectedStateId}
+                        projectOwnerId={projectOwnerId}
+                        currentUserId={currentUser?.id}
+                        isHistoryOpen={isHistoryOpen}
+                        onHistoryOpenChange={setIsHistoryOpen}
+                      />
+                    </div>
+                  </div>
+                </Panel>
+
+                <div className="zoom-indicator">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold opacity-40 tabular-nums">
+                      {zoom}%
+                    </span>
+                  </div>
+                </div>
+
+                <Controls
+                  showInteractive={false}
+                  showZoom={false}
+                  showFitView={false}
+                  position="bottom-right"
+                >
+                  <ControlButton
+                    onClick={undo}
+                    disabled={!canUndo || isPreviewMode}
+                    title={dict.canvas.undo || "Undo"}
+                  >
+                    <Undo2 />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={redo}
+                    disabled={!canRedo || isPreviewMode}
+                    title={dict.canvas.redo || "Redo"}
+                  >
+                    <Redo2 />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={handleZoomIn}
+                    title={dict.canvas.zoomIn}
+                  >
+                    <Plus />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={handleZoomOut}
+                    title={dict.canvas.zoomOut}
+                  >
+                    <Minus />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={handleFitView}
+                    title={dict.canvas.fitView}
+                  >
+                    <Maximize />
+                  </ControlButton>
+                  <DownloadButton />
+                </Controls>
+
+                {contextMenu && (
+                  <div
+                    ref={contextMenuRef}
+                    className="context-menu"
+                    style={
+                      {
+                        "--menu-top": `${contextMenu.top}px`,
+                        "--menu-left": `${contextMenu.left}px`,
+                        opacity: 1,
+                      } as React.CSSProperties
+                    }
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {contextMenu.type === "pane" ? (
                       <>
-                        {canManage && (
+                        {!isPreviewMode && (
                           <>
                             <button
-                              onClick={() => handleToggleLock(block.id)}
-                              className="context-menu-item"
-                            >
-                              {isLocked
-                                ? dict.blocks.unlock || "Unlock"
-                                : dict.blocks.lock || "Lock"}
-                            </button>
-                            <button
                               onClick={() => {
-                                setTransferBlock(block);
+                                setIsAddBlockOpen(true);
                                 setContextMenu(null);
                               }}
                               className="context-menu-item"
                             >
-                              {dict.project.transferOwnership ||
-                                "Transfer Ownership"}
+                              {dict.canvas.addBlock || "Add Block"}
                             </button>
                             <div className="context-menu-separator" />
-                            <button
-                              onClick={() => {
-                                if (contextMenuBlock) {
-                                  const skipConfirm =
-                                    typeof window !== "undefined" &&
-                                    localStorage.getItem(
-                                      "ideon_skip_delete_confirm",
-                                    ) === "true";
-
-                                  if (skipConfirm) {
-                                    _handleDeleteBlock(contextMenuBlock.id);
-                                  } else {
-                                    setBlockToDelete(contextMenuBlock.id);
-                                  }
-                                  setContextMenu(null);
-                                }
-                              }}
-                              className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            >
-                              {dict.common.delete || "Delete"}
-                            </button>
                           </>
                         )}
-                        {!canManage && (
-                          <div className="px-3 py-2 text-xs text-gray-500">
-                            {dict.blocks.viewOnly || "View Only"}
-                          </div>
-                        )}
                       </>
-                    );
-                  })()
-                ) : contextMenu.type === "edge" ? (
-                  (() => {
-                    const edgeId = contextMenu.id;
-                    if (!edgeId) return null;
+                    ) : contextMenu.type === "block" ? (
+                      (() => {
+                        const block = contextMenuBlock;
+                        if (!block || !currentUser) return null;
+                        const isOwner =
+                          currentUser.id &&
+                          (block.data as BlockData)?.ownerId === currentUser.id;
+                        const isProjectOwner =
+                          currentUser.id && projectOwnerId === currentUser.id;
+                        const canManage = isOwner || isProjectOwner;
+                        const isLocked = !!(block.data as BlockData).isLocked;
 
-                    return (
-                      <button
-                        onClick={() => {
-                          _deleteLinks([edgeId]);
-                          setContextMenu(null);
-                          triggerAutoSnapshot("Connection deleted");
-                        }}
-                        className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        {dict.common.delete || "Delete"}
-                      </button>
-                    );
-                  })()
-                ) : null}
-              </div>
-            )}
-          </ReactFlow>
-        </UserMapProvider>
+                        return (
+                          <>
+                            {canManage && (
+                              <>
+                                <button
+                                  onClick={() => handleToggleLock(block.id)}
+                                  className="context-menu-item"
+                                >
+                                  {isLocked
+                                    ? dict.blocks.unlock || "Unlock"
+                                    : dict.blocks.lock || "Lock"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setTransferBlock(block);
+                                    setContextMenu(null);
+                                  }}
+                                  className="context-menu-item"
+                                >
+                                  {dict.project.transferOwnership ||
+                                    "Transfer Ownership"}
+                                </button>
+                                <div className="context-menu-separator" />
+                                <button
+                                  onClick={() => {
+                                    if (contextMenuBlock) {
+                                      const skipConfirm =
+                                        typeof window !== "undefined" &&
+                                        localStorage.getItem(
+                                          "ideon_skip_delete_confirm",
+                                        ) === "true";
 
-        <ProjectAccessModal
-          isOpen={isInviteModalOpen}
-          onClose={() => setIsInviteModalOpen(false)}
-          projectId={initialProjectId!}
-          isOwner={currentUserRole === "owner" || currentUserRole === "creator"}
-          currentUserRole={currentUserRole}
-        />
+                                      if (skipConfirm) {
+                                        _handleDeleteBlock(contextMenuBlock.id);
+                                      } else {
+                                        setBlockToDelete(contextMenuBlock.id);
+                                      }
+                                      setContextMenu(null);
+                                    }
+                                  }}
+                                  className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                >
+                                  {dict.common.delete || "Delete"}
+                                </button>
+                              </>
+                            )}
+                            {!canManage && (
+                              <div className="px-3 py-2 text-xs text-gray-500">
+                                {dict.blocks.viewOnly || "View Only"}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()
+                    ) : contextMenu.type === "edge" ? (
+                      (() => {
+                        const edgeId = contextMenu.id;
+                        if (!edgeId) return null;
 
-        <ShareModal
-          isOpen={isShareModalOpen}
-          onClose={() => setIsShareModalOpen(false)}
-          projectId={initialProjectId!}
-          isOwner={currentUser?.id === projectOwnerId}
-          onRegenerate={async (updateContent) => {
-            if (updateContent) {
-              await handleSaveState("Share link regeneration");
-            }
-          }}
-        />
+                        return (
+                          <button
+                            onClick={() => {
+                              _deleteLinks([edgeId]);
+                              setContextMenu(null);
+                              triggerAutoSnapshot("Connection deleted");
+                            }}
+                            className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            {dict.common.delete || "Delete"}
+                          </button>
+                        );
+                      })()
+                    ) : null}
+                  </div>
+                )}
+              </ReactFlow>
+            </DraftsProvider>
+          </UserMapProvider>
 
-        {transferBlock && (
-          <TransferBlockModal
-            isOpen={!!transferBlock}
-            onClose={() => setTransferBlock(null)}
-            blockId={transferBlock.id}
+          <ProjectAccessModal
+            isOpen={isInviteModalOpen}
+            onClose={() => setIsInviteModalOpen(false)}
             projectId={initialProjectId!}
-            currentOwnerId={transferBlock.data.ownerId}
-            onTransfer={async (blockId, newOwnerId) => {
-              handleTransferBlock(blockId, {
-                id: newOwnerId,
-                username: "",
-                displayName: "",
-              });
-              setTransferBlock(null);
-              triggerAutoSnapshot("Block transferred");
+            isOwner={
+              currentUserRole === "owner" || currentUserRole === "creator"
+            }
+            currentUserRole={currentUserRole}
+          />
+
+          <ShareModal
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
+            projectId={initialProjectId!}
+            isOwner={currentUser?.id === projectOwnerId}
+            onRegenerate={async (updateContent) => {
+              if (updateContent) {
+                await handleSaveState("Share link regeneration");
+              }
             }}
           />
-        )}
 
-        <Modal
-          isOpen={!!blockToDelete || blocksToDelete.length > 0}
-          onClose={() => {
-            setBlockToDelete(null);
-            setBlocksToDelete([]);
-          }}
-          title={dict.modals.confirmDelete}
-          className="max-w-md"
-        >
-          <p className="modal-description">
-            {blocksToDelete.length > 0
-              ? dict.modals.deleteBlocksWarning.replace(
-                  "{count}",
-                  blocksToDelete.length.toString(),
-                )
-              : dict.modals.deleteBlockWarning}
-          </p>
-
-          <div className="flex items-center gap-2 mt-4 mb-2">
-            <input
-              type="checkbox"
-              id="dont-ask-again"
-              checked={dontAskAgain}
-              onChange={(e) => setDontAskAgain(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+          {transferBlock && (
+            <TransferBlockModal
+              isOpen={!!transferBlock}
+              onClose={() => setTransferBlock(null)}
+              blockId={transferBlock.id}
+              projectId={initialProjectId!}
+              currentOwnerId={transferBlock.data.ownerId}
+              onTransfer={async (blockId, newOwnerId) => {
+                handleTransferBlock(blockId, {
+                  id: newOwnerId,
+                  username: "",
+                  displayName: "",
+                });
+                setTransferBlock(null);
+                triggerAutoSnapshot("Block transferred");
+              }}
             />
-            <label htmlFor="dont-ask-again" className="text-sm opacity-80">
-              {dict.modals.dontAskAgain}
-            </label>
-          </div>
+          )}
 
-          <div className="flex justify-end gap-3">
-            <Button
-              onClick={() => {
-                setBlockToDelete(null);
-                setBlocksToDelete([]);
-              }}
-              className="btn-ghost"
-            >
-              {dict.common.cancel}
-            </Button>
-            <Button
-              onClick={() => {
-                if (dontAskAgain) {
-                  localStorage.setItem("ideon_skip_delete_confirm", "true");
-                }
-                confirmDelete();
-                triggerAutoSnapshot("Block deleted");
-              }}
-              className="btn-danger"
-            >
-              {dict.common.delete}
-            </Button>
-          </div>
-        </Modal>
+          <Modal
+            isOpen={!!blockToDelete || blocksToDelete.length > 0}
+            onClose={() => {
+              setBlockToDelete(null);
+              setBlocksToDelete([]);
+            }}
+            title={dict.modals.confirmDelete}
+            className="max-w-md"
+          >
+            <p className="modal-description">
+              {blocksToDelete.length > 0
+                ? dict.modals.deleteBlocksWarning.replace(
+                    "{count}",
+                    blocksToDelete.length.toString(),
+                  )
+                : dict.modals.deleteBlockWarning}
+            </p>
 
-        <CommandPalette
-          isOpen={isPaletteOpen}
-          onClose={() => setIsPaletteOpen(false)}
-        />
+            <div className="flex items-center gap-2 mt-4 mb-2">
+              <input
+                type="checkbox"
+                id="dont-ask-again"
+                checked={dontAskAgain}
+                onChange={(e) => setDontAskAgain(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <label htmlFor="dont-ask-again" className="text-sm opacity-80">
+                {dict.modals.dontAskAgain}
+              </label>
+            </div>
 
-        <AddBlockModal
-          isOpen={isAddBlockOpen}
-          onClose={() => setIsAddBlockOpen(false)}
-          onAddBlock={(blockType) => {
-            const id = handleCreateBlock(
-              undefined,
-              undefined,
-              blockType as
-                | "text"
-                | "link"
-                | "file"
-                | "github"
-                | "palette"
-                | "contact"
-                | "video"
-                | "snippet"
-                | "checklist"
-                | "sketch"
-                | "shell",
-            );
-            if (id) {
-              setNewBlockId(id);
-              setTimeout(() => setNewBlockId(null), 800);
-              triggerAutoSnapshot("Block created");
-            }
-            setIsAddBlockOpen(false);
-          }}
-        />
-      </div>
-    </>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={() => {
+                  setBlockToDelete(null);
+                  setBlocksToDelete([]);
+                }}
+                className="btn-ghost"
+              >
+                {dict.common.cancel}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (dontAskAgain) {
+                    localStorage.setItem("ideon_skip_delete_confirm", "true");
+                  }
+                  confirmDelete();
+                  triggerAutoSnapshot("Block deleted");
+                }}
+                className="btn-danger"
+              >
+                {dict.common.delete}
+              </Button>
+            </div>
+          </Modal>
+
+          <CommandPalette
+            isOpen={isPaletteOpen}
+            onClose={() => setIsPaletteOpen(false)}
+          />
+
+          <AddBlockModal
+            isOpen={isAddBlockOpen}
+            onClose={() => setIsAddBlockOpen(false)}
+            onAddBlock={(blockType) => {
+              const id = handleCreateBlock(
+                undefined,
+                undefined,
+                blockType as
+                  | "text"
+                  | "link"
+                  | "file"
+                  | "github"
+                  | "palette"
+                  | "contact"
+                  | "video"
+                  | "snippet"
+                  | "checklist"
+                  | "sketch"
+                  | "shell",
+              );
+              if (id) {
+                setNewBlockId(id);
+                setTimeout(() => setNewBlockId(null), 800);
+                triggerAutoSnapshot("Block created");
+              }
+              setIsAddBlockOpen(false);
+            }}
+          />
+        </div>
+      </>
+    </YDocContext.Provider>
   );
 }
 

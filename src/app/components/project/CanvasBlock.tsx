@@ -900,7 +900,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
               <img
                 src={faviconUrl}
                 alt="favicon"
-                className="w-4 h-4 min-w-[16px] object-contain opacity-80"
+                className="w-4 h-4 min-w-4 object-contain opacity-80"
                 crossOrigin="anonymous"
                 onError={() => setFaviconError(true)}
               />

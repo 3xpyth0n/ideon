@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-03-06
+
+### Fixed
+
+- Fixed multiple sketch block issues, including disappearing or delayed drawings, and improved real-time rendering.
+
 ## [0.5.4] - 2026-03-04
 
 ### Added

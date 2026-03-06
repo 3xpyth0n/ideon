@@ -124,11 +124,137 @@ export const useProjectCanvasRealtime = (
     };
 
     awareness.on("change", throttledUpdateUsers);
+    // BroadcastChannel fallback for same-browser tabs to show presence immediately
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("ideon-presence");
+        bc.onmessage = (ev) => {
+          try {
+            const msg = ev.data as {
+              user?: UserPresence;
+              cursor?: { x: number; y: number } | null;
+              typingBlockId?: string | null;
+              draggingBlockId?: string | null;
+            };
+            if (msg?.user && msg.user.id) {
+              // merge into awareness-derived lists by synthesizing a state
+              type AwarenessState = {
+                user?: UserPresence;
+                cursor?: { x: number; y: number } | null;
+                typingBlockId?: string | null;
+                draggingBlockId?: string | null;
+                caretPosition?: number | null;
+              };
+
+              const existing = Array.from(
+                awareness.getStates().values(),
+              ) as AwarenessState[];
+              // If the user already present via awareness, skip broadcasting merge
+              const already = existing.find(
+                (s: AwarenessState) => s?.user?.id === msg.user?.id,
+              );
+              if (!already) {
+                const state: AwarenessState = {
+                  user: msg.user,
+                  cursor: msg.cursor ?? undefined,
+                  typingBlockId: msg.typingBlockId ?? undefined,
+                  draggingBlockId: msg.draggingBlockId ?? undefined,
+                };
+                // Temporarily update presence lists using same logic as awareness change
+                const users: UserPresence[] = [];
+                const nextCursors = new Map<string, { x: number; y: number }>();
+                // include synthesized state first
+                if (state.user) {
+                  users.push({
+                    id: state.user.id,
+                    username: state.user.username,
+                    displayName: state.user.displayName,
+                    avatarUrl: state.user.avatarUrl ?? null,
+                    color: state.user.color,
+                    isTyping: !!state.typingBlockId,
+                    typingBlockId: state.typingBlockId ?? null,
+                    draggingBlockId: state.draggingBlockId ?? null,
+                    cursor: state.cursor
+                      ? {
+                          ...state.cursor,
+                          index: state.caretPosition ?? undefined,
+                        }
+                      : undefined,
+                  });
+                  if (state.cursor) {
+                    nextCursors.set(state.user.id, {
+                      x: state.cursor.x,
+                      y: state.cursor.y,
+                    });
+                  }
+                }
+
+                // merge with awareness-derived users
+                try {
+                  const states = awareness.getStates() as Map<
+                    number,
+                    AwarenessState
+                  >;
+                  states.forEach((s: AwarenessState) => {
+                    if (s.user) {
+                      users.push({
+                        id: s.user.id,
+                        username: s.user.username,
+                        displayName: s.user.displayName,
+                        avatarUrl: s.user.avatarUrl ?? null,
+                        color: s.user.color,
+                        isTyping: !!s.typingBlockId,
+                        typingBlockId: s.typingBlockId ?? null,
+                        draggingBlockId: s.draggingBlockId ?? null,
+                        cursor: s.cursor
+                          ? {
+                              x: s.cursor.x,
+                              y: s.cursor.y,
+                              index: s.caretPosition ?? undefined,
+                            }
+                          : undefined,
+                      });
+                      if (s.cursor && s.user)
+                        nextCursors.set(s.user.id, {
+                          x: s.cursor.x,
+                          y: s.cursor.y,
+                        });
+                    }
+                  });
+                } catch {
+                  // ignore
+                }
+
+                const unique = uniqueById(users);
+                // Update cursor ref and presence state similarly
+                remoteCursorsRef.current = nextCursors;
+                if (presenceChanged(prevPresenceRef.current, unique)) {
+                  prevPresenceRef.current = unique;
+                  setPresenceUsers(unique);
+                }
+              }
+            }
+          } catch {
+            // ignore
+          }
+        };
+      }
+    } catch {
+      bc = null;
+    }
     updateUsers();
 
     return () => {
       awareness.off("change", throttledUpdateUsers);
       if (throttleTimer) clearTimeout(throttleTimer);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {
+          // ignore
+        }
+      }
     };
   }, [awareness]);
 
@@ -143,6 +269,16 @@ export const useProjectCanvasRealtime = (
       Object.entries(presence).forEach(([key, value]) => {
         awareness.setLocalStateField(key, value);
       });
+      // broadcast local presence to other tabs for immediate visibility
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const bc = new BroadcastChannel("ideon-presence");
+          bc.postMessage({ user: currentUser, ...presence });
+          bc.close();
+        }
+      } catch {
+        // ignore
+      }
     },
     [awareness, currentUser],
   );

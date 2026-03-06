@@ -17,7 +17,6 @@
 .handle::before {
   content: "";
   position: absolute;
-  /* background-color: rgba(255, 0, 0, 0.05); Removed debug color */
   border-radius: 4px;
   z-index: -1;
   pointer-events: auto;
@@ -119,11 +118,6 @@
   left: 0;
 }
 
-/* Visual Dot removed as per request */
 .handle::after {
   display: none;
-}
-
-.handle:hover::before {
-  /* background-color: rgba(0, 0, 0, 0.1); Removed debug hover effect */
 }

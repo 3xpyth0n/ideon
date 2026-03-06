@@ -10,6 +10,7 @@ import { useProjectCanvasRealtime } from "./useProjectCanvasRealtime";
 import { useUndoRedo } from "./useUndoRedo";
 import { useProjectData } from "./useProjectData";
 import { BlockData } from "@components/project/CanvasBlock";
+import type { DraftsMap } from "@components/project/DraftsContext";
 import {
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
@@ -34,6 +35,9 @@ const cleanBlockDataForSync = (
   delete rest.currentUser;
   delete rest.initialProjectId;
   delete rest.projectOwnerId;
+  const restAny = rest as unknown as Record<string, unknown>;
+  delete restAny.drafts;
+  delete restAny._yDoc;
   return rest;
 };
 
@@ -57,6 +61,7 @@ export const useProjectCanvasState = (
   yBlocks: Y.Map<Node<BlockData>> | null,
   yLinks: Y.Map<Edge> | null,
   yContents: Y.Map<Y.Text> | null,
+  yDoc: Y.Doc | null,
   awareness: Awareness | null,
   isLocalSynced: boolean = false,
   isRemoteSynced: boolean = false,
@@ -68,6 +73,7 @@ export const useProjectCanvasState = (
 
   const [blocks, setBlocksState] = useState<Node<BlockData>[]>([]);
   const [links, setLinksState] = useState<Edge[]>([]);
+  const [draftsByBlock, setDraftsByBlock] = useState<DraftsMap>({});
   const [projectOwnerId, setProjectOwnerId] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewModeState] = useState(false);
   const isPreviewModeRef = useRef(false);
@@ -112,6 +118,11 @@ export const useProjectCanvasState = (
   useEffect(() => {
     if (!yBlocks || !yLinks || !yContents || isReadOnly) return;
 
+    // Drafts map (flat): keys are `${blockId}::${clientId}` -> stringified draft
+    const yDrafts: Y.Map<string> | null = yDoc
+      ? (yDoc.getMap("drafts") as Y.Map<string>)
+      : null;
+
     const updateBlocksFromYjs = (
       event: Y.YMapEvent<Node<BlockData>>,
       transaction: Y.Transaction,
@@ -150,9 +161,12 @@ export const useProjectCanvasState = (
                     ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
                     : rn.position,
                 data: {
-                  ...rn.data,
+                  ...(rn.data as unknown as Record<string, unknown>),
                   yText,
-                  content: yText ? yText.toString() : rn.data?.content || "",
+                  content: yText
+                    ? yText.toString()
+                    : (rn.data as unknown as { content?: string }).content ||
+                      "",
                 },
               };
 
@@ -160,12 +174,12 @@ export const useProjectCanvasState = (
                 next[index] = {
                   ...syncedBlock,
                   selected: next[index].selected,
-                };
+                } as unknown as Node<BlockData>;
               } else {
                 next.push({
                   ...syncedBlock,
                   selected: false,
-                } as Node<BlockData>);
+                } as unknown as Node<BlockData>);
               }
               hasChanges = true;
             }
@@ -275,9 +289,31 @@ export const useProjectCanvasState = (
       });
     };
 
+    const updateDraftsFromYjs = () => {
+      const map: DraftsMap = {};
+      if (yDrafts) {
+        yDrafts.forEach((v, k) => {
+          const parts = String(k).split("::");
+          if (parts.length < 2) return;
+          const blockId = parts[0];
+          const clientId = parts[1];
+          try {
+            const parsed = typeof v === "string" ? JSON.parse(v) : v;
+            map[blockId] = map[blockId] || {};
+            map[blockId][clientId] = parsed;
+          } catch {
+            map[blockId] = map[blockId] || {};
+            map[blockId][clientId] = v as unknown as Record<string, unknown>;
+          }
+        });
+      }
+      setDraftsByBlock(map);
+    };
+
     yBlocks.observe(updateBlocksFromYjs);
     yLinks.observe(updateLinksFromYjs);
     yContents.observe(updateContentsFromYjs);
+    if (yDrafts) yDrafts.observe(updateDraftsFromYjs);
 
     // Initial sync
     const initialBlocks = Array.from(yBlocks.values());
@@ -296,15 +332,40 @@ export const useProjectCanvasState = (
               ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
               : rn.position,
           data: {
-            ...rn.data,
+            ...(rn.data as unknown as Record<string, unknown>),
             yText,
-            content: yText ? yText.toString() : rn.data?.content || "",
+            content: yText
+              ? yText.toString()
+              : (rn.data as unknown as { content?: string }).content || "",
           },
         } as Node<BlockData>;
       }),
     );
 
     setLinksState(initialLinks.map((rl) => ({ ...rl, selected: false })));
+
+    // Initialize drafts state from Yjs drafts map
+    const initialDrafts: DraftsMap = {};
+    if (yDrafts) {
+      yDrafts.forEach((v, k) => {
+        const parts = String(k).split("::");
+        if (parts.length < 2) return;
+        const blockId = parts[0];
+        const clientId = parts[1];
+        try {
+          const parsed = typeof v === "string" ? JSON.parse(v) : v;
+          initialDrafts[blockId] = initialDrafts[blockId] || {};
+          initialDrafts[blockId][clientId] = parsed;
+        } catch {
+          initialDrafts[blockId] = initialDrafts[blockId] || {};
+          initialDrafts[blockId][clientId] = v as unknown as Record<
+            string,
+            unknown
+          >;
+        }
+      });
+    }
+    setDraftsByBlock(initialDrafts);
 
     if (initialBlocks.length > 0 || initialLinks.length > 0) {
       isInitialized.current = true;
@@ -323,6 +384,7 @@ export const useProjectCanvasState = (
       yBlocks.unobserve(updateBlocksFromYjs);
       yLinks.unobserve(updateLinksFromYjs);
       yContents.unobserve(updateContentsFromYjs);
+      if (yDrafts) yDrafts.unobserve(updateDraftsFromYjs);
     };
   }, [yBlocks, yLinks, yContents, isPreviewMode]);
 
@@ -342,6 +404,8 @@ export const useProjectCanvasState = (
             ? { ...n, position: { x: CORE_BLOCK_X, y: CORE_BLOCK_Y } }
             : n,
         );
+
+        const enrichedNextBlocks = nextBlocks;
 
         if (!isPreviewModeRef.current) {
           yBlocks.doc?.transact(() => {
@@ -426,7 +490,8 @@ export const useProjectCanvasState = (
           }, yBlocks.doc.clientID);
         }
 
-        return nextBlocks;
+        // Return blocks
+        return enrichedNextBlocks as unknown as Node<BlockData>[];
       });
     },
     [yBlocks, yContents],
@@ -552,6 +617,107 @@ export const useProjectCanvasState = (
       clear();
     },
     [yBlocks, yLinks, yContents, clear],
+  );
+
+  // Drafts API: keep drafts in separate state to avoid polluting BlockData
+  const getDraftsForBlock = useCallback(
+    (blockId: string) => draftsByBlock[blockId],
+    [draftsByBlock],
+  );
+
+  // Refs for debounced draft commits
+  const draftTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const pendingDraftsRef = useRef<Map<string, string | null>>(new Map());
+
+  // Flush any pending drafts on unmount to ensure final state is persisted.
+  useEffect(() => {
+    return () => {
+      if (!yDoc) return;
+      const yDrafts = yDoc.getMap("drafts") as Y.Map<string> | undefined;
+      if (!yDrafts) return;
+      pendingDraftsRef.current.forEach((payload, key) => {
+        try {
+          if (payload === null) {
+            yDoc.transact(() => yDrafts.delete(key), yDoc.clientID);
+          } else if (typeof payload === "string") {
+            yDoc.transact(() => yDrafts.set(key, payload), yDoc.clientID);
+          }
+        } catch {
+          // ignore
+        }
+      });
+      pendingDraftsRef.current.clear();
+      draftTimersRef.current.forEach((t) => clearTimeout(t));
+      draftTimersRef.current.clear();
+    };
+  }, [yDoc]);
+
+  const writeDraft = useCallback(
+    (
+      blockId: string,
+      clientId: string,
+      draft: Record<string, unknown> | null,
+    ) => {
+      if (!yDoc) return;
+      // Debounced draft writer: batch frequent pointer-move updates to avoid
+      // overwhelming the websocket with tiny updates. Deletes are applied
+      // immediately to ensure ephemeral drafts are removed on pointerUp.
+      try {
+        const yDrafts = yDoc.getMap("drafts") as Y.Map<string> | undefined;
+        if (!yDrafts) return;
+        const key = `${blockId}::${clientId}`;
+
+        // init refs for debounce timers and pending payloads
+        if (!(draftTimersRef.current instanceof Map)) {
+          draftTimersRef.current = new Map<string, NodeJS.Timeout>();
+        }
+        if (!(pendingDraftsRef.current instanceof Map)) {
+          pendingDraftsRef.current = new Map<string, string | null>();
+        }
+
+        // If deleting, apply immediately and clear any pending timer.
+        if (draft === null) {
+          const timer = draftTimersRef.current.get(key);
+          if (timer) {
+            clearTimeout(timer);
+            draftTimersRef.current.delete(key);
+            pendingDraftsRef.current.delete(key);
+          }
+          yDoc.transact(() => {
+            yDrafts.delete(key);
+          }, yDoc.clientID);
+          return;
+        }
+
+        // Otherwise schedule a short debounce before committing the draft.
+        pendingDraftsRef.current.set(key, JSON.stringify(draft));
+        const existing = draftTimersRef.current.get(key);
+        if (existing) clearTimeout(existing);
+        const timer = setTimeout(() => {
+          const payload = pendingDraftsRef.current.get(key);
+          pendingDraftsRef.current.delete(key);
+          draftTimersRef.current.delete(key);
+          if (typeof payload === "string") {
+            try {
+              yDoc.transact(() => {
+                yDrafts.set(key, payload);
+              }, yDoc.clientID);
+            } catch {
+              // ignore
+            }
+          }
+        }, 10);
+        draftTimersRef.current.set(key, timer);
+      } catch {
+        // ignore
+      }
+    },
+    [yDoc],
+  );
+
+  const deleteDraft = useCallback(
+    (blockId: string, clientId: string) => writeDraft(blockId, clientId, null),
+    [writeDraft],
   );
 
   const [isLoading, setIsLoading] = useState(false);
@@ -777,17 +943,11 @@ export const useProjectCanvasState = (
       if (id) onGraphMutation?.("Block created");
       return id;
     },
-    [
-      graph.handleCreateBlock,
-      hasSeenOnboarding,
-      markOnboardingSeen,
-      onGraphMutation,
-    ],
+    [graph, hasSeenOnboarding, markOnboardingSeen, onGraphMutation],
   );
 
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
-      // 1. Guard: Check if focused element is an input or textarea
       const activeElement = document.activeElement;
       if (
         activeElement &&
@@ -798,7 +958,6 @@ export const useProjectCanvasState = (
         return;
       }
 
-      // 2. Get cursor position for new block
       const pos = screenToFlowPosition({
         x: mousePosRef.current.x,
         y: mousePosRef.current.y,
@@ -1534,6 +1693,10 @@ export const useProjectCanvasState = (
     handleCreateBlock: handleCreateBlockWrapper,
     presenceUsers: rt.presenceUsers,
     remoteCursorsRef: rt.remoteCursorsRef,
+    draftsByBlock,
+    getDraftsForBlock,
+    writeDraft,
+    deleteDraft,
     shareCursor,
     setShareCursor,
     projectOwnerId,
@@ -1543,5 +1706,6 @@ export const useProjectCanvasState = (
     canRedo,
     hasSeenOnboarding,
     markOnboardingSeen,
+    updateMyPresence: rt.updateMyPresence,
   };
 };

@@ -262,6 +262,17 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const [isRemoteSynced, setIsRemoteSynced] = useState(false);
   const [isAccessValidated, setIsAccessValidated] = useState(false);
 
+  const dictRef = useRef(dict);
+  const routerRef = useRef(router);
+
+  useEffect(() => {
+    dictRef.current = dict;
+  }, [dict]);
+
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
   useEffect(() => {
     // Validate access on mount to prevent cached access
     const validateAccess = async () => {
@@ -274,14 +285,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         setCurrentUserRole(data.role);
         setIsAccessValidated(true);
       } catch {
-        toast.error(dict.common.accessRevoked || "Access revoked");
-        router.push("/home");
+        toast.error(dictRef.current.common.accessRevoked || "Access revoked");
+        routerRef.current.push("/home");
       }
     };
 
     validateAccess();
 
-    // Handle BFCache
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
         setIsAccessValidated(false);
@@ -291,7 +301,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
     window.addEventListener("pageshow", handlePageShow);
     return () => window.removeEventListener("pageshow", handlePageShow);
-  }, [initialProjectId, router, dict]);
+  }, [initialProjectId]);
 
   useEffect(() => {
     if (user) {
@@ -310,35 +320,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     provider: WebsocketProvider;
   } | null>(null);
 
-  // Ref to persist Yjs resources across StrictMode double-mount.
-  // Without this, StrictMode destroys the WebSocket on fake cleanup,
-  // and the browser throttles the reconnection for ~30-40s.
-  const yjsRef = useRef<{
-    projectId: string;
-    yDoc: Y.Doc;
-    provider: WebsocketProvider;
-    idb: IndexeddbPersistence;
-  } | null>(null);
-
   useEffect(() => {
     if (typeof window === "undefined" || !initialProjectId) return;
-
-    // StrictMode re-mount: reuse existing resources if same project
-    if (yjsRef.current && yjsRef.current.projectId === initialProjectId) {
-      setYjsData({
-        yDoc: yjsRef.current.yDoc,
-        provider: yjsRef.current.provider,
-      });
-      return;
-    }
-
-    // Different project or first mount — clean up old resources if any
-    if (yjsRef.current) {
-      yjsRef.current.provider.destroy();
-      yjsRef.current.idb.destroy();
-      yjsRef.current.yDoc.destroy();
-      yjsRef.current = null;
-    }
 
     const doc = new Y.Doc();
     const wsProvider = new WebsocketProvider(
@@ -347,23 +330,18 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       }/yjs`,
       `project-${initialProjectId}`,
       doc,
-      { connect: true, params: {} },
+      { connect: true },
     );
 
     wsProvider.on("sync", (data: boolean) => {
-      try {
-        setIsRemoteSynced(data);
-      } catch (error) {
-        console.error("Failed to update remote sync status:", error);
-      }
+      setIsRemoteSynced(data);
     });
 
-    // Listen for access revocation
     wsProvider.on("connection-close", (event: { code?: number } | null) => {
-      if (event && event.code === 4003) {
+      if (event?.code === 4003) {
         wsProvider.disconnect();
-        toast.error(dict.common.accessRevoked || "Access revoked");
-        router.push("/home");
+        toast.error(dictRef.current.common.accessRevoked || "Access revoked");
+        routerRef.current.push("/home");
       }
     });
 
@@ -376,32 +354,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       setIsLocalSynced(true);
     });
 
-    yjsRef.current = {
-      projectId: initialProjectId,
-      yDoc: doc,
-      provider: wsProvider,
-      idb: indexeddbProvider,
-    };
-
     setYjsData({ yDoc: doc, provider: wsProvider });
 
-    // No cleanup here — resources are managed via yjsRef.
-    // True cleanup happens when projectId changes (above) or on unmount (below).
-  }, [initialProjectId]);
-
-  // True cleanup only on component unmount (route change)
-  useEffect(() => {
     return () => {
-      if (yjsRef.current) {
-        yjsRef.current.provider.destroy();
-        yjsRef.current.idb.destroy();
-        yjsRef.current.yDoc.destroy();
-        yjsRef.current = null;
-        setIsLocalSynced(false);
-        setIsRemoteSynced(false);
-      }
+      wsProvider.destroy();
+      indexeddbProvider.destroy();
+      doc.destroy();
     };
-  }, []);
+  }, [initialProjectId]);
 
   const { yDoc, provider } = yjsData || { yDoc: null, provider: null };
 

@@ -389,14 +389,22 @@ initDb()
     server.on("upgrade", async (request, socket, head) => {
       const origin = request.headers.origin;
       const appUrl = process.env.APP_URL;
+      const xForwardedProto = (
+        request.headers["x-forwarded-proto"] || ""
+      ).toString();
 
-      // In production, we expect APP_URL to be set and match the origin
-      if (process.env.NODE_ENV === "production" && appUrl) {
-        if (!origin || origin !== appUrl) {
-          logger.warn(
-            { origin, ip: request.socket.remoteAddress },
-            "[CSWSH] Blocked WebSocket connection with invalid origin",
-          );
+      if (process.env.NODE_ENV === "production" && appUrl && origin) {
+        const normalizedOrigin = origin.toLowerCase();
+        const normalizedAppUrl = appUrl.toLowerCase();
+
+        let isValid = normalizedOrigin === normalizedAppUrl;
+
+        if (!isValid && xForwardedProto === "https") {
+          const reconstructedUrl = `https://${request.headers.host || ""}`;
+          isValid = normalizedOrigin === reconstructedUrl.toLowerCase();
+        }
+
+        if (!isValid) {
           socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
           socket.destroy();
           return;
@@ -444,7 +452,6 @@ initDb()
       } else if (pathname?.startsWith("/yjs")) {
         const docName = pathname.split("/").pop() || "default";
 
-        // Security: Validate Authentication and Project Access
         const userId = await validateWebsocketRequest(request, docName);
 
         if (!userId) {
@@ -453,7 +460,6 @@ initDb()
           return;
         }
 
-        // Attach userId to request to pass it to connection handler
         (request as IncomingMessage & { userId: string }).userId = userId;
 
         wss.handleUpgrade(request, socket, head, (ws) => {
@@ -467,11 +473,9 @@ initDb()
     });
 
     wss.on("connection", (ws, req) => {
-      // y-websocket sends room name as the last part of the path: /yjs/room-name
       const { pathname } = new URL(req.url!, `http://${hostname}:${port}`);
       const docName = pathname?.split("/").pop() || "default";
 
-      // Attach userId to websocket instance
       (ws as WebSocket & { userId: string }).userId = (
         req as IncomingMessage & { userId: string }
       ).userId;
@@ -479,33 +483,6 @@ initDb()
       setupWSConnection(ws, req, {
         docName,
         gc: true,
-      });
-
-      ws.on("close", () => {
-        const doc = docs.get(docName);
-        if (doc && doc.conns.size === 0) {
-          // If this was the last connection, destroy the doc and remove from map
-          setTimeout(async () => {
-            const currentDoc = docs.get(docName);
-            if (currentDoc && currentDoc.conns.size === 0) {
-              // Compact document: clear history and save snapshot
-              try {
-                const snapshot = Y.encodeStateAsUpdate(currentDoc);
-                // Ensure we don't lose data if clear fails, but ldb.clearDocument is standard in y-leveldb
-                await ldb.clearDocument(docName);
-                await ldb.storeUpdate(docName, snapshot);
-              } catch (err) {
-                logger.error(
-                  { err, docName },
-                  "[Compaction] Failed to compact document",
-                );
-              }
-
-              currentDoc.destroy();
-              docs.delete(docName);
-            }
-          }, 600000);
-        }
       });
     });
 
@@ -515,6 +492,32 @@ initDb()
         shellProjectId: string;
       };
       handleShellConnection(ws, typedReq.userId, typedReq.shellProjectId);
+    });
+
+    const INACTIVE_DOC_THRESHOLD_MS = 60 * 60 * 1000;
+    const gcInterval = setInterval(() => {
+      const now = Date.now();
+
+      for (const [name, doc] of docs.entries()) {
+        if (
+          doc.conns.size === 0 &&
+          now - (doc.createdAt ?? now) > INACTIVE_DOC_THRESHOLD_MS
+        ) {
+          try {
+            doc.destroy();
+            docs.delete(name);
+          } catch (err) {
+            logger.error(
+              { err, docName: name },
+              "[GC] Failed to destroy document",
+            );
+          }
+        }
+      }
+    }, 300000);
+
+    server.on("close", () => {
+      clearInterval(gcInterval);
     });
 
     server.listen(port, () => {

@@ -78,12 +78,14 @@ export class WSSharedDoc extends Y.Doc {
   name: string;
   conns: Map<WebSocket, Set<number>>;
   awareness: awarenessProtocol.Awareness;
+  createdAt: number;
 
   constructor(name: string) {
     super({ gc: gcEnabled });
     this.name = name;
     this.conns = new Map();
     this.awareness = new awarenessProtocol.Awareness(this);
+    this.createdAt = Date.now();
     this.awareness.setLocalState(null);
 
     const awarenessChangeHandler = (

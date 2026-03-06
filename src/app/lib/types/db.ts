@@ -131,6 +131,7 @@ export interface blocksTable {
     | "video"
     | "snippet"
     | "checklist"
+    | "kanban"
     | "sketch"
     | "shell";
   metadata: string; // JSON string

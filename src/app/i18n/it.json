@@ -490,6 +490,13 @@
     "users": "Membri del Team",
     "usersSubtitle": "Gestisci la forza lavoro collaborativa del tuo progetto"
   },
+  "kanban": {
+    "addColumn": "Aggiungi colonna",
+    "addTask": "Aggiungi attività",
+    "defaultColumnTitle": "Titolo",
+    "deleteColumn": "Elimina colonna",
+    "deleteTask": "Elimina attività"
+  },
   "providers": {
     "callbackUrlNotice": "È necessario aggiungere questo URL di callback alla configurazione del provider di identità:",
     "clientId": "ID Cliente",

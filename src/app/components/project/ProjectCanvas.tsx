@@ -28,6 +28,7 @@ import SketchBlock from "./SketchBlock";
 import ShellBlock from "./ShellBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
+import KanbanBlock from "./KanbanBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import CommandPalette from "./CommandPalette";
@@ -243,6 +244,7 @@ const blockTypes = {
   video: VideoBlock,
   snippet: SnippetBlock,
   checklist: ChecklistBlock,
+  kanban: KanbanBlock,
   sketch: SketchBlock,
   shell: ShellBlock,
   core: ProjectCoreBlock,

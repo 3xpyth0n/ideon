@@ -100,6 +100,7 @@
     "blockTypeCore": "Core",
     "blockTypeFile": "File",
     "blockTypeGit": "Git Repo",
+    "blockTypeKanban": "Kanban",
     "blockTypeLink": "Link",
     "blockTypePalette": "Palette",
     "blockTypeShell": "Shell",
@@ -489,6 +490,13 @@
     "userAdded": "Added",
     "users": "Team Members",
     "usersSubtitle": "Manage your project's collaborative workforce"
+  },
+  "kanban": {
+    "addColumn": "Add Column",
+    "addTask": "Add task",
+    "defaultColumnTitle": "Title",
+    "deleteColumn": "Delete Column",
+    "deleteTask": "Delete task"
   },
   "providers": {
     "callbackUrlNotice": "You need to add this callback URL to your identity provider configuration:",

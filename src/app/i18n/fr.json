@@ -100,6 +100,7 @@
     "blockTypeCore": "Cœur",
     "blockTypeFile": "Fichier",
     "blockTypeGit": "Dépôt Git",
+    "blockTypeKanban": "Kanban",
     "blockTypeLink": "Lien",
     "blockTypePalette": "Palette",
     "blockTypeShell": "Terminal",
@@ -489,6 +490,13 @@
     "userAdded": "Ajouté",
     "users": "Membres de l'équipe",
     "usersSubtitle": "Gérez les collaborateurs de votre projet"
+  },
+  "kanban": {
+    "addColumn": "Ajouter une colonne",
+    "addTask": "Ajouter une tâche",
+    "defaultColumnTitle": "Titre",
+    "deleteColumn": "Supprimer la colonne",
+    "deleteTask": "Supprimer la tâche"
   },
   "providers": {
     "callbackUrlNotice": "Vous devez ajouter cette URL de callback dans la configuration de votre fournisseur d'identité :",

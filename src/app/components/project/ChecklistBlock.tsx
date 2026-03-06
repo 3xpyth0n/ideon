@@ -126,8 +126,15 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
   const [title, setTitle] = useState(data.title || "");
-  const [isDragOverContainer, setIsDragOverContainer] = useState(false);
+  const [, setIsDragOverContainer] = useState(false);
   const dragCounter = useRef(0);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+  const [dragTaskPreview, setDragTaskPreview] = useState<{
+    text: string;
+    checked: boolean;
+    depth: number;
+  } | null>(null);
+  const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (data.title !== undefined && data.title !== title) {
@@ -395,12 +402,53 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     [items, isReadOnly, handleAddItem, handleDeleteItem, handleChangeItemDepth],
   );
 
+  const clearDragPreview = () => {
+    setDragTaskPreview(null);
+    setDropTargetIndex(null);
+    setDragSourceIndex(null);
+  };
+
+  const syncDragPreviewFromEvent = (e: React.DragEvent): boolean => {
+    const raw = e.dataTransfer.getData("application/json");
+    if (!raw) return false;
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        kind?: string;
+        text?: unknown;
+        checked?: unknown;
+        depth?: unknown;
+      };
+
+      if (parsed.kind === "checklist-item" || parsed.kind === "kanban-task") {
+        setDragTaskPreview({
+          text:
+            typeof parsed.text === "string"
+              ? parsed.text
+              : dict.blocks.taskPlaceholder || "Task",
+          checked: Boolean(parsed.checked),
+          depth: typeof parsed.depth === "number" ? parsed.depth : 0,
+        });
+        return true;
+      }
+    } catch {
+      return false;
+    }
+
+    return false;
+  };
+
   // Drag and Drop Handlers
-  const handleDragStart = (e: React.DragEvent, item: ChecklistItem) => {
+  const handleDragStart = (
+    e: React.DragEvent,
+    item: ChecklistItem,
+    index: number,
+  ) => {
     if (isReadOnly) return;
     e.dataTransfer.setData(
       "application/json",
       JSON.stringify({
+        kind: "checklist-item",
         itemId: item.id,
         sourceBlockId: id,
         text: item.text,
@@ -409,34 +457,106 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       }),
     );
     e.dataTransfer.effectAllowed = "move";
+    setDragTaskPreview({
+      text: item.text,
+      checked: item.checked,
+      depth: item.depth || 0,
+    });
+    setDragSourceIndex(index);
+
+    const dragImage = document.createElement("div");
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-9999px";
+    dragImage.style.padding = "8px 12px";
+    dragImage.style.backgroundColor = "var(--bg-island)";
+    dragImage.style.color = "var(--text-main)";
+    dragImage.style.border = "1px solid var(--border)";
+    dragImage.style.borderRadius = "6px";
+    dragImage.style.fontSize = "14px";
+    dragImage.style.maxWidth = "280px";
+    dragImage.style.opacity = "1";
+    dragImage.style.pointerEvents = "none";
+    dragImage.textContent = `${item.checked ? "☑" : "☐"} ${item.text}`;
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    if (isReadOnly) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = "move";
+  const handleDragEnd = () => {
+    clearDragPreview();
+    setIsDragOverContainer(false);
+    dragCounter.current = 0;
   };
 
-  const handleItemDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+  useEffect(() => {
+    const handleGlobalDragReset = () => {
+      clearDragPreview();
+      setIsDragOverContainer(false);
+      dragCounter.current = 0;
+    };
 
-  const handleItemDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+    window.addEventListener("drop", handleGlobalDragReset);
+    window.addEventListener("dragend", handleGlobalDragReset);
+
+    return () => {
+      window.removeEventListener("drop", handleGlobalDragReset);
+      window.removeEventListener("dragend", handleGlobalDragReset);
+    };
+  }, []);
 
   const handleContainerDragOver = (e: React.DragEvent) => {
     if (isReadOnly) return;
     e.preventDefault();
+    e.stopPropagation();
+
+    const hasValidPayload = syncDragPreviewFromEvent(e);
+    if (!hasValidPayload && !dragTaskPreview) return;
+
+    const container = e.currentTarget as HTMLElement;
+    const itemElements = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        ".checklist-item[data-item-index]",
+      ),
+    );
+
+    let insertionIndex = items.length;
+    const deadZone = 8;
+
+    for (const el of itemElements) {
+      const idxStr = el.dataset.itemIndex;
+      if (typeof idxStr !== "string") continue;
+      const idx = Number(idxStr);
+      if (Number.isNaN(idx)) continue;
+
+      const rect = el.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      const distance = Math.abs(e.clientY - midpoint);
+
+      if (distance <= deadZone) {
+        const currentIndex = dropTargetIndex;
+        if (currentIndex === idx || currentIndex === idx + 1) {
+          insertionIndex = currentIndex;
+          break;
+        }
+      }
+
+      if (e.clientY < midpoint) {
+        insertionIndex = idx;
+        break;
+      }
+
+      insertionIndex = idx + 1;
+    }
+
+    const boundedIndex = Math.max(0, Math.min(insertionIndex, items.length));
+    setDropTargetIndex((prev) => (prev === boundedIndex ? prev : boundedIndex));
     e.dataTransfer.dropEffect = "move";
   };
 
   const handleContainerDragEnter = (e: React.DragEvent) => {
     if (isReadOnly) return;
     e.preventDefault();
+    syncDragPreviewFromEvent(e);
     dragCounter.current += 1;
     if (dragCounter.current === 1) {
       setIsDragOverContainer(true);
@@ -448,6 +568,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     dragCounter.current -= 1;
     if (dragCounter.current === 0) {
       setIsDragOverContainer(false);
+      setDropTargetIndex(null);
     }
   };
 
@@ -456,6 +577,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
       if (isReadOnly) return;
       e.preventDefault();
       e.stopPropagation();
+      clearDragPreview();
       setIsDragOverContainer(false);
       dragCounter.current = 0;
 
@@ -463,17 +585,83 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         const dataStr = e.dataTransfer.getData("application/json");
         if (!dataStr) return;
 
-        const { itemId, sourceBlockId, text, checked, depth } =
-          JSON.parse(dataStr);
+        const parsed = JSON.parse(dataStr) as {
+          kind?: string;
+          itemId?: string;
+          sourceBlockId?: string;
+          sourceColumnId?: string;
+          text?: string;
+          checked?: boolean;
+          depth?: number;
+        };
+
+        if (
+          parsed.kind &&
+          parsed.kind !== "checklist-item" &&
+          parsed.kind !== "kanban-task"
+        ) {
+          return;
+        }
+
+        if (typeof parsed.itemId !== "string") return;
+        if (typeof parsed.sourceBlockId !== "string") return;
+
+        const itemId = parsed.itemId;
+        const sourceBlockId = parsed.sourceBlockId;
+        const sourceColumnId =
+          typeof parsed.sourceColumnId === "string"
+            ? parsed.sourceColumnId
+            : undefined;
+        const checked = Boolean(parsed.checked);
+        const depth = typeof parsed.depth === "number" ? parsed.depth : 0;
+
+        let text = typeof parsed.text === "string" ? parsed.text : "";
+
+        if (!text) {
+          const sourceNode = getNode(sourceBlockId);
+          if (sourceNode?.data) {
+            const sourceData = sourceNode.data as BlockData;
+            if (sourceData.blockType === "kanban") {
+              const sourceMeta =
+                typeof sourceData.metadata === "string"
+                  ? JSON.parse(sourceData.metadata)
+                  : sourceData.metadata || {};
+              const sourceColumns = Array.isArray(sourceMeta.columns)
+                ? sourceMeta.columns
+                : [];
+
+              for (const col of sourceColumns) {
+                if (
+                  sourceColumnId &&
+                  typeof col?.id === "string" &&
+                  col.id !== sourceColumnId
+                ) {
+                  continue;
+                }
+                const tasks = Array.isArray(col?.tasks) ? col.tasks : [];
+                const task = tasks.find(
+                  (t: { id?: string }) => t.id === itemId,
+                );
+                if (task && typeof task.text === "string") {
+                  text = task.text;
+                  break;
+                }
+              }
+            }
+          }
+        }
 
         if (sourceBlockId === id) {
           // Reorder locally
           const oldIndex = items.findIndex((i) => i.id === itemId);
           if (oldIndex === -1) return;
 
+          if (oldIndex === targetIndex || oldIndex + 1 === targetIndex) {
+            return;
+          }
+
           const newItems = [...items];
           const [movedItem] = newItems.splice(oldIndex, 1);
-          // Adjust target index if we moved from above
           const adjustedTargetIndex =
             oldIndex < targetIndex ? targetIndex - 1 : targetIndex;
           newItems.splice(adjustedTargetIndex, 0, movedItem);
@@ -496,25 +684,59 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           const sourceNode = getNode(sourceBlockId);
           if (sourceNode && sourceNode.data) {
             const sourceData = sourceNode.data as BlockData;
-            const sourceMeta =
-              typeof sourceData.metadata === "string"
-                ? JSON.parse(sourceData.metadata)
-                : sourceData.metadata || {};
+            if (sourceData.blockType === "kanban") {
+              const sourceMeta =
+                typeof sourceData.metadata === "string"
+                  ? JSON.parse(sourceData.metadata)
+                  : sourceData.metadata || {};
 
-            const sourceItems = sourceMeta.items || [];
-            const newSourceItems = sourceItems.filter(
-              (i: ChecklistItem) => i.id !== itemId,
-            );
+              const sourceColumns = Array.isArray(sourceMeta.columns)
+                ? sourceMeta.columns
+                : [];
 
-            data.onContentChange?.(
-              sourceBlockId,
-              sourceData.content,
-              new Date().toISOString(),
-              currentUser?.displayName || "Anonymous",
-              JSON.stringify({ ...sourceMeta, items: newSourceItems }),
-              sourceData.title,
-              sourceData.reactions,
-            );
+              const newSourceColumns = sourceColumns.map(
+                (col: { id?: string; tasks?: ChecklistItem[] }) => {
+                  if (sourceColumnId && col.id !== sourceColumnId) {
+                    return col;
+                  }
+                  const tasks = Array.isArray(col.tasks) ? col.tasks : [];
+                  return {
+                    ...col,
+                    tasks: tasks.filter((t: ChecklistItem) => t.id !== itemId),
+                  };
+                },
+              );
+
+              data.onContentChange?.(
+                sourceBlockId,
+                sourceData.content,
+                new Date().toISOString(),
+                currentUser?.displayName || "Anonymous",
+                JSON.stringify({ ...sourceMeta, columns: newSourceColumns }),
+                sourceData.title,
+                sourceData.reactions,
+              );
+            } else {
+              const sourceMeta =
+                typeof sourceData.metadata === "string"
+                  ? JSON.parse(sourceData.metadata)
+                  : sourceData.metadata || {};
+
+              const sourceItems = sourceMeta.items || [];
+              const newSourceItems = sourceItems.filter(
+                (i: ChecklistItem) => i.id !== itemId,
+              );
+
+              data.onContentChange?.(
+                sourceBlockId,
+                sourceData.content,
+                new Date().toISOString(),
+                currentUser?.displayName || "Anonymous",
+                JSON.stringify({ ...sourceMeta, items: newSourceItems }),
+                sourceData.title,
+                sourceData.reactions,
+              );
+            }
           }
         }
       } catch (err) {
@@ -672,61 +894,147 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             onDragOver={handleContainerDragOver}
             onDragEnter={handleContainerDragEnter}
             onDragLeave={handleContainerDragLeave}
-            onDrop={(e) => handleDrop(e, total)}
+            onDrop={(e) => handleDrop(e, dropTargetIndex ?? total)}
           >
             {items.map((item, index) => (
-              <div
-                key={item.id}
-                className="checklist-item group"
-                draggable={!isReadOnly}
-                onDragStart={(e) => handleDragStart(e, item)}
-                onDragEnter={handleItemDragEnter}
-                onDragOver={handleDragOver}
-                onDragLeave={handleItemDragLeave}
-                onDrop={(e) => handleDrop(e, index)}
-                style={{ paddingLeft: `${(item.depth || 0) * 24}px` }}
-                data-item-index={index}
-              >
-                {!isReadOnly && (
-                  <div
-                    className="checklist-drag-handle"
-                    title={dict.common?.dragToReorder || "Drag to reorder"}
-                  >
-                    <GripVertical size={12} />
-                  </div>
-                )}
-                <button
-                  className={`checklist-checkbox ${
-                    item.checked ? "checked" : ""
+              <div key={item.id}>
+                {dragTaskPreview &&
+                  dropTargetIndex === index &&
+                  dragSourceIndex !== null &&
+                  !(
+                    dragSourceIndex === index || dragSourceIndex + 1 === index
+                  ) && (
+                    <div
+                      className="checklist-item checklist-item-placeholder"
+                      style={{
+                        paddingLeft: `${(dragTaskPreview.depth || 0) * 24}px`,
+                      }}
+                      aria-hidden="true"
+                    >
+                      {!isReadOnly && (
+                        <div className="checklist-drag-handle">
+                          <GripVertical size={12} />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className={`checklist-checkbox ${
+                          dragTaskPreview.checked ? "checked" : ""
+                        }`}
+                        tabIndex={-1}
+                      >
+                        {dragTaskPreview.checked && (
+                          <Check size={10} strokeWidth={4} />
+                        )}
+                      </button>
+                      <div
+                        className="checklist-placeholder-text"
+                        style={{
+                          flex: 1,
+                          padding: "6px 8px",
+                          fontSize: "0.875rem",
+                          color: "var(--text-main)",
+                        }}
+                      >
+                        {dragTaskPreview.text ||
+                          dict.blocks.taskPlaceholder ||
+                          "Task"}
+                      </div>
+                    </div>
+                  )}
+                <div
+                  className={`checklist-item group ${
+                    dragSourceIndex === index ? "is-dragging" : ""
                   }`}
-                  onClick={() => !isReadOnly && handleToggleItem(item.id)}
+                  draggable={!isReadOnly}
+                  onDragStart={(e) => handleDragStart(e, item, index)}
+                  onDragEnd={handleDragEnd}
+                  onDrop={(e) => handleDrop(e, dropTargetIndex ?? index)}
+                  style={{ paddingLeft: `${(item.depth || 0) * 24}px` }}
+                  data-item-index={index}
                 >
-                  {item.checked && <Check size={10} strokeWidth={4} />}
-                </button>
-                <AutoResizeTextarea
-                  value={item.text}
-                  onChange={(e) =>
-                    handleChangeItemText(item.id, e.target.value)
-                  }
-                  className={`checklist-input ${item.checked ? "checked" : ""}`}
-                  placeholder={dict.blocks.taskPlaceholder || "Task..."}
-                  readOnly={isReadOnly}
-                  onKeyDown={(e) => handleItemKeyDown(e, item.id, index)}
-                />
-                {!isReadOnly && (
+                  {!isReadOnly && (
+                    <div
+                      className="checklist-drag-handle"
+                      title={dict.common?.dragToReorder || "Drag to reorder"}
+                    >
+                      <GripVertical size={12} />
+                    </div>
+                  )}
                   <button
-                    className="checklist-delete-btn"
-                    onClick={() => handleDeleteItem(item.id)}
+                    className={`checklist-checkbox ${
+                      item.checked ? "checked" : ""
+                    }`}
+                    onClick={() => !isReadOnly && handleToggleItem(item.id)}
                   >
-                    <Trash2 size={12} />
+                    {item.checked && <Check size={10} strokeWidth={4} />}
                   </button>
-                )}
+                  <AutoResizeTextarea
+                    value={item.text}
+                    onChange={(e) =>
+                      handleChangeItemText(item.id, e.target.value)
+                    }
+                    className={`checklist-input ${
+                      item.checked ? "checked" : ""
+                    }`}
+                    placeholder={dict.blocks.taskPlaceholder || "Task..."}
+                    readOnly={isReadOnly}
+                    onKeyDown={(e) => handleItemKeyDown(e, item.id, index)}
+                  />
+                  {!isReadOnly && (
+                    <button
+                      className="checklist-delete-btn"
+                      onClick={() => handleDeleteItem(item.id)}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
 
-            {isDragOverContainer && !isReadOnly && (
-              <div className="checklist-drop-placeholder" />
-            )}
+            {dragTaskPreview &&
+              dropTargetIndex === items.length &&
+              dragSourceIndex !== null &&
+              dragSourceIndex !== items.length - 1 && (
+                <div
+                  className="checklist-item checklist-item-placeholder"
+                  style={{
+                    paddingLeft: `${(dragTaskPreview.depth || 0) * 24}px`,
+                  }}
+                  aria-hidden="true"
+                >
+                  {!isReadOnly && (
+                    <div className="checklist-drag-handle">
+                      <GripVertical size={12} />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className={`checklist-checkbox ${
+                      dragTaskPreview.checked ? "checked" : ""
+                    }`}
+                    tabIndex={-1}
+                  >
+                    {dragTaskPreview.checked && (
+                      <Check size={10} strokeWidth={4} />
+                    )}
+                  </button>
+                  <div
+                    className="checklist-placeholder-text"
+                    style={{
+                      flex: 1,
+                      padding: "6px 8px",
+                      fontSize: "0.875rem",
+                      color: "var(--text-main)",
+                    }}
+                  >
+                    {dragTaskPreview.text ||
+                      dict.blocks.taskPlaceholder ||
+                      "Task"}
+                  </div>
+                </div>
+              )}
 
             {!isReadOnly && (
               <button

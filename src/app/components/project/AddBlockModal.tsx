@@ -15,6 +15,7 @@ import {
   CheckSquare,
   PenTool,
   Terminal,
+  Kanban,
 } from "lucide-react";
 
 interface AddBlockModalProps {
@@ -33,6 +34,7 @@ const BLOCK_TYPES = [
   { type: "video", icon: Video, labelKey: "blockTypeVideo" },
   { type: "snippet", icon: Code, labelKey: "blockTypeSnippet" },
   { type: "checklist", icon: CheckSquare, labelKey: "blockTypeChecklist" },
+  { type: "kanban", icon: Kanban, labelKey: "blockTypeKanban" },
   { type: "sketch", icon: PenTool, labelKey: "blockTypeSketch" },
   { type: "shell", icon: Terminal, labelKey: "blockTypeShell" },
 ] as const;

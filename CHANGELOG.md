@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **NEW Kanban Block**: Added a minimal Kanban block with customizable columns and drag and drop support for tasks between the Kanban and checklist blocks.
 - **Camera Centering on Keyboard Navigation**: the viewport now smoothly centers on blocks when navigating with arrow keys or vim keys (h/j/k/l), making it easier to follow focus across the canvas.
 
 ### Fixed

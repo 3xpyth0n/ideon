@@ -5,6 +5,11 @@
   width: 100%;
   padding: 16px;
   overflow-y: auto;
+  cursor: default;
+}
+
+.block-type-checklist .block-content {
+  cursor: default;
 }
 
 .checklist-item {
@@ -13,11 +18,32 @@
   gap: 8px;
   transition: all 0.2s ease;
   border-radius: 4px;
+  cursor: default;
 }
 
 .checklist-item.is-dragging {
-  opacity: 0.5;
-  background: var(--bg-muted);
+  opacity: 0.3;
+  background: transparent;
+}
+
+.checklist-item-placeholder {
+  opacity: 0.4;
+  background: transparent;
+  pointer-events: none;
+  overflow: hidden;
+  max-height: 48px;
+  animation: checklistPlaceholderIn 140ms ease;
+}
+
+@keyframes checklistPlaceholderIn {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 48px;
+    opacity: 0.4;
+  }
 }
 
 .checklist-drag-handle {
@@ -27,6 +53,10 @@
   cursor: grab;
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+.checklist-drag-handle:active {
+  cursor: grabbing;
 }
 
 .checklist-item:hover .checklist-drag-handle {
@@ -51,7 +81,11 @@
 .checklist-checkbox.checked {
   background: var(--text-main);
   border-color: var(--text-main);
-  color: var(--bg-main);
+  color: var(--bg-island);
+}
+
+.checklist-checkbox:disabled {
+  cursor: default;
 }
 
 .checklist-input {
@@ -66,6 +100,7 @@
   min-height: 24px;
   line-height: 1.5;
   font-family: inherit;
+  cursor: text;
 }
 
 [data-theme="dark"] .checklist-input {
@@ -194,4 +229,20 @@
   transition:
     width 0.3s ease,
     background-color 0.3s ease;
+}
+
+.block-type-checklist .block-header {
+  cursor: grab;
+}
+
+.block-type-checklist .block-header:active {
+  cursor: grabbing;
+}
+
+.block-type-checklist .block-footer {
+  cursor: grab;
+}
+
+.block-type-checklist .block-footer:active {
+  cursor: grabbing;
 }

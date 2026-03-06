@@ -56,6 +56,7 @@ export type BlockData = {
     | "video"
     | "snippet"
     | "checklist"
+    | "kanban"
     | "sketch"
     | "shell";
   label?: string;

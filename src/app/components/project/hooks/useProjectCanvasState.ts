@@ -68,8 +68,14 @@ export const useProjectCanvasState = (
   onGraphMutation?: (intent: string) => void,
 ) => {
   const { dict } = useI18n();
-  const { fitView, getZoom, zoomTo, setViewport, screenToFlowPosition } =
-    useReactFlow();
+  const {
+    fitView,
+    getZoom,
+    zoomTo,
+    setViewport,
+    screenToFlowPosition,
+    setCenter,
+  } = useReactFlow();
 
   const [blocks, setBlocksState] = useState<Node<BlockData>[]>([]);
   const [links, setLinksState] = useState<Edge[]>([]);
@@ -1547,6 +1553,19 @@ export const useProjectCanvasState = (
               selected: n.id === (bestCandidate as Node<BlockData>).id,
             })),
           );
+
+          const candidate = bestCandidate as Node<BlockData>;
+          const candidateCenter = {
+            x:
+              candidate.position.x +
+              (candidate.width || DEFAULT_BLOCK_WIDTH) / 2,
+            y: candidate.position.y + (candidate.height || 100) / 2,
+          };
+
+          setCenter(candidateCenter.x, candidateCenter.y, {
+            zoom: getZoom(),
+            duration: 600,
+          });
         }
         return;
       }

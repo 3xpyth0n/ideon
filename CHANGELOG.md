@@ -7,6 +7,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.5] - 2026-03-06
 
+### Added
+
+- **Camera Centering on Keyboard Navigation**: the viewport now smoothly centers on blocks when navigating with arrow keys or vim keys (h/j/k/l), making it easier to follow focus across the canvas.
+
 ### Fixed
 
 - Fixed multiple sketch block issues, including disappearing or delayed drawings, and improved real-time rendering.

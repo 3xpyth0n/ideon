@@ -287,6 +287,10 @@ export function getGlobalDb(): Kysely<database> {
   return getDb();
 }
 
+export function isInAuthenticatedSession(): boolean {
+  return dbStore.getStore() !== undefined;
+}
+
 export function getDb(): Kysely<database> {
   // Check if we are inside a transaction context (RLS)
   const storeDb = dbStore.getStore();

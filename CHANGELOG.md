@@ -16,6 +16,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fixed multiple sketch block issues, including disappearing or delayed drawings, and improved real-time rendering.
+- Fixed security audit logging failures in Docker PostgreSQL deployments by preventing nested transaction conflicts. Audit events for project operations (create, delete, etc.) now log successfully.
 
 ## [0.5.4] - 2026-03-04
 

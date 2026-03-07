@@ -38,8 +38,8 @@ input:-webkit-autofill:active {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
   background-color: var(--bg-page);
   color: var(--text-main);
   display: flex;
@@ -47,7 +47,8 @@ input:-webkit-autofill:active {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .auth-logo-container {
@@ -82,10 +83,18 @@ input:-webkit-autofill:active {
 }
 
 .auth-card {
-  display: flex;
+  display: grid;
   flex-direction: column;
   gap: 2rem;
   width: 45%;
+  max-width: 560px;
+  align-items: center;
+}
+
+.auth-theme-switch {
+  position: absolute;
+  top: 2.5rem;
+  right: 2.5rem;
 }
 
 .auth-header {
@@ -507,9 +516,9 @@ input:-webkit-autofill:active {
   background: var(--bg-island);
   border: 1px solid var(--border);
   border-radius: 0;
-  width: 90%;
+  width: min(90vw, 800px);
   max-width: 800px;
-  min-width: 320px;
+  min-width: 0;
   max-height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -604,6 +613,49 @@ input:-webkit-autofill:active {
 
 .project-canvas .react-flow__node.block-just-created {
   animation: block-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (max-width: 768px) {
+  .auth-page {
+    padding: 1rem 0.875rem 1.25rem;
+    justify-content: center;
+  }
+
+  .auth-logo-container {
+    top: 1rem;
+    left: 1rem;
+    gap: 0.35rem;
+  }
+
+  .auth-logo-text {
+    font-size: 22px;
+  }
+
+  .auth-theme-switch {
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .auth-card {
+    width: 90%;
+    max-width: 560px;
+    gap: 1.5rem;
+  }
+
+  .modal-content {
+    width: min(94vw, 800px);
+    padding: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-logo-text {
+    font-size: 18px;
+  }
+
+  .modal-content {
+    padding: 20px;
+  }
 }
 
 .project-canvas .react-flow__node.selected,
@@ -702,6 +754,20 @@ input:-webkit-autofill:active {
   z-index: 100;
   overflow: hidden;
   animation: slideSelect 0.2s ease-out;
+}
+
+@media (max-width: 640px) {
+  .custom-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .select-dropdown {
+    max-width: calc(100vw - 2rem);
+    left: 1rem !important;
+    right: 1rem !important;
+  }
 }
 
 /* Language Select (Auth) */

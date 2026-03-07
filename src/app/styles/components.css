@@ -24,6 +24,42 @@
   animation: slide-in-top 0.3s ease-out;
 }
 
+@media (max-width: 870px) {
+  .temporal-navigation-container {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: visible !important;
+    z-index: 9998 !important;
+  }
+
+  .save-context-menu {
+    position: fixed !important;
+    max-height: calc(100vh - 100px) !important;
+    right: 1rem !important;
+    top: 60px !important;
+    left: auto !important;
+    margin-top: 0 !important;
+    z-index: 9999 !important;
+    transform: none !important;
+  }
+
+  .temporal-trigger {
+    display: none !important;
+  }
+}
+
+@media (max-width: 440px) {
+  .save-context-menu {
+    width: auto !important;
+    max-width: none !important;
+    left: 1rem !important;
+    right: 1rem !important;
+  }
+}
+
 .temporal-save-btn {
   opacity: 0.7;
   transition: all 0.2s ease;
@@ -1078,6 +1114,59 @@
   animation: slideSelect 0.2s ease-out;
 }
 
+@media (max-width: 768px) {
+  .user-actions-mobile {
+    opacity: 1 !important;
+  }
+
+  .user-card {
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .user-card > div:first-child {
+    width: 100%;
+  }
+
+  .user-card .user-actions-mobile {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .user-role-dropdown {
+    right: auto;
+    left: 0;
+    max-width: calc(100vw - 3rem);
+  }
+
+  .section-header-row {
+    padding-bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-card {
+    padding: 10px;
+  }
+
+  .user-card .flex.items-center.gap-6 {
+    gap: 12px;
+  }
+
+  .role-badge {
+    font-size: 7px;
+    padding: 2px 6px;
+  }
+
+  .user-role-dropdown {
+    max-width: calc(100vw - 2rem);
+  }
+}
+
 .btn-primary {
   padding: 8px 24px;
   background: var(--bg-island);
@@ -1255,6 +1344,22 @@
 .avatar-remove-btn:hover {
   background: #ff4d4d;
   transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .avatar-remove-btn {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .avatar-remove-btn {
+    width: 28px;
+    height: 28px;
+    top: -10px;
+    right: -10px;
+  }
 }
 
 .theme-checkbox {

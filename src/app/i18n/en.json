@@ -450,6 +450,7 @@
     "blocksCount": "{count} blocks",
     "currentCollaborators": "Current Collaborators",
     "membersAndRequests": "Members & Requests",
+    "mobileActions": "Mobile actions",
     "editProject": "Edit Project",
     "forbidden": "You do not have permission to access this project",
     "importExport": "Import / Export Project",

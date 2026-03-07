@@ -221,10 +221,10 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12 pb-20 px-4">
-      <div className="flex items-center justify-between">
+    <div className="max-w-5xl mx-auto space-y-12 pb-20 px-4 sm:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1">
             {dict.project.users}
           </h1>
           <p className="text-sm opacity-40">{dict.project.usersSubtitle}</p>
@@ -234,6 +234,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
             onClick={() => fetchData()}
             disabled={loading}
             title={dict.common?.refresh}
+            className="p-2"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -304,91 +305,85 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all">
-                  {currentUserRole === "superadmin" &&
-                    user.role !== "superadmin" && (
-                      <>
-                        <div className="user-role-select">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOpenUserRoleId(
-                                openUserRoleId === user.id ? null : user.id,
-                              )
-                            }
-                            className="user-role-trigger"
-                          >
-                            <span>
-                              {user.role === "admin"
-                                ? dict.management.admin
-                                : dict.management.member}
-                            </span>
-                            <ChevronDown
-                              size={10}
-                              className={`transition-transform duration-200 opacity-20 ${
-                                openUserRoleId === user.id ? "rotate-180" : ""
-                              }`}
-                            />
-                          </button>
-
-                          {openUserRoleId === user.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-90"
-                                onClick={() => setOpenUserRoleId(null)}
-                              />
-                              <div className="user-role-dropdown">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleUpdateRole(user.id, "member");
-                                    setOpenUserRoleId(null);
-                                  }}
-                                  className={`select-option ${
-                                    user.role === "member"
-                                      ? "bg-text-main/5"
-                                      : ""
-                                  }`}
-                                >
-                                  <span className="text-[10px] uppercase font-bold">
-                                    {dict.management.member}
-                                  </span>
-                                  {user.role === "member" && (
-                                    <Check size={10} className="opacity-40" />
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleUpdateRole(user.id, "admin");
-                                    setOpenUserRoleId(null);
-                                  }}
-                                  className={`select-option ${
-                                    user.role === "admin"
-                                      ? "bg-text-main/5"
-                                      : ""
-                                  }`}
-                                >
-                                  <span className="text-[10px] uppercase font-bold">
-                                    {dict.management.admin}
-                                  </span>
-                                  {user.role === "admin" && (
-                                    <Check size={10} className="opacity-40" />
-                                  )}
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                {currentUserRole === "superadmin" &&
+                  user.role !== "superadmin" && (
+                    <div className="flex items-center gap-4 user-actions-mobile">
+                      <div className="user-role-select">
                         <button
-                          onClick={() => setDeleteUserId(user.id)}
-                          className="p-2 text-red-500 opacity-40 hover:opacity-100 transition-all"
+                          type="button"
+                          onClick={() =>
+                            setOpenUserRoleId(
+                              openUserRoleId === user.id ? null : user.id,
+                            )
+                          }
+                          className="user-role-trigger"
                         >
-                          <Trash2 size={14} />
+                          <span>
+                            {user.role === "admin"
+                              ? dict.management.admin
+                              : dict.management.member}
+                          </span>
+                          <ChevronDown
+                            size={10}
+                            className={`transition-transform duration-200 opacity-20 ${
+                              openUserRoleId === user.id ? "rotate-180" : ""
+                            }`}
+                          />
                         </button>
-                      </>
-                    )}
-                </div>
+
+                        {openUserRoleId === user.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-90"
+                              onClick={() => setOpenUserRoleId(null)}
+                            />
+                            <div className="user-role-dropdown">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateRole(user.id, "member");
+                                  setOpenUserRoleId(null);
+                                }}
+                                className={`select-option ${
+                                  user.role === "member" ? "bg-text-main/5" : ""
+                                }`}
+                              >
+                                <span className="text-[10px] uppercase font-bold">
+                                  {dict.management.member}
+                                </span>
+                                {user.role === "member" && (
+                                  <Check size={10} className="opacity-40" />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateRole(user.id, "admin");
+                                  setOpenUserRoleId(null);
+                                }}
+                                className={`select-option ${
+                                  user.role === "admin" ? "bg-text-main/5" : ""
+                                }`}
+                              >
+                                <span className="text-[10px] uppercase font-bold">
+                                  {dict.management.admin}
+                                </span>
+                                {user.role === "admin" && (
+                                  <Check size={10} className="opacity-40" />
+                                )}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setDeleteUserId(user.id)}
+                        className="p-2 text-red-500 opacity-40 hover:opacity-100 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
               </div>
             ))}
           </div>
@@ -433,11 +428,11 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className="flex items-center gap-4 user-actions-mobile">
                     <button
                       onClick={() => handleResendInvitation(invite.id)}
                       disabled={resendingId === invite.id}
-                      className="p-2 opacity-40 hover:opacity-100 transition-all relative group/tooltip"
+                      className="p-2 opacity-40 hover:opacity-100 transition-all relative group/tooltip user-action-btn"
                     >
                       {resendingId === invite.id ? (
                         <div className="w-3.5 h-3.5 border-2 border-blue-500/30 border-t-blue-500 animate-spin rounded-full" />
@@ -450,7 +445,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
                     </button>
                     <button
                       onClick={() => setDeleteInviteId(invite.id)}
-                      className="p-2 text-red-500 opacity-40 hover:opacity-100 transition-all relative group/tooltip"
+                      className="p-2 text-red-500 opacity-40 hover:opacity-100 transition-all relative group/tooltip user-action-btn"
                     >
                       <Trash2 size={14} />
                       <span className="tooltip">

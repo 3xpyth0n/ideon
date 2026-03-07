@@ -667,8 +667,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   return (
     <>
       <div className="zen-container max-w-5xl py-12 animate-in fade-in duration-700">
-        <header className="flex justify-between items-center mb-16">
-          <div>
+        <header className="flex flex-col items-start gap-4 mt-8 mb-10 md:mb-16 md:flex-row md:items-center md:justify-between">
+          <div className="w-full md:w-auto">
             {folderId ? (
               <>
                 <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
@@ -731,11 +731,11 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
           </div>
 
           {canCreate && (
-            <div className="flex gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto md:w-auto md:flex-row md:items-center">
               {!folderId && (
                 <Button
                   onClick={handleCreateFolder}
-                  className="btn-primary gap-2"
+                  className="btn-primary gap-2 w-full sm:w-auto"
                 >
                   <FolderIcon size={14} />
                   <span>New Folder</span>
@@ -743,7 +743,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               )}
               <Button
                 onClick={() => setShowCreate(true)}
-                className="btn-primary gap-2"
+                className="btn-primary gap-2 w-full sm:w-auto"
               >
                 <Plus size={14} />
                 <span>{dict.dashboard.newProject}</span>

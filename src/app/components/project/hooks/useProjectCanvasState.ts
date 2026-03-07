@@ -17,6 +17,17 @@ import {
   DEFAULT_BLOCK_WIDTH,
 } from "@components/project/utils/constants";
 import { generateStateHash } from "@components/project/utils/hash";
+import {
+  computeLongestSideViewport,
+  getNodesBoundsWithFallback,
+  getReactFlowViewportSize,
+} from "@components/project/utils/fitViewport";
+
+const FIT_PADDING = 0.12;
+const FIT_DURATION = 800;
+const FIT_MIN_ZOOM = 0.1;
+const FIT_MAX_ZOOM_SELECTED = 2;
+const FIT_MAX_ZOOM_ALL = 1;
 
 const cleanBlockDataForSync = (
   data: Partial<BlockData>,
@@ -68,14 +79,43 @@ export const useProjectCanvasState = (
   onGraphMutation?: (intent: string) => void,
 ) => {
   const { dict } = useI18n();
-  const {
-    fitView,
-    getZoom,
-    zoomTo,
-    setViewport,
-    screenToFlowPosition,
-    setCenter,
-  } = useReactFlow();
+  const { fitView, getZoom, zoomTo, setViewport, screenToFlowPosition } =
+    useReactFlow();
+
+  const applyLongestSideFit = useCallback(
+    (targetBlocks: Node<BlockData>[], maxZoom: number) => {
+      if (targetBlocks.length === 0) {
+        fitView({
+          duration: FIT_DURATION,
+          maxZoom,
+          padding: FIT_PADDING,
+        });
+        return;
+      }
+
+      const bounds = getNodesBoundsWithFallback(targetBlocks);
+      const viewportSize = getReactFlowViewportSize();
+
+      if (!bounds || !viewportSize) {
+        fitView({
+          nodes: targetBlocks,
+          duration: FIT_DURATION,
+          maxZoom,
+          padding: FIT_PADDING,
+        });
+        return;
+      }
+
+      const nextViewport = computeLongestSideViewport(bounds, viewportSize, {
+        padding: FIT_PADDING,
+        minZoom: FIT_MIN_ZOOM,
+        maxZoom,
+      });
+
+      setViewport(nextViewport, { duration: FIT_DURATION });
+    },
+    [fitView, setViewport],
+  );
 
   const [blocks, setBlocksState] = useState<Node<BlockData>[]>([]);
   const [links, setLinksState] = useState<Edge[]>([]);
@@ -378,11 +418,7 @@ export const useProjectCanvasState = (
 
       // Auto-center on core block if it exists
       setTimeout(() => {
-        fitView({
-          duration: 800,
-          maxZoom: 1,
-          padding: 0.3,
-        });
+        applyLongestSideFit(initialBlocks, FIT_MAX_ZOOM_ALL);
       }, 100);
     }
 
@@ -392,7 +428,7 @@ export const useProjectCanvasState = (
       yContents.unobserve(updateContentsFromYjs);
       if (yDrafts) yDrafts.unobserve(updateDraftsFromYjs);
     };
-  }, [yBlocks, yLinks, yContents, isPreviewMode]);
+  }, [yBlocks, yLinks, yContents, isPreviewMode, applyLongestSideFit]);
 
   const setBlocks = useCallback(
     (
@@ -1233,11 +1269,11 @@ export const useProjectCanvasState = (
 
         // Fit view on load/refresh
         setTimeout(() => {
-          fitView({
-            duration: 800,
-            maxZoom: 1,
-            padding: 0.2,
-          });
+          const blocksToFit =
+            blocks.length > 0
+              ? blocks
+              : (Array.from(yBlocks.values()) as Node<BlockData>[]);
+          applyLongestSideFit(blocksToFit, FIT_MAX_ZOOM_ALL);
         }, 100);
 
         return;
@@ -1261,6 +1297,7 @@ export const useProjectCanvasState = (
       io.fetchGraph();
     }
   }, [
+    blocks,
     initialProjectId,
     io.fetchGraph,
     io.fetchProjectMetadata,
@@ -1268,26 +1305,17 @@ export const useProjectCanvasState = (
     yContents,
     isLocalSynced,
     isRemoteSynced,
+    applyLongestSideFit,
   ]);
 
   const handleFitView = useCallback(() => {
     const selectedBlocks = blocks.filter((n) => n.selected);
     if (selectedBlocks.length > 0)
-      fitView({
-        nodes: selectedBlocks,
-        duration: 800,
-        maxZoom: 2,
-        padding: 0.3,
-      });
+      applyLongestSideFit(selectedBlocks, FIT_MAX_ZOOM_SELECTED);
     else if (blocks.length === 0)
-      setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
-    else
-      fitView({
-        duration: 800,
-        maxZoom: 1,
-        padding: 0.2,
-      });
-  }, [blocks, fitView, setViewport]);
+      setViewport({ x: 0, y: 0, zoom: 1 }, { duration: FIT_DURATION });
+    else applyLongestSideFit(blocks, FIT_MAX_ZOOM_ALL);
+  }, [blocks, setViewport, applyLongestSideFit]);
 
   const handleZoomIn = useCallback(
     () =>
@@ -1554,18 +1582,7 @@ export const useProjectCanvasState = (
             })),
           );
 
-          const candidate = bestCandidate as Node<BlockData>;
-          const candidateCenter = {
-            x:
-              candidate.position.x +
-              (candidate.width || DEFAULT_BLOCK_WIDTH) / 2,
-            y: candidate.position.y + (candidate.height || 100) / 2,
-          };
-
-          setCenter(candidateCenter.x, candidateCenter.y, {
-            zoom: getZoom(),
-            duration: 600,
-          });
+          applyLongestSideFit([bestCandidate], FIT_MAX_ZOOM_SELECTED);
         }
         return;
       }

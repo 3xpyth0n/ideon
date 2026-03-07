@@ -5,6 +5,16 @@ import { useI18n } from "@providers/I18nProvider";
 import { useRouter } from "next/navigation";
 import { uniqueById } from "@lib/utils";
 import { BlockData } from "@components/project/CanvasBlock";
+import {
+  computeLongestSideViewport,
+  getNodesBoundsWithFallback,
+  getReactFlowViewportSize,
+} from "@components/project/utils/fitViewport";
+
+const FIT_DURATION = 800;
+const FIT_PADDING = 0.12;
+const FIT_MIN_ZOOM = 0.1;
+const FIT_MAX_ZOOM_ALL = 1;
 
 interface UseProjectDataProps {
   initialProjectId?: string;
@@ -49,6 +59,37 @@ export const useProjectData = ({
   const router = useRouter();
   const { fitView, setViewport } = useReactFlow();
   const loadedBlockIds = useRef<Set<string>>(new Set());
+
+  const fitBlocksByLongestSide = useCallback(
+    (targetBlocks: Node<BlockData>[]) => {
+      if (targetBlocks.length === 0) {
+        setViewport({ x: 0, y: 0, zoom: 1 }, { duration: FIT_DURATION });
+        return;
+      }
+
+      const bounds = getNodesBoundsWithFallback(targetBlocks as Node[]);
+      const viewportSize = getReactFlowViewportSize();
+
+      if (!bounds || !viewportSize) {
+        fitView({
+          nodes: targetBlocks,
+          duration: FIT_DURATION,
+          maxZoom: FIT_MAX_ZOOM_ALL,
+          padding: FIT_PADDING,
+        });
+        return;
+      }
+
+      const nextViewport = computeLongestSideViewport(bounds, viewportSize, {
+        padding: FIT_PADDING,
+        minZoom: FIT_MIN_ZOOM,
+        maxZoom: FIT_MAX_ZOOM_ALL,
+      });
+
+      setViewport(nextViewport, { duration: FIT_DURATION });
+    },
+    [fitView, setViewport],
+  );
 
   const fetchGraph = useCallback(
     async (isExplicitApply = false) => {
@@ -95,9 +136,7 @@ export const useProjectData = ({
         setProjectOwnerId(data.projectOwnerId || null);
         isInitialized.current = true;
         setTimeout(() => {
-          if (!newBlocks.length)
-            setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
-          else fitView({ duration: 800, maxZoom: 1 });
+          fitBlocksByLongestSide(newBlocks);
         }, 100);
       } catch {
         toast.error(dict.modals.noHistory);
@@ -111,6 +150,7 @@ export const useProjectData = ({
       setLinks,
       replaceGraph,
       fitView,
+      fitBlocksByLongestSide,
       setViewport,
       router,
       setIsLoading,

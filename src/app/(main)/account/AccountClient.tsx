@@ -263,7 +263,7 @@ export default function AccountPage() {
   return (
     <div className="island-content relative pt-0!" ref={containerRef}>
       <div className="zen-container max-w-5xl py-12 animate-in fade-in duration-700">
-        <header className="mb-8">
+        <header className="mb-8 mt-12">
           <h1 className="zen-title text-2xl mb-1">{dict.layout.settings}</h1>
           <p className="zen-subtitle text-sm opacity-40">
             {dict.account.accountSubtitle}
@@ -296,8 +296,8 @@ export default function AccountPage() {
                 {dict.account.languageDescription}
               </p>
             </div>
-            <div className="md:col-span-8 max-w-xs">
-              <div className="custom-select">
+            <div className="md:col-span-8 w-full sm:w-auto">
+              <div className="custom-select w-full sm:w-auto">
                 <button
                   onClick={() => setIsLangOpen(!isLangOpen)}
                   className="select-trigger h-11 px-0"
@@ -355,7 +355,7 @@ export default function AccountPage() {
             <div className="md:col-span-8">
               <div className="flex flex-col gap-10">
                 {/* Avatar Row */}
-                <div className="flex items-center gap-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                   <div className="relative group">
                     <div
                       onClick={handleAvatarClick}
@@ -403,7 +403,7 @@ export default function AccountPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <p className="text-[11px] text-muted opacity-40 max-w-[200px]">
+                    <p className="text-[11px] text-muted opacity-40 max-w-50 leading-relaxed">
                       {dict.account.avatarHint}
                     </p>
                   </div>
@@ -412,7 +412,7 @@ export default function AccountPage() {
                 {/* Profile Form */}
                 <form
                   onSubmit={handleProfileUpdate}
-                  className="flex flex-col gap-6 max-w-md"
+                  className="flex flex-col gap-6 w-full max-w-md"
                 >
                   <div className="flex flex-col gap-2">
                     <label className="zen-label ml-0">
@@ -470,10 +470,10 @@ export default function AccountPage() {
                 {dict.account.securityDescription}
               </p>
             </div>
-            <div className="md:col-span-8 max-w-md">
+            <div className="md:col-span-8 w-full max-w-md">
               <form
                 onSubmit={handlePasswordUpdate}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-6 w-full"
               >
                 <div className="flex flex-col gap-2">
                   <label className="zen-label ml-0">

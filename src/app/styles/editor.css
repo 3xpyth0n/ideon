@@ -377,6 +377,133 @@
   letter-spacing: 0.02em;
 }
 
+.project-topbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-presence-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-presence-avatars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-mobile-actions {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.project-mobile-actions-trigger {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg-island);
+  color: var(--text-main);
+}
+
+.project-mobile-actions-trigger.active {
+  border-color: var(--text-main);
+}
+
+.project-mobile-actions-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -20px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-island);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  z-index: 2001;
+}
+
+.project-mobile-actions-item,
+.project-mobile-actions-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+@media (max-width: 870px) {
+  .project-topbar-panel-mobile {
+    margin: 0.75rem 0.75rem 0 !important;
+  }
+
+  .project-topbar-panel-mobile .preview-mode-banner {
+    max-width: calc(100vw - 1.5rem);
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .project-topbar-panel-mobile .preview-mode-banner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .project-topbar-row {
+    max-width: calc(100vw - 1.5rem);
+    white-space: nowrap;
+  }
+
+  .project-presence-strip {
+    flex: 1 1 auto;
+    max-width: calc(100vw - 56px);
+  }
+
+  .project-presence-avatars {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .project-presence-avatars::-webkit-scrollbar {
+    display: none;
+  }
+
+  .project-presence-strip .user-presence-avatar {
+    width: 26px;
+    height: 26px;
+    border-width: 1.5px;
+  }
+
+  .project-presence-strip .sync-indicator {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+
+  .project-presence-strip .sync-indicator-text {
+    font-size: 9px;
+  }
+}
+
 .react-flow__controls-button:hover {
   background: var(--bg-sidebar) !important ;
   color: var(--text-main) !important ;

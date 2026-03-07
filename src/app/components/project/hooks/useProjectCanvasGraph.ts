@@ -10,6 +10,11 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from "@xyflow/react";
+import {
+  computeLongestSideViewport,
+  getNodesBoundsWithFallback,
+  getReactFlowViewportSize,
+} from "@components/project/utils/fitViewport";
 import { v4 as uuidv4 } from "uuid";
 import { UserPresence } from "./useProjectCanvasState";
 import { BlockData } from "@components/project/CanvasBlock";
@@ -22,6 +27,12 @@ import {
   CORE_BLOCK_HEIGHT,
 } from "@components/project/utils/constants";
 import { getAdjustedPosition } from "@components/project/utils/collision";
+
+const FIT_DURATION = 800;
+const FIT_PADDING = 0.12;
+const FIT_MIN_ZOOM = 0.1;
+const FIT_MAX_ZOOM_SELECTED = 2;
+const FIT_MAX_ZOOM_ALL = 1;
 
 interface UseProjectCanvasGraphProps {
   currentUser: UserPresence | null;
@@ -68,24 +79,40 @@ export const useProjectCanvasGraph = ({
 }: UseProjectCanvasGraphProps) => {
   const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
 
+  const applyLongestSideFit = useCallback(
+    (targetBlocks: Node<BlockData>[], maxZoom: number) => {
+      const bounds = getNodesBoundsWithFallback(targetBlocks as Node[]);
+      const viewportSize = getReactFlowViewportSize();
+
+      if (!bounds || !viewportSize) {
+        fitView({
+          nodes: targetBlocks,
+          duration: FIT_DURATION,
+          maxZoom,
+          padding: FIT_PADDING,
+        });
+        return;
+      }
+
+      const nextViewport = computeLongestSideViewport(bounds, viewportSize, {
+        padding: FIT_PADDING,
+        minZoom: FIT_MIN_ZOOM,
+        maxZoom,
+      });
+
+      setViewport(nextViewport, { duration: FIT_DURATION });
+    },
+    [fitView, setViewport],
+  );
+
   const handleFitView = useCallback(() => {
     const selectedBlocks = blocks.filter((b) => b.selected);
     if (selectedBlocks.length > 0)
-      fitView({
-        nodes: selectedBlocks,
-        duration: 800,
-        maxZoom: 2,
-        padding: 0.35,
-      });
+      applyLongestSideFit(selectedBlocks, FIT_MAX_ZOOM_SELECTED);
     else if (blocks.length === 0)
-      setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
-    else
-      fitView({
-        duration: 800,
-        maxZoom: 1,
-        padding: 0.3,
-      });
-  }, [blocks, fitView, setViewport]);
+      setViewport({ x: 0, y: 0, zoom: 1 }, { duration: FIT_DURATION });
+    else applyLongestSideFit(blocks, FIT_MAX_ZOOM_ALL);
+  }, [blocks, setViewport, applyLongestSideFit]);
 
   const onEdgeContextMenu = useCallback(
     (event: React.MouseEvent | MouseEvent, edge: Edge) => {

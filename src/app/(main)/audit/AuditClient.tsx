@@ -23,7 +23,7 @@ export default function AuditClient({
   const [logs] = useState(initialLogs);
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-y-auto bg-[var(--bg-page)] p-8">
+    <div className="flex h-screen w-full flex-col overflow-y-auto bg-(--bg-page) p-8">
       <div className="mx-auto w-full max-w-5xl">
         <header className="mb-8 flex items-center gap-3">
           <Shield className="opacity-50" size={24} />

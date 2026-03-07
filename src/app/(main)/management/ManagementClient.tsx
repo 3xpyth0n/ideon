@@ -272,7 +272,7 @@ export function ManagementClient() {
 
   return (
     <div className="management-container">
-      <header className="management-header">
+      <header className="management-header mt-6">
         <div>
           <h1 className="management-title">{dict.management.management}</h1>
           <p className="management-subtitle">
@@ -760,7 +760,7 @@ function ProviderConfigModal({
                 {dict.providers.samlRawMetadataXml}
               </label>
               <textarea
-                className="zen-input min-h-[100px] font-mono text-[10px]"
+                className="zen-input min-h-25 font-mono text-[10px]"
                 value={metadataXml}
                 onChange={(e) => setMetadataXml(e.target.value)}
                 placeholder="<EntityDescriptor ...>...</EntityDescriptor>"

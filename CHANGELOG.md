@@ -5,11 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.5] - 2026-03-06
+## [0.6.0] - 2026-03-07
 
 ### Added
 
 - **NEW Kanban Block**: Added a minimal Kanban block with customizable columns and drag and drop support for tasks between the Kanban and checklist blocks.
+- **Improved Mobile Experience**: Completely improved the mobile UI and layout to ensure the application works smoothly on smartphone portrait screens.
 - **Camera Centering on Keyboard Navigation**: the viewport now smoothly centers on blocks when navigating with arrow keys or vim keys (h/j/k/l), making it easier to follow focus across the canvas.
 
 ### Fixed

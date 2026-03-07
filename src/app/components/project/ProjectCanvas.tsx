@@ -66,6 +66,7 @@ import {
   Share2,
   Github,
   Loader2,
+  Menu,
 } from "lucide-react";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
@@ -492,7 +493,60 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isMobileTopbar, setIsMobileTopbar] = useState(false);
+  const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
   const [newBlockId, setNewBlockId] = useState<string | null>(null);
+  const mobileActionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(max-width: 870px)");
+    const update = () => setIsMobileTopbar(media.matches);
+
+    update();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileTopbar) {
+      setIsMobileActionsOpen(false);
+    }
+  }, [isMobileTopbar]);
+
+  useEffect(() => {
+    if (!isMobileActionsOpen) return;
+
+    const closeOnOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof globalThis.Node)) return;
+      if (mobileActionsRef.current?.contains(target)) return;
+      setIsMobileActionsOpen(false);
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileActionsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeOnOutside, true);
+    document.addEventListener("touchstart", closeOnOutside, true);
+    window.addEventListener("keydown", closeOnEscape, true);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside, true);
+      document.removeEventListener("touchstart", closeOnOutside, true);
+      window.removeEventListener("keydown", closeOnEscape, true);
+    };
+  }, [isMobileActionsOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -948,7 +1002,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   className="m-6! ml-12! mt-3!"
                   style={{ zIndex: 2000 }}
                 >
-                  {!isPreviewMode && (
+                  {!isPreviewMode && !isMobileTopbar && (
                     <div className="flex items-center gap-3 mt-2">
                       <span className="text-sm font-bold opacity-40 select-none">
                         {dict.project.shareCursor}
@@ -982,7 +1036,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
                 <Panel
                   position="top-right"
-                  className="flex items-center gap-2 m-6! mt-3!"
+                  className={`flex items-center gap-2 m-6! mt-3! ${
+                    isMobileTopbar ? "project-topbar-panel-mobile" : ""
+                  }`}
                   style={{ zIndex: 2000 }}
                 >
                   {isPreviewMode && (
@@ -1021,86 +1077,212 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2">
+                  <div className="project-topbar-row">
                     {!isPreviewMode && (
-                      <div className="flex gap-2 mr-2">
+                      <div className="project-presence-strip">
                         <SyncIndicator />
-                        {presenceUsers.map((u) => (
-                          <div
-                            key={u.id}
-                            className="user-presence-item relative shrink-0"
-                          >
+                        <div className="project-presence-avatars">
+                          {presenceUsers.map((u) => (
                             <div
-                              className="user-presence-avatar"
-                              style={{ borderColor: u.color || "#000" }}
+                              key={u.id}
+                              className="user-presence-item relative shrink-0"
                             >
-                              <img
-                                src={getAvatarUrl(u.avatarUrl, u.username)}
-                                alt={u.displayName || u.username}
-                                className="user-presence-avatar-img"
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
+                              <div
+                                className="user-presence-avatar"
+                                style={{ borderColor: u.color || "#000" }}
+                              >
+                                <img
+                                  src={getAvatarUrl(u.avatarUrl, u.username)}
+                                  alt={u.displayName || u.username}
+                                  className="user-presence-avatar-img"
+                                  referrerPolicy="no-referrer"
+                                />
+                              </div>
 
-                            <div
-                              className="user-presence-tooltip"
-                              style={
-                                {
-                                  "--user-color": u.color || "#000",
-                                } as React.CSSProperties
-                              }
-                            >
-                              {u.displayName || u.username}
-                              <div className="user-presence-tooltip-arrow" />
+                              <div
+                                className="user-presence-tooltip"
+                                style={
+                                  {
+                                    "--user-color": u.color || "#000",
+                                  } as React.CSSProperties
+                                }
+                              >
+                                {u.displayName || u.username}
+                                <div className="user-presence-tooltip-arrow" />
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
-                      {currentUserRole !== "viewer" && (
-                        <div className="relative">
-                          <Button
-                            onClick={() => setIsInviteModalOpen(true)}
-                            className="btn-primary"
-                            disabled={isPreviewMode}
-                          >
-                            {(dict.project.access || "Access").toUpperCase()}
-                          </Button>
-                          {pendingRequestsCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                              {pendingRequestsCount}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {currentUser?.id === projectOwnerId && (
-                        <Button
-                          onClick={() => setIsShareModalOpen(true)}
-                          className="btn-secondary px-3!"
-                          disabled={isPreviewMode}
-                          title={dict.project.share || "Share"}
+
+                    {isMobileTopbar ? (
+                      <div
+                        className="project-mobile-actions"
+                        ref={mobileActionsRef}
+                      >
+                        <button
+                          className={`project-mobile-actions-trigger ${
+                            isMobileActionsOpen ? "active" : ""
+                          }`}
+                          onClick={() =>
+                            setIsMobileActionsOpen((open) => !open)
+                          }
+                          title={dict.project.mobileActions}
+                          aria-label={dict.project.mobileActions}
                         >
-                          <Share2 size={16} />
-                        </Button>
-                      )}
-                      <DecisionHistory
-                        projectId={initialProjectId!}
-                        onPreview={handlePreview}
-                        onApply={handleApplyState}
-                        onSave={handleSaveState}
-                        onDelete={handleDeleteState}
-                        onRename={handleRenameState}
-                        isPreviewing={isPreviewMode}
-                        selectedStateId={selectedStateId}
-                        projectOwnerId={projectOwnerId}
-                        currentUserId={currentUser?.id}
-                        isHistoryOpen={isHistoryOpen}
-                        onHistoryOpenChange={setIsHistoryOpen}
-                      />
-                    </div>
+                          <Menu size={18} />
+                        </button>
+
+                        {isMobileActionsOpen && (
+                          <div className="project-mobile-actions-menu">
+                            {!isPreviewMode && (
+                              <label className="project-mobile-actions-item project-mobile-actions-switch">
+                                <span>{dict.project.shareCursor}</span>
+                                <input
+                                  type="checkbox"
+                                  className="theme-checkbox"
+                                  checked={shareCursor}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    setShareCursor(e.target.checked);
+                                  }}
+                                />
+                              </label>
+                            )}
+
+                            {!isPreviewMode && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsAddBlockOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                              >
+                                {dict.canvas.addBlock}
+                              </button>
+                            )}
+
+                            {!isPreviewMode && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsPaletteOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                              >
+                                {dict.canvas.commandPalette}
+                              </button>
+                            )}
+
+                            {currentUserRole !== "viewer" && (
+                              <button
+                                className="project-mobile-actions-item relative"
+                                onClick={() => {
+                                  setIsInviteModalOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                                disabled={isPreviewMode}
+                              >
+                                <span>{dict.project.access || "Access"}</span>
+                                {pendingRequestsCount > 0 && (
+                                  <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                    {pendingRequestsCount}
+                                  </span>
+                                )}
+                              </button>
+                            )}
+
+                            {currentUser?.id === projectOwnerId && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsShareModalOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                                disabled={isPreviewMode}
+                              >
+                                {dict.project.share || "Share"}
+                              </button>
+                            )}
+
+                            {!isPreviewMode && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsHistoryOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                              >
+                                {dict.canvas.temporalHistory || "History"}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {currentUserRole !== "viewer" && (
+                          <div className="relative">
+                            <Button
+                              onClick={() => setIsInviteModalOpen(true)}
+                              className="btn-primary"
+                              disabled={isPreviewMode}
+                            >
+                              {(dict.project.access || "Access").toUpperCase()}
+                            </Button>
+                            {pendingRequestsCount > 0 && (
+                              <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                {pendingRequestsCount}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {currentUser?.id === projectOwnerId && (
+                          <Button
+                            onClick={() => setIsShareModalOpen(true)}
+                            className="btn-secondary px-3!"
+                            disabled={isPreviewMode}
+                            title={dict.project.share || "Share"}
+                          >
+                            <Share2 size={16} />
+                          </Button>
+                        )}
+                        <DecisionHistory
+                          projectId={initialProjectId!}
+                          onPreview={handlePreview}
+                          onApply={handleApplyState}
+                          onSave={handleSaveState}
+                          onDelete={handleDeleteState}
+                          onRename={handleRenameState}
+                          isPreviewing={isPreviewMode}
+                          selectedStateId={selectedStateId}
+                          projectOwnerId={projectOwnerId}
+                          currentUserId={currentUser?.id}
+                          isHistoryOpen={isHistoryOpen}
+                          onHistoryOpenChange={setIsHistoryOpen}
+                        />
+                      </div>
+                    )}
                   </div>
                 </Panel>
+
+                {isMobileTopbar && (
+                  <DecisionHistory
+                    projectId={initialProjectId!}
+                    onPreview={handlePreview}
+                    onApply={handleApplyState}
+                    onSave={handleSaveState}
+                    onDelete={handleDeleteState}
+                    onRename={handleRenameState}
+                    isPreviewing={isPreviewMode}
+                    selectedStateId={selectedStateId}
+                    projectOwnerId={projectOwnerId}
+                    currentUserId={currentUser?.id}
+                    isHistoryOpen={isHistoryOpen}
+                    onHistoryOpenChange={setIsHistoryOpen}
+                  />
+                )}
 
                 <div className="zoom-indicator">
                   <div className="flex items-center gap-2">

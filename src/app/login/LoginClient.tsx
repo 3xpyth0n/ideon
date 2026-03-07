@@ -221,8 +221,7 @@ export function LoginClient() {
         <span className="auth-logo-text pt-2">{dict.title}</span>
       </div>
 
-      {/* Theme Switch */}
-      <div style={{ position: "absolute", top: "2.5rem", right: "2.5rem" }}>
+      <div className="auth-theme-switch">
         <ThemeSwitch />
       </div>
 

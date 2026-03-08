@@ -100,6 +100,7 @@
     "blockTypeCore": "Nucleo",
     "blockTypeFile": "File",
     "blockTypeGit": "Repository Git",
+    "blockTypeKanban": "Kanban",
     "blockTypeLink": "Link",
     "blockTypePalette": "Palette",
     "blockTypeShell": "Terminale",
@@ -298,6 +299,7 @@
     "manageTrash": "Gestisci i progetti eliminati",
     "myProjects": "I Miei Progetti",
     "newProject": "Nuovo Progetto",
+    "createFolder": "Nuova Cartella",
     "projects": "Progetti",
     "recent": "Recenti",
     "sharedWithMe": "Condivisi con Me",
@@ -369,7 +371,15 @@
     "status": "Stato",
     "superadmin": "Superamministratore",
     "timestamp": "Timestamp",
-    "userDetails": "Dettagli Utente"
+    "userDetails": "Dettagli Utente",
+    "integrations": "Integrazioni"
+  },
+  "integrations": {
+    "title": "Integrazioni",
+    "subtitle": "Connetti strumenti e servizi esterni per migliorare il tuo flusso di lavoro",
+    "comingSoon": "Prossimamente",
+    "importFromObsidian": "Importa da Obsidian",
+    "importFromObsidianDesc": "Sincronizza il tuo vault Obsidian nei progetti Ideon"
   },
   "modals": {
     "confirmDelete": "Conferma eliminazione",
@@ -432,7 +442,8 @@
     "setup": "Configurazione",
     "share": "Progetto condiviso",
     "ssoProviders": "Provider SSO",
-    "users": "Utenti"
+    "users": "Utenti",
+    "integrations": "Integrazioni"
   },
   "project": {
     "accessDenied": "Accesso negato",

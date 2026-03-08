@@ -299,6 +299,7 @@
     "manageTrash": "Gérer les projets supprimés",
     "myProjects": "Mes Projets",
     "newProject": "Nouveau Projet",
+    "createFolder": "Nouveau Dossier",
     "projects": "Projets",
     "recent": "Récents",
     "sharedWithMe": "Partagés avec moi",
@@ -370,7 +371,15 @@
     "status": "Statut",
     "superadmin": "Superadmin",
     "timestamp": "Horodatage",
-    "userDetails": "Détails de l'utilisateur"
+    "userDetails": "Détails de l'utilisateur",
+    "integrations": "Intégrations"
+  },
+  "integrations": {
+    "title": "Intégrations",
+    "subtitle": "Connectez des outils et services externes pour améliorer votre flux de travail",
+    "comingSoon": "À venir",
+    "importFromObsidian": "Importer depuis Obsidian",
+    "importFromObsidianDesc": "Synchronisez votre coffre Obsidian dans les projets Ideon"
   },
   "modals": {
     "confirmDelete": "Confirmer la Suppression",
@@ -433,7 +442,8 @@
     "setup": "Configuration",
     "share": "Projet partagé",
     "ssoProviders": "Fournisseurs SSO",
-    "users": "Utilisateurs"
+    "users": "Utilisateurs",
+    "integrations": "Intégrations"
   },
   "project": {
     "accessDenied": "Accès refusé",

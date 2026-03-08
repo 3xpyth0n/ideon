@@ -299,7 +299,8 @@
     "manageTrash": "Manage deleted projects",
     "myProjects": "My Projects",
     "newProject": "New Project",
-    "projects": "",
+    "createFolder": "New Folder",
+    "projects": "Projects",
     "recent": "Recent",
     "sharedWithMe": "Shared with Me",
     "starred": "Starred",
@@ -370,7 +371,15 @@
     "status": "Status",
     "superadmin": "Superadmin",
     "timestamp": "Timestamp",
-    "userDetails": "User Details"
+    "userDetails": "User Details",
+    "integrations": "Integrations"
+  },
+  "integrations": {
+    "title": "Integrations",
+    "subtitle": "Connect external tools and services to enhance your workflow",
+    "comingSoon": "Coming Soon",
+    "importFromObsidian": "Import from Obsidian",
+    "importFromObsidianDesc": "Sync your Obsidian vault into Ideon projects"
   },
   "modals": {
     "confirmDelete": "Confirm Deletion",
@@ -395,7 +404,7 @@
     "errorImport": "Invalid import format.",
     "errorParsing": "Failed to parse import file.",
     "exportFormat": "Export Format",
-    "exportProject": "",
+    "exportProject": "Export Project",
     "failure": "Failure",
     "imported": "Imported",
     "inviteSuccessSubtitle": "If the email doesn't arrive, copy the direct link below.",
@@ -433,7 +442,8 @@
     "setup": "Setup",
     "share": "Shared Project",
     "ssoProviders": "SSO Providers",
-    "users": "Users"
+    "users": "Users",
+    "integrations": "Integrations"
   },
   "project": {
     "accessDenied": "Access Denied",

@@ -20,25 +20,34 @@
     width="100%"
   />
   <a href="https://github.com/prettier/prettier">
-    <img src="https://img.shields.io/badge/code_style-prettier-pink.svg" alt="Prettier">
+    <img src="https://img.shields.io/badge/code_style-prettier-001.svg?style=flat-square" alt="Prettier">
   </a>
   <a href="https://github.com/3xpyth0n/ideon/actions/workflows/ci.yml">
-    <img src="https://github.com/3xpyth0n/ideon/actions/workflows/ci.yml/badge.svg" alt="CI">
+    <img src="https://img.shields.io/github/actions/workflow/status/3xpyth0n/ideon/ci.yml?branch=main&style=flat-square&color=001&label=CI" alt="CI">
   </a>
   <a href="https://github.com/3xpyth0n/ideon/issues">
-    <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg" alt="Contributions welcome">
+    <img src="https://img.shields.io/badge/contributions-welcome-001.svg?style=flat-square" alt="Contributions welcome">
   </a>
   <a href="https://github.com/3xpyth0n/ideon/commits/main">
-    <img src="https://img.shields.io/github/last-commit/3xpyth0n/ideon" alt="Last commit">
+    <img src="https://img.shields.io/github/last-commit/3xpyth0n/ideon?style=flat-square&color=001" alt="Last commit">
   </a>
   <a href="https://github.com/3xpyth0n/ideon/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-AGPLv3-77b5fe.svg" alt="License">
+    <img src="https://img.shields.io/badge/License-AGPLv3-001.svg?style=flat-square" alt="License">
   </a>
 </p>
 
 ## Overview
 
 Ideon replaces abstract folders with spatial organization. Instead of navigating tabs, you see your entire project context: Git repositories, design notes, and tasks, **on a single map**.
+
+<div align="center">
+  <strong>
+    <a href="https://www.theideon.com">Home Page</a> |
+    <a href="https://www.theideon.com/docs/">Documentation</a> |
+    <a href="https://github.com/users/3xpyth0n/projects/3">Roadmap</a> |
+    <a href="https://www.theideon.com/about/">About</a>
+  </strong>
+</div>
 
 ## Features
 

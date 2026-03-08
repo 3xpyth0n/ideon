@@ -17,7 +17,8 @@
     "check": "eslint . --max-warnings=0; tsc --noEmit",
     "test": "vitest run",
     "parse": "swc src/app --no-swcrc",
-    "prepare": "husky || echo 'Husky not installed'"
+    "prepare": "husky || echo 'Husky not installed'",
+    "validate:i18n": "tsx src/app/i18n/validate.ts"
   },
   "dependencies": {
     "@boxyhq/saml-jackson": "^1.52.2",
@@ -142,7 +143,7 @@
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "autoprefixer": "^10.4.27",
-    "eslint": "^10.0.2",
+    "eslint": "^10.0.3",
     "globals": "^17.4.0",
     "husky": "^9.1.7",
     "jiti": "^2.6.1",

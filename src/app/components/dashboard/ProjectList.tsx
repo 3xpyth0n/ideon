@@ -421,7 +421,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     try {
       const res = await fetch("/api/folders", {
         method: "POST",
-        body: JSON.stringify({ name: "New Folder" }),
+        body: JSON.stringify({ name: dict.dashboard.createFolder }),
         headers: { "Content-Type": "application/json" },
       });
       if (res.ok) {
@@ -738,7 +738,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   className="btn-primary gap-2 w-full sm:w-auto"
                 >
                   <FolderIcon size={14} />
-                  <span>New Folder</span>
+                  <span>{dict.dashboard.createFolder}</span>
                 </Button>
               )}
               <Button

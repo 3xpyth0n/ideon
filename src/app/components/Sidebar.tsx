@@ -17,6 +17,7 @@ import {
   Share2,
   PanelLeftOpen,
   PanelLeftClose,
+  Grid2x2Plus,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
@@ -375,6 +376,20 @@ export function Sidebar({
                 )}
               </div>
             )}
+            <div
+              className={`nav-item pointer-events-auto flex items-stretch p-0 overflow-hidden ${
+                isActive("/integrations") ? "active" : ""
+              }`}
+            >
+              <Link
+                href="/integrations"
+                className="flex-1 flex items-center gap-3 px-3 py-2.5 text-inherit no-underline"
+                title={isCollapsed ? dict.management.integrations : ""}
+              >
+                <Grid2x2Plus size={20} />
+                {!isCollapsed && <span>{dict.management.integrations}</span>}
+              </Link>
+            </div>
           </div>
         </nav>
 

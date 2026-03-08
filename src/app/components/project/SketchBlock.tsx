@@ -19,6 +19,7 @@ import { getStroke } from "perfect-freehand";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import ColorPicker from "./ColorPicker";
 
 type SketchBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -49,6 +50,9 @@ const COLORS = [
 ];
 
 const STROKE_SIZES = [2, 4, 8, 12, 16];
+
+const RAINBOW_GRADIENT =
+  "conic-gradient(from 0deg, #f00 0deg, #ff0 60deg, #0f0 120deg, #0ff 180deg, #00f 240deg, #f0f 300deg, #f00 360deg)";
 
 function getSvgPathFromStroke(stroke: number[][]) {
   if (!stroke.length) return "";
@@ -95,6 +99,10 @@ const SketchBlock = memo((props: SketchBlockProps) => {
     "pen" | "eraser" | "color" | null
   >(null);
   const [title, setTitle] = useState(data.title || "");
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [colorPickerPosition, setColorPickerPosition] = useState<
+    { x: number; y: number } | undefined
+  >(undefined);
 
   const [currentPoints, setCurrentPoints] = useState<Point[] | null>(null);
   // Use yDoc from context (enterprise pattern)
@@ -682,6 +690,19 @@ const SketchBlock = memo((props: SketchBlockProps) => {
                         style={{ backgroundColor: c }}
                       />
                     ))}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        stopPropagation(e);
+                        setColorPickerPosition({ x: e.clientX, y: e.clientY });
+                        setShowColorPicker(true);
+                        setActivePopup(null);
+                      }}
+                      {...preventDrag}
+                      className="w-6 h-6 rounded-full border border-(--border)"
+                      style={{ background: RAINBOW_GRADIENT }}
+                      title="Custom color"
+                    />
                   </div>
                 )}
               </div>
@@ -953,6 +974,20 @@ const SketchBlock = memo((props: SketchBlockProps) => {
         isReadOnly={isReadOnly}
         canReact={canReact}
       />
+      {showColorPicker && (
+        <ColorPicker
+          initialColor={color}
+          onSelect={(newColor) => {
+            setColor(newColor);
+            setShowColorPicker(false);
+            setTool("pen");
+          }}
+          position={colorPickerPosition}
+          onClose={() => {
+            setShowColorPicker(false);
+          }}
+        />
+      )}
     </>
   );
 });

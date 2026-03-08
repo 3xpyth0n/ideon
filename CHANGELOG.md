@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **Alignment Helper Lines**: Visual guide lines now appear when dragging nodes to help align them with other blocks. Shows horizontal and vertical alignment guides.
+- **Sketch Block Custom Color Picker**: Added an option allowing users to select any custom color using hex input or gradient picker.
 
 ## [0.6.0] - 2026-03-07
 

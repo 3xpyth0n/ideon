@@ -1676,6 +1676,7 @@ export const useProjectCanvasState = (
     onKeyDown,
     onPointerMove,
     onPointerLeave: rt.onPointerLeave,
+    helperLines: graph.helperLines,
     handlePreview: io.handlePreview,
     handleApplyState: async (stateId: string) => {
       if (!initialProjectId) return;

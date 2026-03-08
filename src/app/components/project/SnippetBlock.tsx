@@ -30,7 +30,6 @@ import "prismjs/components/prism-json";
 import "prismjs/themes/prism-tomorrow.css"; // Dark theme
 
 import { BlockData } from "./CanvasBlock";
-import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
 import { Select, SelectOption } from "@components/ui/Select";
 import "./snippet-block.css";
 import { BlockReactions } from "./BlockReactions";
@@ -52,7 +51,7 @@ const LANGUAGE_OPTIONS: SelectOption[] = [
 
 const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const { dict, lang } = useI18n();
-  const { setNodes, getNode, getEdges } = useReactFlow();
+  const { setNodes, getEdges } = useReactFlow();
 
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
@@ -304,43 +303,23 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       _evt: unknown,
       params: { width: number; height: number; x: number; y: number },
     ) => {
-      const { width, height, x, y } = params;
-
-      const snapW =
-        Math.abs(width - DEFAULT_BLOCK_WIDTH) <= DEFAULT_BLOCK_WIDTH * 0.1;
-      const snapH =
-        Math.abs(height - DEFAULT_BLOCK_HEIGHT) <= DEFAULT_BLOCK_HEIGHT * 0.1;
-
-      const finalWidth = snapW ? DEFAULT_BLOCK_WIDTH : Math.round(width);
-      const finalHeight = snapH ? DEFAULT_BLOCK_HEIGHT : Math.round(height);
-
-      const currentBlock = getNode(id);
-      if (!currentBlock) return;
-
-      let finalX = Math.round(x);
-      let finalY = Math.round(y);
-
-      if (snapW && Math.abs(x - currentBlock.position.x) > 0.1) {
-        finalX = Math.round(x + width - DEFAULT_BLOCK_WIDTH);
-      }
-      if (snapH && Math.abs(y - currentBlock.position.y) > 0.1) {
-        finalY = Math.round(y + height - DEFAULT_BLOCK_HEIGHT);
-      }
-
       setNodes((nds) =>
         nds.map((n) =>
           n.id === id
             ? {
                 ...n,
-                width: finalWidth,
-                height: finalHeight,
-                position: { x: finalX, y: finalY },
+                width: Math.round(params.width),
+                height: Math.round(params.height),
+                position: {
+                  x: Math.round(params.x),
+                  y: Math.round(params.y),
+                },
               }
             : n,
         ),
       );
     },
-    [id, getNode, setNodes],
+    [id, setNodes],
   );
 
   const handleResizeEnd = useCallback(

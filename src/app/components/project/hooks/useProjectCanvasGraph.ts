@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Node,
   Edge,
@@ -27,12 +27,17 @@ import {
   CORE_BLOCK_HEIGHT,
 } from "@components/project/utils/constants";
 import { getAdjustedPosition } from "@components/project/utils/collision";
+import {
+  calculateHelperLines,
+  HelperLine,
+} from "@components/project/utils/alignment";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
 const FIT_MIN_ZOOM = 0.1;
 const FIT_MAX_ZOOM_SELECTED = 2;
 const FIT_MAX_ZOOM_ALL = 1;
+const SNAP_THRESHOLD_PX = 8;
 
 interface UseProjectCanvasGraphProps {
   currentUser: UserPresence | null;
@@ -78,6 +83,34 @@ export const useProjectCanvasGraph = ({
   isReadOnly = false,
 }: UseProjectCanvasGraphProps) => {
   const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
+  const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const lastDragPositionRef = useRef<{
+    blockId: string;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift" && !isShiftPressed) {
+        setIsShiftPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isShiftPressed]);
 
   const applyLongestSideFit = useCallback(
     (targetBlocks: Node<BlockData>[], maxZoom: number) => {
@@ -329,9 +362,21 @@ export const useProjectCanvasGraph = ({
       if (isReadOnly) return;
       if (block.type === "core") return;
 
+      const { helperLines: activeHelperLines, snappedPosition } =
+        calculateHelperLines(
+          block as Node<BlockData>,
+          blocks,
+          SNAP_THRESHOLD_PX,
+          isShiftPressed,
+        );
+
+      setHelperLines(activeHelperLines);
+
+      const position = snappedPosition || block.position;
+
       const blockRect = {
-        x: block.position.x,
-        y: block.position.y,
+        x: position.x,
+        y: position.y,
         width: block.measured?.width || block.width || DEFAULT_BLOCK_WIDTH,
         height: block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT,
       };
@@ -343,18 +388,25 @@ export const useProjectCanvasGraph = ({
         height: CORE_BLOCK_HEIGHT,
       });
 
-      const adjustedBlock = {
-        ...block,
+      lastDragPositionRef.current = {
+        blockId: block.id,
         position: adjustedPos,
       };
 
-      setBlocks((blocks) =>
-        blocks.map((b) =>
-          b.id === block.id ? (adjustedBlock as Node<BlockData>) : b,
-        ),
-      );
+      if (
+        adjustedPos.x !== block.position.x ||
+        adjustedPos.y !== block.position.y
+      ) {
+        setBlocks((blocks) =>
+          blocks.map((b) =>
+            b.id === block.id
+              ? ({ ...b, position: adjustedPos } as Node<BlockData>)
+              : b,
+          ),
+        );
+      }
     },
-    [setBlocks],
+    [setBlocks, blocks, isReadOnly, isShiftPressed],
   );
 
   const onBlockDragStop = useCallback(
@@ -362,35 +414,27 @@ export const useProjectCanvasGraph = ({
       if (isReadOnly) return;
       if (block.type === "core") return;
       updateMyPresence({ draggingBlockId: null });
+      setHelperLines([]);
 
-      const blockRect = {
-        x: block.position.x,
-        y: block.position.y,
-        width: block.measured?.width || block.width || DEFAULT_BLOCK_WIDTH,
-        height: block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT,
-      };
+      const lastPosition = lastDragPositionRef.current;
+      const finalPosition =
+        lastPosition?.blockId === block.id
+          ? lastPosition.position
+          : block.position;
 
-      const adjustedPos = getAdjustedPosition(blockRect, {
-        x: CORE_BLOCK_X,
-        y: CORE_BLOCK_Y,
-        width: CORE_BLOCK_WIDTH,
-        height: CORE_BLOCK_HEIGHT,
-      });
-
-      const adjustedBlock = {
-        ...block,
-        position: adjustedPos,
-      };
+      lastDragPositionRef.current = null;
 
       applyMutation({
         intent: "Moved block",
         blocksUpdate: (blocks) =>
           blocks.map((b) =>
-            b.id === block.id ? (adjustedBlock as Node<BlockData>) : b,
+            b.id === block.id
+              ? ({ ...block, position: finalPosition } as Node<BlockData>)
+              : b,
           ),
       });
     },
-    [applyMutation, updateMyPresence],
+    [applyMutation, updateMyPresence, isReadOnly],
   );
 
   const onContentChange = useCallback(
@@ -429,46 +473,9 @@ export const useProjectCanvasGraph = ({
     [blocks, links, setBlocks],
   );
 
-  const onResizeCallback = useCallback(
-    (
-      blockId: string,
-      params: { width: number; height: number; x?: number; y?: number },
-    ) => {
-      if (isReadOnly) return;
-      const block = blocks.find((b) => b.id === blockId);
-      if (!block || block.type === "core") return;
-
-      const adjustedPos = getAdjustedPosition(
-        {
-          x: params.x !== undefined ? params.x : block.position.x,
-          y: params.y !== undefined ? params.y : block.position.y,
-          width: params.width,
-          height: params.height,
-        },
-        {
-          x: CORE_BLOCK_X,
-          y: CORE_BLOCK_Y,
-          width: CORE_BLOCK_WIDTH,
-          height: CORE_BLOCK_HEIGHT,
-        },
-      );
-
-      // Apply position adjustment
-      setBlocks((blocks) =>
-        blocks.map((b) =>
-          b.id === blockId
-            ? {
-                ...b,
-                width: params.width,
-                height: params.height,
-                position: adjustedPos,
-              }
-            : b,
-        ),
-      );
-    },
-    [setBlocks, blocks],
-  );
+  const onResizeCallback = useCallback(() => {
+    if (isReadOnly) return;
+  }, [isReadOnly]);
 
   const onResizeEndCallback = useCallback(
     (
@@ -478,6 +485,7 @@ export const useProjectCanvasGraph = ({
       if (isReadOnly) return;
       const block = blocks.find((b) => b.id === blockId);
       if (!block || block.type === "core") return;
+      setHelperLines([]);
 
       const adjustedPos = getAdjustedPosition(
         {
@@ -766,5 +774,6 @@ export const useProjectCanvasGraph = ({
     handleToggleLock,
     handleTransferBlock,
     handleFitView,
+    helperLines,
   };
 };

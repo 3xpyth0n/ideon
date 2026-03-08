@@ -328,8 +328,10 @@ const FileBlock = (props: CanvasBlockProps) => {
   const handleResizeEnd = useCallback(
     (
       _: unknown,
-      params: { width: number; height: number; x?: number; y?: number },
+      params?: { width: number; height: number; x?: number; y?: number },
     ) => {
+      if (!params) return;
+
       data.onResizeEnd?.(id, params);
     },
     [data, id],

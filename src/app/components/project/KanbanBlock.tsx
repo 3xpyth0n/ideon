@@ -261,6 +261,40 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     );
   };
 
+  const handleResize = useCallback(
+    (
+      _evt: unknown,
+      params: { width: number; height: number; x: number; y: number },
+    ) => {
+      const { width, height, x, y } = params;
+      const onResize = data.onResize;
+      onResize?.(id, {
+        width: Math.round(width),
+        height: Math.round(height),
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    },
+    [id, data],
+  );
+
+  const handleResizeEnd = useCallback(
+    (
+      _evt: unknown,
+      params: { width: number; height: number; x: number; y: number },
+    ) => {
+      const { width, height, x, y } = params;
+      const onResizeEnd = data.onResizeEnd;
+      onResizeEnd?.(id, {
+        width: Math.round(width),
+        height: Math.round(height),
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    },
+    [id, data],
+  );
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isReadOnly) return;
     const newTitle = e.target.value;
@@ -932,6 +966,8 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
         keepAspectRatio={false}
+        onResize={handleResize}
+        onResizeEnd={handleResizeEnd}
       />
 
       <div className="kb-root">

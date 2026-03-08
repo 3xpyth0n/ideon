@@ -379,7 +379,12 @@ const GitBlock = (props: CanvasBlockProps) => {
       _: unknown,
       params: { width: number; height: number; x?: number; y?: number },
     ) => {
-      data.onResize?.(id, params);
+      data.onResize?.(id, {
+        width: Math.round(params.width),
+        height: Math.round(params.height),
+        x: params.x !== undefined ? Math.round(params.x) : undefined,
+        y: params.y !== undefined ? Math.round(params.y) : undefined,
+      });
     },
     [data, id],
   );

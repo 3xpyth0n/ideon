@@ -25,7 +25,7 @@ import {
 import { useI18n } from "@providers/I18nProvider";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useTouch } from "@providers/TouchProvider";
-import { DEFAULT_BLOCK_WIDTH, DEFAULT_BLOCK_HEIGHT } from "./utils/constants";
+import { DEFAULT_BLOCK_WIDTH } from "./utils/constants";
 import * as Y from "yjs";
 import { UserPresence } from "./hooks/useProjectCanvasState";
 import ProjectCoreBlock from "./ProjectCoreBlock";
@@ -184,7 +184,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const userRole = data.userRole;
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
-  const { setNodes, getNode, getEdges } = useReactFlow();
+  const { setNodes, getEdges } = useReactFlow();
 
   const { rippleRef } = useTouch();
 
@@ -686,38 +686,22 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       _evt: unknown,
       params: { width: number; height: number; x: number; y: number },
     ) => {
-      const { width, height, x, y } = params;
-
-      const snapW =
-        Math.abs(width - DEFAULT_BLOCK_WIDTH) <= DEFAULT_BLOCK_WIDTH * 0.1;
-      const snapH =
-        Math.abs(height - DEFAULT_BLOCK_HEIGHT) <= DEFAULT_BLOCK_HEIGHT * 0.1;
-
-      const finalWidth = snapW ? DEFAULT_BLOCK_WIDTH : Math.round(width);
-      const finalHeight = snapH ? DEFAULT_BLOCK_HEIGHT : Math.round(height);
-
-      const currentBlock = getNode(id);
-      if (!currentBlock) return;
-
-      let finalX = Math.round(x);
-      let finalY = Math.round(y);
-
-      if (snapW && Math.abs(x - currentBlock.position.x) > 0.1) {
-        finalX = Math.round(x + width - DEFAULT_BLOCK_WIDTH);
-      }
-      if (snapH && Math.abs(y - currentBlock.position.y) > 0.1) {
-        finalY = Math.round(y + height - DEFAULT_BLOCK_HEIGHT);
-      }
-
       setNodes((nds) =>
         nds.map((n) =>
           n.id === id
             ? {
                 ...n,
-                width: finalWidth,
-                height: finalHeight,
-                position: { x: finalX, y: finalY },
-                style: { ...n.style, width: finalWidth, height: finalHeight },
+                width: Math.round(params.width),
+                height: Math.round(params.height),
+                position: {
+                  x: Math.round(params.x),
+                  y: Math.round(params.y),
+                },
+                style: {
+                  ...n.style,
+                  width: Math.round(params.width),
+                  height: Math.round(params.height),
+                },
               }
             : n,
         ),
@@ -725,52 +709,31 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
       const onResize = data.onResize;
       onResize?.(id, {
-        width: finalWidth,
-        height: finalHeight,
-        x: finalX,
-        y: finalY,
+        width: Math.round(params.width),
+        height: Math.round(params.height),
+        x: Math.round(params.x),
+        y: Math.round(params.y),
       });
     },
-    [id, data, getNode, setNodes],
+    [id, data, setNodes],
   );
 
   const handleResizeEnd = useCallback(
     (
       _evt: unknown,
-      params: { width: number; height: number; x: number; y: number },
+      params?: { width: number; height: number; x: number; y: number },
     ) => {
-      const { width, height, x, y } = params;
-
-      const snapW =
-        Math.abs(width - DEFAULT_BLOCK_WIDTH) <= DEFAULT_BLOCK_WIDTH * 0.1;
-      const snapH =
-        Math.abs(height - DEFAULT_BLOCK_HEIGHT) <= DEFAULT_BLOCK_HEIGHT * 0.1;
-
-      const finalWidth = snapW ? DEFAULT_BLOCK_WIDTH : Math.round(width);
-      const finalHeight = snapH ? DEFAULT_BLOCK_HEIGHT : Math.round(height);
-
-      const currentBlock = getNode(id);
-      if (!currentBlock) return;
-
-      let finalX = Math.round(x);
-      let finalY = Math.round(y);
-
-      if (snapW && Math.abs(x - currentBlock.position.x) > 0.1) {
-        finalX = Math.round(x + width - DEFAULT_BLOCK_WIDTH);
-      }
-      if (snapH && Math.abs(y - currentBlock.position.y) > 0.1) {
-        finalY = Math.round(y + height - DEFAULT_BLOCK_HEIGHT);
-      }
+      if (!params) return;
 
       const onResizeEnd = data.onResizeEnd;
       onResizeEnd?.(id, {
-        width: finalWidth,
-        height: finalHeight,
-        x: finalX,
-        y: finalY,
+        width: Math.round(params.width),
+        height: Math.round(params.height),
+        x: Math.round(params.x),
+        y: Math.round(params.y),
       });
     },
-    [id, data, getNode],
+    [id, data],
   );
 
   const getDomain = (url: string) => {

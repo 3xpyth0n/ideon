@@ -44,6 +44,14 @@
   pointer-events: none;
 }
 
+.helper-line {
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 5, 5;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
 /* User Presence Styles */
 .user-presence-avatar {
   width: 32px;

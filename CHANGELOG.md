@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-03-XX
+
+### Added
+
+- **Alignment Helper Lines**: Visual guide lines now appear when dragging nodes to help align them with other blocks. Shows horizontal and vertical alignment guides.
+
 ## [0.6.0] - 2026-03-07
 
 ### Added

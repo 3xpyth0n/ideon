@@ -48,10 +48,12 @@ export default function CommandPalette({
       { label: dict.canvas.cheatChildBlock, keys: ["Tab"] },
     ],
     [dict.canvas.cheatCanvas]: [
+      { label: dict.canvas.AddBlock, keys: ["Ctrl", "A"] },
       { label: dict.canvas.zoomIn, keys: ["Ctrl", "+"] },
       { label: dict.canvas.zoomOut, keys: ["Ctrl", "-"] },
       { label: dict.canvas.fitView, keys: ["Ctrl", "0"] },
       { label: dict.canvas.cheatMultiSelect, keys: ["Ctrl", "Click"] },
+      { label: dict.canvas.cheatDisableSnap, keys: ["Shift", "(drag)"] },
     ],
     [dict.canvas.cheatMarkdown]: [
       { label: dict.canvas.cheatBold, keys: ["Ctrl", "B"] },

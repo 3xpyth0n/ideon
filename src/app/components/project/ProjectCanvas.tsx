@@ -73,6 +73,7 @@ import { ShareModal } from "./ShareModal";
 import { DownloadButton } from "./DownloadButton";
 import { SyncIndicator } from "./SyncIndicator";
 import { useAutoSnapshot, AutoSnapshotIntent } from "@/hooks/useAutoSnapshot";
+import HelperLines from "./HelperLines";
 
 import { Modal } from "@components/ui/Modal";
 import {
@@ -470,6 +471,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     canUndo,
     canRedo,
     hasSeenOnboarding,
+    helperLines,
   } = useProjectCanvasState(
     initialProjectId,
     currentUser,
@@ -967,6 +969,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     remoteCursorsRef={remoteCursorsRef}
                   />
                 </Panel>
+                {!isReadOnly && (
+                  <Panel
+                    position="top-left"
+                    className="pointer-events-none m-0!"
+                    style={{ width: "100%", height: "100%", zIndex: 999 }}
+                  >
+                    <HelperLines helperLines={helperLines} />
+                  </Panel>
+                )}
                 <Background
                   variant={BackgroundVariant.Dots}
                   gap={25}

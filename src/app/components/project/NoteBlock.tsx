@@ -517,6 +517,40 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     editor?.commands.focus();
   }, [editor]);
 
+  const handleResize = useCallback(
+    (
+      _evt: unknown,
+      params: { width: number; height: number; x: number; y: number },
+    ) => {
+      const { width, height, x, y } = params;
+      const onResize = data.onResize;
+      onResize?.(id, {
+        width: Math.round(width),
+        height: Math.round(height),
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    },
+    [id, data],
+  );
+
+  const handleResizeEnd = useCallback(
+    (
+      _evt: unknown,
+      params: { width: number; height: number; x: number; y: number },
+    ) => {
+      const { width, height, x, y } = params;
+      const onResizeEnd = data.onResizeEnd;
+      onResizeEnd?.(id, {
+        width: Math.round(width),
+        height: Math.round(height),
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    },
+    [id, data],
+  );
+
   return (
     <>
       <CustomNodeResizer
@@ -525,6 +559,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         minHeight={180}
         lineClassName="resizer-line"
         handleClassName="resizer-handle"
+        onResize={handleResize}
+        onResizeEnd={handleResizeEnd}
       />
       <div
         ref={blockRef}

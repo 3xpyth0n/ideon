@@ -129,13 +129,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Validate i18n files synchronization
-        run: npm run validate:i18n
+        run: npm exec --yes --package=tsx -- tsx src/app/i18n/validate.ts
 
   secret-scan:
     name: Secret scanning

@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
+  Check,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useTouchGestures } from "./hooks/useTouchGestures";
@@ -126,6 +127,9 @@ export interface BlockMetadata {
   description?: string;
   image?: string;
   error?: string;
+  metadataUrl?: string;
+  hasFetchedMetadata?: boolean;
+  disablePublicMetadataFetch?: boolean;
   [key: string]: unknown;
 }
 
@@ -171,6 +175,8 @@ const getBlockIconComponent = (type: string) => {
       return FileText;
   }
 };
+
+const HIDE_OG_PREVIEW_BELOW_HEIGHT = 260;
 
 const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const { id, data, selected, type, width, height } = props;
@@ -365,6 +371,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
   const [previewImageError, setPreviewImageError] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
+  const fetchedMetadataUrlsRef = useRef<Set<string>>(new Set());
+  const metadataFetchInFlightRef = useRef<string | null>(null);
 
   useEffect(() => {
     setPreviewImageError(false);
@@ -375,23 +383,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   useEffect(() => {
     metadataRef.current = metadata;
   }, [metadata]);
-
-  // Sync metadata from props (real-time updates)
-  useEffect(() => {
-    try {
-      const incomingMetadata = data.metadata
-        ? typeof data.metadata === "string"
-          ? JSON.parse(data.metadata)
-          : data.metadata
-        : null;
-
-      if (JSON.stringify(incomingMetadata) !== JSON.stringify(metadata)) {
-        setMetadata(incomingMetadata);
-      }
-    } catch {
-      // Ignore parsing errors
-    }
-  }, [data.metadata, metadata]);
 
   const blockRef = useRef<HTMLDivElement>(null);
   const linkInputRef = useRef<HTMLInputElement>(null);
@@ -432,25 +423,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         title,
         data.reactions,
       );
-
-      if (setNodes) {
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === id
-              ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    metadata: metadataString,
-                    title: title,
-                  },
-                }
-              : n,
-          ),
-        );
-      }
     },
-    [currentUser, dict.project.anonymous, data, id, content, title, setNodes],
+    [currentUser, dict.project.anonymous, data, id, content, title],
   );
 
   const linkRetries = useRef(0);
@@ -460,57 +434,146 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   }, [content]);
 
   const fetchLinkMetadata = useCallback(
-    async (url: string) => {
+    async (url: string, options?: { forceRoot?: boolean }) => {
       if (!url) return;
 
-      // Validate domain format (http optional, domain + TLD required)
-      const URL_REGEX = new RegExp(
-        "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)/?$",
-        "i",
-      );
+      if (metadataRef.current?.disablePublicMetadataFetch) {
+        return;
+      }
 
-      if (!URL_REGEX.test(url)) {
+      const fetchKey = options?.forceRoot ? `root:${url}` : `main:${url}`;
+      if (metadataFetchInFlightRef.current === fetchKey) {
+        return;
+      }
+      if (!options?.forceRoot && fetchedMetadataUrlsRef.current.has(url)) {
+        return;
+      }
+
+      // Validate URL format while allowing private hosts (localhost, intranet, IPs).
+      let validatedUrl: string | null = null;
+      try {
+        const withProtocol = url.startsWith("http") ? url : `https://${url}`;
+        const parsed = new URL(withProtocol);
+        if (/^https?:$/.test(parsed.protocol)) {
+          validatedUrl = parsed.toString();
+        }
+      } catch {
+        validatedUrl = null;
+      }
+
+      if (!validatedUrl) {
         updateMetadata({
           ...metadataRef.current,
           title: "Invalid Link",
           description: "The URL format is invalid",
           image: "",
           error: "invalid_format",
+          metadataUrl: url,
+          hasFetchedMetadata: true,
         });
+        fetchedMetadataUrlsRef.current.add(url);
         return;
       }
 
       if (linkRetries.current >= 3) {
+        fetchedMetadataUrlsRef.current.add(url);
         updateMetadata({
           ...metadataRef.current,
-          title: "Link Unavailable",
-          description: "Could not retrieve link metadata",
+          metadataUrl: url,
+          hasFetchedMetadata: true,
+          error: undefined,
           image: "",
-          error: "max_retries",
         });
         return;
       }
 
       linkRetries.current += 1;
+      metadataFetchInFlightRef.current = fetchKey;
 
-      try {
+      const normalizeValue = (value: unknown) => {
+        if (typeof value !== "string") return undefined;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      };
+
+      const fetchPreview = async (targetUrl: string) => {
         const res = await fetch("/api/links/preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
+          body: JSON.stringify({ url: targetUrl }),
         });
-        if (res.ok) {
-          const ogData = await res.json();
-          updateMetadata({
-            ...metadataRef.current,
-            title: ogData.title,
-            description: ogData.description,
-            image: ogData.image,
-            error: undefined,
-          });
+
+        if (!res.ok) return null;
+
+        const ogData = (await res.json()) as {
+          title?: string;
+          description?: string;
+          image?: string;
+        };
+
+        return {
+          title: normalizeValue(ogData.title),
+          description: normalizeValue(ogData.description),
+          image: normalizeValue(ogData.image),
+        };
+      };
+
+      const buildRootUrl = (rawUrl: string) => {
+        const parsed = new URL(
+          rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`,
+        );
+        return `${parsed.protocol}//${parsed.hostname}/`;
+      };
+
+      try {
+        const primaryTarget = options?.forceRoot
+          ? buildRootUrl(url)
+          : validatedUrl;
+        let preview = await fetchPreview(primaryTarget);
+
+        const shouldTryRootFallback =
+          !options?.forceRoot && (!preview || !preview.image);
+
+        if (shouldTryRootFallback) {
+          const rootUrl = buildRootUrl(url);
+          if (rootUrl !== primaryTarget) {
+            const rootPreview = await fetchPreview(rootUrl);
+            if (rootPreview) {
+              preview = {
+                title: preview?.title || rootPreview.title,
+                description: preview?.description || rootPreview.description,
+                image: rootPreview.image || preview?.image,
+              };
+            }
+          }
+        }
+
+        updateMetadata({
+          ...metadataRef.current,
+          title: preview?.title,
+          description: preview?.description,
+          image: preview?.image || "",
+          error: undefined,
+          metadataUrl: url,
+          hasFetchedMetadata: true,
+        });
+        if (!options?.forceRoot) {
+          fetchedMetadataUrlsRef.current.add(url);
         }
       } catch (error) {
         console.error("Failed to fetch link metadata:", error);
+        updateMetadata({
+          ...metadataRef.current,
+          error: undefined,
+          image: "",
+          metadataUrl: url,
+          hasFetchedMetadata: true,
+        });
+        if (!options?.forceRoot) {
+          fetchedMetadataUrlsRef.current.add(url);
+        }
+      } finally {
+        metadataFetchInFlightRef.current = null;
       }
     },
     [updateMetadata],
@@ -526,7 +589,14 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   useEffect(() => {
     if (blockType !== "link" || !content || isEditingLink || isReadOnly) return;
 
-    if (!metadata?.title && !metadata?.image && !metadata?.error) {
+    const hasMetadataForCurrentUrl = metadata?.metadataUrl === content;
+    const isPublicMetadataDisabled = !!metadata?.disablePublicMetadataFetch;
+
+    if (
+      !isPublicMetadataDisabled &&
+      metadata?.error !== "invalid_format" &&
+      (!hasMetadataForCurrentUrl || !metadata?.hasFetchedMetadata)
+    ) {
       fetchLinkMetadata(content);
     }
   }, [
@@ -745,10 +815,41 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     }
   };
 
+  const isPublicMetadataDisabled = !!metadata?.disablePublicMetadataFetch;
+  const showInvalidState = metadata?.error === "invalid_format";
+
+  const handleMetadataToggle = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const nextDisabled = !metadataRef.current?.disablePublicMetadataFetch;
+      const nextMetadata = {
+        ...metadataRef.current,
+        disablePublicMetadataFetch: nextDisabled,
+        metadataUrl: content,
+        hasFetchedMetadata: nextDisabled,
+        error:
+          metadataRef.current?.error === "invalid_format"
+            ? "invalid_format"
+            : undefined,
+      } as BlockMetadata;
+
+      updateMetadata(nextMetadata);
+
+      if (!nextDisabled) {
+        fetchedMetadataUrlsRef.current.delete(content);
+        linkRetries.current = 0;
+        fetchLinkMetadata(content);
+      }
+    },
+    [content, fetchLinkMetadata, updateMetadata],
+  );
+
   const renderContent = () => {
     if (isEditingLink) {
       return (
-        <div className="block-link-edit-container flex items-center justify-center h-full w-full px-4 nodrag">
+        <div className="block-link-edit-container flex flex-col items-stretch justify-center h-full w-full px-4 gap-3 nodrag">
           <input
             ref={linkInputRef}
             type="text"
@@ -786,6 +887,32 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             className="link-input"
             readOnly={isReadOnly}
           />
+          <div
+            className="flex items-center gap-2"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          >
+            <button
+              type="button"
+              className={`checklist-checkbox ${
+                isPublicMetadataDisabled ? "checked" : ""
+              }`}
+              onClick={handleMetadataToggle}
+              disabled={isReadOnly}
+              aria-label={dict.blocks.disablePublicMetadataFetch}
+            >
+              {isPublicMetadataDisabled && <Check size={11} />}
+            </button>
+            <span className="text-[11px] opacity-60">
+              {dict.blocks.disablePublicMetadataFetch}
+            </span>
+          </div>
         </div>
       );
     }
@@ -796,6 +923,40 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
         )}`
       : null;
+
+    const normalizeText = (value?: string) =>
+      (value || "").trim().toLowerCase();
+    const normalizedContent = normalizeText(content);
+
+    const fallbackTitle =
+      domain.replace(/^www\./i, "") || content || "Untitled Link";
+    const metadataTitle = (metadata?.title || "").trim();
+    const metadataDescription = (metadata?.description || "").trim();
+
+    const linkTitle =
+      !isPublicMetadataDisabled &&
+      metadataTitle &&
+      normalizeText(metadataTitle) !== normalizedContent
+        ? metadataTitle
+        : fallbackTitle;
+
+    const linkDescription =
+      !isPublicMetadataDisabled && metadataDescription
+        ? metadataDescription
+        : "";
+
+    const shouldShowDescription =
+      !!linkDescription &&
+      normalizeText(linkDescription) !== normalizeText(linkTitle) &&
+      normalizeText(linkDescription) !== normalizedContent;
+
+    const isCompactHeight =
+      typeof height === "number" && height < HIDE_OG_PREVIEW_BELOW_HEIGHT;
+    const hasPreviewImage = !!metadata?.image && !previewImageError;
+    const shouldShowPreviewImage =
+      !isPublicMetadataDisabled && hasPreviewImage && !isCompactHeight;
+    const shouldShowPreviewPlaceholder =
+      !isPublicMetadataDisabled && !hasPreviewImage;
 
     return (
       <div
@@ -817,44 +978,25 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             </span>
           </div>
         )}
-        {metadata?.image && !previewImageError ? (
+        {shouldShowPreviewImage && (
           <div className="block-link-preview w-full aspect-video overflow-hidden relative shrink-0">
             <img
-              src={`/api/proxy/image?url=${encodeURIComponent(metadata.image)}`}
-              alt={metadata.title || "Link preview"}
+              src={`/api/proxy/image?url=${encodeURIComponent(
+                metadata.image as string,
+              )}`}
+              alt={metadata?.title || "Link preview"}
               className="w-full h-full object-cover"
               crossOrigin="anonymous"
               onError={() => setPreviewImageError(true)}
             />
-            {faviconUrl && !faviconError && (
-              <div className="absolute top-2 left-2 w-6 h-6">
-                <img
-                  src={faviconUrl}
-                  alt="favicon"
-                  className="w-full h-full object-contain"
-                  crossOrigin="anonymous"
-                  onError={() => setFaviconError(true)}
-                />
-              </div>
-            )}
           </div>
-        ) : (
+        )}
+        {shouldShowPreviewPlaceholder && (
           <div className="block-link-placeholder w-full aspect-video flex items-center justify-center bg-white/5 relative shrink-0">
-            {metadata?.error ? (
+            {showInvalidState ? (
               <AlertCircle size={48} className="opacity-20 text-red-500" />
             ) : (
               <Globe size={48} className="opacity-20" />
-            )}
-            {faviconUrl && !faviconError && (
-              <div className="absolute top-2 left-2 w-6 h-6">
-                <img
-                  src={faviconUrl}
-                  alt="favicon"
-                  className="w-full h-full object-contain"
-                  crossOrigin="anonymous"
-                  onError={() => setFaviconError(true)}
-                />
-              </div>
             )}
           </div>
         )}
@@ -871,15 +1013,17 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             )}
             <h4
               className={`block-link-title line-clamp-1 font-bold text-sm ${
-                metadata?.error ? "text-red-400" : ""
+                showInvalidState ? "text-red-400" : ""
               }`}
             >
-              {metadata?.title || content || "Untitled Link"}
+              {linkTitle}
             </h4>
           </div>
-          <p className="block-link-description line-clamp-2 text-xs opacity-60">
-            {metadata?.description || content}
-          </p>
+          {shouldShowDescription && (
+            <p className="block-link-description line-clamp-2 text-xs opacity-60">
+              {linkDescription}
+            </p>
+          )}
           <div className="flex items-center gap-1 mt-3 text-[10px] opacity-40">
             <ExternalLink size={10} />
             <span className="truncate">{content}</span>

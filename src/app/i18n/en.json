@@ -150,6 +150,7 @@
     "issues": "Open Issues",
     "lastUpdated": "Last Updated",
     "linkPlaceholder": "https://example.com",
+    "disablePublicMetadataFetch": "Disable public metadata",
     "lock": "Lock",
     "locked": "Locked",
     "mergeRequests": "Open Merge Requests",

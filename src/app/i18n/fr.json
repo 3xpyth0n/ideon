@@ -150,6 +150,7 @@
     "issues": "Issues Ouvertes",
     "lastUpdated": "Mis à jour le",
     "linkPlaceholder": "https://exemple.com",
+    "disablePublicMetadataFetch": "Désactiver les métadonnées publiques",
     "lock": "Verrouiller",
     "locked": "Verrouillé",
     "mergeRequests": "Merge Requests Ouvertes",

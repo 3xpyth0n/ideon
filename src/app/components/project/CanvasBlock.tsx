@@ -1050,6 +1050,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       }
     >
       <CustomNodeResizer
+        nodeId={id}
         minWidth={250}
         minHeight={180}
         isVisible={!isReadOnly}

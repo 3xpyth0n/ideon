@@ -164,7 +164,9 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
   const lastResizeParamsRef = useRef<ResizeParams | null>(null);
 
-  const selectedNode = useStore((state) => state.nodes.find((n) => n.selected));
+  const resizingNode = useStore((state) =>
+    props.nodeId ? state.nodes.find((n) => n.id === props.nodeId) : null,
+  );
 
   const hitboxSize = useMemo(() => {
     if (!zoom || zoom <= 0) return MIN_HITBOX_SIZE;
@@ -186,24 +188,24 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
     NonNullable<NodeResizerProps["onResizeStart"]>
   >(
     (event, params) => {
-      if (!selectedNode) return;
+      if (!resizingNode) return;
 
       const handle = extractHandleFromEvent(event);
       if (!handle) return;
 
-      const fixedCorner = calculateFixedCorner(selectedNode, handle);
+      const fixedCorner = calculateFixedCorner(resizingNode, handle);
       setResizeState({
         handle,
         fixedCorner,
         originalDims: {
-          width: selectedNode.width || 0,
-          height: selectedNode.height || 0,
+          width: resizingNode.width || 0,
+          height: resizingNode.height || 0,
         },
       });
 
       props.onResizeStart?.(event, params);
     },
-    [selectedNode, props],
+    [resizingNode, props],
   );
 
   const onResizeEnd = useCallback<NonNullable<NodeResizerProps["onResizeEnd"]>>(
@@ -213,24 +215,24 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
       const fallbackParams: ResizeParams | undefined =
         params ??
         lastResizeParamsRef.current ??
-        (selectedNode
+        (resizingNode
           ? {
-              x: selectedNode.position.x,
-              y: selectedNode.position.y,
-              width: selectedNode.width ?? 0,
-              height: selectedNode.height ?? 0,
+              x: resizingNode.position.x,
+              y: resizingNode.position.y,
+              width: resizingNode.width ?? 0,
+              height: resizingNode.height ?? 0,
             }
           : undefined);
 
       props.onResizeEnd?.(event, fallbackParams);
       lastResizeParamsRef.current = null;
     },
-    [props, selectedNode],
+    [props, resizingNode],
   );
 
   const onResize = useCallback<NonNullable<NodeResizerProps["onResize"]>>(
     (event, params) => {
-      if (!selectedNode) {
+      if (!resizingNode) {
         props.onResize?.(event, params);
         return;
       }
@@ -241,8 +243,8 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
       if (!resizeState || !currentHandle) {
         const corrected = {
           ...params,
-          x: selectedNode.position.x,
-          y: selectedNode.position.y,
+          x: resizingNode.position.x,
+          y: resizingNode.position.y,
           width,
           height,
         };
@@ -254,7 +256,7 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
 
       const { fixedCorner } = resizeState;
       const position = calculateCorrectedPosition(
-        selectedNode,
+        resizingNode,
         currentHandle,
         fixedCorner,
         width,
@@ -272,7 +274,7 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
       lastResizeParamsRef.current = corrected;
       props.onResize?.(event, corrected);
     },
-    [selectedNode, resizeState, props],
+    [resizingNode, resizeState, props],
   );
 
   const shouldResize = useCallback<

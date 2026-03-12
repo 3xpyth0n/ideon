@@ -1,11 +1,21 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, Check, Camera, Loader2, Globe, X } from "lucide-react";
+import {
+  ChevronDown,
+  Check,
+  Camera,
+  Loader2,
+  Globe,
+  X,
+  BadgeInfo,
+} from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
 import { toast } from "sonner";
 import { getAvatarUrl } from "@lib/utils";
 import { GitTokenManager } from "@components/account/GitTokenManager";
+import { Modal } from "@components/ui/Modal";
+import { ideonSiteConfig } from "@lib/site-config";
 
 export default function AccountPage() {
   const { dict, lang, setLang, availableLanguages } = useI18n();
@@ -19,6 +29,8 @@ export default function AccountPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState("0.0.0");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -145,6 +157,19 @@ export default function AccountPage() {
   }, [dict, loading]);
 
   useEffect(() => {
+    fetch("/api/system/current-version")
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.version === "string" && data.version.length > 0) {
+          setCurrentVersion(data.version);
+        }
+      })
+      .catch(() => {
+        setCurrentVersion("0.0.0");
+      });
+  }, []);
+
+  useEffect(() => {
     if (user) {
       setUsername(user.username || "");
       setDisplayName(user.displayName || "");
@@ -259,6 +284,10 @@ export default function AccountPage() {
       </div>
     );
   }
+
+  const copyrightText = `© ${new Date().getFullYear()} ${
+    ideonSiteConfig.creator.name
+  }`;
 
   return (
     <div className="island-content relative pt-0!" ref={containerRef}>
@@ -523,8 +552,125 @@ export default function AccountPage() {
               <GitTokenManager />
             </div>
           </section>
+
+          <div className="account-about-trigger-wrap">
+            <button
+              type="button"
+              className="about-trigger-btn"
+              onClick={() => setIsAboutOpen(true)}
+            >
+              <BadgeInfo size={14} />
+              <span>{dict.account.aboutButton}</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
+        title={dict.account.aboutTitle}
+        subtitle={dict.account.aboutSubtitle}
+        className="about-modal"
+      >
+        <div className="about-modal-content">
+          <div className="about-section">
+            <h3 className="about-section-title">
+              {dict.account.aboutSectionInfo}
+            </h3>
+            <div className="about-meta-grid">
+              <p className="about-meta-item">
+                <span className="about-meta-label">
+                  {dict.account.aboutAppNameLabel}
+                </span>
+                <span className="about-meta-value">{ideonSiteConfig.name}</span>
+              </p>
+              <p className="about-meta-item">
+                <span className="about-meta-label">
+                  {dict.account.aboutCreatorLabel}
+                </span>
+                <span className="about-meta-value">
+                  {ideonSiteConfig.creator.name}
+                </span>
+              </p>
+              <p className="about-meta-item">
+                <span className="about-meta-label">
+                  {dict.account.aboutVersionLabel}
+                </span>
+                <span className="about-meta-value">v{currentVersion}</span>
+              </p>
+              <p className="about-meta-item">
+                <span className="about-meta-label">
+                  {dict.account.aboutLicenseLabel}
+                </span>
+                <span className="about-meta-value">
+                  {ideonSiteConfig.license}
+                </span>
+              </p>
+              <p className="about-meta-item">
+                <span className="about-meta-label">
+                  {dict.account.aboutCopyrightLabel}
+                </span>
+                <span className="about-meta-value">{copyrightText}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="about-section">
+            <h3 className="about-section-title">
+              {dict.account.aboutSectionLinks}
+            </h3>
+            <div className="about-actions-grid">
+              <a
+                className="btn-ghost about-action-link"
+                href={ideonSiteConfig.links.repository}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {dict.account.aboutOpenRepository}
+              </a>
+              <a
+                className="btn-ghost about-action-link"
+                href={ideonSiteConfig.links.website}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {dict.account.aboutOpenWebsite}
+              </a>
+              <a
+                className="btn-ghost about-action-link"
+                href={ideonSiteConfig.links.documentation}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {dict.account.aboutOpenDocumentation}
+              </a>
+              <a
+                className="btn-ghost about-action-link"
+                href={ideonSiteConfig.links.issues}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {dict.account.aboutOpenIssue}
+              </a>
+              <a
+                className="btn-ghost about-action-link"
+                href={`mailto:${ideonSiteConfig.contact.email}`}
+              >
+                {dict.account.aboutSendEmail}
+              </a>
+              <a
+                className="btn-ghost about-action-link"
+                href={ideonSiteConfig.links.changelog}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {dict.account.aboutViewChangelog}
+              </a>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

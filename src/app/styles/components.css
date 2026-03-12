@@ -1936,6 +1936,136 @@
   padding: 32px 0;
 }
 
+.account-about-trigger-wrap {
+  margin-top: 4px;
+  padding-top: 8px;
+  display: flex;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.account-about-trigger-wrap:hover {
+  opacity: 1;
+}
+
+.about-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: small;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.about-trigger-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.about-trigger-btn svg {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.about-trigger-btn span {
+  display: inline-block;
+}
+
+.about-modal {
+  max-width: 720px;
+  width: 92vw;
+  text-align: left;
+}
+
+.about-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.about-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.about-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+.about-meta-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.about-meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.about-meta-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.about-meta-value {
+  font-size: 13px;
+  color: var(--text-main);
+  text-align: right;
+  word-break: break-word;
+}
+
+.about-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.about-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  width: 100%;
+}
+
+/* override ghost button hover for about actions to stay visible on light backgrounds */
+.about-action-link.btn-ghost:hover {
+  color: var(--text-main) !important;
+  border-color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+@media (max-width: 640px) {
+  .about-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-meta-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .about-meta-value {
+    text-align: left;
+  }
+}
+
 /* Notion Rapid Input */
 .rapid-input-container {
   position: absolute;

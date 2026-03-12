@@ -145,7 +145,12 @@ export function prepareBlockForDb(
     data: JSON.stringify(parsedNode.data || {}),
     ownerId: data.ownerId || ownerId,
     updatedAt: new Date().toISOString(),
-    metadata: data.metadata ? JSON.stringify(data.metadata) : "{}",
+    metadata:
+      typeof data.metadata === "string"
+        ? data.metadata
+        : data.metadata
+          ? JSON.stringify(data.metadata)
+          : "{}",
   };
 }
 

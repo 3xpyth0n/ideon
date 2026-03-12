@@ -941,17 +941,29 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       !isPublicMetadataDisabled && !hasPreviewImage;
 
     return (
-      <div
-        className="block-link-widget flex-1 flex flex-col min-h-0 overflow-hidden rounded bg-white/5 transition-colors cursor-pointer group relative"
+      <a
+        className="block-link-widget nodrag nopan flex-1 flex flex-col min-h-0 overflow-hidden rounded bg-white/5 transition-colors cursor-pointer group relative"
         onContextMenu={handleContentContextMenu}
         {...touchHandlers}
-        onClick={() =>
-          content &&
-          window.open(
-            content.startsWith("http") ? content : `https://${content}`,
-            "_blank",
-          )
+        href={
+          content
+            ? content.startsWith("http")
+              ? content
+              : `https://${content}`
+            : "#"
         }
+        target="_blank"
+        rel="noopener noreferrer"
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          if (!content) {
+            event.preventDefault();
+            return;
+          }
+          event.stopPropagation();
+        }}
       >
         {!isReadOnly && !isEditingLink && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
@@ -1011,7 +1023,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             <span className="truncate">{content}</span>
           </div>
         </div>
-      </div>
+      </a>
     );
   };
 

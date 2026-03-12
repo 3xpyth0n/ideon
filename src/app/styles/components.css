@@ -1659,7 +1659,12 @@
 
 /* Read-only Canvas Cursors & Interaction */
 .project-canvas.read-only .react-flow__pane {
-  cursor: grab !important;
+  cursor: default !important;
+}
+
+.project-canvas.read-only .react-flow__pane.dragging,
+.project-canvas.read-only .react-flow__pane:active {
+  cursor: grabbing !important;
 }
 
 .project-canvas.read-only .react-flow__node,

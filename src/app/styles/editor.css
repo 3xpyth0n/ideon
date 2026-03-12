@@ -128,10 +128,23 @@
   -webkit-touch-callout: default;
 }
 
-.block-file-container, .preview-mode .react-flow__node,
-.preview-mode .react-flow__edge, /* Force block-card content to have default cursor in preview mode */
+.block-file-container,
+.preview-mode .react-flow__node,
+.preview-mode .react-flow__edge,
+.preview-mode .block-card,
 .preview-mode .block-card * {
   cursor: default !important;
+}
+
+.preview-mode .block-card a,
+.preview-mode .block-card button,
+.preview-mode .block-card [role="button"],
+.preview-mode .block-card .reaction-button,
+.preview-mode .block-card .reaction-badge,
+.preview-mode .block-link-widget,
+.preview-mode .markdown-editor-container .ProseMirror a {
+  cursor: pointer !important;
+  pointer-events: auto !important;
 }
 
 .loading-overlay {
@@ -340,6 +353,10 @@
   letter-spacing: 0.1em;
   pointer-events: none;
   z-index: 1000;
+}
+
+.public-project-canvas .zoom-indicator {
+  right: 140px;
 }
 
 .sync-indicator {
@@ -837,6 +854,24 @@
   border-color: rgba(255, 255, 255, 0.6);
 }
 
+.preview-mode .block-card.selected {
+  z-index: 5;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .preview-mode .block-card.selected {
+  z-index: 5;
+  box-shadow: 0 0 15px 1px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.preview-mode .react-flow__node:focus,
+.preview-mode .react-flow__node:focus-visible,
+.preview-mode .react-flow__node:focus-within {
+  outline: none !important;
+}
+
 /* Thought Node Status Styles */
 .block-card.status-idea {
   border-style: dashed;
@@ -1217,10 +1252,10 @@
 }
 
 .preview-mode .react-flow__pane {
-  cursor: grab !important;
-  cursor: -webkit-grab !important;
+  cursor: default !important;
 }
 
+.preview-mode .react-flow__pane.dragging,
 .preview-mode .react-flow__pane:active {
   cursor: grabbing !important;
   cursor: -webkit-grabbing !important;

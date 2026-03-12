@@ -590,7 +590,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           </div>
 
           <div
-            className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag cursor-text"
+            className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag nopan cursor-text"
             onContextMenu={(e) => e.preventDefault()}
           >
             <MarkdownEditor

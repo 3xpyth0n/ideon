@@ -650,7 +650,7 @@ export const useProjectCanvasGraph = ({
           authorName: currentUser.username,
           authorColor: currentUser.color,
           blockType,
-          isLocked: true,
+          isLocked: false,
           updatedAt: new Date().toISOString(),
           lastEditor: currentUser.username,
           isEditingLink: false,

@@ -142,6 +142,7 @@ const MarkdownEditor = ({
 }: MarkdownEditorProps) => {
   const [, setIsFocused] = useState(false);
   const isSyncingRef = React.useRef(false);
+  const wasFocusedBeforeClickRef = React.useRef(false);
 
   const onLinkShortcutRef = React.useRef(onLinkShortcut);
 
@@ -177,7 +178,7 @@ const MarkdownEditor = ({
       TableHeader,
       TableCell,
       Link.configure({
-        openOnClick: false,
+        openOnClick: isReadOnly,
         HTMLAttributes: {
           class: "cursor-pointer text-blue-500 hover:text-blue-600 underline",
         },
@@ -199,6 +200,28 @@ const MarkdownEditor = ({
     editorProps: {
       attributes: {
         class: `prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[100px] ${className}`,
+      },
+      handleDOMEvents: {
+        mousedown: (view) => {
+          wasFocusedBeforeClickRef.current = view.hasFocus();
+          return false;
+        },
+        click: (_view, event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return false;
+
+          const anchor = target.closest("a");
+          if (!(anchor instanceof HTMLAnchorElement) || !anchor.href) {
+            return false;
+          }
+
+          if (!isReadOnly && wasFocusedBeforeClickRef.current) return false;
+
+          event.preventDefault();
+          event.stopPropagation();
+          window.open(anchor.href, "_blank", "noopener,noreferrer");
+          return true;
+        },
       },
     },
     onUpdate: ({ editor }) => {

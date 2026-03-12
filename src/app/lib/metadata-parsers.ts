@@ -21,6 +21,14 @@ export const parseJsonRecord = (raw: unknown): JsonRecord => {
   if (typeof raw === "string") {
     try {
       const parsed = JSON.parse(raw);
+      if (typeof parsed === "string") {
+        try {
+          const reparsed = JSON.parse(parsed);
+          return isJsonRecord(reparsed) ? reparsed : {};
+        } catch {
+          return {};
+        }
+      }
       return isJsonRecord(parsed) ? parsed : {};
     } catch {
       return {};

@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Fixed multiple issues related to Link block metadata handling and rendering behavior.
 - Fixed block teleportation during canvas resize when another block was focused.
+- Fixed canvas crashes caused by malformed or incomplete block metadata by normalizing parsed metadata shapes and by hardening canvas hydration.
 
 ## [0.6.1] - 2026-03-09
 

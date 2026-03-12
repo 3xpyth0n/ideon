@@ -36,6 +36,7 @@ import NoteBlock from "./NoteBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
+import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
 
 export type BlockData = {
   title?: string;
@@ -359,14 +360,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   }
 
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
-    try {
-      if (!data.metadata) return null;
-      return typeof data.metadata === "string"
-        ? JSON.parse(data.metadata)
-        : data.metadata;
-    } catch {
-      return null;
-    }
+    return parseOptionalJsonRecord(data.metadata) as BlockMetadata | null;
   });
 
   const [previewImageError, setPreviewImageError] = useState(false);
@@ -688,19 +682,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   }, [data.title]);
 
   useEffect(() => {
-    try {
-      if (!data.metadata) {
-        setMetadata(null);
-        return;
-      }
-      const parsed =
-        typeof data.metadata === "string"
-          ? JSON.parse(data.metadata)
-          : data.metadata;
-      setMetadata(parsed);
-    } catch {
-      setMetadata(null);
-    }
+    setMetadata(parseOptionalJsonRecord(data.metadata) as BlockMetadata | null);
   }, [data.metadata]);
 
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";

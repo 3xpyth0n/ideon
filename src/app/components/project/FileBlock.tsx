@@ -20,6 +20,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
 
 interface BlockMetadata {
   name?: string;
@@ -129,14 +130,7 @@ const FileBlock = (props: CanvasBlockProps) => {
   }, [data.title]);
 
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
-    try {
-      if (!data.metadata) return null;
-      return typeof data.metadata === "string"
-        ? JSON.parse(data.metadata)
-        : data.metadata;
-    } catch {
-      return null;
-    }
+    return parseOptionalJsonRecord(data.metadata) as BlockMetadata | null;
   });
 
   const [previewImageError, setPreviewImageError] = useState(false);

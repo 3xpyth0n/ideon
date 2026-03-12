@@ -624,6 +624,15 @@ export const useProjectCanvasGraph = ({
       );
 
       const newBlockId = uuidv4();
+      const defaultMetadataByType: Partial<
+        Record<typeof blockType, Record<string, unknown>>
+      > = {
+        palette: { colors: [] },
+        checklist: { items: [] },
+      };
+      const resolvedMetadata =
+        initialMetadata || defaultMetadataByType[blockType];
+
       const newBlock: Node<BlockData> = {
         id: newBlockId,
         type: blockType,
@@ -634,8 +643,8 @@ export const useProjectCanvasGraph = ({
         data: {
           title: "",
           content: initialContent,
-          metadata: initialMetadata
-            ? JSON.stringify(initialMetadata)
+          metadata: resolvedMetadata
+            ? JSON.stringify(resolvedMetadata)
             : undefined,
           ownerId: currentUser.id,
           authorName: currentUser.username,

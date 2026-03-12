@@ -26,6 +26,7 @@ import "./checklist-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { parseChecklistMetadata, parseJsonRecord } from "@lib/metadata-parsers";
 
 type ChecklistBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -160,15 +161,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   }, [selected, id]);
 
   const items: ChecklistItem[] = useMemo(() => {
-    try {
-      const meta =
-        typeof data.metadata === "string"
-          ? JSON.parse(data.metadata || "{}")
-          : data.metadata || {};
-      return meta.items || [];
-    } catch {
-      return [];
-    }
+    return parseChecklistMetadata(data.metadata).items as ChecklistItem[];
   }, [data.metadata]);
 
   const total = items.length;
@@ -227,10 +220,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         currentUser?.username ||
         dict.project.anonymous;
 
-      const meta =
-        typeof data.metadata === "string"
-          ? JSON.parse(data.metadata || "{}")
-          : data.metadata || {};
+      const meta = parseChecklistMetadata(data.metadata);
 
       data.onContentChange?.(
         id,
@@ -338,7 +328,12 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         if (e.shiftKey) return;
         e.stopPropagation();
         return;
-      } else if (e.key === "Backspace" && items[index].text === "") {
+      }
+
+      const currentItem = items[index];
+      if (currentItem == null) return;
+
+      if (e.key === "Backspace" && currentItem.text === "") {
         e.preventDefault();
         handleDeleteItem(itemId);
         // Focus previous
@@ -355,7 +350,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         if (e.shiftKey) {
           // Shift + Tab: Outdent OR Focus Previous
           // First check if we can outdent
-          const currentDepth = items[index].depth || 0;
+          const currentDepth = currentItem.depth || 0;
           if (currentDepth > 0) {
             handleChangeItemDepth(itemId, -1);
           } else {
@@ -387,7 +382,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           nextInput?.focus();
         } else {
           e.preventDefault();
-          const currentDepth = items[index].depth || 0;
+          const currentDepth = currentItem.depth || 0;
           handleAddItem(index, currentDepth);
           setTimeout(() => {
             const nextInput = document.querySelector(
@@ -621,10 +616,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           if (sourceNode?.data) {
             const sourceData = sourceNode.data as BlockData;
             if (sourceData.blockType === "kanban") {
-              const sourceMeta =
-                typeof sourceData.metadata === "string"
-                  ? JSON.parse(sourceData.metadata)
-                  : sourceData.metadata || {};
+              const sourceMeta = parseJsonRecord(sourceData.metadata);
               const sourceColumns = Array.isArray(sourceMeta.columns)
                 ? sourceMeta.columns
                 : [];
@@ -684,10 +676,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
           if (sourceNode && sourceNode.data) {
             const sourceData = sourceNode.data as BlockData;
             if (sourceData.blockType === "kanban") {
-              const sourceMeta =
-                typeof sourceData.metadata === "string"
-                  ? JSON.parse(sourceData.metadata)
-                  : sourceData.metadata || {};
+              const sourceMeta = parseJsonRecord(sourceData.metadata);
 
               const sourceColumns = Array.isArray(sourceMeta.columns)
                 ? sourceMeta.columns
@@ -716,12 +705,9 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                 sourceData.reactions,
               );
             } else {
-              const sourceMeta =
-                typeof sourceData.metadata === "string"
-                  ? JSON.parse(sourceData.metadata)
-                  : sourceData.metadata || {};
+              const sourceMeta = parseChecklistMetadata(sourceData.metadata);
 
-              const sourceItems = sourceMeta.items || [];
+              const sourceItems = sourceMeta.items;
               const newSourceItems = sourceItems.filter(
                 (i: ChecklistItem) => i.id !== itemId,
               );

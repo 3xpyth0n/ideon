@@ -127,6 +127,82 @@ describe("graph library", () => {
 
       expect(node.data).toMatchObject({ foo: "bar" });
     });
+
+    it("should normalize palette metadata colors to an array", () => {
+      const dbBlock: DbBlock = {
+        id: "palette-1",
+        projectId: "project-1",
+        blockType: "palette",
+        parentBlockId: null,
+        positionX: 0,
+        positionY: 0,
+        width: 100,
+        height: 100,
+        selected: 0,
+        ownerId: "user-1",
+        content: "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        data: "{}",
+        metadata: "{}",
+      };
+
+      const node = transformBlock(dbBlock);
+
+      expect(
+        (node.data as { metadata?: { colors?: unknown } }).metadata?.colors,
+      ).toEqual([]);
+    });
+
+    it("should normalize checklist metadata items to an array", () => {
+      const dbBlock: DbBlock = {
+        id: "checklist-1",
+        projectId: "project-1",
+        blockType: "checklist",
+        parentBlockId: null,
+        positionX: 0,
+        positionY: 0,
+        width: 100,
+        height: 100,
+        selected: 0,
+        ownerId: "user-1",
+        content: "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        data: "{}",
+        metadata: JSON.stringify({ items: null }),
+      };
+
+      const node = transformBlock(dbBlock);
+
+      expect(
+        (node.data as { metadata?: { items?: unknown } }).metadata?.items,
+      ).toEqual([]);
+    });
+
+    it("should not throw for invalid serialized data or metadata", () => {
+      const dbBlock: DbBlock = {
+        id: "broken-1",
+        projectId: "project-1",
+        blockType: "palette",
+        parentBlockId: null,
+        positionX: 0,
+        positionY: 0,
+        width: 100,
+        height: 100,
+        selected: 0,
+        ownerId: "user-1",
+        content: "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        data: "{invalid-json}",
+        metadata: "{invalid-json}",
+      };
+
+      const node = transformBlock(dbBlock);
+
+      expect(node.data).toMatchObject({ metadata: { colors: [] } });
+    });
   });
 
   describe("prepareBlockForDb", () => {

@@ -21,6 +21,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
 
 interface GitStats {
   stars: number;
@@ -136,14 +137,7 @@ const GitBlock = (props: CanvasBlockProps) => {
   }, [data.content, content, isEditingGit]);
 
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
-    try {
-      if (!data.metadata) return null;
-      return typeof data.metadata === "string"
-        ? JSON.parse(data.metadata)
-        : data.metadata;
-    } catch {
-      return null;
-    }
+    return parseOptionalJsonRecord(data.metadata) as BlockMetadata | null;
   });
 
   const metadataRef = useRef(metadata);
@@ -158,18 +152,12 @@ const GitBlock = (props: CanvasBlockProps) => {
 
   // Sync metadata from props (real-time updates)
   useEffect(() => {
-    try {
-      const incomingMetadata = data.metadata
-        ? typeof data.metadata === "string"
-          ? JSON.parse(data.metadata)
-          : data.metadata
-        : null;
+    const incomingMetadata = parseOptionalJsonRecord(
+      data.metadata,
+    ) as BlockMetadata | null;
 
-      if (JSON.stringify(incomingMetadata) !== JSON.stringify(metadata)) {
-        setMetadata(incomingMetadata);
-      }
-    } catch {
-      // Ignore parsing errors
+    if (JSON.stringify(incomingMetadata) !== JSON.stringify(metadata)) {
+      setMetadata(incomingMetadata);
     }
   }, [data.metadata, metadata]);
 

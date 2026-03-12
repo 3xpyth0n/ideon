@@ -18,6 +18,7 @@ import "./contact-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { parseContactMetadata } from "@lib/metadata-parsers";
 
 type ContactBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -63,11 +64,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
   const initialMetadata = useMemo((): ContactMetadata => {
-    try {
-      return JSON.parse(data.metadata || "{}");
-    } catch {
-      return { name: "", phone: "", email: "", note: "" };
-    }
+    return parseContactMetadata(data.metadata) as ContactMetadata;
   }, [data.metadata]);
 
   const [localMeta, setLocalMeta] = useState<ContactMetadata>(initialMetadata);

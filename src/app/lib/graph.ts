@@ -6,6 +6,10 @@ import {
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
 } from "@components/project/utils/constants";
+import {
+  normalizeMetadataForBlockType,
+  parseJsonRecord,
+} from "@lib/metadata-parsers";
 
 export interface GraphState {
   blocks: Node[];
@@ -68,15 +72,11 @@ const NodeSchema = z.object({
 });
 
 export function transformBlock(block: DbBlock): Node {
-  const data = (
-    typeof block.data === "string" ? JSON.parse(block.data) : block.data
-  ) as Record<string, unknown>;
-
-  const metadata = (
-    typeof block.metadata === "string"
-      ? JSON.parse(block.metadata)
-      : block.metadata
-  ) as Record<string, unknown>;
+  const data = parseJsonRecord(block.data);
+  const metadata = normalizeMetadataForBlockType(
+    block.blockType,
+    block.metadata,
+  );
 
   const isCore = block.blockType === "core";
 
@@ -166,8 +166,7 @@ export function transformLink(dbLink: Record<string, unknown>): Edge {
     markerEnd?: string;
   };
 
-  const data =
-    typeof link.data === "string" ? JSON.parse(link.data) : link.data || {};
+  const data = parseJsonRecord(link.data);
 
   return {
     id: link.id,

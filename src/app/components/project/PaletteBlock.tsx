@@ -20,6 +20,7 @@ import "./palette-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { parsePaletteMetadata } from "@lib/metadata-parsers";
 
 type PaletteBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -66,18 +67,11 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   >(undefined);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [title, setTitle] = useState(data.title || "");
-  const metadata = useMemo(() => {
-    try {
-      if (!data.metadata) return { colors: [] };
-      const parsed =
-        typeof data.metadata === "string"
-          ? JSON.parse(data.metadata)
-          : data.metadata;
-      return (parsed as PaletteMetadata) || { colors: [] };
-    } catch {
-      return { colors: [] };
-    }
-  }, [data.metadata]);
+  const metadata = useMemo(
+    () => parsePaletteMetadata(data.metadata) as PaletteMetadata,
+    [data.metadata],
+  );
+  const colors = metadata.colors;
 
   const updatePalette = useCallback(
     (newColors: string[]) => {
@@ -103,18 +97,18 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   const addColor = useCallback(
     (color: string) => {
       if (isReadOnly) return;
-      updatePalette([...metadata.colors, color]);
+      updatePalette([...colors, color]);
     },
-    [metadata.colors, updatePalette, isReadOnly],
+    [colors, updatePalette, isReadOnly],
   );
 
   const removeColor = useCallback(
     (index: number) => {
       if (isReadOnly) return;
-      const newColors = metadata.colors.filter((_, i) => i !== index);
+      const newColors = colors.filter((_, i) => i !== index);
       updatePalette(newColors);
     },
-    [metadata.colors, updatePalette, isReadOnly],
+    [colors, updatePalette, isReadOnly],
   );
 
   const handleColorClick = useCallback(
@@ -164,8 +158,12 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   const handleUpdateColor = useCallback(
     (color: string) => {
       if (isReadOnly) return;
-      if (editingIndex !== null) {
-        const newColors = [...metadata.colors];
+      if (
+        editingIndex !== null &&
+        editingIndex >= 0 &&
+        editingIndex < colors.length
+      ) {
+        const newColors = [...colors];
         newColors[editingIndex] = color;
         updatePalette(newColors);
       } else {
@@ -174,7 +172,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
       setShowPicker(false);
       setEditingIndex(null);
     },
-    [editingIndex, metadata.colors, updatePalette, addColor, isReadOnly],
+    [editingIndex, colors, updatePalette, addColor, isReadOnly],
   );
 
   const handleBackgroundClick = useCallback(() => {
@@ -297,7 +295,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
         >
           <div className="palette-section">
             <div className="palette-colors-grid">
-              {metadata.colors.map((color, index) => (
+              {colors.map((color, index) => (
                 <div
                   key={`${color}-${index}`}
                   className="palette-color-item group"
@@ -350,7 +348,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
             <ColorPicker
               initialColor={
                 editingIndex !== null
-                  ? metadata.colors[editingIndex]
+                  ? colors[editingIndex] ?? "#000000"
                   : "#000000"
               }
               onSelect={handleUpdateColor}

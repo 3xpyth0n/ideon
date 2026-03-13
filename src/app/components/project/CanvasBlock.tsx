@@ -60,7 +60,8 @@ export type BlockData = {
     | "checklist"
     | "kanban"
     | "sketch"
-    | "shell";
+    | "shell"
+    | "folder";
   label?: string;
   metadata?: string;
   isLocked?: boolean;
@@ -111,6 +112,7 @@ export type BlockData = {
       y?: number;
     },
   ) => void;
+  onFolderToggle?: (folderId: string, isCollapsed: boolean) => void;
   typingUsers?: UserPresence[];
   movingUserColor?: string;
   projectOwnerId?: string | null;
@@ -148,6 +150,7 @@ export type CanvasBlockProps = NodeProps<
     | "checklist"
     | "sketch"
     | "shell"
+    | "folder"
   >
 >;
 

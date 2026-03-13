@@ -16,13 +16,33 @@ import {
   PenTool,
   Terminal,
   Kanban,
+  Folder,
 } from "lucide-react";
+
+type AddableBlockType =
+  | "text"
+  | "link"
+  | "file"
+  | "github"
+  | "palette"
+  | "contact"
+  | "video"
+  | "snippet"
+  | "checklist"
+  | "kanban"
+  | "sketch"
+  | "shell"
+  | "folder";
 
 interface AddBlockModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddBlock: (blockType: string) => void;
+  onAddBlock: (blockType: AddableBlockType) => void;
 }
+
+const FOLDER_TYPES = [
+  { type: "folder", icon: Folder, labelKey: "blockTypeFolder" },
+] as const;
 
 const BLOCK_TYPES = [
   { type: "text", icon: FileText, labelKey: "blockTypeText" },
@@ -60,6 +80,22 @@ export default function AddBlockModal({
         />
         <Command.List>
           <Command.Empty>{dict.canvas.noBlocksFound}</Command.Empty>
+          <Command.Group heading={dict.canvas.folderSection || "Folder"}>
+            {FOLDER_TYPES.map(({ type, icon: Icon, labelKey }) => (
+              <Command.Item
+                key={type}
+                value={
+                  dict.blocks[labelKey as keyof typeof dict.blocks] as string
+                }
+                onSelect={() => onAddBlock(type)}
+              >
+                <Icon className="add-block-icon" />
+                <span className="add-block-label">
+                  {dict.blocks[labelKey as keyof typeof dict.blocks]}
+                </span>
+              </Command.Item>
+            ))}
+          </Command.Group>
           <Command.Group heading={dict.canvas.addBlock}>
             {BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
               <Command.Item

@@ -133,7 +133,8 @@ export interface blocksTable {
     | "checklist"
     | "kanban"
     | "sketch"
-    | "shell";
+    | "shell"
+    | "folder";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;

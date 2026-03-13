@@ -1,7 +1,13 @@
 import { registerIntegration, getAllIntegrations } from "./registry";
 import { obsidianManifest } from "./obsidian/manifest";
+import { getImportCapability, getIntegrationReleaseStatus } from "./types";
 
 registerIntegration(obsidianManifest);
 
 export { getAllIntegrations };
-export type { IntegrationManifest } from "./types";
+export { getImportCapability, getIntegrationReleaseStatus };
+export type {
+  IntegrationManifest,
+  IntegrationImportCapability,
+  IntegrationReleaseStatus,
+} from "./types";

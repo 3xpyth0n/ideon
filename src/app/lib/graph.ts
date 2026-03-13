@@ -53,6 +53,7 @@ const BlockDataSchema = z
         "checklist",
         "sketch",
         "shell",
+        "folder",
       ])
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -129,7 +130,8 @@ export function prepareBlockForDb(
       | "snippet"
       | "checklist"
       | "sketch"
-      | "shell") ||
+      | "shell"
+      | "folder") ||
     "text";
 
   return {

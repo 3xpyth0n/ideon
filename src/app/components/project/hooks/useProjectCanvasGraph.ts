@@ -16,8 +16,10 @@ import {
   getReactFlowViewportSize,
 } from "@components/project/utils/fitViewport";
 import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 import { UserPresence } from "./useProjectCanvasState";
 import { BlockData } from "@components/project/CanvasBlock";
+import { useI18n } from "@providers/I18nProvider";
 import {
   DEFAULT_BLOCK_WIDTH,
   DEFAULT_BLOCK_HEIGHT,
@@ -31,6 +33,8 @@ import {
   calculateHelperLines,
   HelperLine,
 } from "@components/project/utils/alignment";
+import { parseFolderMetadata } from "@lib/metadata-parsers";
+import { validateFolderLinkRules } from "@lib/folder-link-rules";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
@@ -82,6 +86,7 @@ export const useProjectCanvasGraph = ({
   contextMenu,
   isReadOnly = false,
 }: UseProjectCanvasGraphProps) => {
+  const { dict } = useI18n();
   const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -328,6 +333,7 @@ export const useProjectCanvasGraph = ({
     (params: Connection) => {
       if (isReadOnly) return;
       if (!params.source || !params.target) return;
+      if (params.source === params.target) return;
 
       const targetBlock = blocks.find((b) => b.id === params.target);
       // Strict enforcement: Core blocks cannot be targets
@@ -342,10 +348,146 @@ export const useProjectCanvasGraph = ({
         zIndex: 2000,
       };
 
+      const violatedRule = validateFolderLinkRules(
+        blocks.map((block) => ({
+          id: block.id,
+          type: block.type,
+          data: { blockType: block.data?.blockType },
+        })),
+        [...links, { source: link.source, target: link.target }],
+      );
+
+      if (violatedRule) {
+        if (violatedRule.code === "folder_to_core") {
+          toast.error(
+            dict.blocks.folderCannotLinkToCore ||
+              "Folder blocks cannot target the core block.",
+          );
+        } else if (violatedRule.code === "folder_reverse_link") {
+          toast.error(
+            dict.blocks.folderReverseLinkForbidden ||
+              "Reverse folder links are not allowed.",
+          );
+        } else if (violatedRule.code === "folder_multiple_parents") {
+          toast.error(
+            dict.blocks.folderSingleParentOnly ||
+              "A block cannot depend on multiple folders.",
+          );
+        }
+        return;
+      }
+
       setLinks((lks) => addEdge(link, lks || []));
     },
-    [setLinks, blocks, isReadOnly],
+    [setLinks, blocks, links, isReadOnly, dict.blocks],
   );
+
+  const getDescendantIds = useCallback((rootId: string, graphLinks: Edge[]) => {
+    const visited = new Set<string>();
+    const queue = graphLinks
+      .filter((link) => link.source === rootId)
+      .map((link) => link.target);
+
+    while (queue.length > 0) {
+      const nextId = queue.shift();
+      if (!nextId || visited.has(nextId)) {
+        continue;
+      }
+
+      visited.add(nextId);
+
+      for (const link of graphLinks) {
+        if (link.source === nextId && !visited.has(link.target)) {
+          queue.push(link.target);
+        }
+      }
+    }
+
+    return visited;
+  }, []);
+
+  const getCollapsedFolderIds = useCallback((nodes: Node<BlockData>[]) => {
+    return new Set(
+      nodes
+        .filter((node) => node.type === "folder")
+        .filter((node) => parseFolderMetadata(node.data?.metadata).isCollapsed)
+        .map((node) => node.id),
+    );
+  }, []);
+
+  const computeHiddenNodeIds = useCallback(
+    (nodes: Node<BlockData>[], graphLinks: Edge[]) => {
+      const hiddenIds = new Set<string>();
+      const collapsedFolderIds = getCollapsedFolderIds(nodes);
+
+      for (const folderId of collapsedFolderIds) {
+        const descendants = getDescendantIds(folderId, graphLinks);
+        descendants.delete(folderId);
+        descendants.forEach((descendantId) => hiddenIds.add(descendantId));
+      }
+
+      return hiddenIds;
+    },
+    [getCollapsedFolderIds, getDescendantIds],
+  );
+
+  const applyFolderVisibility = useCallback(
+    (nodes: Node<BlockData>[], graphLinks: Edge[]) => {
+      const hiddenIds = computeHiddenNodeIds(nodes, graphLinks);
+      return nodes.map((node) => {
+        const shouldHide = hiddenIds.has(node.id);
+        if (node.hidden === shouldHide) {
+          return node;
+        }
+
+        return {
+          ...node,
+          hidden: shouldHide,
+        };
+      });
+    },
+    [computeHiddenNodeIds],
+  );
+
+  const handleToggleFolderCollapse = useCallback(
+    (folderId: string, isCollapsed: boolean) => {
+      if (isReadOnly) return;
+
+      setBlocks((currentNodes) => {
+        const updatedNodes = currentNodes.map((node) => {
+          if (node.id !== folderId) {
+            return node;
+          }
+
+          const metadata = parseFolderMetadata(node.data?.metadata);
+
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              metadata: JSON.stringify({ ...metadata, isCollapsed }),
+            },
+          };
+        });
+
+        return applyFolderVisibility(updatedNodes, links);
+      });
+    },
+    [isReadOnly, setBlocks, applyFolderVisibility, links],
+  );
+
+  useEffect(() => {
+    const hiddenIds = computeHiddenNodeIds(blocks, links);
+    const hasVisibilityDiff = blocks.some(
+      (node) => (node.hidden || false) !== hiddenIds.has(node.id),
+    );
+
+    if (!hasVisibilityDiff) {
+      return;
+    }
+
+    setBlocks((currentNodes) => applyFolderVisibility(currentNodes, links));
+  }, [blocks, links, computeHiddenNodeIds, setBlocks, applyFolderVisibility]);
 
   const onBlockDragStart = useCallback(
     (_: React.MouseEvent, block: Node) => {
@@ -585,8 +727,10 @@ export const useProjectCanvasGraph = ({
         | "video"
         | "snippet"
         | "checklist"
+        | "kanban"
         | "sketch"
-        | "shell" = "text",
+        | "shell"
+        | "folder" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
@@ -629,6 +773,7 @@ export const useProjectCanvasGraph = ({
       > = {
         palette: { colors: [] },
         checklist: { items: [] },
+        folder: { isCollapsed: false },
       };
       const resolvedMetadata =
         initialMetadata || defaultMetadataByType[blockType];
@@ -781,6 +926,7 @@ export const useProjectCanvasGraph = ({
     handleCreateBlock,
     handleDeleteBlock,
     handleToggleLock,
+    handleToggleFolderCollapse,
     handleTransferBlock,
     handleFitView,
     helperLines,

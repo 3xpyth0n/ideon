@@ -9,6 +9,7 @@ import {
   DbBlock,
 } from "@lib/graph";
 import type { BlockData } from "@components/project/CanvasBlock";
+import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -213,6 +214,41 @@ export const POST = projectAction(
   async (_req, { project, user, body }) => {
     const { blocks, links, force } = body;
     const db = getDb();
+
+    if (blocks?.length && links?.length) {
+      const violatedRule = validateFolderLinkRules(
+        blocks.map((block: Node<BlockData>) => ({
+          id: block.id,
+          type: block.type,
+          data: { blockType: block.data?.blockType },
+        })),
+        links.map((link: Edge) => ({
+          source: link.source,
+          target: link.target,
+        })),
+      );
+
+      if (violatedRule) {
+        if (violatedRule.code === "folder_to_core") {
+          throw {
+            status: 400,
+            message: "Folder blocks cannot target core blocks.",
+          };
+        }
+
+        if (violatedRule.code === "folder_reverse_link") {
+          throw {
+            status: 400,
+            message: "Reverse links between two folder blocks are not allowed.",
+          };
+        }
+
+        throw {
+          status: 400,
+          message: "A block cannot depend on multiple folders.",
+        };
+      }
+    }
 
     await runTransaction(db, async (trx) => {
       if (!force && !blocks?.length && !links?.length) return;

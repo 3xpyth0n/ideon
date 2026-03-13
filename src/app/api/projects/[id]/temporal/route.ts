@@ -8,6 +8,7 @@ import {
   GraphState,
 } from "@lib/graph";
 import { uniqueById } from "@lib/utils";
+import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import { z } from "zod";
 import * as crypto from "crypto";
 
@@ -106,6 +107,42 @@ export const POST = projectAction(
       const snapshotId = crypto.randomUUID();
       const uniqueBlocks = uniqueById(inputBlocks || []);
       const uniqueLinks = uniqueById(inputLinks || []);
+
+      const violatedRule = validateFolderLinkRules(
+        uniqueBlocks.map((block: Node) => ({
+          id: block.id,
+          type: block.type,
+          data: {
+            blockType: (block.data as { blockType?: string } | undefined)
+              ?.blockType,
+          },
+        })),
+        uniqueLinks.map((link: Edge) => ({
+          source: link.source,
+          target: link.target,
+        })),
+      );
+
+      if (violatedRule) {
+        if (violatedRule.code === "folder_to_core") {
+          throw {
+            status: 400,
+            message: "Folder blocks cannot target core blocks.",
+          };
+        }
+
+        if (violatedRule.code === "folder_reverse_link") {
+          throw {
+            status: 400,
+            message: "Reverse links between two folder blocks are not allowed.",
+          };
+        }
+
+        throw {
+          status: 400,
+          message: "A block cannot depend on multiple folders.",
+        };
+      }
 
       // Security check: deletions and ownership transfers
       const existingBlocks = await db

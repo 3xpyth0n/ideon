@@ -14,6 +14,10 @@ export interface ContactMetadataShape {
   note: string;
 }
 
+export interface FolderMetadataShape {
+  isCollapsed: boolean;
+}
+
 const isJsonRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -126,6 +130,18 @@ export const parseContactMetadata = (
   };
 };
 
+export const parseFolderMetadata = (
+  raw: unknown,
+): JsonRecord & FolderMetadataShape => {
+  const parsed = parseJsonRecord(raw);
+
+  return {
+    ...parsed,
+    isCollapsed:
+      typeof parsed.isCollapsed === "boolean" ? parsed.isCollapsed : false,
+  };
+};
+
 export const normalizeMetadataForBlockType = (
   blockType: string,
   raw: unknown,
@@ -136,6 +152,10 @@ export const normalizeMetadataForBlockType = (
 
   if (blockType === "checklist") {
     return parseChecklistMetadata(raw);
+  }
+
+  if (blockType === "folder") {
+    return parseFolderMetadata(raw);
   }
 
   return parseJsonRecord(raw);

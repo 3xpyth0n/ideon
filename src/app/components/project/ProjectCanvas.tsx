@@ -29,6 +29,7 @@ import ShellBlock from "./ShellBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
 import KanbanBlock from "./KanbanBlock";
+import FolderBlock from "./FolderBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import CommandPalette from "./CommandPalette";
@@ -249,6 +250,7 @@ const blockTypes = {
   kanban: KanbanBlock,
   sketch: SketchBlock,
   shell: ShellBlock,
+  folder: FolderBlock,
   core: ProjectCoreBlock,
 };
 
@@ -789,9 +791,24 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   const isValidConnection = useCallback(
     (connection: { source: string; target: string }) => {
-      return connection.source !== connection.target;
+      if (connection.source === connection.target) {
+        return false;
+      }
+
+      const sourceBlock = blocks.find(
+        (block) => block.id === connection.source,
+      );
+      const targetBlock = blocks.find(
+        (block) => block.id === connection.target,
+      );
+
+      if (sourceBlock?.type === "folder" && targetBlock?.type === "core") {
+        return false;
+      }
+
+      return true;
     },
-    [],
+    [blocks],
   );
 
   const isTyping = useMemo(() => {
@@ -1371,6 +1388,26 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             >
                               {dict.canvas.addBlock || "Add Block"}
                             </button>
+                            <button
+                              onClick={() => {
+                                const id = handleCreateBlock(
+                                  undefined,
+                                  undefined,
+                                  "folder",
+                                );
+
+                                if (id) {
+                                  setNewBlockId(id);
+                                  setTimeout(() => setNewBlockId(null), 800);
+                                  triggerAutoSnapshot("Block created");
+                                }
+
+                                setContextMenu(null);
+                              }}
+                              className="context-menu-item"
+                            >
+                              {dict.canvas.addFolder || "Add Folder"}
+                            </button>
                             <div className="context-menu-separator" />
                           </>
                         )}
@@ -1585,8 +1622,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   | "video"
                   | "snippet"
                   | "checklist"
+                  | "kanban"
                   | "sketch"
-                  | "shell",
+                  | "shell"
+                  | "folder",
               );
               if (id) {
                 setNewBlockId(id);

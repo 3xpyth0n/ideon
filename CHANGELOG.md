@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-03-XX
+
+### Added
+
+- **Our First Integration: Obsidian Import**: Ideon now supports importing Obsidian vaults directly into projects.
+- **Folder Block**: Added a new folder block to group related blocks and quickly collapse or expand them for a cleaner, more organized canvas.
+
 ## [0.6.2] - 2026-03-12
 
 ### Fixed

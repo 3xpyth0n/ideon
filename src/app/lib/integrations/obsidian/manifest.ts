@@ -7,7 +7,14 @@ export const obsidianManifest: IntegrationManifest = {
   iconUrl:
     "https://gdm-catalog-fmapi-prod.imgix.net/ProductLogo/53c7cb96-7407-4a94-8219-60f6f5543fe3.png",
   category: "notes",
-  enabled: false,
+  releaseStatus: "released",
+  capabilities: {
+    import: {
+      enabled: true,
+      sources: ["zip"],
+      acceptsProjectName: true,
+    },
+  },
   nameKey: "importFromObsidian",
   descriptionKey: "importFromObsidianDesc",
 };

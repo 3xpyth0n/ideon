@@ -1,0 +1,114 @@
+.folder-block {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.block-card.folder-block {
+  --folder-border-strong: color-mix(
+    in srgb,
+    var(--block-border-color, var(--border)) 72%,
+    var(--text-main)
+  );
+  position: relative;
+  z-index: auto !important;
+  border-color: var(--folder-border-strong);
+  border-top-left-radius: 12px;
+}
+
+.folder-block::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: -2px;
+  width: 118px;
+  height: 44px;
+  background: color-mix(in srgb, var(--bg-island) 60%, var(--border));
+  border: 2px solid var(--folder-border-strong);
+  border-bottom: none;
+  border-radius: 7px 22px 0 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.folder-block-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  min-height: 0;
+  flex: 1;
+}
+
+.folder-block-type-pill {
+  display: inline-flex;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.folder-block-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0;
+}
+
+.folder-block-name {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  text-align: left;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.folder-block-name::placeholder {
+  opacity: 0.4;
+}
+
+.folder-block-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.folder-block-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-main) 90%, transparent);
+  color: var(--text-main);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.folder-block-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.folder-block-count {
+  font-size: 12px;
+  opacity: 0.65;
+}

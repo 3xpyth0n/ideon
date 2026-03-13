@@ -23,7 +23,7 @@ export const yourIntegrationManifest: IntegrationManifest = {
   description: "Short description for internal use",
   iconUrl: "https://example.com/icon.png",
   category: "notes", // or "communication" | "automation" | "design" | "productivity"
-  enabled: false, // Set to true when ready
+  releaseStatus: "coming_soon", // "coming_soon" | "beta" | "released"
   nameKey: "importFromYourIntegration",
   descriptionKey: "importFromYourIntegrationDesc",
 };

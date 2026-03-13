@@ -20,7 +20,6 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
 import CustomNodeResizer from "./CustomNodeResizer";
-import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
 
 interface BlockMetadata {
   name?: string;
@@ -34,6 +33,17 @@ interface BlockMetadata {
   tempUrl?: string;
   status?: string;
   [key: string]: unknown;
+}
+
+function parseBlockMetadata(rawMetadata: unknown): BlockMetadata | null {
+  try {
+    if (!rawMetadata) return null;
+    return typeof rawMetadata === "string"
+      ? JSON.parse(rawMetadata)
+      : (rawMetadata as BlockMetadata);
+  } catch {
+    return null;
+  }
 }
 
 const getFileIcon = (filename: string, mimeType?: string) => {
@@ -129,10 +139,17 @@ const FileBlock = (props: CanvasBlockProps) => {
     if (data.title !== undefined) setTitle(data.title);
   }, [data.title]);
 
-  const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
-    return parseOptionalJsonRecord(data.metadata) as BlockMetadata | null;
-  });
+  const [metadata, setMetadata] = useState<BlockMetadata | null>(() =>
+    parseBlockMetadata(data.metadata),
+  );
 
+  useEffect(() => {
+    setContent(data.content);
+  }, [data.content]);
+
+  useEffect(() => {
+    setMetadata(parseBlockMetadata(data.metadata));
+  }, [data.metadata]);
   const [previewImageError, setPreviewImageError] = useState(false);
 
   useEffect(() => {

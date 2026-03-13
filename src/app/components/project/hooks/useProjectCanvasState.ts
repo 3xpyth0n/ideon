@@ -1230,6 +1230,9 @@ export const useProjectCanvasState = (
           onCaretMove: isPreviewMode ? undefined : rt.onCaretMove,
           onResize: isPreviewMode ? undefined : graph.onResizeCallback,
           onResizeEnd: isPreviewMode ? undefined : graph.onResizeEndCallback,
+          onFolderToggle: isPreviewMode
+            ? undefined
+            : graph.handleToggleFolderCollapse,
         },
       };
     });

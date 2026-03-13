@@ -953,6 +953,64 @@
   line-height: 1.4;
 }
 
+.integration-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.integration-card-actions button {
+  min-width: 120px;
+}
+
+.integration-beta-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  background: var(--bg-elevated);
+}
+
+.integration-import-modal {
+  max-width: 560px;
+}
+
+.integration-import-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.integration-import-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.integration-import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.integration-import-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.integration-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
 .coming-soon-overlay {
   position: absolute;
   top: 0;

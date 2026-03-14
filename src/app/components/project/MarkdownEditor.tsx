@@ -202,7 +202,17 @@ const MarkdownEditor = ({
         class: `prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[100px] ${className}`,
       },
       handleDOMEvents: {
-        mousedown: (view) => {
+        mousedown: (view, event) => {
+          const target = event.target;
+          if (target instanceof HTMLElement) {
+            const anchor = target.closest("a");
+            if (anchor instanceof HTMLAnchorElement && anchor.href) {
+              event.preventDefault();
+              event.stopPropagation();
+              return true;
+            }
+          }
+
           wasFocusedBeforeClickRef.current = view.hasFocus();
           return false;
         },
@@ -214,8 +224,6 @@ const MarkdownEditor = ({
           if (!(anchor instanceof HTMLAnchorElement) || !anchor.href) {
             return false;
           }
-
-          if (!isReadOnly && wasFocusedBeforeClickRef.current) return false;
 
           event.preventDefault();
           event.stopPropagation();

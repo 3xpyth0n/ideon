@@ -109,7 +109,7 @@ export function ProjectModal({
               onClick={() => setShowDeleteConfirm(false)}
               disabled={loading}
               noRipple
-              className="btn-secondary min-w-[120px]"
+              className="btn-secondary min-w-30"
             >
               {dict.common.cancel}
             </Button>
@@ -117,7 +117,7 @@ export function ProjectModal({
               onClick={handleDelete}
               disabled={loading}
               noRipple
-              className="btn-danger min-w-[120px]"
+              className="btn-danger min-w-30"
             >
               {loading ? dict.common.deleting : dict.common.delete}
             </Button>
@@ -150,7 +150,7 @@ export function ProjectModal({
                   {dict.project.projectDescriptionOptional}
                 </label>
                 <textarea
-                  className="zen-textarea min-h-[120px] w-full"
+                  className="zen-textarea min-h-30 w-full"
                   placeholder={dict.project.projectDescription}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -164,7 +164,7 @@ export function ProjectModal({
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={loading}
                 noRipple
-                className="btn-danger min-w-[120px]"
+                className="btn-danger min-w-30"
               >
                 <span>{dict.common.delete}</span>
               </Button>
@@ -172,7 +172,7 @@ export function ProjectModal({
               <Button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="btn-primary min-w-[120px]"
+                className="btn-primary min-w-30"
               >
                 <div className="flex items-center justify-center gap-2">
                   {loading ? (
@@ -212,7 +212,7 @@ export function ProjectModal({
                   {dict.project.projectDescriptionOptional}
                 </label>
                 <textarea
-                  className="zen-textarea min-h-[120px]"
+                  className="zen-textarea min-h-30"
                   placeholder={dict.project.projectDescription}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}

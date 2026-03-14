@@ -121,6 +121,12 @@
   background-color: #0d0d0d;
 }
 
+body.sketch-modal-open
+  > :not(.sketch-modal-backdrop):not(.excalidraw-modal-container) {
+  transition: filter 0.18s ease;
+  filter: blur(8px) brightness(0.7);
+}
+
 .project-canvas-container input,
 .project-canvas-container textarea,
 .project-canvas-container [contenteditable="true"] {
@@ -795,7 +801,7 @@
 }
 
 .block-handle-right::after {
-  right: -64px;
+  left: 0;
 }
 
 .block-handle-top::after {
@@ -957,6 +963,165 @@
   cursor: text;
   min-height: 0;
   overflow: visible;
+}
+
+.sketch-content {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.sketch-clickable {
+  cursor: pointer;
+}
+
+.sketch-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  transition: filter 0.2s;
+  padding: 1px;
+}
+
+.sketch-clickable:hover .sketch-thumbnail {
+  filter: blur(3px);
+}
+
+.sketch-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  opacity: 0.3;
+  pointer-events: none;
+  font-size: 13px;
+}
+
+.sketch-edit-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.sketch-clickable:hover .sketch-edit-overlay {
+  opacity: 1;
+}
+
+.sketch-edit-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(30, 30, 30, 0.85);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(4px);
+}
+
+.sketch-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Ensure Excalidraw internal dialogs (e.g. clear canvas confirmation) render above our modal */
+.Modal,
+.Dialog,
+.Modal__background,
+.Modal__content {
+  z-index: 11001 !important;
+}
+
+/* Force Excalidraw modal container to cover the viewport (prevent being clipped / scaled by React Flow transforms) */
+.excalidraw-modal-container {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: visible !important;
+  z-index: 11000 !important;
+}
+
+.sketch-modal {
+  display: flex;
+  flex-direction: column;
+  width: 80vw;
+  height: 75vh;
+  max-width: 1100px;
+  background: var(--bg-page);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+}
+
+.sketch-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-island);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.sketch-modal-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.sketch-modal-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none;
+}
+
+.sketch-modal-btn-close {
+  background: transparent;
+  color: var(--text-main);
+}
+
+.sketch-modal-btn-close:hover {
+  background: var(--bg-hover);
+}
+
+.sketch-modal-btn-save {
+  background: #fff;
+  color: #111;
+  box-shadow: #00000020 0px 4px 12px;
+}
+
+.sketch-modal-btn-save:hover {
+  opacity: 0.88;
 }
 
 .block-title {

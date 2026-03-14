@@ -82,7 +82,7 @@ export function getSecurityHeaders(nonce: string) {
     `script-src 'self' 'nonce-${nonce}';`,
     "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
     "img-src 'self' data: blob: https:;",
-    "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;",
+    "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://esm.sh;",
     "connect-src 'self' ws: wss: https:;",
     "frame-src 'self' https:;",
     "frame-ancestors 'none';",

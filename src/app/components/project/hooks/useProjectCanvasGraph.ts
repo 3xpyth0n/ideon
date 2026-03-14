@@ -42,6 +42,8 @@ const FIT_MIN_ZOOM = 0.1;
 const FIT_MAX_ZOOM_SELECTED = 2;
 const FIT_MAX_ZOOM_ALL = 1;
 const SNAP_THRESHOLD_PX = 8;
+const DEFAULT_SKETCH_BLOCK_WIDTH = 600;
+const DEFAULT_SKETCH_BLOCK_HEIGHT = 450;
 
 interface UseProjectCanvasGraphProps {
   currentUser: UserPresence | null;
@@ -739,10 +741,10 @@ export const useProjectCanvasGraph = ({
 
       const isSketch = blockType === "sketch";
       const blockWidth = isSketch
-        ? DEFAULT_BLOCK_WIDTH * 1.5
+        ? DEFAULT_SKETCH_BLOCK_WIDTH
         : DEFAULT_BLOCK_WIDTH;
       const blockHeight = isSketch
-        ? DEFAULT_BLOCK_HEIGHT * 1.5
+        ? DEFAULT_SKETCH_BLOCK_HEIGHT
         : DEFAULT_BLOCK_HEIGHT;
 
       const screenPos = pos

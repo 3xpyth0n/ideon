@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **Our First Integration: Obsidian Import**: Ideon now supports importing Obsidian vaults directly into projects.
+- **Excalidraw Block (SDK expanded)**: Replaced the old Sketch Block with a full Excalidraw integration, expanding the block SDK to support more drawing tools and collaborative features.
 - **Folder Block**: Added a new folder block to group related blocks and quickly collapse or expand them for a cleaner, more organized canvas.
 
 ## [0.6.2] - 2026-03-12

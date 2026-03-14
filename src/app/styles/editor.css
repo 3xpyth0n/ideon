@@ -117,6 +117,14 @@
   -webkit-touch-callout: none;
 }
 
+.project-canvas {
+  transition: filter 0.16s ease;
+}
+
+.project-canvas-container.drop-active .project-canvas {
+  filter: blur(2px);
+}
+
 [data-theme="dark"] .project-canvas-container {
   background-color: #0d0d0d;
 }
@@ -166,6 +174,83 @@ body.sketch-modal-open
 
 [data-theme="dark"] .loading-overlay {
   background-color: rgba(0, 0, 0, 0.5);
+}
+
+.drop-import-hover-overlay,
+.drop-import-progress-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.drop-import-hover-overlay {
+  background-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+}
+
+[data-theme="dark"] .drop-import-hover-overlay {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.drop-import-hover-card,
+.drop-import-progress-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 520px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-island);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.drop-import-hover-icon,
+.drop-import-progress-spinner {
+  width: 18px;
+  height: 18px;
+  color: var(--text-main);
+  flex-shrink: 0;
+}
+
+.drop-import-progress-spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+.drop-import-hover-text,
+.drop-import-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drop-import-hover-text p,
+.drop-import-progress-text p {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.drop-import-hover-text p:first-child,
+.drop-import-progress-text p:first-child {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.drop-import-hover-text p:last-child,
+.drop-import-progress-text p:last-child {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.drop-import-progress-overlay {
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 16px;
+  background-color: transparent;
 }
 
 .hidden-svg {

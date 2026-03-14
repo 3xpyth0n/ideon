@@ -459,6 +459,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onBlockClick,
     onLinkClick,
     handleCreateBlock,
+    onExternalDragEnter,
+    onExternalDragLeave,
+    onExternalDragOver,
+    handleExternalDrop,
+    isExternalDropActive,
+    dropImportProgress,
     remoteCursorsRef,
     presenceUsers,
     draftsByBlock,
@@ -864,19 +870,84 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     return blocks.length === 1 && blocks[0].type === "core";
   }, [blocks]);
 
+  // --- Hide children of collapsed folders ---
+  const getVisibleBlockIds = (
+    allBlocks: Node<BlockData>[],
+    allLinks: Edge[],
+  ) => {
+    // Build parent->children map
+    const childrenMap = new Map<string, string[]>();
+    allLinks.forEach((edge) => {
+      if (edge.type === "connection" && edge.source && edge.target) {
+        if (!childrenMap.has(edge.source)) childrenMap.set(edge.source, []);
+        childrenMap.get(edge.source)!.push(edge.target);
+      }
+    });
+
+    // Find all collapsed folders
+    const collapsedFolders = new Set<string>();
+    allBlocks.forEach((block) => {
+      if (block.type === "folder") {
+        let meta = {};
+        try {
+          meta = block.data?.metadata ? JSON.parse(block.data.metadata) : {};
+        } catch {
+          // ignore invalid json
+        }
+        if (meta && (meta as { isCollapsed?: boolean }).isCollapsed)
+          collapsedFolders.add(block.id);
+      }
+    });
+
+    // Recursively collect all descendants of a folder
+    const collectDescendants = (id: string, acc: Set<string>) => {
+      const children = childrenMap.get(id);
+      if (!children) return;
+      for (const childId of children) {
+        acc.add(childId);
+        collectDescendants(childId, acc);
+      }
+    };
+
+    // Exclude all descendants of collapsed folders
+    const hidden = new Set<string>();
+    for (const folderId of collapsedFolders) {
+      collectDescendants(folderId, hidden);
+    }
+
+    // Visible blocks are those not in hidden
+    return new Set(allBlocks.map((b) => b.id).filter((id) => !hidden.has(id)));
+  };
+
+  const visibleBlockIds = useMemo(
+    () => getVisibleBlockIds(blocks, links),
+    [blocks, links],
+  );
+
   const blocksWithPreview = useMemo(() => {
-    return blocks.map((block) => ({
-      ...block,
-      className:
-        block.id === newBlockId ? "block-just-created" : block.className || "",
-      data: {
-        ...block.data,
-        isPreviewMode,
-        currentUser: currentUser || undefined,
-        userRole: currentUserRole || undefined,
-      },
-    }));
-  }, [blocks, isPreviewMode, currentUser, currentUserRole, newBlockId]);
+    return blocks
+      .filter((block) => !block.hidden && visibleBlockIds.has(block.id))
+      .map((block) => ({
+        ...block,
+        className:
+          block.id === newBlockId
+            ? "block-just-created"
+            : block.className || "",
+        data: {
+          ...block.data,
+          isPreviewMode,
+          currentUser: currentUser || undefined,
+          userRole: currentUserRole || undefined,
+        },
+      }));
+  }, [
+    blocks,
+    isPreviewMode,
+    currentUser,
+    currentUserRole,
+    newBlockId,
+    visibleBlockIds,
+  ]);
 
   if (!isAccessValidated) {
     return (
@@ -907,14 +978,55 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         <div
           className={`project-canvas-container ${
             isPreviewMode ? "preview-mode" : ""
-          }`}
+          } ${isExternalDropActive ? "drop-active" : ""}`}
           onKeyDown={onKeyDown}
+          onDragEnter={onExternalDragEnter}
+          onDragLeave={onExternalDragLeave}
+          onDragOver={onExternalDragOver}
+          onDrop={handleExternalDrop}
           tabIndex={0}
           {...touchHandlers}
         >
           {isLoading && (
             <div className="loading-overlay">
               <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
+
+          {isExternalDropActive && !dropImportProgress.isImporting && (
+            <div className="drop-import-hover-overlay">
+              <div className="drop-import-hover-card">
+                <FileIcon className="drop-import-hover-icon" />
+                <div className="drop-import-hover-text">
+                  <p>{dict.canvas.dropHoverTitle}</p>
+                  <p>{dict.canvas.dropHoverDescription}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {dropImportProgress.isImporting && (
+            <div className="drop-import-progress-overlay">
+              <div className="drop-import-progress-card">
+                <Loader2 className="drop-import-progress-spinner" />
+                <div className="drop-import-progress-text">
+                  <p>{dict.canvas.dropImportLoadingTitle}</p>
+                  <p>
+                    {dropImportProgress.total > 0
+                      ? (
+                          dict.canvas.dropImportLoadingProgress ||
+                          "{processed}/{total} files processed"
+                        )
+                          .replace(
+                            "{processed}",
+                            String(dropImportProgress.processed),
+                          )
+                          .replace("{total}", String(dropImportProgress.total))
+                      : dict.canvas.dropImportLoadingScanning ||
+                        "Preparing import..."}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -929,7 +1041,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             >
               <ReactFlow
                 nodes={blocksWithPreview}
-                edges={links}
+                edges={links.filter(
+                  (edge) =>
+                    !blocks.find((b) => b.id === edge.source && b.hidden) &&
+                    !blocks.find((b) => b.id === edge.target && b.hidden) &&
+                    visibleBlockIds.has(edge.source) &&
+                    visibleBlockIds.has(edge.target),
+                )}
                 onNodesChange={isPreviewMode ? undefined : onBlocksChange}
                 onEdgesChange={isPreviewMode ? undefined : onLinksChange}
                 onNodeDragStart={isPreviewMode ? undefined : onBlockDragStart}

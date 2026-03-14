@@ -14,6 +14,7 @@ import type { DraftsMap } from "@components/project/DraftsContext";
 import {
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
+  DEFAULT_BLOCK_HEIGHT,
   DEFAULT_BLOCK_WIDTH,
 } from "@components/project/utils/constants";
 import { generateStateHash } from "@components/project/utils/hash";
@@ -22,12 +23,294 @@ import {
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
 } from "@components/project/utils/fitViewport";
+import { computeHiddenNodeIds } from "@components/project/utils/visibility";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 
 const FIT_PADDING = 0.12;
 const FIT_DURATION = 800;
 const FIT_MIN_ZOOM = 0.1;
 const FIT_MAX_ZOOM_SELECTED = 2;
 const FIT_MAX_ZOOM_ALL = 1;
+const SKETCH_BLOCK_WIDTH = 600;
+const SKETCH_BLOCK_HEIGHT = 450;
+const FOLDER_BLOCK_WIDTH = 320;
+const FOLDER_BLOCK_HEIGHT = 240;
+const FILE_BLOCK_WIDTH = 300;
+const FILE_BLOCK_HEIGHT = 220;
+const DROP_COL_GAP = 420;
+const DROP_ROW_GAP = 280;
+
+type DropImportProgress = {
+  isImporting: boolean;
+  total: number;
+  processed: number;
+};
+
+type ImportNodeKind = "folder" | "text" | "file" | "sketch";
+
+type PlannedImportNode = {
+  path: string;
+  parentPath: string;
+  name: string;
+  kind: ImportNodeKind;
+  content?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type DroppedFileEntry = {
+  path: string;
+  file: File;
+};
+
+type DroppedEntries = {
+  files: DroppedFileEntry[];
+  directories: string[];
+  hadDirectory: boolean;
+  usedFlatFallback: boolean;
+};
+
+type ExcalidrawPayload = {
+  elements?: unknown;
+  files?: unknown;
+  appState?: unknown;
+};
+
+type LegacyFileSystemEntry = {
+  isFile: boolean;
+  isDirectory: boolean;
+  fullPath?: string;
+  name: string;
+};
+
+type LegacyFileSystemFileEntry = LegacyFileSystemEntry & {
+  isFile: true;
+  file: (success: (file: File) => void, error?: (err: unknown) => void) => void;
+};
+
+type LegacyFileSystemDirectoryReader = {
+  readEntries: (
+    success: (entries: LegacyFileSystemEntry[]) => void,
+    error?: (err: unknown) => void,
+  ) => void;
+};
+
+type LegacyFileSystemDirectoryEntry = LegacyFileSystemEntry & {
+  isDirectory: true;
+  createReader: () => LegacyFileSystemDirectoryReader;
+};
+
+type LegacyDataTransferItem = DataTransferItem & {
+  webkitGetAsEntry?: () => LegacyFileSystemEntry | null;
+};
+
+const normalizeDropPath = (value: string) =>
+  value.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+
+const getParentPath = (path: string) => {
+  const normalized = normalizeDropPath(path);
+  const index = normalized.lastIndexOf("/");
+  return index < 0 ? "" : normalized.slice(0, index);
+};
+
+const getBaseName = (path: string) => {
+  const normalized = normalizeDropPath(path);
+  const index = normalized.lastIndexOf("/");
+  return index < 0 ? normalized : normalized.slice(index + 1);
+};
+
+const stripExtension = (name: string) => name.replace(/\.[^/.]+$/, "");
+
+const isMarkdownPath = (path: string) =>
+  normalizeDropPath(path).toLowerCase().endsWith(".md");
+
+const isExcalidrawPath = (path: string) =>
+  normalizeDropPath(path).toLowerCase().endsWith(".excalidraw");
+
+const listDirectoryEntries = async (
+  directoryEntry: LegacyFileSystemDirectoryEntry,
+): Promise<LegacyFileSystemEntry[]> => {
+  const reader = directoryEntry.createReader();
+  const result: LegacyFileSystemEntry[] = [];
+
+  while (true) {
+    const chunk = await new Promise<LegacyFileSystemEntry[]>(
+      (resolve, reject) => {
+        reader.readEntries(resolve, reject);
+      },
+    );
+
+    if (!chunk.length) break;
+    result.push(...chunk);
+  }
+
+  return result;
+};
+
+const readDroppedEntry = async (
+  entry: LegacyFileSystemEntry,
+  parentPath = "",
+): Promise<{ files: DroppedFileEntry[]; directories: string[] }> => {
+  const localPath = normalizeDropPath(
+    parentPath ? `${parentPath}/${entry.name}` : entry.name,
+  );
+
+  if (entry.isFile) {
+    const fileEntry = entry as LegacyFileSystemFileEntry;
+    const file = await new Promise<File>((resolve, reject) => {
+      fileEntry.file(resolve, reject);
+    });
+    return {
+      files: [{ path: localPath, file }],
+      directories: [],
+    };
+  }
+
+  if (!entry.isDirectory) {
+    return { files: [], directories: [] };
+  }
+
+  const directoryEntry = entry as LegacyFileSystemDirectoryEntry;
+  const children = await listDirectoryEntries(directoryEntry);
+  const files: DroppedFileEntry[] = [];
+  const directories: string[] = [localPath];
+
+  for (const child of children) {
+    const read = await readDroppedEntry(child, localPath);
+    files.push(...read.files);
+    directories.push(...read.directories);
+  }
+
+  return { files, directories };
+};
+
+const collectDroppedEntries = async (
+  dataTransfer: DataTransfer,
+): Promise<DroppedEntries> => {
+  const files: DroppedFileEntry[] = [];
+  const directories = new Set<string>();
+  let hadDirectory = false;
+
+  const items = Array.from(dataTransfer.items || []);
+  const webkitEntries = items
+    .map(
+      (item) =>
+        ((item as LegacyDataTransferItem).webkitGetAsEntry?.() ||
+          null) as LegacyFileSystemEntry | null,
+    )
+    .filter((entry): entry is LegacyFileSystemEntry => entry !== null);
+
+  if (webkitEntries.length > 0) {
+    for (const entry of webkitEntries) {
+      const read = await readDroppedEntry(entry);
+      read.files.forEach((value) => files.push(value));
+      read.directories.forEach((path) => {
+        if (path) directories.add(path);
+      });
+      if (entry.isDirectory || read.directories.length > 0) {
+        hadDirectory = true;
+      }
+    }
+
+    return {
+      files,
+      directories: Array.from(directories),
+      hadDirectory,
+      usedFlatFallback: false,
+    };
+  }
+
+  const droppedFiles = Array.from(dataTransfer.files || []);
+  for (const file of droppedFiles) {
+    const relativePath = normalizeDropPath(
+      (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+        file.name,
+    );
+    files.push({ path: relativePath, file });
+
+    const segments = relativePath.split("/").filter(Boolean);
+    if (segments.length > 1) {
+      hadDirectory = true;
+      let cursor = "";
+      segments.slice(0, -1).forEach((segment) => {
+        cursor = cursor ? `${cursor}/${segment}` : segment;
+        directories.add(cursor);
+      });
+    }
+  }
+
+  return {
+    files,
+    directories: Array.from(directories),
+    hadDirectory,
+    usedFlatFallback: true,
+  };
+};
+
+const isExcalidrawPayload = (
+  value: unknown,
+): value is {
+  elements: unknown[];
+  files?: Record<string, unknown>;
+  appState?: Record<string, unknown>;
+} => {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as ExcalidrawPayload;
+  return Array.isArray(payload.elements);
+};
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+const serializeSvgDataUri = (svg: SVGSVGElement) => {
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  const xml = new XMLSerializer().serializeToString(svg);
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+};
+
+const buildExcalidrawPreviewSvgs = async (payload: {
+  elements: unknown[];
+  files?: Record<string, unknown>;
+  appState?: Record<string, unknown>;
+}) => {
+  try {
+    const { exportToSvg } = await import("@excalidraw/excalidraw");
+    const elements =
+      payload.elements as unknown as readonly ExcalidrawElement[];
+    const files = (payload.files || {}) as unknown as BinaryFiles;
+    const appState = isObjectRecord(payload.appState) ? payload.appState : {};
+
+    const lightSvg = await exportToSvg({
+      elements,
+      files,
+      appState: {
+        ...appState,
+        exportBackground: true,
+        exportWithDarkMode: false,
+      },
+    });
+
+    const darkSvg = await exportToSvg({
+      elements,
+      files,
+      appState: {
+        ...appState,
+        exportBackground: true,
+        exportWithDarkMode: true,
+      },
+    });
+
+    return {
+      svgLight: serializeSvgDataUri(lightSvg),
+      svgDark: serializeSvgDataUri(darkSvg),
+    };
+  } catch {
+    return {
+      svgLight: undefined,
+      svgDark: undefined,
+    };
+  }
+};
 
 const cleanBlockDataForSync = (
   data: Partial<BlockData>,
@@ -122,7 +405,15 @@ export const useProjectCanvasState = (
   const [draftsByBlock, setDraftsByBlock] = useState<DraftsMap>({});
   const [projectOwnerId, setProjectOwnerId] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewModeState] = useState(false);
+  const [isExternalDropActive, setIsExternalDropActive] = useState(false);
+  const [dropImportProgress, setDropImportProgress] =
+    useState<DropImportProgress>({
+      isImporting: false,
+      total: 0,
+      processed: 0,
+    });
   const isPreviewModeRef = useRef(false);
+  const externalDragDepthRef = useRef(0);
 
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -415,10 +706,8 @@ export const useProjectCanvasState = (
 
     if (initialBlocks.length > 0 || initialLinks.length > 0) {
       isInitialized.current = true;
-
-      // Auto-center on core block if it exists
       setTimeout(() => {
-        applyLongestSideFit(initialBlocks, FIT_MAX_ZOOM_ALL);
+        handleFitView();
       }, 100);
     }
 
@@ -988,6 +1277,430 @@ export const useProjectCanvasState = (
     [graph, hasSeenOnboarding, markOnboardingSeen, onGraphMutation],
   );
 
+  const buildImportBlock = useCallback(
+    (
+      planned: PlannedImportNode,
+      position: { x: number; y: number },
+      ownerName: string,
+    ): Node<BlockData> => {
+      const id = crypto.randomUUID();
+      const isSketch = planned.kind === "sketch";
+      const isFolder = planned.kind === "folder";
+      const isFile = planned.kind === "file";
+
+      const width = isSketch
+        ? SKETCH_BLOCK_WIDTH
+        : isFolder
+          ? FOLDER_BLOCK_WIDTH
+          : isFile
+            ? FILE_BLOCK_WIDTH
+            : DEFAULT_BLOCK_WIDTH;
+      const height = isSketch
+        ? SKETCH_BLOCK_HEIGHT
+        : isFolder
+          ? FOLDER_BLOCK_HEIGHT
+          : isFile
+            ? FILE_BLOCK_HEIGHT
+            : DEFAULT_BLOCK_HEIGHT;
+
+      const blockType = planned.kind === "folder" ? "folder" : planned.kind;
+      const metadata = planned.metadata
+        ? JSON.stringify(planned.metadata)
+        : undefined;
+      const content =
+        planned.kind === "folder"
+          ? planned.name
+          : planned.content || planned.name;
+
+      return {
+        id,
+        type: blockType,
+        position,
+        width,
+        height,
+        style: { width, height },
+        data: {
+          title: planned.name,
+          content,
+          metadata,
+          ownerId: currentUser?.id,
+          authorName: ownerName,
+          authorColor: currentUser?.color,
+          blockType,
+          isLocked: false,
+          updatedAt: new Date().toISOString(),
+          lastEditor: ownerName,
+          isEditingLink: false,
+          isEditingGithub: false,
+        },
+      };
+    },
+    [currentUser],
+  );
+
+  const handleExternalDrop = useCallback(
+    async (event: React.DragEvent) => {
+      if (isReadOnly || !initialProjectId || !currentUser) return;
+
+      const transfer = event.dataTransfer;
+      if (!transfer) return;
+
+      const transferTypes = Array.from(transfer.types || []);
+      if (!transferTypes.includes("Files")) return;
+
+      event.preventDefault();
+      externalDragDepthRef.current = 0;
+      setIsExternalDropActive(false);
+
+      setDropImportProgress({
+        isImporting: true,
+        total: 0,
+        processed: 0,
+      });
+
+      try {
+        const dropPoint = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        const dropped = await collectDroppedEntries(transfer);
+        if (!dropped.files.length && !dropped.directories.length) {
+          return;
+        }
+
+        setDropImportProgress((prev) => ({
+          ...prev,
+          total: dropped.files.length,
+          processed: 0,
+        }));
+
+        if (dropped.hadDirectory && dropped.usedFlatFallback) {
+          toast.info(
+            dict.canvas.dropFolderFallback ||
+              "Folder recursion is limited in this browser; importing available files only.",
+          );
+        }
+
+        const planned = new Map<string, PlannedImportNode>();
+        const failedPaths: string[] = [];
+        let processedCount = 0;
+
+        for (const fileEntry of dropped.files) {
+          const normalizedPath = normalizeDropPath(
+            fileEntry.path || fileEntry.file.name,
+          );
+          if (!normalizedPath) {
+            processedCount += 1;
+            setDropImportProgress((prev) => ({
+              ...prev,
+              processed: processedCount,
+            }));
+            continue;
+          }
+
+          const baseName = getBaseName(normalizedPath);
+          const displayName = stripExtension(baseName) || baseName;
+
+          if (isMarkdownPath(normalizedPath)) {
+            const content = await fileEntry.file.text();
+            planned.set(normalizedPath, {
+              path: normalizedPath,
+              parentPath: getParentPath(normalizedPath),
+              name: displayName,
+              kind: "text",
+              content,
+              metadata: {
+                sourcePath: normalizedPath,
+                kind: "drop-markdown",
+              },
+            });
+            processedCount += 1;
+            setDropImportProgress((prev) => ({
+              ...prev,
+              processed: processedCount,
+            }));
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+            continue;
+          }
+
+          if (isExcalidrawPath(normalizedPath)) {
+            try {
+              const raw = await fileEntry.file.text();
+              const parsed = JSON.parse(raw) as unknown;
+
+              if (!isExcalidrawPayload(parsed)) {
+                throw new Error("Invalid Excalidraw payload");
+              }
+
+              const previews = await buildExcalidrawPreviewSvgs(parsed);
+
+              planned.set(normalizedPath, {
+                path: normalizedPath,
+                parentPath: getParentPath(normalizedPath),
+                name: displayName,
+                kind: "sketch",
+                metadata: {
+                  sourcePath: normalizedPath,
+                  kind: "drop-excalidraw",
+                  excalidrawElements: parsed.elements,
+                  excalidrawFiles: parsed.files || {},
+                  excalidrawSvg: previews.svgLight,
+                  excalidrawSvgLight: previews.svgLight,
+                  excalidrawSvgDark: previews.svgDark,
+                },
+              });
+            } catch {
+              failedPaths.push(normalizedPath);
+            }
+
+            processedCount += 1;
+            setDropImportProgress((prev) => ({
+              ...prev,
+              processed: processedCount,
+            }));
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+            continue;
+          }
+
+          const formData = new FormData();
+          formData.append("file", fileEntry.file);
+
+          try {
+            const res = await fetch(`/api/projects/${initialProjectId}/files`, {
+              method: "POST",
+              body: formData,
+            });
+
+            if (!res.ok) {
+              throw new Error("upload-failed");
+            }
+
+            const uploaded = await res.json();
+            planned.set(normalizedPath, {
+              path: normalizedPath,
+              parentPath: getParentPath(normalizedPath),
+              name: uploaded.name || baseName,
+              kind: "file",
+              content: uploaded.name || baseName,
+              metadata: {
+                name: uploaded.name || baseName,
+                size: uploaded.size ?? fileEntry.file.size,
+                type: uploaded.type ?? fileEntry.file.type,
+                lastModified: fileEntry.file.lastModified,
+                status: "success",
+                sourcePath: normalizedPath,
+              },
+            });
+          } catch {
+            failedPaths.push(normalizedPath);
+          }
+
+          processedCount += 1;
+          setDropImportProgress((prev) => ({
+            ...prev,
+            processed: processedCount,
+          }));
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        }
+
+        const folderPaths = new Set(
+          dropped.directories
+            .map((path) => normalizeDropPath(path))
+            .filter(Boolean),
+        );
+
+        planned.forEach((node) => {
+          let cursor = node.parentPath;
+          while (cursor) {
+            folderPaths.add(cursor);
+            cursor = getParentPath(cursor);
+          }
+        });
+
+        folderPaths.forEach((folderPath) => {
+          if (planned.has(folderPath)) return;
+          planned.set(folderPath, {
+            path: folderPath,
+            parentPath: getParentPath(folderPath),
+            name: getBaseName(folderPath),
+            kind: "folder",
+            content: getBaseName(folderPath),
+            metadata: {
+              isCollapsed: false,
+              sourcePath: folderPath,
+              kind: "drop-folder",
+            },
+          });
+        });
+
+        const allNodes = Array.from(planned.values()).sort((left, right) => {
+          if (left.parentPath === right.path) return 1;
+          if (right.parentPath === left.path) return -1;
+          if (left.kind === "folder" && right.kind !== "folder") return -1;
+          if (right.kind === "folder" && left.kind !== "folder") return 1;
+          return left.path.localeCompare(right.path);
+        });
+
+        const childrenByParent = new Map<string, PlannedImportNode[]>();
+        allNodes.forEach((node) => {
+          const key = node.parentPath;
+          const group = childrenByParent.get(key) || [];
+          group.push(node);
+          childrenByParent.set(key, group);
+        });
+
+        const createdByPath = new Map<string, Node<BlockData>>();
+        const newNodes: Node<BlockData>[] = [];
+        const newLinks: Edge[] = [];
+        const ownerName =
+          currentUser.displayName ||
+          currentUser.username ||
+          dict.project.anonymous;
+        let rowIndex = 0;
+
+        const walk = (parentPath: string, depth: number) => {
+          const children = childrenByParent.get(parentPath) || [];
+          children.sort((a, b) => {
+            if (a.kind === "folder" && b.kind !== "folder") return -1;
+            if (b.kind === "folder" && a.kind !== "folder") return 1;
+            return a.name.localeCompare(b.name);
+          });
+
+          children.forEach((node) => {
+            const created = buildImportBlock(
+              node,
+              {
+                x: dropPoint.x + depth * DROP_COL_GAP,
+                y: dropPoint.y + rowIndex * DROP_ROW_GAP,
+              },
+              ownerName,
+            );
+            rowIndex += 1;
+
+            createdByPath.set(node.path, created);
+            newNodes.push(created);
+
+            if (node.parentPath && createdByPath.has(node.parentPath)) {
+              const parent = createdByPath.get(node.parentPath)!;
+              const isRight = created.position.x >= parent.position.x;
+
+              newLinks.push({
+                id: crypto.randomUUID(),
+                source: parent.id,
+                target: created.id,
+                type: "connection",
+                sourceHandle: isRight ? "right" : "left",
+                targetHandle: isRight ? "left" : "right",
+                markerEnd: "connection-arrow",
+                data: {
+                  relationType:
+                    parent.type === "folder" ? "folder" : "contains",
+                },
+              });
+            }
+
+            walk(node.path, depth + 1);
+          });
+        };
+
+        walk("", 0);
+
+        if (!newNodes.length) {
+          toast.error(dict.canvas.dropImportError || "Import failed");
+          return;
+        }
+
+        setBlocks((prev) => [...prev, ...newNodes]);
+        setLinks((prev) => [...prev, ...newLinks]);
+
+        if (!hasSeenOnboarding) {
+          markOnboardingSeen();
+        }
+
+        const importedCount = newNodes.length;
+        if (failedPaths.length > 0) {
+          toast.warning(
+            (
+              dict.canvas.dropImportPartial ||
+              "Imported {count} items. Some files could not be imported."
+            ).replace("{count}", String(importedCount)),
+          );
+        } else {
+          toast.success(
+            (dict.canvas.dropImportSuccess || "Imported {count} items").replace(
+              "{count}",
+              String(importedCount),
+            ),
+          );
+        }
+
+        onGraphMutation?.("Dropped import created");
+      } finally {
+        setDropImportProgress({
+          isImporting: false,
+          total: 0,
+          processed: 0,
+        });
+      }
+    },
+    [
+      isReadOnly,
+      initialProjectId,
+      currentUser,
+      screenToFlowPosition,
+      dict,
+      setBlocks,
+      setLinks,
+      buildImportBlock,
+      hasSeenOnboarding,
+      markOnboardingSeen,
+      onGraphMutation,
+    ],
+  );
+
+  const onExternalDragEnter = useCallback((event: React.DragEvent) => {
+    const transfer = event.dataTransfer;
+    if (!transfer) return;
+    const hasFiles = Array.from(transfer.types || []).includes("Files");
+    if (!hasFiles) return;
+
+    event.preventDefault();
+    externalDragDepthRef.current += 1;
+    setIsExternalDropActive(true);
+  }, []);
+
+  const onExternalDragLeave = useCallback((event: React.DragEvent) => {
+    const transfer = event.dataTransfer;
+    if (!transfer) return;
+    const hasFiles = Array.from(transfer.types || []).includes("Files");
+    if (!hasFiles) return;
+
+    externalDragDepthRef.current = Math.max(
+      0,
+      externalDragDepthRef.current - 1,
+    );
+    if (externalDragDepthRef.current === 0) {
+      setIsExternalDropActive(false);
+    }
+  }, []);
+
+  const onExternalDragOver = useCallback(
+    (event: React.DragEvent) => {
+      const transfer = event.dataTransfer;
+      if (!transfer) return;
+      const hasFiles = Array.from(transfer.types || []).includes("Files");
+      if (!hasFiles) return;
+
+      event.preventDefault();
+      transfer.dropEffect = "copy";
+      if (!isExternalDropActive) {
+        setIsExternalDropActive(true);
+      }
+    },
+    [isExternalDropActive],
+  );
+
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const activeElement = document.activeElement;
@@ -1270,13 +1983,20 @@ export const useProjectCanvasState = (
         lastProjectId.current = initialProjectId;
         io.fetchProjectMetadata();
 
-        // Fit view on load/refresh
         setTimeout(() => {
-          const blocksToFit =
+          const rawBlocks =
             blocks.length > 0
               ? blocks
-              : (Array.from(yBlocks.values()) as Node<BlockData>[]);
-          applyLongestSideFit(blocksToFit, FIT_MAX_ZOOM_ALL);
+              : (Array.from(yBlocks!.values()) as Node<BlockData>[]);
+          const rawLinks =
+            links.length > 0 ? links : Array.from(yLinks!.values());
+          const initialHiddenIds = computeHiddenNodeIds(rawBlocks, rawLinks);
+
+          const filteredRawBlocks = rawBlocks.filter(
+            (b) => !b.hidden && !initialHiddenIds.has(b.id),
+          );
+
+          applyLongestSideFit(filteredRawBlocks, FIT_MAX_ZOOM_ALL);
         }, 100);
 
         return;
@@ -1312,12 +2032,13 @@ export const useProjectCanvasState = (
   ]);
 
   const handleFitView = useCallback(() => {
-    const selectedBlocks = blocks.filter((n) => n.selected);
+    const visibleBlocks = blocks.filter((b) => !b.hidden);
+    const selectedBlocks = visibleBlocks.filter((n) => n.selected);
     if (selectedBlocks.length > 0)
       applyLongestSideFit(selectedBlocks, FIT_MAX_ZOOM_SELECTED);
-    else if (blocks.length === 0)
+    else if (visibleBlocks.length === 0)
       setViewport({ x: 0, y: 0, zoom: 1 }, { duration: FIT_DURATION });
-    else applyLongestSideFit(blocks, FIT_MAX_ZOOM_ALL);
+    else applyLongestSideFit(visibleBlocks, FIT_MAX_ZOOM_ALL);
   }, [blocks, setViewport, applyLongestSideFit]);
 
   const handleZoomIn = useCallback(
@@ -1731,6 +2452,12 @@ export const useProjectCanvasState = (
     onBlockClick: () => setContextMenu(null),
     onLinkClick: () => setContextMenu(null),
     handleCreateBlock: handleCreateBlockWrapper,
+    onExternalDragEnter,
+    onExternalDragLeave,
+    onExternalDragOver,
+    handleExternalDrop,
+    isExternalDropActive,
+    dropImportProgress,
     presenceUsers: rt.presenceUsers,
     remoteCursorsRef: rt.remoteCursorsRef,
     draftsByBlock,

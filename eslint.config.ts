@@ -41,7 +41,7 @@ const config: Linter.Config[] = [
   },
 
   {
-    ignores: [".next/", "node_modules/", "dist/"],
+    ignores: [".next/", "node_modules/", "dist/", "storage/"],
   },
 ];
 

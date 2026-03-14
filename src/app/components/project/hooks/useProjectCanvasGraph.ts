@@ -35,6 +35,7 @@ import {
 } from "@components/project/utils/alignment";
 import { parseFolderMetadata } from "@lib/metadata-parsers";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
+import { computeHiddenNodeIds } from "@components/project/utils/visibility";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
@@ -384,55 +385,6 @@ export const useProjectCanvasGraph = ({
     [setLinks, blocks, links, isReadOnly, dict.blocks],
   );
 
-  const getDescendantIds = useCallback((rootId: string, graphLinks: Edge[]) => {
-    const visited = new Set<string>();
-    const queue = graphLinks
-      .filter((link) => link.source === rootId)
-      .map((link) => link.target);
-
-    while (queue.length > 0) {
-      const nextId = queue.shift();
-      if (!nextId || visited.has(nextId)) {
-        continue;
-      }
-
-      visited.add(nextId);
-
-      for (const link of graphLinks) {
-        if (link.source === nextId && !visited.has(link.target)) {
-          queue.push(link.target);
-        }
-      }
-    }
-
-    return visited;
-  }, []);
-
-  const getCollapsedFolderIds = useCallback((nodes: Node<BlockData>[]) => {
-    return new Set(
-      nodes
-        .filter((node) => node.type === "folder")
-        .filter((node) => parseFolderMetadata(node.data?.metadata).isCollapsed)
-        .map((node) => node.id),
-    );
-  }, []);
-
-  const computeHiddenNodeIds = useCallback(
-    (nodes: Node<BlockData>[], graphLinks: Edge[]) => {
-      const hiddenIds = new Set<string>();
-      const collapsedFolderIds = getCollapsedFolderIds(nodes);
-
-      for (const folderId of collapsedFolderIds) {
-        const descendants = getDescendantIds(folderId, graphLinks);
-        descendants.delete(folderId);
-        descendants.forEach((descendantId) => hiddenIds.add(descendantId));
-      }
-
-      return hiddenIds;
-    },
-    [getCollapsedFolderIds, getDescendantIds],
-  );
-
   const applyFolderVisibility = useCallback(
     (nodes: Node<BlockData>[], graphLinks: Edge[]) => {
       const hiddenIds = computeHiddenNodeIds(nodes, graphLinks);
@@ -448,7 +400,7 @@ export const useProjectCanvasGraph = ({
         };
       });
     },
-    [computeHiddenNodeIds],
+    [],
   );
 
   const handleToggleFolderCollapse = useCallback(
@@ -489,7 +441,7 @@ export const useProjectCanvasGraph = ({
     }
 
     setBlocks((currentNodes) => applyFolderVisibility(currentNodes, links));
-  }, [blocks, links, computeHiddenNodeIds, setBlocks, applyFolderVisibility]);
+  }, [blocks, links, setBlocks, applyFolderVisibility]);
 
   const onBlockDragStart = useCallback(
     (_: React.MouseEvent, block: Node) => {

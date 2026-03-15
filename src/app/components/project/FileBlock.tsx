@@ -437,6 +437,7 @@ const FileBlock = (props: CanvasBlockProps) => {
 
         <div className="block-content flex-1 flex flex-col min-h-0">
           {(() => {
+            const ext = metadata?.name?.split(".").pop()?.toLowerCase() || "";
             const isImage =
               metadata?.type?.startsWith("image/") ||
               [
@@ -448,9 +449,17 @@ const FileBlock = (props: CanvasBlockProps) => {
                 "svg",
                 "bmp",
                 "ico",
-              ].includes(metadata?.name?.split(".").pop()?.toLowerCase() || "");
+              ].includes(ext);
 
-            const imageUrl =
+            const isAudio =
+              metadata?.type?.startsWith("audio/") ||
+              ["mp3", "wav", "ogg", "m4a", "flac"].includes(ext);
+
+            const isVideo =
+              metadata?.type?.startsWith("video/") ||
+              ["mp4", "mov", "avi", "webm", "mkv"].includes(ext);
+
+            const mediaUrl =
               metadata?.tempUrl ||
               (metadata?.name && initialProjectId
                 ? `/api/projects/${initialProjectId}/files?name=${encodeURIComponent(
@@ -465,7 +474,8 @@ const FileBlock = (props: CanvasBlockProps) => {
             const isVerticalLayout =
               (width ?? 0) >= 400 || (height ?? 0) >= 300;
             const shouldUseVerticalLayout =
-              isImage && imageUrl && isVerticalLayout;
+              !!mediaUrl &&
+              (isAudio || ((isImage || isVideo) && isVerticalLayout));
 
             return (
               <div
@@ -507,7 +517,7 @@ const FileBlock = (props: CanvasBlockProps) => {
                         : "flex items-center gap-3"
                     }`}
                   >
-                    {isImage && imageUrl && !previewImageError ? (
+                    {isImage && mediaUrl && !previewImageError ? (
                       <div
                         role="button"
                         tabIndex={0}
@@ -530,7 +540,7 @@ const FileBlock = (props: CanvasBlockProps) => {
                         }}
                       >
                         <img
-                          src={imageUrl as string}
+                          src={mediaUrl as string}
                           alt={metadata.name}
                           className={`w-full h-full select-none nodrag ${
                             isLargeBlock ? "object-contain" : "object-cover"
@@ -538,6 +548,42 @@ const FileBlock = (props: CanvasBlockProps) => {
                           draggable={false}
                           crossOrigin="anonymous"
                           onError={() => setPreviewImageError(true)}
+                        />
+                      </div>
+                    ) : isVideo && mediaUrl ? (
+                      <div
+                        className={`block-file-video nodrag flex items-center justify-center bg-black/50 rounded overflow-hidden ${
+                          isLargeBlock
+                            ? "flex-1 min-h-0 w-full"
+                            : shouldUseVerticalLayout
+                              ? "w-full aspect-video"
+                              : "h-16 w-24 shrink-0"
+                        }`}
+                        onPointerDownCapture={(e) => e.stopPropagation()}
+                        onKeyDownCapture={(e) => e.stopPropagation()}
+                      >
+                        <video
+                          src={mediaUrl as string}
+                          controls
+                          className="w-full h-full object-contain nodrag"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                    ) : isAudio && mediaUrl ? (
+                      <div
+                        className={`block-file-audio nodrag flex items-center justify-center bg-black/20 rounded ${
+                          shouldUseVerticalLayout
+                            ? "w-full p-2"
+                            : "flex-1 px-2 py-1"
+                        }`}
+                        onPointerDownCapture={(e) => e.stopPropagation()}
+                        onKeyDownCapture={(e) => e.stopPropagation()}
+                      >
+                        <audio
+                          src={mediaUrl as string}
+                          controls
+                          className="w-full h-10 nodrag"
+                          crossOrigin="anonymous"
                         />
                       </div>
                     ) : (

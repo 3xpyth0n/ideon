@@ -17,6 +17,7 @@ export interface UserProfile {
   color: string | null;
   role?: string | null;
   email?: string | null;
+  vimMode?: boolean | null;
   updatedAt?: string | Date | null;
 }
 

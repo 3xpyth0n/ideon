@@ -36,7 +36,9 @@
     "rotatePassword": "Mettre à jour",
     "security": "Sécurité",
     "securityDescription": "Mettez à jour votre mot de passe pour sécuriser votre compte.",
-    "usernamePlaceholder": "pseudo"
+    "usernamePlaceholder": "pseudo",
+    "vimMode": "Mode Vim",
+    "vimModeDescription": "Activer les raccourcis Vim dans l'éditeur de code."
   },
   "auth": {
     "acceptInvitation": "Accepter l'invitation",

@@ -5,11 +5,12 @@ import {
   useEditor,
   EditorContext,
   type Editor,
+  wrappingInputRule,
 } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Markdown } from "tiptap-markdown";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
@@ -61,7 +62,6 @@ const SmartCode = Extension.create({
           const tr = newState.tr;
           let modified = false;
 
-          // Check if any transaction added text
           const hasInput = transactions.some((t) => t.docChanged);
           if (!hasInput) return;
 
@@ -71,11 +71,9 @@ const SmartCode = Extension.create({
 
           if (!node.isTextblock) return;
 
-          // Get the text content of the current block
           const text = node.textContent;
           const startPos = $from.start();
 
-          // Regex to match `code` pattern
           const regex = /(?:^|[^`])(`([^`]+)`)(?:[^`]|$)/g;
           let match;
           const matches: RegExpExecArray[] = [];
@@ -84,7 +82,6 @@ const SmartCode = Extension.create({
             matches.push(match);
           }
 
-          // Process matches in reverse order to avoid index shifting issues
           for (let i = matches.length - 1; i >= 0; i--) {
             const match = matches[i];
             const matchStartInText = match.index + match[0].indexOf(match[1]);
@@ -117,6 +114,23 @@ const SmartCode = Extension.create({
   },
 });
 
+const SmartTasks = Extension.create({
+  name: "smartTasks",
+
+  addInputRules() {
+    return [
+      wrappingInputRule({
+        find: /^\s*(\[ \]|\[\])\s$/,
+        type: this.editor.schema.nodes.taskList,
+      }),
+      wrappingInputRule({
+        find: /^\s*([-*]\s)(\[ \]|\[\])\s$/,
+        type: this.editor.schema.nodes.taskList,
+      }),
+    ];
+  },
+});
+
 interface MarkdownEditorProps {
   content?: string;
   onChange?: (content: string) => void;
@@ -127,6 +141,12 @@ interface MarkdownEditorProps {
   onBlur?: () => void;
   onEditorReady?: (editor: Editor) => void;
   onLinkShortcut?: () => void;
+}
+
+interface MarkdownStorage {
+  markdown: {
+    getMarkdown: () => string;
+  };
 }
 
 const MarkdownEditor = ({
@@ -141,31 +161,33 @@ const MarkdownEditor = ({
   onLinkShortcut,
 }: MarkdownEditorProps) => {
   const [, setIsFocused] = useState(false);
-  const isSyncingRef = React.useRef(false);
-  const wasFocusedBeforeClickRef = React.useRef(false);
+  const isSyncingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wasFocusedBeforeClickRef = useRef(false);
+  const lastLocalUpdateRef = useRef(0);
 
-  const onLinkShortcutRef = React.useRef(onLinkShortcut);
+  const onLinkShortcutRef = useRef(onLinkShortcut);
 
   useEffect(() => {
     onLinkShortcutRef.current = onLinkShortcut;
   }, [onLinkShortcut]);
 
-  // Type definition for Markdown storage
-  interface MarkdownStorage {
-    markdown: {
-      getMarkdown: () => string;
-    };
-  }
-
   const editor = useEditor({
     immediatelyRender: false,
+    content: content,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         link: false,
         underline: false,
       }),
-      Markdown,
+      Markdown.configure({
+        html: false,
+        tightLists: true,
+        bulletListMarker: "-",
+        transformPastedText: true,
+        transformCopiedText: true,
+      }),
       UnderlineExtension,
       TaskList,
       TaskItem.configure({
@@ -189,12 +211,13 @@ const MarkdownEditor = ({
       }),
       KeyboardShortcuts.configure({
         onLinkShortcut: () => {
-          if (onLinkShortcutRef.current) {
+          if (!isReadOnly && onLinkShortcutRef.current) {
             onLinkShortcutRef.current();
           }
         },
       }),
       SmartCode,
+      SmartTasks,
     ],
     editable: !isReadOnly,
     editorProps: {
@@ -203,7 +226,8 @@ const MarkdownEditor = ({
       },
       handleDOMEvents: {
         mousedown: (view, event) => {
-          const target = event.target;
+          const target = event.target as HTMLElement;
+
           if (target instanceof HTMLElement) {
             const anchor = target.closest("a");
             if (anchor instanceof HTMLAnchorElement && anchor.href) {
@@ -249,23 +273,99 @@ const MarkdownEditor = ({
     },
   });
 
-  // Expose editor instance to parent
+  const toggleCheckbox = useCallback(
+    (li: HTMLElement) => {
+      if (!editor) return;
+
+      const view = editor.view;
+      const nodePos = view.posAtDOM(li, 0);
+      if (nodePos < 0) return;
+
+      const { state } = view;
+      const node = state.doc.nodeAt(nodePos);
+      if (!node || node.type.name !== "taskItem") return;
+
+      const checked = !node.attrs.checked;
+      lastLocalUpdateRef.current = Date.now();
+
+      // Temporarily enable editing to allow the transaction to be dispatched
+      const wasEditable = editor.isEditable;
+      if (!wasEditable) {
+        editor.setEditable(true, false); // false to avoid focusing
+      }
+
+      editor.view.dispatch(
+        editor.view.state.tr.setNodeMarkup(nodePos, undefined, {
+          ...node.attrs,
+          checked,
+        }),
+      );
+
+      if (!wasEditable) {
+        editor.setEditable(false, false);
+      }
+
+      // Force update the parent immediately
+      const markdown = (
+        editor.storage as unknown as MarkdownStorage
+      ).markdown.getMarkdown();
+      onChange?.(markdown);
+    },
+    [editor, onChange],
+  );
+
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isReadOnly || !editor) return;
+
+      const target = e.target as HTMLElement;
+      const checkbox = target.closest('input[type="checkbox"]');
+      const label = target.closest("label");
+
+      if (checkbox || (label && label.closest('li[data-type="taskItem"]'))) {
+        const li = target.closest(
+          'li[data-type="taskItem"]',
+        ) as HTMLElement | null;
+        if (li) {
+          toggleCheckbox(li);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    },
+    [isReadOnly, editor, toggleCheckbox],
+  );
+
   useEffect(() => {
     if (editor && onEditorReady) {
       onEditorReady(editor);
+      return () => {
+        onEditorReady(null as unknown as Editor);
+      };
     }
   }, [editor, onEditorReady]);
 
-  // Sync content updates from outside (e.g. Yjs updates)
   useEffect(() => {
     if (editor && content !== undefined) {
+      const processedContent = content
+        .replace(/^(\s*)(-?\s*)(\[ \]|\[\])(\s*)$/gm, "$1- [ ] ")
+        .replace(/^(\s*)(-?\s*)(\[x\])(\s*)$/gm, "$1- [x] ")
+        .replace(/^(\s*)(-?\s*)(\[ \]|\[\])(\s.+)$/gm, "$1- [ ]$4")
+        .replace(/^(\s*)(-?\s*)(\[x\])(\s.+)$/gm, "$1- [x]$4");
+
       const currentMarkdown = (
         editor.storage as unknown as MarkdownStorage
       ).markdown.getMarkdown();
-      if (content !== currentMarkdown) {
-        if (isReadOnly || !editor.isFocused || editor.isEmpty) {
+      if (processedContent !== currentMarkdown) {
+        const isRecentLocalUpdate =
+          Date.now() - lastLocalUpdateRef.current < 500;
+
+        if (
+          (isReadOnly || !editor.isFocused || editor.isEmpty) &&
+          !isRecentLocalUpdate
+        ) {
           isSyncingRef.current = true;
-          editor.commands.setContent(content);
+          editor.commands.setContent(processedContent);
           setTimeout(() => {
             isSyncingRef.current = false;
           }, 0);
@@ -274,7 +374,6 @@ const MarkdownEditor = ({
     }
   }, [content, editor, isReadOnly]);
 
-  // Sync read-only state
   useEffect(() => {
     if (editor) {
       editor.setEditable(!isReadOnly);
@@ -287,11 +386,13 @@ const MarkdownEditor = ({
 
   return (
     <div
+      ref={containerRef}
       className={`markdown-editor-container relative w-full h-full ${
         className.includes("prosemirror-full-height")
           ? "prosemirror-full-height"
           : ""
       }`}
+      onClick={handleContainerClick}
     >
       <EditorContext.Provider value={{ editor }}>
         <EditorContent editor={editor} className="h-full" />

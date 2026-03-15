@@ -214,7 +214,7 @@ const ProjectCoreBlock = memo(
             <div className="w-32 h-px bg-current opacity-20 my-8 shrink-0" />
 
             <div
-              className="relative w-full flex-1 min-h-0 overflow-hidden flex flex-col justify-center cursor-text nodrag"
+              className="relative w-full flex-1 min-h-0 overflow-hidden flex flex-col justify-center nodrag"
               onClick={() =>
                 document
                   .querySelector(".core-block .ProseMirror")

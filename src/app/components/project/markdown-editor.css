@@ -1,10 +1,10 @@
 .markdown-editor-container {
-  cursor: text !important;
+  cursor: default;
 }
 
 .markdown-editor-container .ProseMirror {
   outline: none !important;
-  cursor: text !important;
+  cursor: text;
 }
 
 .markdown-editor-container.prosemirror-full-height .ProseMirror {
@@ -207,28 +207,116 @@
 .markdown-editor-container .ProseMirror ul[data-type="taskList"] {
   list-style: none;
   padding: 0;
+  margin: 0.5rem 0;
 }
 
 .markdown-editor-container .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
+  margin-bottom: 0.4rem;
 }
 
 .markdown-editor-container .ProseMirror ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  user-select: none;
+  margin-right: 0.75rem;
+  height: 1.6rem; /* Match line-height of p */
   display: flex;
   align-items: center;
-  margin-right: 0.5em;
-  user-select: none;
+  justify-content: center;
+}
+
+.markdown-editor-container .ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.markdown-editor-container .ProseMirror ul[data-type="taskList"] li > div > p {
+  margin: 0 !important;
+  line-height: 1.6;
 }
 
 .markdown-editor-container
   .ProseMirror
   ul[data-type="taskList"]
-  li
-  > label
+  li[data-checked="true"]
+  > div
+  > p {
+  color: #adb5bd;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Custom Checkbox Appearance */
+.markdown-editor-container
+  .ProseMirror
+  ul[data-type="taskList"]
   input[type="checkbox"] {
-  margin: 0;
-  margin-right: 0.5em;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: transparent;
+  margin: 0 !important;
+  color: #2563eb;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  display: grid;
+  place-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+[data-theme="dark"]
+  .markdown-editor-container
+  .ProseMirror
+  ul[data-type="taskList"]
+  input[type="checkbox"] {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.markdown-editor-container
+  .ProseMirror
+  ul[data-type="taskList"]
+  input[type="checkbox"]::before {
+  content: "";
+  width: 0.65rem;
+  height: 0.65rem;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em #2563eb;
+  transform-origin: center;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.markdown-editor-container
+  .ProseMirror
+  ul[data-type="taskList"]
+  input[type="checkbox"]:checked {
+  border-color: #2563eb;
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.markdown-editor-container
+  .ProseMirror
+  ul[data-type="taskList"]
+  input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+/* Read-only adjustment */
+.markdown-editor-container
+  .ProseMirror[contenteditable="false"]
+  ul[data-type="taskList"]
+  li
+  > label,
+.markdown-editor-container
+  .ProseMirror[contenteditable="false"]
+  ul[data-type="taskList"]
+  input[type="checkbox"] {
+  cursor: pointer !important;
+  pointer-events: auto !important;
 }
 
 /* Delete button styling */

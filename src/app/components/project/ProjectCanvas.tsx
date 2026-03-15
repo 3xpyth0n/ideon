@@ -317,6 +317,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
         color: user.color || undefined,
+        vimMode: user.vimMode || false,
       });
     }
   }, [user]);

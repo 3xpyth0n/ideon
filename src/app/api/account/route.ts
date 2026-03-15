@@ -18,6 +18,7 @@ const updateAccountSchema = z.object({
   email: z.string().email().optional(),
   avatarUrl: z.string().optional(),
   password: z.string().min(8).optional(),
+  vimMode: z.boolean().optional(),
 });
 
 export const GET = authenticatedAction(
@@ -34,6 +35,7 @@ export const GET = authenticatedAction(
         "avatarUrl as avatarUrl",
         "color as color",
         "role as role",
+        "vimMode as vimMode",
       ])
       .where("id", "=", auth.id)
       .executeTakeFirst();
@@ -67,6 +69,7 @@ export const PATCH = authenticatedAction(
       email?: string;
       avatarUrl?: string;
       passwordHash?: string;
+      vimMode?: number;
     } = {};
 
     if (body.username !== undefined) {
@@ -105,6 +108,9 @@ export const PATCH = authenticatedAction(
     if (body.avatarUrl !== undefined) updateData.avatarUrl = body.avatarUrl;
     if (body.password) {
       updateData.passwordHash = await argon2.hash(body.password);
+    }
+    if (body.vimMode !== undefined) {
+      updateData.vimMode = body.vimMode ? 1 : 0;
     }
 
     if (Object.keys(updateData).length > 0) {

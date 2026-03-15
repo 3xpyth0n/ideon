@@ -36,7 +36,9 @@
     "rotatePassword": "Update",
     "security": "Security",
     "securityDescription": "Update your password to secure your account.",
-    "usernamePlaceholder": "username"
+    "usernamePlaceholder": "username",
+    "vimMode": "Vim Mode",
+    "vimModeDescription": "Enable Vim keybindings in the code editors."
   },
   "auth": {
     "acceptInvitation": "Accept Invitation",

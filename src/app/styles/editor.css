@@ -145,8 +145,7 @@ body.sketch-modal-open
 .block-file-container,
 .preview-mode .react-flow__node,
 .preview-mode .react-flow__edge,
-.preview-mode .block-card,
-.preview-mode .block-card * {
+.preview-mode .block-card {
   cursor: default !important;
 }
 
@@ -159,6 +158,37 @@ body.sketch-modal-open
 .preview-mode .markdown-editor-container .ProseMirror a {
   cursor: pointer !important;
   pointer-events: auto !important;
+}
+
+.markdown-editor-container {
+  pointer-events: auto !important;
+}
+
+.markdown-editor-container .nodrag {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.markdown-editor-container .ProseMirror {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  pointer-events: auto !important;
+  cursor: text !important;
+}
+
+.markdown-editor-container .ProseMirror ::selection {
+  background: rgba(37, 99, 235, 0.4) !important;
+  color: white !important;
+}
+
+[data-theme="dark"] .markdown-editor-container .ProseMirror ::selection {
+  background: rgba(59, 130, 246, 0.5) !important;
+  color: white !important;
+}
+
+.markdown-editor-container .ProseMirror * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 .loading-overlay {

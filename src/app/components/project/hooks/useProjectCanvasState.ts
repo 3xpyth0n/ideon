@@ -341,6 +341,7 @@ export interface UserPresence {
   displayName?: string | null;
   avatarUrl: string | null;
   color?: string;
+  vimMode?: boolean;
   cursor?: { x: number; y: number; index?: number };
   isTyping?: boolean;
   typingBlockId?: string | null;

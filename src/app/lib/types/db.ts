@@ -56,6 +56,7 @@ export interface usersTable {
   lastOnline: ColumnType<Date, Date | string | undefined, Date | string>;
   invitedByUserId: string | null;
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
+  vimMode: number | null; // 0 or 1
 }
 
 export interface foldersTable {

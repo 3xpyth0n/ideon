@@ -14,6 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Folder Block**: Added a new folder block to group related blocks and quickly collapse or expand them for a cleaner, more organized canvas.
 - **Drag and Drop Import**: You can now drag and drop files, text, folders, and even Excalidraw sketches directly onto the project canvas. Imported content is automatically recognized and added as the appropriate block type, with real-time progress and visual feedback.
 - **Audio and Video Support**: Added native playback support for common audio and video files directly inside the File Block.
+- **Vim Mode**: Added an optional Vim mode for text editors (Note Block and Snippet Block), which can be toggled in the Account settings.
 
 ## [0.6.2] - 2026-03-12
 

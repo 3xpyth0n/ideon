@@ -19,6 +19,7 @@ import {
   type Node,
   useReactFlow,
 } from "@xyflow/react";
+import dynamic from "next/dynamic";
 import Editor from "react-simple-code-editor";
 import { highlight, languages } from "prismjs";
 import "prismjs/components/prism-clike";
@@ -31,10 +32,21 @@ import "prismjs/themes/prism-tomorrow.css"; // Dark theme
 
 import { BlockData } from "./CanvasBlock";
 import { Select, SelectOption } from "@components/ui/Select";
-import "./snippet-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { markdown } from "@codemirror/lang-markdown";
+import { javascript } from "@codemirror/lang-javascript";
+import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
+import { json } from "@codemirror/lang-json";
+import { sql } from "@codemirror/lang-sql";
+import { python } from "@codemirror/lang-python";
+import { cpp } from "@codemirror/lang-cpp";
+import { java } from "@codemirror/lang-java";
+import "./snippet-block.css";
+
+const VimEditor = dynamic(() => import("./VimEditor"), { ssr: false });
 
 type SnippetBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -48,6 +60,36 @@ const LANGUAGE_OPTIONS: SelectOption[] = [
   { value: "json", label: "JSON" },
   { value: "text", label: "Plain Text" },
 ];
+
+const getLanguageExtension = (lang: string) => {
+  switch (lang.toLowerCase()) {
+    case "javascript":
+    case "typescript":
+    case "js":
+    case "ts":
+      return javascript();
+    case "html":
+      return html();
+    case "css":
+      return css();
+    case "json":
+      return json();
+    case "sql":
+      return sql();
+    case "python":
+      return python();
+    case "cpp":
+    case "c++":
+    case "c":
+      return cpp();
+    case "java":
+      return java();
+    case "markdown":
+    case "md":
+    default:
+      return markdown();
+  }
+};
 
 const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const { dict, lang } = useI18n();
@@ -205,6 +247,16 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
       );
     },
     [id, data, currentUser, dict, language, syncToYjs, title],
+  );
+
+  const handleVimChange = useCallback(
+    (value: string) => {
+      setCode(value);
+      if (syncToYjs) {
+        syncToYjs(value);
+      }
+    },
+    [syncToYjs],
   );
 
   const handleLanguageChange = useCallback(
@@ -409,31 +461,46 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
         </div>
 
         <div className="block-content flex-1 flex flex-col min-h-0 relative overflow-hidden bg-transparent nodrag">
-          <div
-            className="snippet-block-container"
-            onMouseDown={(e) => {
-              // Prevent focus loss when clicking the scrollbar
-              if (e.target === e.currentTarget) {
-                e.preventDefault();
-              }
-            }}
-          >
-            <div className="snippet-line-numbers">
-              {lines.map((i) => (
-                <div key={i}>{i}</div>
-              ))}
-            </div>
-            <Editor
+          {currentUser?.vimMode ? (
+            <VimEditor
               value={code}
-              onValueChange={handleCodeChange}
-              highlight={(code) =>
-                highlight(code, languages[language] || languages.text, language)
-              }
-              padding={16}
-              className="font-mono text-sm snippet-block-editor"
-              disabled={isReadOnly}
+              onChange={handleVimChange}
+              editable={!isReadOnly}
+              extensions={[getLanguageExtension(language)]}
+              theme="dark"
+              className="h-full font-mono text-sm leading-relaxed"
             />
-          </div>
+          ) : (
+            <div
+              className="snippet-block-container"
+              onMouseDown={(e) => {
+                // Prevent focus loss when clicking the scrollbar
+                if (e.target === e.currentTarget) {
+                  e.preventDefault();
+                }
+              }}
+            >
+              <div className="snippet-line-numbers">
+                {lines.map((i) => (
+                  <div key={i}>{i}</div>
+                ))}
+              </div>
+              <Editor
+                value={code}
+                onValueChange={handleCodeChange}
+                highlight={(code) =>
+                  highlight(
+                    code,
+                    languages[language] || languages.text,
+                    language,
+                  )
+                }
+                padding={16}
+                className="font-mono text-sm snippet-block-editor"
+                disabled={isReadOnly}
+              />
+            </div>
+          )}
         </div>
 
         <BlockFooter

@@ -36,7 +36,9 @@
     "rotatePassword": "Aggiorna",
     "security": "Sicurezza",
     "securityDescription": "Aggiorna la tua password per proteggere il tuo account.",
-    "usernamePlaceholder": "nome utente"
+    "usernamePlaceholder": "nome utente",
+    "vimMode": "Modalità Vim",
+    "vimModeDescription": "Abilita le scorciatoie Vim nell'editor di codice."
   },
   "auth": {
     "acceptInvitation": "Accetta invito",

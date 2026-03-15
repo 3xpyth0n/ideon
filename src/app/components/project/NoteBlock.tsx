@@ -16,6 +16,7 @@ import {
   type NodeProps,
   type Node,
   useReactFlow,
+  useViewport,
 } from "@xyflow/react";
 import {
   FileText,
@@ -44,7 +45,11 @@ import { BlockFooter } from "./BlockFooter";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import dynamic from "next/dynamic";
+import { markdown } from "@codemirror/lang-markdown";
 import "./markdown-editor.css";
+
+const VimEditor = dynamic(() => import("./VimEditor"), { ssr: false });
 
 type NoteBlockProps = NodeProps<Node<BlockData, "text">>;
 
@@ -58,6 +63,8 @@ interface BubbleMenuProps {
   removeLink: () => void;
   cancelLink: () => void;
   blockRect: DOMRect;
+  zoom: number;
+  editorStateVersion?: number;
 }
 
 const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
@@ -72,26 +79,29 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
       removeLink,
       cancelLink,
       blockRect,
+      zoom,
+      editorStateVersion,
     },
     ref,
   ) => {
+    const iconSize = 14;
+
     const style: React.CSSProperties = {
       position: "fixed",
       top: blockRect.top - 50,
       left: blockRect.left + blockRect.width / 2,
-      transform: "translateX(-50%)",
+      transform: `translateX(-50%) scale(${zoom})`,
+      transformOrigin: "bottom center",
       zIndex: 100000,
     };
 
     const handleDeleteRow = () => {
-      if (!editor) return;
       if (!editor.isActive("table")) return;
       const { state } = editor;
       const { selection } = state;
 
       let tableNode: PMNode | null = null;
 
-      // Find the parent table node
       state.doc.nodesBetween(selection.from, selection.to, (node) => {
         if (node.type.name === "table") {
           tableNode = node as unknown as PMNode;
@@ -100,7 +110,6 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
       });
 
       if (tableNode) {
-        // Check if it's the last row
         const node = tableNode as PMNode;
         if (node.childCount <= 1) {
           editor.chain().focus().deleteTable().run();
@@ -148,7 +157,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               title="Apply"
               className="text-green-400 hover:text-green-300"
             >
-              <Check size={14} />
+              <Check size={iconSize} />
             </button>
             {editor.isActive("link") && (
               <button
@@ -159,7 +168,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 title="Unlink"
                 className="text-red-400 hover:text-red-300"
               >
-                <Unlink size={14} />
+                <Unlink size={iconSize} />
               </button>
             )}
             <button
@@ -169,7 +178,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               }}
               title="Cancel"
             >
-              <X size={14} />
+              <X size={iconSize} />
             </button>
           </>
         ) : (
@@ -179,28 +188,28 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               className={editor.isActive("bold") ? "is-active" : ""}
               title="Bold"
             >
-              <Bold size={14} />
+              <Bold size={iconSize} />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleItalic().run()}
               className={editor.isActive("italic") ? "is-active" : ""}
               title="Italic"
             >
-              <Italic size={14} />
+              <Italic size={iconSize} />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               className={editor.isActive("underline") ? "is-active" : ""}
               title="Underline"
             >
-              <Underline size={14} />
+              <Underline size={iconSize} />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleStrike().run()}
               className={editor.isActive("strike") ? "is-active" : ""}
               title="Strikethrough"
             >
-              <Strikethrough size={14} />
+              <Strikethrough size={iconSize} />
             </button>
 
             <div className="tiptap-bubble-menu-separator" />
@@ -214,7 +223,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               }
               title="Heading 1"
             >
-              <Heading1 size={14} />
+              <Heading1 size={iconSize} />
             </button>
             <button
               onClick={() =>
@@ -225,7 +234,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               }
               title="Heading 2"
             >
-              <Heading2 size={14} />
+              <Heading2 size={iconSize} />
             </button>
             <button
               onClick={() =>
@@ -236,7 +245,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               }
               title="Heading 3"
             >
-              <Heading3 size={14} />
+              <Heading3 size={iconSize} />
             </button>
 
             <div className="tiptap-bubble-menu-separator" />
@@ -249,7 +258,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               className={editor.isActive("link") ? "is-active" : ""}
               title={editor.isActive("link") ? "Edit Link" : "Add Link"}
             >
-              <LinkIcon size={14} />
+              <LinkIcon size={iconSize} />
             </button>
 
             <div className="tiptap-bubble-menu-separator" />
@@ -264,7 +273,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               }
               title="Insert Table"
             >
-              <TableIcon size={14} />
+              <TableIcon size={iconSize} />
             </button>
 
             <button
@@ -272,7 +281,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               className={editor.isActive("taskList") ? "is-active" : ""}
               title="Task List"
             >
-              <CheckSquare size={14} />
+              <CheckSquare size={iconSize} />
             </button>
 
             {editor.isActive("table") && (
@@ -282,27 +291,27 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                   onClick={() => editor.chain().focus().addRowAfter().run()}
                   title="Add Row"
                 >
-                  <Rows2 size={14} className="text-green-500" />
+                  <Rows2 size={iconSize} className="text-green-500" />
                 </button>
                 <button
                   onClick={() => editor.chain().focus().addColumnAfter().run()}
                   title="Add Column"
                 >
-                  <Columns2 size={14} className="text-green-500" />
+                  <Columns2 size={iconSize} className="text-green-500" />
                 </button>
                 <button
                   onClick={handleDeleteRow}
                   title="Delete Row"
                   className="delete-button"
                 >
-                  <Rows2 size={14} />
+                  <Rows2 size={iconSize} />
                 </button>
                 <button
                   onClick={() => editor.chain().focus().deleteColumn().run()}
                   title="Delete Column"
                   className="delete-button"
                 >
-                  <Columns2 size={14} />
+                  <Columns2 size={iconSize} />
                 </button>
               </>
             )}
@@ -318,6 +327,7 @@ BubbleMenuComponent.displayName = "BubbleMenuComponent";
 const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const { dict, lang } = useI18n();
   const { getEdges } = useReactFlow();
+  const viewport = useViewport();
 
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
@@ -343,6 +353,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   });
 
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [isEditing, setIsEditing] = useState(data.content ? false : true);
   const [showBubbleMenu, setShowBubbleMenu] = useState(false);
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isEditingLink, setIsEditingLink] = useState(false);
@@ -350,48 +361,84 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const blockRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [blockRect, setBlockRect] = useState<DOMRect | null>(null);
+  const [editorStateVersion, setEditorStateVersion] = useState(0);
 
-  // Update bubble menu visibility based on editor focus
   useEffect(() => {
-    if (!editor) return;
+    if (isReadOnly || !isEditing) {
+      setShowBubbleMenu(false);
+    }
+  }, [isReadOnly, isEditing]);
+
+  useEffect(() => {
+    if (!currentUser?.vimMode && isEditing && !isReadOnly) {
+      setShowBubbleMenu(true);
+    }
+  }, [currentUser?.vimMode, isEditing, isReadOnly]);
+
+  useEffect(() => {
+    const isNonVimEdit = !currentUser?.vimMode && isEditing && !isReadOnly;
+
+    if (!editor) {
+      if (!isNonVimEdit) setShowBubbleMenu(false);
+      return;
+    }
+
+    const handleSelectionUpdate = () => {
+      if (isNonVimEdit) return;
+      const { from, head } = editor.state.selection;
+      const hasSelection = from !== head;
+      setShowBubbleMenu(
+        hasSelection && !isTitleEditing && !isReadOnly && isEditing,
+      );
+    };
 
     const handleFocus = () => {
-      setShowBubbleMenu(!isTitleEditing && !isReadOnly);
+      if (isNonVimEdit) return;
+      if (isReadOnly || !isEditing) return;
+      const { from, head } = editor.state.selection;
+      if (from !== head) setShowBubbleMenu(true);
     };
 
     const handleDomBlur = (e: FocusEvent) => {
+      if (isNonVimEdit) return;
+
       const relatedTarget = e.relatedTarget;
       if (
         menuRef.current &&
         relatedTarget instanceof Node &&
         menuRef.current.contains(relatedTarget)
       ) {
-        // Don't hide if focus is moving to the menu
         return;
       }
       setShowBubbleMenu(false);
     };
 
-    editor.on("focus", handleFocus);
-    editor.view.dom.addEventListener("blur", handleDomBlur);
+    const handleTransaction = () => {
+      setEditorStateVersion((v) => v + 1);
+    };
 
-    // Set initial state
-    if (editor.isFocused) {
-      handleFocus();
+    editor.on("selectionUpdate", handleSelectionUpdate);
+    editor.on("transaction", handleTransaction);
+    editor.on("focus", handleFocus);
+    if (editor.view && !editor.isDestroyed) {
+      editor.view.dom.addEventListener("blur", handleDomBlur);
     }
 
     return () => {
+      editor.off("selectionUpdate", handleSelectionUpdate);
+      editor.off("transaction", handleTransaction);
       editor.off("focus", handleFocus);
-      editor.view.dom.removeEventListener("blur", handleDomBlur);
+      if (editor.view && !editor.isDestroyed && editor.view.dom) {
+        editor.view.dom.removeEventListener("blur", handleDomBlur);
+      }
     };
-  }, [editor, isTitleEditing, isReadOnly]);
+  }, [editor, isTitleEditing, isReadOnly, isEditing, currentUser?.vimMode]);
 
-  // Update block rect when menu is shown
   useLayoutEffect(() => {
     if (showBubbleMenu && blockRef.current) {
       setBlockRect(blockRef.current.getBoundingClientRect());
     }
-  }, [showBubbleMenu]);
+  }, [showBubbleMenu, viewport]);
 
   const [title, setTitle] = useState(data.title || "");
 
@@ -471,8 +518,31 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     ],
   );
 
+  const handleVimChange = useCallback(
+    (value: string) => {
+      syncToYjs(value);
+      data.onContentChange?.(
+        id,
+        value,
+        new Date().toISOString(),
+        data.lastEditor,
+        data.metadata ? JSON.stringify(data.metadata) : undefined,
+        title,
+        data.reactions,
+      );
+    },
+    [
+      id,
+      data.onContentChange,
+      data.lastEditor,
+      data.metadata,
+      title,
+      syncToYjs,
+    ],
+  );
+
   const openLinkModal = useCallback(() => {
-    if (!editor) return;
+    if (!editor || isReadOnly) return;
     const previousUrl = editor.getAttributes("link").href;
     setLinkUrl(previousUrl || "");
     setIsEditingLink(true);
@@ -590,19 +660,44 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           </div>
 
           <div
-            className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag nopan cursor-text"
+            className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag nopan"
             onContextMenu={(e) => e.preventDefault()}
           >
-            <MarkdownEditor
-              key={data.yText ? `collab-${id}` : `local-${id}`}
-              content={data.content}
-              onChange={handleContentChange}
-              isReadOnly={isReadOnly}
-              placeholder=""
-              className="text-base prosemirror-full-height"
-              onEditorReady={setEditor}
-              onLinkShortcut={openLinkModal}
-            />
+            {isEditing && !isReadOnly ? (
+              currentUser?.vimMode ? (
+                <VimEditor
+                  value={data.content || ""}
+                  onChange={handleVimChange}
+                  editable={!isReadOnly}
+                  vimEnabled={true}
+                  extensions={[markdown()]}
+                  theme="dark"
+                  className="h-full font-mono text-sm leading-relaxed"
+                />
+              ) : (
+                <MarkdownEditor
+                  key={data.yText ? `collab-edit-${id}` : `local-edit-${id}`}
+                  content={data.content}
+                  onChange={handleContentChange}
+                  isReadOnly={false}
+                  placeholder={dict.blocks.contentPlaceholder || "..."}
+                  className="text-base prosemirror-full-height"
+                  onEditorReady={setEditor}
+                  onLinkShortcut={openLinkModal}
+                />
+              )
+            ) : (
+              <MarkdownEditor
+                key={data.yText ? `collab-prev-${id}` : `local-prev-${id}`}
+                content={data.content}
+                onChange={handleContentChange}
+                isReadOnly={true}
+                placeholder=""
+                className="text-base prosemirror-full-height"
+                onEditorReady={setEditor}
+                onLinkShortcut={openLinkModal}
+              />
+            )}
           </div>
 
           <BlockFooter
@@ -611,7 +706,24 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             isLocked={data.isLocked}
             dict={dict}
             lang={lang}
-          />
+          >
+            {!isReadOnly && (
+              <div className="zen-switch">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className={`zen-switch-btn ${isEditing ? "active" : ""}`}
+                >
+                  {dict.common.edit}
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className={`zen-switch-btn ${!isEditing ? "active" : ""}`}
+                >
+                  {dict.common.preview}
+                </button>
+              </div>
+            )}
+          </BlockFooter>
         </div>
 
         <BlockReactions
@@ -683,6 +795,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             removeLink={removeLink}
             cancelLink={cancelLink}
             blockRect={blockRect}
+            zoom={viewport.zoom}
+            editorStateVersion={editorStateVersion}
           />,
           document.body,
         )}

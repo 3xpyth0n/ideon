@@ -8,6 +8,7 @@ import {
   Globe,
   X,
   BadgeInfo,
+  Keyboard,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
@@ -30,6 +31,7 @@ export default function AccountPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [vimMode, setVimMode] = useState(false);
   const [currentVersion, setCurrentVersion] = useState("0.0.0");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,6 +43,7 @@ export default function AccountPage() {
     { id: "identity", label: dict.account.identity },
     { id: "security", label: dict.account.security },
     { id: "git-tokens", label: dict.gitTokens.title },
+    { id: "vim-mode", label: dict.account.vimMode },
   ];
 
   const isScrollingRef = useRef(false);
@@ -175,6 +178,7 @@ export default function AccountPage() {
       setDisplayName(user.displayName || "");
       setEmail(user.email || "");
       setAvatarUrl(user.avatarUrl || null);
+      setVimMode(user.vimMode || false);
       setLoading(false);
     }
   }, [user]);
@@ -271,6 +275,25 @@ export default function AccountPage() {
       setPassword("");
       setConfirmPassword("");
     } catch {
+      toast(dict.common.error);
+    }
+  };
+
+  const handleVimModeToggle = async () => {
+    const newValue = !vimMode;
+    setVimMode(newValue);
+    try {
+      const res = await fetch("/api/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vimMode: newValue }),
+      });
+      if (!res.ok) throw new Error();
+      toast(dict.common.success);
+      await refreshUser();
+      window.dispatchEvent(new CustomEvent("user-data-updated"));
+    } catch {
+      setVimMode(!newValue);
       toast(dict.common.error);
     }
   };
@@ -550,6 +573,43 @@ export default function AccountPage() {
             </div>
             <div className="md:col-span-8 max-w-md">
               <GitTokenManager />
+            </div>
+          </section>
+
+          {/* Vim Mode Section */}
+          <section
+            id="vim-mode"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 scroll-mt-24"
+          >
+            <div className="md:col-span-4">
+              <h2 className="section-title mb-1">{dict.account.vimMode}</h2>
+              <p className="text-xs text-muted opacity-40 leading-relaxed">
+                {dict.account.vimModeDescription}
+              </p>
+            </div>
+            <div className="md:col-span-8 max-w-md">
+              <div className="flex items-center justify-between p-3 border border-border/10 rounded-lg bg-background/50 hover:bg-background/80 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="text-muted-foreground">
+                    <Keyboard className="w-5 h-5" />
+                  </div>
+                  <div className="font-medium text-sm flex items-center gap-2">
+                    {dict.account.vimMode}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">
+                    {vimMode ? dict.common.enabled : dict.common.disabled}
+                  </span>
+                  <button
+                    type="button"
+                    className={`zen-switch-small ${vimMode ? "active" : ""}`}
+                    onClick={handleVimModeToggle}
+                  >
+                    <div className="switch-thumb" />
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 

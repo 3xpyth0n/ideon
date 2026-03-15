@@ -117,7 +117,12 @@ export type BlockData = {
   movingUserColor?: string;
   projectOwnerId?: string | null;
   initialProjectId?: string;
-  currentUser?: { id: string; username: string; displayName?: string | null };
+  currentUser?: {
+    id: string;
+    username: string;
+    displayName?: string | null;
+    vimMode?: boolean;
+  };
   userRole?: "creator" | "owner" | "editor" | "viewer";
 };
 

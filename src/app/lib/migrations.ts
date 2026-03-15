@@ -2,8 +2,8 @@ import { Migrator, FileMigrationProvider } from "kysely";
 import { getDb } from "./db";
 import { isBuildMode } from "./runtime";
 import { logger } from "./logger";
-import { promises as fs } from "fs";
-import * as path from "path";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
 
 export async function runMigrations() {
   if (isBuildMode() && !process.env.VITEST) {

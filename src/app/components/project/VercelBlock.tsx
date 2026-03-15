@@ -37,7 +37,7 @@ import { VercelLogsModal } from "./VercelLogsModal";
 import { VercelEnvVarsModal } from "./VercelEnvVarsModal";
 import { VercelPreviewsModal } from "./VercelPreviewsModal";
 import { DomainsPopover, BypassPopover } from "./VercelPopovers";
-import { isRedeploy } from "../../lib/vercel";
+import { isRedeploy } from "@lib/vercel-shared";
 
 interface VercelProject {
   vercelProjectId: string;

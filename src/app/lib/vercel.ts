@@ -1,9 +1,7 @@
 import { getDb } from "./db";
 import { decryptApiKey } from "./crypto";
 
-export function isRedeploy(d: { source: string | null }): boolean {
-  return d.source === "redeploy";
-}
+export { isRedeploy } from "./vercel-shared";
 
 export async function getVercelCredentials(userId: string): Promise<{
   accessToken: string;

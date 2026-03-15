@@ -9,8 +9,8 @@ import {
 import DatabaseDriver from "better-sqlite3";
 import pg from "pg";
 import type { database, temporalStatesTable } from "./types/db";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { logger } from "./logger";
 import { AsyncLocalStorage } from "node:async_hooks";
 

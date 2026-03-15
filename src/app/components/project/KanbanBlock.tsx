@@ -1007,7 +1007,10 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
               )}
             </div>
           ) : (
-            <div className="kb-scroll nodrag nowheel">
+            <div
+              className="kb-scroll nodrag nowheel nopan"
+              onWheel={(e) => e.stopPropagation()}
+            >
               {!isReadOnly && (
                 <button
                   className={`kb-sep nodrag ${
@@ -1126,7 +1129,8 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                     </div>
 
                     <div
-                      className="kb-tasks"
+                      className="kb-tasks nowheel nodrag nopan"
+                      onWheel={(e) => e.stopPropagation()}
                       onDragOver={(e) =>
                         handleTasksContainerDragOver(
                           e,

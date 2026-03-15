@@ -9,6 +9,7 @@ import {
   getIntegrationReleaseStatus,
 } from "@lib/integrations";
 import IntegrationImportModal from "./IntegrationImportModal";
+import VercelConfigModal from "./VercelConfigModal";
 
 export default function IntegrationsClient() {
   const { dict } = useI18n();
@@ -16,6 +17,9 @@ export default function IntegrationsClient() {
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<
     string | null
   >(null);
+  const [configIntegrationId, setConfigIntegrationId] = useState<string | null>(
+    null,
+  );
 
   const selectedIntegration = useMemo(
     () =>
@@ -73,6 +77,16 @@ export default function IntegrationsClient() {
                         ? () => setSelectedIntegrationId(integration.id)
                         : undefined
                     }
+                    configureLabel={
+                      integration.capabilities?.oauth
+                        ? dict.integrations.vercelConfigure || "Configure"
+                        : undefined
+                    }
+                    onConfigure={
+                      integration.capabilities?.oauth
+                        ? () => setConfigIntegrationId(integration.id)
+                        : undefined
+                    }
                   />
                 );
               })(),
@@ -87,6 +101,10 @@ export default function IntegrationsClient() {
           capability={selectedCapability}
           onClose={() => setSelectedIntegrationId(null)}
         />
+      )}
+
+      {configIntegrationId === "vercel" && (
+        <VercelConfigModal onClose={() => setConfigIntegrationId(null)} />
       )}
     </div>
   );

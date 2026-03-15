@@ -8,6 +8,8 @@ interface IntegrationCardProps {
   actionLabel?: string;
   onAction?: () => void;
   actionLoading?: boolean;
+  configureLabel?: string;
+  onConfigure?: () => void;
 }
 
 export function IntegrationCard({
@@ -16,10 +18,12 @@ export function IntegrationCard({
   icon,
   releaseStatus,
   comingSoonText,
-  betaText,
   actionLabel,
   onAction,
   actionLoading,
+  configureLabel,
+  onConfigure,
+  betaText = "Beta",
 }: IntegrationCardProps) {
   const isComingSoon = releaseStatus === "coming_soon";
   const isBeta = releaseStatus === "beta";
@@ -38,16 +42,28 @@ export function IntegrationCard({
         <div className="integration-description">{description}</div>
       </div>
 
-      {!isComingSoon && actionLabel && onAction && (
+      {!isComingSoon && (actionLabel || configureLabel) && (
         <div className="integration-card-actions">
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={onAction}
-            disabled={Boolean(actionLoading)}
-          >
-            {actionLoading ? "..." : actionLabel}
-          </button>
+          {actionLabel && onAction && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={onAction}
+              disabled={Boolean(actionLoading)}
+            >
+              {actionLoading ? "..." : actionLabel}
+            </button>
+          )}
+          {configureLabel && onConfigure && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={onConfigure}
+              disabled={Boolean(actionLoading)}
+            >
+              {configureLabel}
+            </button>
+          )}
         </div>
       )}
 

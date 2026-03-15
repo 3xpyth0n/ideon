@@ -107,7 +107,10 @@ const VimEditorContent = memo(
         <CodeMirror
           ref={editorRef}
           height="100%"
-          className={`flex-1 overflow-auto vim-code-mirror ${className || ""}`}
+          className={`flex-1 overflow-auto vim-code-mirror nopan nodrag nowheel ${
+            className || ""
+          }`}
+          onWheel={(e) => e.stopPropagation()}
           extensions={mergedExtensions}
           {...props}
         />

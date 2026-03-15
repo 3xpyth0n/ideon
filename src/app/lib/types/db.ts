@@ -135,7 +135,8 @@ export interface blocksTable {
     | "kanban"
     | "sketch"
     | "shell"
-    | "folder";
+    | "folder"
+    | "vercel";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;
@@ -278,6 +279,8 @@ export interface rateLimitsTable {
 }
 
 import type { userGitTokensTable } from "./userGitTokens.ts";
+import type { userVercelTokensTable } from "./userVercelTokens.ts";
+import type { userVercelProjectsTable } from "./userVercelProjects.ts";
 
 export interface database {
   users: usersTable;
@@ -303,6 +306,8 @@ export interface database {
   userGitTokens: userGitTokensTable;
   blockReactions: blockReactionsTable;
   projectRequests: projectRequestsTable;
+  userVercelTokens: userVercelTokensTable;
+  userVercelProjects: userVercelProjectsTable;
 }
 
 export interface projectRequestsTable {

@@ -13,32 +13,37 @@ import {
   ChevronRight,
   Download,
 } from "lucide-react";
-import { FaGoogle, FaDiscord, FaSlack, FaGitlab } from "react-icons/fa";
+import { FaGoogle, FaDiscord, FaSlack } from "react-icons/fa";
 import { BsMicrosoft } from "react-icons/bs";
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
 import { AuditTable, type AuditLog } from "@components/audit/AuditTable";
 import { AuditExportModal } from "@components/audit/AuditExportModal";
+import { VercelIcon } from "@components/icons/VercelIcon";
 
 type ProviderKey =
   | "google"
   | "entra"
-  | "slack"
   | "oidc"
   | "discord"
   | "gitlab"
   | "magicLink"
-  | "saml";
+  | "saml"
+  | "slack"
+  | "vercel";
 
 interface ProviderConfig {
   enabled: boolean;
   clientId?: string;
   clientSecret?: string;
-  issuer?: string;
   tenantId?: string;
   redirectUri?: string;
   expiresInMinutes?: number;
   metadataUrl?: string;
+  integrationSlug?: string;
+  issuer?: string;
+  oauthEnabled?: boolean;
+  patEnabled?: boolean;
 }
 
 interface AuthSettings {
@@ -67,11 +72,12 @@ export function ManagementClient() {
       google: { enabled: false },
       entra: { enabled: false },
       slack: { enabled: false },
-      oidc: { enabled: false },
       discord: { enabled: false },
+      oidc: { enabled: false },
       gitlab: { enabled: false },
       magicLink: { enabled: false },
       saml: { enabled: false },
+      vercel: { enabled: false },
     },
   });
 
@@ -249,15 +255,22 @@ export function ManagementClient() {
     key: ProviderKey;
     icon: React.ElementType;
     color: string;
+    imageUrl?: string;
   }[] = [
     { key: "google", icon: FaGoogle, color: "#B10202" },
     { key: "entra", icon: BsMicrosoft, color: "#0078D4" },
     { key: "slack", icon: FaSlack, color: "#4A154B" },
     { key: "oidc", icon: Key, color: "#F78C40" },
     { key: "discord", icon: FaDiscord, color: "#5865F2" },
-    { key: "gitlab", icon: FaGitlab, color: "#FC6D26" },
     { key: "magicLink", icon: Mail, color: "#EA4335" },
     { key: "saml", icon: Shield, color: "#8E44AD" },
+    {
+      key: "vercel",
+      icon: VercelIcon,
+      color: "#000000",
+      imageUrl:
+        "https://assets.vercel.com/image/upload/front/favicon/vercel/180x180.png",
+    },
   ];
 
   if (loading) {
@@ -444,7 +457,17 @@ export function ManagementClient() {
                               color: p.color,
                             }}
                           >
-                            <p.icon size={24} />
+                            {p.imageUrl ? (
+                              <img
+                                src={p.imageUrl}
+                                alt={p.key}
+                                width={40}
+                                height={40}
+                                className="rounded-lg object-contain"
+                              />
+                            ) : (
+                              <p.icon size={24} />
+                            )}
                           </div>
                           <button
                             className={`zen-switch-small ${
@@ -624,7 +647,8 @@ function ProviderConfigModal({
     provider === "gitlab" ||
     provider === "entra" ||
     provider === "slack" ||
-    provider === "discord";
+    provider === "discord" ||
+    provider === "vercel";
   const isSaml = provider === "saml";
   const isMagicLink = provider === "magicLink";
 
@@ -636,195 +660,313 @@ function ProviderConfigModal({
         dict.auth[provider as keyof typeof dict.auth]
       }`}
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 mt-6">
-        {["google", "entra", "slack", "discord"].includes(provider) && (
-          <div className="border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
-            <div className="flex items-center gap-2 font-bold tracking-wider">
-              <Globe size={14} />
-              <span>{dict.providers.callbackUrlNotice}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
-                {appUrl}/api/auth/callback/
-                {provider === "entra" ? "azure-ad" : provider}
-              </code>
-            </div>
-          </div>
-        )}
-        {isOidc && (
+      <div className="flex flex-col gap-6 mt-6">
+        {provider === "vercel" && (
           <>
-            <div className="form-group">
-              <label className="modal-label">{dict.providers.clientId}</label>
-              <input
-                className="zen-input"
-                value={formData.clientId || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, clientId: e.target.value })
-                }
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              />
+            <div className="p-4 rounded-xl bg-bg-island border border-border/10 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-black/20 text-text-main">
+                  <Globe size={18} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold">
+                    {dict.management.vercelDocs}
+                  </span>
+                  <span className="text-[10px] text-muted opacity-50 font-mono">
+                    vercel.com/docs/integrations/create-integration
+                  </span>
+                </div>
+              </div>
+              <a
+                href="https://vercel.com/docs/integrations/create-integration"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all"
+              >
+                {dict.common.showMore}
+              </a>
             </div>
-            <div className="form-group">
-              <label className="modal-label">
-                {dict.providers.clientSecret}
-              </label>
-              <input
-                className="zen-input"
-                type="password"
-                value={formData.clientSecret || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, clientSecret: e.target.value })
-                }
-                placeholder="••••••••••••••••"
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-bg-secondary border border-border/10 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold">
+                    {dict.management.oauthMode}
+                  </span>
+                  <div
+                    className={`zen-switch ${
+                      formData.oauthEnabled ? "active" : ""
+                    }`}
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        oauthEnabled: !formData.oauthEnabled,
+                      })
+                    }
+                  >
+                    <div className="switch-thumb" />
+                  </div>
+                </div>
+                <p className="text-[10px] opacity-50">
+                  {dict.management.enableOAuth}
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-bg-secondary border border-border/10 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold">
+                    {dict.management.patMode}
+                  </span>
+                  <div
+                    className={`zen-switch ${
+                      formData.patEnabled ? "active" : ""
+                    }`}
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        patEnabled: !formData.patEnabled,
+                      })
+                    }
+                  >
+                    <div className="switch-thumb" />
+                  </div>
+                </div>
+                <p className="text-[10px] opacity-50">
+                  {dict.management.enablePat}
+                </p>
+              </div>
             </div>
-            {provider === "entra" && (
+          </>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          {["google", "entra", "slack", "discord", "vercel"].includes(
+            provider,
+          ) && (
+            <div
+              className={`border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2 transition-all duration-300 ${
+                provider === "vercel" && !formData.oauthEnabled
+                  ? "opacity-30 pointer-events-none grayscale"
+                  : ""
+              }`}
+            >
+              <div className="flex items-center gap-2 font-bold tracking-wider">
+                <Globe size={14} />
+                <span>{dict.providers.callbackUrlNotice}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                  {provider === "vercel"
+                    ? `${appUrl}/api/vercel/callback`
+                    : `${appUrl}/api/auth/callback/${
+                        provider === "entra" ? "azure-ad" : provider
+                      }`}
+                </code>
+              </div>
+            </div>
+          )}
+          {isOidc && (
+            <div
+              className={`flex flex-col gap-6 transition-all duration-300 ${
+                provider === "vercel" && !formData.oauthEnabled
+                  ? "opacity-30 pointer-events-none grayscale"
+                  : ""
+              }`}
+            >
               <div className="form-group">
-                <label className="modal-label">{dict.providers.tenantId}</label>
+                <label className="modal-label">{dict.providers.clientId}</label>
                 <input
                   className="zen-input"
-                  value={formData.tenantId || ""}
+                  value={formData.clientId || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, tenantId: e.target.value })
+                    setFormData({ ...formData, clientId: e.target.value })
                   }
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 />
               </div>
-            )}
-            {provider === "oidc" && (
               <div className="form-group">
-                <label className="modal-label">{dict.providers.issuer}</label>
+                <label className="modal-label">
+                  {dict.providers.clientSecret}
+                </label>
                 <input
                   className="zen-input"
-                  value={formData.issuer || ""}
+                  type="password"
+                  value={formData.clientSecret || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, issuer: e.target.value })
+                    setFormData({ ...formData, clientSecret: e.target.value })
                   }
-                  placeholder="https://example.com/auth/realms/master"
+                  placeholder="••••••••••••••••"
                 />
               </div>
-            )}
+              {provider === "entra" && (
+                <div className="form-group">
+                  <label className="modal-label">
+                    {dict.providers.tenantId}
+                  </label>
+                  <input
+                    className="zen-input"
+                    value={formData.tenantId || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, tenantId: e.target.value })
+                    }
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  />
+                </div>
+              )}
+              {provider === "oidc" && (
+                <div className="form-group">
+                  <label className="modal-label">{dict.providers.issuer}</label>
+                  <input
+                    className="zen-input"
+                    value={formData.issuer || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, issuer: e.target.value })
+                    }
+                    placeholder="https://example.com/auth/realms/master"
+                  />
+                </div>
+              )}
+              {provider === "vercel" && (
+                <div className="form-group">
+                  <label className="modal-label">Integration Slug</label>
+                  <input
+                    className="zen-input"
+                    value={formData.integrationSlug || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        integrationSlug: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. my-app-integration"
+                  />
+                </div>
+              )}
+              {provider !== "vercel" && (
+                <div className="form-group">
+                  <label className="modal-label">
+                    {dict.providers.redirectUri}
+                  </label>
+                  <input
+                    className="zen-input"
+                    value={formData.redirectUri || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, redirectUri: e.target.value })
+                    }
+                    placeholder="https://your-app.com/api/auth/callback"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {isSaml && (
+            <>
+              <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
+                <div className="flex items-center gap-2 font-bold tracking-wider">
+                  <Globe size={14} />
+                  <span>{dict.providers.samlSpConfig}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {appUrl}/api/auth/sso/saml
+                  </code>
+                </div>
+                <div className="flex items-center gap-2 font-bold tracking-wider mt-2">
+                  <Shield size={14} />
+                  <span>{dict.providers.samlSpEntityId}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
+                    https://saml.boxyhq.com
+                  </code>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="modal-label">
+                  {dict.providers.samlIdpMetadataUrl}
+                </label>
+                <input
+                  className="zen-input"
+                  value={formData.metadataUrl || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, metadataUrl: e.target.value })
+                  }
+                  placeholder="https://idp.example.com/metadata.xml"
+                />
+              </div>
+              <div className="form-group">
+                <label className="modal-label">
+                  {dict.providers.samlRawMetadataXml}
+                </label>
+                <textarea
+                  className="zen-input min-h-25 font-mono text-[10px]"
+                  value={metadataXml}
+                  onChange={(e) => setMetadataXml(e.target.value)}
+                  placeholder="<EntityDescriptor ...>...</EntityDescriptor>"
+                />
+              </div>
+            </>
+          )}
+
+          {isMagicLink && (
             <div className="form-group">
               <label className="modal-label">
-                {dict.providers.redirectUri}
+                {dict.providers.magicLinkDuration}
               </label>
               <input
+                type="number"
                 className="zen-input"
-                value={formData.redirectUri || ""}
+                value={formData.expiresInMinutes || ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, redirectUri: e.target.value })
+                  setFormData({
+                    ...formData,
+                    expiresInMinutes: parseInt(e.target.value),
+                  })
                 }
-                placeholder="https://your-app.com/api/auth/callback"
+                placeholder={dict.providers.magicLinkDurationPlaceholder}
               />
+              <p className="text-[10px] opacity-40 mt-1">
+                {dict.providers.magicLinkEnvNotice}
+              </p>
             </div>
-          </>
-        )}
+          )}
 
-        {isSaml && (
-          <>
-            <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2">
-              <div className="flex items-center gap-2 font-bold tracking-wider">
-                <Globe size={14} />
-                <span>{dict.providers.samlSpConfig}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
-                  {appUrl}/api/auth/sso/saml
-                </code>
-              </div>
-              <div className="flex items-center gap-2 font-bold tracking-wider mt-2">
-                <Shield size={14} />
-                <span>{dict.providers.samlSpEntityId}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <code className="bg-white/50 px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono text-blue-900 overflow-hidden text-ellipsis whitespace-nowrap">
-                  https://saml.boxyhq.com
-                </code>
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="modal-label">
-                {dict.providers.samlIdpMetadataUrl}
-              </label>
-              <input
-                className="zen-input"
-                value={formData.metadataUrl || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, metadataUrl: e.target.value })
-                }
-                placeholder="https://idp.example.com/metadata.xml"
-              />
-            </div>
-            <div className="form-group">
-              <label className="modal-label">
-                {dict.providers.samlRawMetadataXml}
-              </label>
-              <textarea
-                className="zen-input min-h-25 font-mono text-[10px]"
-                value={metadataXml}
-                onChange={(e) => setMetadataXml(e.target.value)}
-                placeholder="<EntityDescriptor ...>...</EntityDescriptor>"
-              />
-            </div>
-          </>
-        )}
-
-        {isMagicLink && (
-          <div className="form-group">
-            <label className="modal-label">
-              {dict.providers.magicLinkDuration}
-            </label>
-            <input
-              type="number"
-              className="zen-input"
-              value={formData.expiresInMinutes || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  expiresInMinutes: parseInt(e.target.value),
-                })
-              }
-              placeholder={dict.providers.magicLinkDurationPlaceholder}
-            />
-            <p className="text-[10px] opacity-40 mt-1">
-              {dict.providers.magicLinkEnvNotice}
-            </p>
-          </div>
-        )}
-
-        <div className="modal-footer-full">
-          <div className="flex flex-col gap-4 w-full">
-            {isMagicLink && (
-              <div className="flex items-center gap-4 w-full">
-                <Button
-                  type="button"
-                  onClick={onTestSmtp}
-                  disabled={testingSmtp}
-                  className="btn-primary whitespace-nowrap"
-                >
-                  {testingSmtp ? (
-                    <Loader2 className="animate-spin" size={18} />
-                  ) : (
-                    dict.setup.testSmtp
-                  )}
-                </Button>
-                {smtpTestStatus && (
-                  <div
-                    className={`text-sm font-medium p-2 rounded flex-1 ${
-                      smtpTestStatus.success ? "text-green-600" : "text-red-600"
-                    }`}
+          <div className="modal-footer-full">
+            <div className="flex flex-col gap-4 w-full">
+              {isMagicLink && (
+                <div className="flex items-center gap-4 w-full">
+                  <Button
+                    type="button"
+                    onClick={onTestSmtp}
+                    disabled={testingSmtp}
+                    className="btn-primary whitespace-nowrap"
                   >
-                    {smtpTestStatus.message}
-                  </div>
-                )}
-              </div>
-            )}
-            <Button type="submit" className="btn-primary btn-full">
-              {dict.common.save}
-            </Button>
+                    {testingSmtp ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      dict.setup.testSmtp
+                    )}
+                  </Button>
+                  {smtpTestStatus && (
+                    <div
+                      className={`text-sm font-medium p-2 rounded flex-1 ${
+                        smtpTestStatus.success
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {smtpTestStatus.message}
+                    </div>
+                  )}
+                </div>
+              )}
+              <Button type="submit" className="btn-primary btn-full">
+                {dict.common.save}
+              </Button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </Modal>
   );
 }

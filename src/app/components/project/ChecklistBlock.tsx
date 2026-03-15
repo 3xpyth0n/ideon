@@ -855,7 +855,8 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
 
         <div className="block-content flex-1 flex flex-col min-h-0">
           <div
-            className="checklist-block-container nowheel nodrag h-full"
+            className="checklist-block-container nowheel nodrag nopan h-full"
+            onWheel={(e) => e.stopPropagation()}
             onDragOver={handleContainerDragOver}
             onDragEnter={handleContainerDragEnter}
             onDragLeave={handleContainerDragLeave}

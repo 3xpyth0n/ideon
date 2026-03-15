@@ -18,6 +18,7 @@ import {
   Kanban,
   Folder,
 } from "lucide-react";
+import { VercelIcon } from "../icons/VercelIcon";
 
 type AddableBlockType =
   | "text"
@@ -32,7 +33,8 @@ type AddableBlockType =
   | "kanban"
   | "sketch"
   | "shell"
-  | "folder";
+  | "folder"
+  | "vercel";
 
 interface AddBlockModalProps {
   isOpen: boolean;
@@ -57,6 +59,7 @@ const BLOCK_TYPES = [
   { type: "kanban", icon: Kanban, labelKey: "blockTypeKanban" },
   { type: "sketch", icon: PenTool, labelKey: "blockTypeSketch" },
   { type: "shell", icon: Terminal, labelKey: "blockTypeShell" },
+  { type: "vercel", icon: VercelIcon, labelKey: "blockTypeVercel" },
 ] as const;
 
 export default function AddBlockModal({

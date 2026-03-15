@@ -462,7 +462,10 @@ const GitBlock = (props: CanvasBlockProps) => {
       };
 
       return (
-        <div className="git-edit-container overflow-y-auto nowheel nodrag">
+        <div
+          className="git-edit-container overflow-y-auto nowheel nodrag nopan"
+          onWheel={(e) => e.stopPropagation()}
+        >
           <div className="git-input-wrapper">
             <input
               ref={linkInputRef}

@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **Our First Integration: Obsidian Import**: Ideon now supports importing Obsidian vaults directly into projects.
+- **Vercel Integration**: Ideon now supports deploying and monitoring Vercel projects directly from the canvas.
 - **Excalidraw Block (SDK expanded)**: Replaced the old Sketch Block with a full Excalidraw integration, expanding the block SDK to support more drawing tools and collaborative features.
 - **Folder Block**: Added a new folder block to group related blocks and quickly collapse or expand them for a cleaner, more organized canvas.
 - **Drag and Drop Import**: You can now drag and drop files, text, folders, and even Excalidraw sketches directly onto the project canvas. Imported content is automatically recognized and added as the appropriate block type, with real-time progress and visual feedback.

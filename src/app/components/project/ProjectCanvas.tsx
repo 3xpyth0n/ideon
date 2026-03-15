@@ -25,11 +25,11 @@ import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
 import SketchBlock from "./SketchBlock";
-import ShellBlock from "./ShellBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
 import KanbanBlock from "./KanbanBlock";
 import FolderBlock from "./FolderBlock";
+import VercelBlock from "./VercelBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import CommandPalette from "./CommandPalette";
@@ -249,8 +249,8 @@ const blockTypes = {
   checklist: ChecklistBlock,
   kanban: KanbanBlock,
   sketch: SketchBlock,
-  shell: ShellBlock,
   folder: FolderBlock,
+  vercel: VercelBlock,
   core: ProjectCoreBlock,
 };
 

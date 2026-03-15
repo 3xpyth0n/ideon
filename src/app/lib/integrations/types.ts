@@ -18,7 +18,8 @@ export interface IntegrationManifest {
     | "communication"
     | "automation"
     | "design"
-    | "productivity";
+    | "productivity"
+    | "deployment";
   releaseStatus: IntegrationReleaseStatus;
   enabled?: boolean;
   capabilities?: IntegrationCapabilities;

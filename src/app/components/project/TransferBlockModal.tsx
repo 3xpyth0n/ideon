@@ -74,7 +74,10 @@ export function TransferBlockModal({
       subtitle={dict.modals.transferDescription}
       className="max-w-lg w-full"
     >
-      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+      <div
+        className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar nopan nodrag nowheel"
+        onWheel={(e) => e.stopPropagation()}
+      >
         {loading ? (
           <div className="py-8 flex items-center justify-center opacity-20">
             <Loader2 className="animate-spin" size={24} />

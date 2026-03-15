@@ -472,7 +472,8 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             />
           ) : (
             <div
-              className="snippet-block-container"
+              className="snippet-block-container nopan nodrag nowheel"
+              onWheel={(e) => e.stopPropagation()}
               onMouseDown={(e) => {
                 // Prevent focus loss when clicking the scrollbar
                 if (e.target === e.currentTarget) {

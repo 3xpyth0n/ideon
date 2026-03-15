@@ -301,7 +301,10 @@ export function ProjectAccessModal({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar min-h-[100px]">
+          <div
+            className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar min-h-[100px] nopan nodrag nowheel"
+            onWheel={(e) => e.stopPropagation()}
+          >
             {results.length > 0 ? (
               results.map((user) => {
                 const isCollaborator = collaboratorIds.includes(user.id);
@@ -389,7 +392,10 @@ export function ProjectAccessModal({
               <span>{collaborators.length}</span>
             </h3>
 
-            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            <div
+              className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar nopan nodrag nowheel"
+              onWheel={(e) => e.stopPropagation()}
+            >
               {loadingCollaborators ? (
                 <div className="py-12 flex items-center justify-center opacity-20">
                   <Loader2 className="animate-spin" size={24} />

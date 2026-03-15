@@ -516,7 +516,8 @@ const ShellBlock = memo(({ id, data, selected }: ShellBlockProps) => {
 
           <div
             ref={terminalRef}
-            className="shell-terminal-container"
+            className="shell-terminal-container nowheel nopan nodrag"
+            onWheel={(e) => e.stopPropagation()}
             style={{
               display:
                 status === "running" ||

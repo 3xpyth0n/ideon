@@ -54,6 +54,7 @@ const BlockDataSchema = z
         "sketch",
         "shell",
         "folder",
+        "vercel",
       ])
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -131,7 +132,8 @@ export function prepareBlockForDb(
       | "checklist"
       | "sketch"
       | "shell"
-      | "folder") ||
+      | "folder"
+      | "vercel") ||
     "text";
 
   return {

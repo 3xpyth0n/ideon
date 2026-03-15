@@ -27,6 +27,9 @@
   </a>
   <a href="https://github.com/3xpyth0n/ideon/issues">
     <img src="https://img.shields.io/badge/contributions-welcome-001.svg?style=flat-square" alt="Contributions welcome">
+  <a href="https://discord.gg/X6gJSjupz3">
+    <img src="https://img.shields.io/discord/1476900574380167254?label=Discord&logo=discord&style=flat-square&color=5865F2" alt="Discord server">
+  </a>
   </a>
   <a href="https://github.com/3xpyth0n/ideon/commits/main">
     <img src="https://img.shields.io/github/last-commit/3xpyth0n/ideon?style=flat-square&color=001" alt="Last commit">
@@ -45,6 +48,7 @@ Ideon replaces abstract folders with spatial organization. Instead of navigating
     <a href="https://www.theideon.com">Home Page</a> |
     <a href="https://www.theideon.com/docs/">Documentation</a> |
     <a href="https://github.com/users/3xpyth0n/projects/3">Roadmap</a> |
+    <a href="https://discord.gg/MBrnUXGhUG">Discord Server</a> |
     <a href="https://www.theideon.com/about/">About</a>
   </strong>
 </div>

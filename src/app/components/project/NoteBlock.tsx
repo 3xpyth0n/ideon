@@ -64,7 +64,6 @@ interface BubbleMenuProps {
   cancelLink: () => void;
   blockRect: DOMRect;
   zoom: number;
-  editorStateVersion?: number;
 }
 
 const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
@@ -80,7 +79,6 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
       cancelLink,
       blockRect,
       zoom,
-      editorStateVersion,
     },
     ref,
   ) => {
@@ -361,7 +359,6 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const blockRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [blockRect, setBlockRect] = useState<DOMRect | null>(null);
-  const [editorStateVersion, setEditorStateVersion] = useState(0);
 
   useEffect(() => {
     if (isReadOnly || !isEditing) {
@@ -413,12 +410,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       setShowBubbleMenu(false);
     };
 
-    const handleTransaction = () => {
-      setEditorStateVersion((v) => v + 1);
-    };
-
     editor.on("selectionUpdate", handleSelectionUpdate);
-    editor.on("transaction", handleTransaction);
+    editor.on("transaction", handleSelectionUpdate);
     editor.on("focus", handleFocus);
     if (editor.view && !editor.isDestroyed) {
       editor.view.dom.addEventListener("blur", handleDomBlur);
@@ -426,7 +419,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
     return () => {
       editor.off("selectionUpdate", handleSelectionUpdate);
-      editor.off("transaction", handleTransaction);
+      editor.off("transaction", handleSelectionUpdate);
       editor.off("focus", handleFocus);
       if (editor.view && !editor.isDestroyed && editor.view.dom) {
         editor.view.dom.removeEventListener("blur", handleDomBlur);
@@ -660,8 +653,9 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           </div>
 
           <div
-            className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag nopan"
+            className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag nopan nowheel"
             onContextMenu={(e) => e.preventDefault()}
+            onWheel={(e) => e.stopPropagation()}
           >
             {isEditing && !isReadOnly ? (
               currentUser?.vimMode ? (
@@ -708,16 +702,18 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             lang={lang}
           >
             {!isReadOnly && (
-              <div className="zen-switch">
+              <div className="zen-mode-switch">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className={`zen-switch-btn ${isEditing ? "active" : ""}`}
+                  className={`zen-mode-switch-btn ${isEditing ? "active" : ""}`}
                 >
                   {dict.common.edit}
                 </button>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className={`zen-switch-btn ${!isEditing ? "active" : ""}`}
+                  className={`zen-mode-switch-btn ${
+                    !isEditing ? "active" : ""
+                  }`}
                 >
                   {dict.common.preview}
                 </button>
@@ -796,7 +792,6 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             cancelLink={cancelLink}
             blockRect={blockRect}
             zoom={viewport.zoom}
-            editorStateVersion={editorStateVersion}
           />,
           document.body,
         )}

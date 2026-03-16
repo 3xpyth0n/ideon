@@ -4,7 +4,7 @@ import {
   isInAuthenticatedSession,
   getDb,
 } from "./db";
-import * as crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { logger } from "./logger";
 import type { Kysely } from "kysely";
 import type { database } from "./types/db";
@@ -22,7 +22,7 @@ async function insertAuditLog(
   await db
     .insertInto("auditLogs")
     .values({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       userId,
       action,
       status,

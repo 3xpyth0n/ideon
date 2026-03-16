@@ -1,6 +1,7 @@
 import { authenticatedAction } from "@lib/server-utils";
 import { getDb } from "@lib/db";
 import { encryptApiKey, decryptApiKey } from "@lib/crypto";
+import { v4 as uuidv4 } from "uuid";
 
 export const GET = authenticatedAction(
   async (_req, { user }) => {
@@ -114,7 +115,7 @@ export const POST = authenticatedAction(
     await db
       .insertInto("userVercelTokens")
       .values({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         userId: user.id,
         accessToken: encryptedToken,
         authMethod: authMethod || "pat",

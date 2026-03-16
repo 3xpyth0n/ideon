@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@lib/db";
 import { getAuthUser } from "@auth";
 import { encryptApiKey } from "@lib/crypto";
+import { v4 as uuidv4 } from "uuid";
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser();
@@ -103,7 +104,7 @@ export async function GET(req: NextRequest) {
     await db
       .insertInto("userVercelTokens")
       .values({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         userId: user.id,
         accessToken: encryptedToken,
         authMethod: "oauth",

@@ -431,6 +431,7 @@ const VercelBlock = (props: CanvasBlockProps) => {
         return blocksDict.vercelDeploymentQueued || "Queued";
       case "BUILDING":
         return blocksDict.vercelDeploymentBuilding || "Building";
+      case "READY":
         return blocksDict.vercelDeploymentReady || "Ready";
       case "ERROR":
         return blocksDict.vercelDeploymentError || "Error";

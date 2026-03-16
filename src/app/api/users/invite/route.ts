@@ -4,6 +4,7 @@ import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 import { hashToken } from "@lib/crypto";
+import { v4 as uuidv4 } from "uuid";
 import { checkRateLimit } from "@lib/rate-limit";
 import { getClientIp } from "@/lib/security-utils";
 
@@ -61,8 +62,8 @@ export const POST = authenticatedAction(
       throw { status: 400, message: "User already exists" };
     }
 
-    const token = crypto.randomUUID();
-    const id = crypto.randomUUID();
+    const token = uuidv4();
+    const id = uuidv4();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 

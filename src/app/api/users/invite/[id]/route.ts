@@ -5,6 +5,7 @@ import { logSecurityEvent } from "@lib/audit";
 import { getClientIp } from "@lib/security-utils";
 import { headers } from "next/headers";
 import { hashToken } from "@lib/crypto";
+import { v4 as uuidv4 } from "uuid";
 
 export const PUT = authenticatedAction(
   async (_req, { params, user: auth }) => {
@@ -38,7 +39,7 @@ export const PUT = authenticatedAction(
       throw { status: 404, message: "Invitation not found" };
     }
 
-    const newToken = crypto.randomUUID();
+    const newToken = uuidv4();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 

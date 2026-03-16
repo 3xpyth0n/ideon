@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, getPool } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
-import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 export const POST = authenticatedAction<{ error?: string; status?: string }>(
   async (req, { params, user }) => {
@@ -97,7 +97,7 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
     }
 
     try {
-      const newId = crypto.randomUUID();
+      const newId = uuidv4();
 
       // Create request
       await db

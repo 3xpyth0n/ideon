@@ -1,7 +1,7 @@
 import { Adapter, AdapterUser } from "next-auth/adapters";
 import { getDb } from "./db";
 import { stringToColor } from "./utils";
-import * as crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { hashToken } from "./crypto";
 import { headers } from "next/headers";
 import { logSecurityEvent } from "./audit";
@@ -63,12 +63,12 @@ export function KyselyAdapter(): Adapter {
         chosenUsername = emailPrefix;
       } else {
         // Fallback: append random string
-        chosenUsername = `${emailPrefix}_${crypto.randomUUID().slice(0, 4)}`;
+        chosenUsername = `${emailPrefix}_${uuidv4().slice(0, 4)}`;
       }
 
       // Generate distinct color
       const userColor = stringToColor(chosenUsername);
-      const newUserId = crypto.randomUUID();
+      const newUserId = uuidv4();
 
       await db.transaction().execute(async (trx) => {
         await trx
@@ -183,7 +183,7 @@ export function KyselyAdapter(): Adapter {
     },
 
     async createSession({ sessionToken, userId, expires }) {
-      const id = crypto.randomUUID();
+      const id = uuidv4();
       await db
         .insertInto("sessions")
         .values({
@@ -257,7 +257,7 @@ export function KyselyAdapter(): Adapter {
       await db
         .insertInto("magicLinks")
         .values({
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           email: token.identifier,
           token: hashToken(token.token),
           expiresAt: expires.toISOString(),

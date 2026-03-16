@@ -10,6 +10,7 @@ import {
 } from "@lib/graph";
 import type { BlockData } from "@components/project/CanvasBlock";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -139,7 +140,7 @@ export const GET = projectAction(async (req, { project, user }) => {
   ) {
     const now = new Date();
     const nowString = now.toISOString();
-    const coreBlockId = crypto.randomUUID();
+    const coreBlockId = uuidv4();
 
     // Insert default Core Block
     await db
@@ -283,7 +284,7 @@ export const POST = projectAction(
                       const userId =
                         typeof userOrId === "string" ? userOrId : userOrId.id;
                       reactionsToInsert.push({
-                        id: crypto.randomUUID(),
+                        id: uuidv4(),
                         blockId: block.id,
                         userId: userId,
                         emoji: r.emoji,

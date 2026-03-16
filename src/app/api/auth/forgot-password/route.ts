@@ -3,7 +3,7 @@ import { getDb } from "@lib/db";
 import { sendPasswordResetEmail } from "@lib/email";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
-import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
 import { getClientIp } from "@lib/security-utils";
@@ -34,13 +34,13 @@ export async function POST(req: Request) {
       .executeTakeFirst();
 
     if (user) {
-      const token = crypto.randomUUID();
+      const token = uuidv4();
       const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
 
       await db
         .insertInto("passwordResets")
         .values({
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           userId: user.id,
           token: hashToken(token),
           expiresAt,

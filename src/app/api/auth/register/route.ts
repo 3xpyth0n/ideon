@@ -8,6 +8,7 @@ import { authenticatedAction } from "@lib/server-utils";
 import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
 import { getClientIp } from "@lib/security-utils";
+import { v4 as uuidv4 } from "uuid";
 
 const registerSchema = z.object({
   token: z.string().nullable().optional(),
@@ -87,7 +88,7 @@ export const POST = authenticatedAction(
 
     // 3. Hash password and create user
     const passwordHash = await argon2.hash(password);
-    const userId = crypto.randomUUID();
+    const userId = uuidv4();
 
     await runTransaction(db, async (trx) => {
       await trx

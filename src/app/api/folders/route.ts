@@ -1,7 +1,7 @@
 import { getDb } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { z } from "zod";
-import * as crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 
@@ -84,7 +84,7 @@ export const POST = authenticatedAction(
     const db = getDb();
     const { name } = body;
 
-    const folderId = crypto.randomUUID();
+    const folderId = uuidv4();
     const now = new Date().toISOString();
 
     await db

@@ -21,6 +21,7 @@ import {
   type Node,
   useReactFlow,
 } from "@xyflow/react";
+import { v4 as uuidv4 } from "uuid";
 import { BlockData } from "./CanvasBlock";
 import "./checklist-block.css";
 import { BlockReactions } from "./BlockReactions";
@@ -239,7 +240,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
     (afterIndex: number = -1, depth: number = 0) => {
       if (isReadOnly) return;
       const newItem: ChecklistItem = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         text: "",
         checked: false,
         depth,

@@ -1,7 +1,7 @@
 import { authenticatedAction } from "@lib/server-utils";
 import { getDb } from "@lib/db";
 import { z } from "zod";
-import * as crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { encryptApiKey } from "@lib/crypto";
 
 const createTokenSchema = z.object({
@@ -69,7 +69,7 @@ export const POST = authenticatedAction(async (req, { user, body }) => {
 
   const encryptedToken = encryptApiKey(cleanToken, user.id);
   const newToken = {
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     userId: user.id,
     provider,
     host: normalizedHost,

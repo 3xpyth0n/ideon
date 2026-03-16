@@ -1,6 +1,7 @@
 import { authenticatedAction } from "@lib/server-utils";
 import { getDb } from "@lib/db";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 import { getVercelCredentials } from "@lib/vercel";
 
 export const GET = authenticatedAction(
@@ -105,7 +106,7 @@ export const POST = authenticatedAction(
           vercelProjectName: string;
           enabled: boolean;
         }) => ({
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           userId: user.id,
           vercelProjectId: s.vercelProjectId,
           vercelProjectName: s.vercelProjectName,

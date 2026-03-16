@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
 import { getSecurityHeaders } from "@lib/utils";
 import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
@@ -11,7 +12,7 @@ export async function proxy(req: NextRequest) {
   // Use a stable nonce for CSP
   let nonce: string;
   try {
-    nonce = globalThis.crypto.randomUUID();
+    nonce = uuidv4();
   } catch {
     nonce = Math.random().toString(36).substring(2);
   }

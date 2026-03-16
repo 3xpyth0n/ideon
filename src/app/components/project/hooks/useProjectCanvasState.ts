@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import { uniqueById } from "@lib/utils";
 import * as Y from "yjs";
+import { v4 as uuidv4 } from "uuid";
 import type { Awareness } from "y-protocols/awareness";
 import { useProjectCanvasGraph } from "./useProjectCanvasGraph";
 import { useProjectCanvasRealtime } from "./useProjectCanvasRealtime";
@@ -1284,7 +1285,7 @@ export const useProjectCanvasState = (
       position: { x: number; y: number },
       ownerName: string,
     ): Node<BlockData> => {
-      const id = crypto.randomUUID();
+      const id = uuidv4();
       const isSketch = planned.kind === "sketch";
       const isFolder = planned.kind === "folder";
       const isFile = planned.kind === "file";
@@ -1587,7 +1588,7 @@ export const useProjectCanvasState = (
               const isRight = created.position.x >= parent.position.x;
 
               newLinks.push({
-                id: crypto.randomUUID(),
+                id: uuidv4(),
                 source: parent.id,
                 target: created.id,
                 type: "connection",

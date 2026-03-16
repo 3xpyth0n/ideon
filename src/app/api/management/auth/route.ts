@@ -3,6 +3,7 @@ import { adminAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 import { getClientIp } from "@lib/security-utils";
+import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +100,7 @@ export const POST = adminAction(
       await db
         .insertInto("systemSettings")
         .values({
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           publicRegistrationEnabled: publicRegistrationEnabled ? 1 : 0,
           ssoRegistrationEnabled: ssoRegistrationEnabled ? 1 : 0,
           passwordLoginEnabled: passwordLoginEnabled ? 1 : 0,

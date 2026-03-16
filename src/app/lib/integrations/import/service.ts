@@ -1,4 +1,5 @@
 import { runTransaction } from "@lib/db";
+import { v4 as uuidv4 } from "uuid";
 import { sanitizeFileName } from "@lib/file-utils";
 import { database } from "@lib/types/db";
 import { Kysely, Insertable } from "kysely";
@@ -351,8 +352,8 @@ export async function persistNormalizedImport({
   data,
 }: PersistImportPayload): Promise<IntegrationImportResult> {
   const now = new Date().toISOString();
-  const projectId = crypto.randomUUID();
-  const coreBlockId = crypto.randomUUID();
+  const projectId = uuidv4();
+  const coreBlockId = uuidv4();
   const hierarchyNodes = buildHierarchyNodes(data);
   const positions = buildLayeredTreePositions(hierarchyNodes);
   let persistedRelationsCount = 0;
@@ -404,7 +405,7 @@ export async function persistNormalizedImport({
     const folderBlocks = hierarchyNodes
       .filter((node) => node.kind === "folder")
       .map((node, index) => {
-        const blockId = crypto.randomUUID();
+        const blockId = uuidv4();
         blockIdByNodeKey.set(node.key, blockId);
 
         const position = positions.get(node.key) || buildGridPosition(index);
@@ -453,7 +454,7 @@ export async function persistNormalizedImport({
           return null;
         }
 
-        const blockId = crypto.randomUUID();
+        const blockId = uuidv4();
         blockIdByNodeKey.set(node.key, blockId);
         noteIdByPath.set(node.path, blockId);
         const position = positions.get(node.key) || buildGridPosition(index);
@@ -501,7 +502,7 @@ export async function persistNormalizedImport({
           return null;
         }
 
-        const blockId = crypto.randomUUID();
+        const blockId = uuidv4();
         blockIdByNodeKey.set(node.key, blockId);
 
         const position =
@@ -564,7 +565,7 @@ export async function persistNormalizedImport({
             : { sourceHandle: "right", targetHandle: "left" };
 
         return {
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           projectId,
           source,
           target,

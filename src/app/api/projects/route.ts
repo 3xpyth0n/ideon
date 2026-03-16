@@ -2,6 +2,7 @@ import { getDb, runTransaction } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
+import { v4 as uuidv4 } from "uuid";
 
 import { z } from "zod";
 import { Insertable } from "kysely";
@@ -59,7 +60,7 @@ export const POST = authenticatedAction(
       if (!hasAccess) throw new Error("Forbidden: No access to folder");
     }
 
-    const projectId = crypto.randomUUID();
+    const projectId = uuidv4();
     const now = new Date().toISOString();
 
     await runTransaction(db, async (trx) => {
@@ -76,7 +77,7 @@ export const POST = authenticatedAction(
         })
         .execute();
 
-      const blockId = crypto.randomUUID();
+      const blockId = uuidv4();
       await trx
         .insertInto("blocks")
         .values({

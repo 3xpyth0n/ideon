@@ -10,7 +10,7 @@ import {
 import { uniqueById } from "@lib/utils";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import { z } from "zod";
-import * as crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -104,7 +104,7 @@ export const POST = projectAction(
     } = body;
 
     if (action === "create") {
-      const snapshotId = crypto.randomUUID();
+      const snapshotId = uuidv4();
       const uniqueBlocks = uniqueById(inputBlocks || []);
       const uniqueLinks = uniqueById(inputLinks || []);
 
@@ -323,7 +323,7 @@ export const POST = projectAction(
         formattedIntent = `Restored state from ${day}/${month}/${year} ${hours}:${minutes}`;
       }
 
-      const snapshotId = crypto.randomUUID();
+      const snapshotId = uuidv4();
       const uniqueBlocks = uniqueById(graph.blocks);
       const uniqueLinks = uniqueById(graph.links);
 

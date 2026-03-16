@@ -3,7 +3,7 @@ import { getDb } from "@lib/db";
 import { runMigrations } from "@lib/migrations";
 import { stringToColor } from "@lib/utils";
 import * as argon2 from "argon2";
-import * as crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 type Input = {
   email: string;
@@ -14,7 +14,7 @@ type Input = {
 export async function setupAction(input: Input): Promise<boolean> {
   await runMigrations();
   const db = getDb();
-  const createdId = crypto.randomUUID();
+  const createdId = uuidv4();
   const hash = await argon2.hash(input.password);
   const existing = await db
     .selectFrom("users")
@@ -34,7 +34,7 @@ export async function setupAction(input: Input): Promise<boolean> {
       })
       .execute();
   }
-  const settingsId = crypto.randomUUID();
+  const settingsId = uuidv4();
   await db
     .insertInto("systemSettings")
     .values({

@@ -2058,6 +2058,7 @@ export const useProjectCanvasState = (
 
   const onViewportChange = useCallback(
     (v: { x: number; y: number; zoom: number }) => {
+      setContextMenu(null);
       if (zoomRAF.current === null) {
         zoomRAF.current = requestAnimationFrame(() => {
           zoomRAF.current = null;
@@ -2071,6 +2072,7 @@ export const useProjectCanvasState = (
 
   const onMove = useCallback(
     (_e: unknown, v: { x: number; y: number; zoom: number }) => {
+      setContextMenu(null);
       if (v) debouncedCheckVisibleBlocks(v);
     },
     [debouncedCheckVisibleBlocks],

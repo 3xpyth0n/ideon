@@ -261,7 +261,13 @@ const linkTypes = {
 function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const { dict } = useI18n();
   const { user } = useUser();
+  const { getViewport, setViewport } = useReactFlowHook();
   const router = useRouter();
+  const flowContainerRef = useRef<HTMLDivElement>(null);
+  const lastClickRef = useRef<{ time: number; x: number; y: number } | null>(
+    null,
+  );
+  const lastNodeClickRef = useRef<{ id: string; time: number } | null>(null);
   const [currentUser, setCurrentUser] = useState<UserPresence | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [isLocalSynced, setIsLocalSynced] = useState(false);
@@ -456,8 +462,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onBlockContextMenu,
     onEdgeContextMenu,
     onPaneContextMenu,
-    onPaneClick,
-    onBlockClick,
+    onPaneClick: originalOnPaneClick,
     onLinkClick,
     handleCreateBlock,
     onExternalDragEnter,
@@ -703,11 +708,98 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     [isReadOnly, blocks, onBlockContextMenu, onPaneContextMenu],
   );
 
-  const onDoubleTap = useCallback(
-    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+  const handlePaneClick = useCallback(
+    (event: React.MouseEvent | React.TouchEvent) => {
+      // button 2 is right click
+      if ("button" in event && event.button === 2) return;
+
+      originalOnPaneClick();
+
+      const now = Date.now();
+      const clientX =
+        "clientX" in event
+          ? event.clientX
+          : (event as React.TouchEvent).touches?.[0]?.clientX;
+      const clientY =
+        "clientY" in event
+          ? event.clientY
+          : (event as React.TouchEvent).touches?.[0]?.clientY;
+
+      if (lastClickRef.current) {
+        const timeDiff = now - lastClickRef.current.time;
+        const dist = Math.sqrt(
+          Math.pow(clientX - lastClickRef.current.x, 2) +
+            Math.pow(clientY - lastClickRef.current.y, 2),
+        );
+
+        if (timeDiff < 400 && dist < 20) {
+          onPaneContextMenu(event as React.MouseEvent);
+          lastClickRef.current = null;
+          return;
+        }
+      }
+      lastClickRef.current = { time: now, x: clientX, y: clientY };
+    },
+    [onPaneContextMenu, originalOnPaneClick],
+  );
+
+  const handleNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      // Clear context menu as per original onBlockClick
+      originalOnPaneClick();
+
+      const now = Date.now();
+      if (lastNodeClickRef.current && lastNodeClickRef.current.id === node.id) {
+        const diff = now - lastNodeClickRef.current.time;
+        if (diff < 400) {
+          onBlockContextMenu(event, node as Node<BlockData>);
+          lastNodeClickRef.current = null;
+          return;
+        }
+      }
+      lastNodeClickRef.current = { id: node.id, time: now };
+    },
+    [onBlockContextMenu, originalOnPaneClick],
+  );
+
+  const onPinch = useCallback(
+    (delta: number, centerX: number, centerY: number) => {
+      if (isReadOnly) return;
+      const { x, y, zoom } = getViewport();
+
+      const sensitivity = 0.01; // Boosted
+      const factor = Math.pow(2, delta * sensitivity);
+      const nextZoom = Math.min(Math.max(zoom * factor, 0.1), 4);
+
+      if (nextZoom === zoom) return;
+
+      const rect = flowContainerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const localX = centerX - rect.left;
+      const localY = centerY - rect.top;
+
+      const flowX = (localX - x) / zoom;
+      const flowY = (localY - y) / zoom;
+
+      const nextX = localX - flowX * nextZoom;
+      const nextY = localY - flowY * nextZoom;
+
+      setViewport({ x: nextX, y: nextY, zoom: nextZoom }, { duration: 0 });
+    },
+    [getViewport, setViewport, isReadOnly],
+  );
+
+  const touchHandlers = useTouchGestures({
+    rippleRef,
+    onLongPress,
+    onDoubleTap: (e, x, y) => {
       if (isReadOnly) return;
 
-      const target = e.target as HTMLElement;
+      // Using elementFromPoint for more reliable hit testing for edges/pane
+      const elementAtPoint = document.elementFromPoint(x, y);
+      const target = (elementAtPoint || e.target) as HTMLElement;
+
       const edgeElement = target.closest(".react-flow__edge");
 
       if (edgeElement) {
@@ -723,18 +815,55 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               } as unknown as React.MouseEvent,
               edge,
             );
+            return;
           }
         }
       }
-    },
-    [isReadOnly, links, onEdgeContextMenu],
-  );
 
-  const touchHandlers = useTouchGestures({
-    rippleRef,
-    onLongPress,
-    onDoubleTap,
+      onPaneContextMenu({
+        preventDefault: () => {},
+        clientX: x,
+        clientY: y,
+      } as unknown as React.MouseEvent);
+    },
+    onPinch,
+    allowLongPress: false,
   });
+
+  useEffect(() => {
+    const container = flowContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const { x, y, zoom } = getViewport();
+        const delta = -e.deltaY;
+        const sensitivity = 0.01; // Boosted
+        const factor = Math.pow(2, delta * sensitivity);
+        const nextZoom = Math.min(Math.max(zoom * factor, 0.1), 4);
+
+        if (nextZoom === zoom) return;
+
+        const rect = container.getBoundingClientRect();
+        const centerX = e.clientX - rect.left;
+        const centerY = e.clientY - rect.top;
+
+        const flowX = (centerX - x) / zoom;
+        const flowY = (centerY - y) / zoom;
+
+        const nextX = centerX - flowX * nextZoom;
+        const nextY = centerY - flowY * nextZoom;
+
+        setViewport({ x: nextX, y: nextY, zoom: nextZoom }, { duration: 0 });
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, [getViewport, setViewport]);
 
   const [dontAskAgain, setDontAskAgain] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -986,6 +1115,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           onDragOver={onExternalDragOver}
           onDrop={handleExternalDrop}
           tabIndex={0}
+          ref={flowContainerRef}
           {...touchHandlers}
         >
           {isLoading && (
@@ -1061,12 +1191,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 onPaneContextMenu={onPaneContextMenu}
                 onNodeContextMenu={onBlockContextMenu}
                 onEdgeContextMenu={onEdgeContextMenu}
-                onPaneClick={onPaneClick}
-                onNodeClick={onBlockClick}
+                onPaneClick={handlePaneClick}
+                onNodeClick={handleNodeClick}
                 onEdgeClick={onLinkClick}
                 onEdgeDoubleClick={onLinkDoubleClick}
                 onMove={onMove}
                 onViewportChange={onViewportChange}
+                zoomOnPinch={true}
+                zoomOnDoubleClick={false}
                 nodeTypes={blockTypes}
                 edgeTypes={linkTypes}
                 defaultViewport={DEFAULT_VIEWPORT}

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-03-XX
+
+### Fixed
+
+- Fixed an issue where the markdown bubble menu would not appear when expected.
+- Fixed UUID generation in non secure contexts by replacing "crypto.randomUUID" with "uuidv4"
+
 ## [0.7.0] - 2026-03-16
 
 ### Added

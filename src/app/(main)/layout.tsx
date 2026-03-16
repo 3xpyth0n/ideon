@@ -48,7 +48,7 @@ export default async function MainLayout({
         initialCollapsed={sidebarCollapsed}
         userRole={user?.role}
       />
-      <main className="main-island">
+      <main className="main-island" id="app-main-container">
         {/* Debug: Layout is rendering */}
         {children}
       </main>

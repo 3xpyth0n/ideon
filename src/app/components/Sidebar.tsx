@@ -110,6 +110,10 @@ export function Sidebar({
     } else {
       document.documentElement.removeAttribute("data-sidebar-collapsed");
     }
+
+    window.dispatchEvent(
+      new CustomEvent("sidebar-toggle", { detail: { collapsed } }),
+    );
   };
 
   const logout = async () => {

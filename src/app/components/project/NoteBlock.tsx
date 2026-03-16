@@ -84,13 +84,26 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
   ) => {
     const iconSize = 14;
 
+    const container = document.getElementById("app-main-container");
+    const containerRect = container?.getBoundingClientRect();
+    const offsetTop = containerRect?.top || 0;
+    const offsetLeft = containerRect?.left || 0;
+
+    const top = blockRect ? blockRect.top - offsetTop - 50 : 0;
+    const left = blockRect
+      ? blockRect.left - offsetLeft + blockRect.width / 2
+      : 0;
+
     const style: React.CSSProperties = {
-      position: "fixed",
-      top: blockRect.top - 50,
-      left: blockRect.left + blockRect.width / 2,
+      position: "absolute",
+      top,
+      left,
       transform: `translateX(-50%) scale(${zoom})`,
       transformOrigin: "bottom center",
-      zIndex: 100000,
+      zIndex: 1100,
+      opacity: blockRect ? 1 : 0,
+      pointerEvents: blockRect ? "auto" : "none",
+      transition: "opacity 0.1s ease-out",
     };
 
     const handleDeleteRow = () => {
@@ -428,9 +441,35 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   }, [editor, isTitleEditing, isReadOnly, isEditing, currentUser?.vimMode]);
 
   useLayoutEffect(() => {
-    if (showBubbleMenu && blockRef.current) {
-      setBlockRect(blockRef.current.getBoundingClientRect());
-    }
+    const updateRect = () => {
+      if (showBubbleMenu && blockRef.current) {
+        setBlockRect(blockRef.current.getBoundingClientRect());
+      }
+    };
+
+    const handleSidebarToggle = () => {
+      // Run updateRect for 350ms to cover the 300ms transition
+      const startTime = Date.now();
+      const duration = 350;
+
+      const loop = () => {
+        updateRect();
+        if (Date.now() - startTime < duration) {
+          requestAnimationFrame(loop);
+        }
+      };
+      requestAnimationFrame(loop);
+    };
+
+    updateRect();
+
+    window.addEventListener("resize", updateRect);
+    window.addEventListener("sidebar-toggle", handleSidebarToggle);
+
+    return () => {
+      window.removeEventListener("resize", updateRect);
+      window.removeEventListener("sidebar-toggle", handleSidebarToggle);
+    };
   }, [showBubbleMenu, viewport]);
 
   const [title, setTitle] = useState(data.title || "");
@@ -793,7 +832,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             blockRect={blockRect}
             zoom={viewport.zoom}
           />,
-          document.body,
+          document.getElementById("app-main-container") || document.body,
         )}
     </>
   );

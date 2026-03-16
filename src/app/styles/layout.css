@@ -8,13 +8,13 @@
 
 .sidebar {
   width: 280px;
-  background: transparent;
+  background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
   padding: 32px 0px;
   padding-top: 24px !important;
   position: relative;
-  z-index: 2000;
+  z-index: 4000;
   user-select: none;
   -webkit-touch-callout: none;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -424,6 +424,7 @@
   flex-direction: column;
   border-radius: 25px;
   box-shadow: 0 4px 24px #00000026;
+  transform: translateZ(0); /* Clip fixed children with overflow: hidden */
 }
 
 [data-theme="dark"] .main-island {

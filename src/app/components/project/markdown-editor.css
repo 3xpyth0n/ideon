@@ -92,7 +92,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  z-index: 99999; /* High z-index to ensure visibility */
+  z-index: 1100; /* Above nodes but below sidebar */
   animation: context-menu-fade-in 0.15s ease-out;
 }
 
@@ -150,12 +150,10 @@
 @keyframes context-menu-fade-in {
   from {
     opacity: 0;
-    transform: scale(0.95);
   }
 
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 

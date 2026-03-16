@@ -86,17 +86,31 @@ export const POST = adminAction(
       .executeTakeFirst();
 
     if (existing) {
+      const ssoConfig = (authProviders as Record<string, unknown>) || {};
+      if (ssoConfig.vercel) {
+        const vercel = ssoConfig.vercel as Record<string, unknown>;
+        vercel.enabled = true;
+        vercel.patEnabled = true;
+      }
+
       await db
         .updateTable("systemSettings")
         .set({
           publicRegistrationEnabled: publicRegistrationEnabled ? 1 : 0,
           ssoRegistrationEnabled: ssoRegistrationEnabled ? 1 : 0,
           passwordLoginEnabled: passwordLoginEnabled ? 1 : 0,
-          authProvidersJson: JSON.stringify(authProviders || {}),
+          authProvidersJson: JSON.stringify(ssoConfig),
         })
         .where("id", "=", existing.id)
         .execute();
     } else {
+      const ssoConfig = (authProviders as Record<string, unknown>) || {};
+      if (ssoConfig.vercel) {
+        const vercel = ssoConfig.vercel as Record<string, unknown>;
+        vercel.enabled = true;
+        vercel.patEnabled = true;
+      }
+
       await db
         .insertInto("systemSettings")
         .values({
@@ -104,7 +118,7 @@ export const POST = adminAction(
           publicRegistrationEnabled: publicRegistrationEnabled ? 1 : 0,
           ssoRegistrationEnabled: ssoRegistrationEnabled ? 1 : 0,
           passwordLoginEnabled: passwordLoginEnabled ? 1 : 0,
-          authProvidersJson: JSON.stringify(authProviders || {}),
+          authProvidersJson: JSON.stringify(ssoConfig),
           installed: 1,
         })
         .execute();

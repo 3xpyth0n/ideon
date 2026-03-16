@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Fixed an issue where the markdown bubble menu would not appear when expected.
 - Fixed UUID generation in non secure contexts by replacing "crypto.randomUUID" with "uuidv4"
+- Fixed Vercel integration to always keep PAT enabled, with optional OAuth.
 
 ## [0.7.0] - 2026-03-16
 

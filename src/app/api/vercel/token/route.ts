@@ -58,7 +58,7 @@ export const GET = authenticatedAction(
       scopeSlug,
       config: {
         oauthEnabled: vercelConfig?.oauthEnabled ?? false,
-        patEnabled: vercelConfig?.patEnabled ?? false,
+        patEnabled: true,
       },
     };
   },

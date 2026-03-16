@@ -494,7 +494,7 @@
     "vercelDocs": "Official Vercel Integration Guide",
     "enableOAuth": "Enable OAuth Authentication",
     "enablePat": "Enable Personal Access Tokens (PAT)",
-    "oauthMode": "OAuth Flow",
+    "oauthMode": "OAuth Flow (Connect with Vercel)",
     "patMode": "Manual Token (PAT)",
     "disableVercelAuthWarning": "Warning: Disabling an authentication method will disconnect users currently using it. Are you sure?"
   },

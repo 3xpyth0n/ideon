@@ -187,14 +187,24 @@ export function ManagementClient() {
   };
 
   const toggleProvider = (key: ProviderKey) => {
+    const isVercel = key === "vercel";
+    const currentConfig = settings.authProviders[key] || { enabled: false };
+
     const updated = {
       ...settings,
       authProviders: {
         ...settings.authProviders,
-        [key]: {
-          ...settings.authProviders[key],
-          enabled: !settings.authProviders[key].enabled,
-        },
+        [key]: isVercel
+          ? {
+              ...currentConfig,
+              enabled: true,
+              patEnabled: true,
+              oauthEnabled: !currentConfig.oauthEnabled,
+            }
+          : {
+              ...currentConfig,
+              enabled: !currentConfig.enabled,
+            },
       },
     };
     handleSave(updated);
@@ -471,7 +481,13 @@ export function ManagementClient() {
                           </div>
                           <button
                             className={`zen-switch-small ${
-                              config.enabled ? "active" : ""
+                              p.key === "vercel"
+                                ? config.oauthEnabled
+                                  ? "active"
+                                  : ""
+                                : config.enabled
+                                  ? "active"
+                                  : ""
                             }`}
                             onClick={() => toggleProvider(p.key)}
                             disabled={saving}
@@ -488,9 +504,13 @@ export function ManagementClient() {
                               config.enabled ? "active" : ""
                             }`}
                           />
-                          {config.enabled
-                            ? dict.common.enabled
-                            : dict.common.disabled}
+                          {p.key === "vercel"
+                            ? config.oauthEnabled
+                              ? dict.common.enabled
+                              : dict.common.disabled
+                            : config.enabled
+                              ? dict.common.enabled
+                              : dict.common.disabled}
                         </div>
                         <Button
                           className="btn-minimal w-full mt-4 justify-between group hover:text-text-main"
@@ -685,55 +705,6 @@ function ProviderConfigModal({
               >
                 {dict.common.showMore}
               </a>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-bg-secondary border border-border/10 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">
-                    {dict.management.oauthMode}
-                  </span>
-                  <div
-                    className={`zen-switch ${
-                      formData.oauthEnabled ? "active" : ""
-                    }`}
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        oauthEnabled: !formData.oauthEnabled,
-                      })
-                    }
-                  >
-                    <div className="switch-thumb" />
-                  </div>
-                </div>
-                <p className="text-[10px] opacity-50">
-                  {dict.management.enableOAuth}
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-bg-secondary border border-border/10 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">
-                    {dict.management.patMode}
-                  </span>
-                  <div
-                    className={`zen-switch ${
-                      formData.patEnabled ? "active" : ""
-                    }`}
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        patEnabled: !formData.patEnabled,
-                      })
-                    }
-                  >
-                    <div className="switch-thumb" />
-                  </div>
-                </div>
-                <p className="text-[10px] opacity-50">
-                  {dict.management.enablePat}
-                </p>
-              </div>
             </div>
           </>
         )}

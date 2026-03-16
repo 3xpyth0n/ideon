@@ -494,7 +494,7 @@
     "vercelDocs": "Guide officiel des intégrations Vercel",
     "enableOAuth": "Activer l'authentification OAuth",
     "enablePat": "Activer les Jetons Personnels (PAT)",
-    "oauthMode": "Flux OAuth",
+    "oauthMode": "Flux OAuth (Connexion avec Vercel)",
     "patMode": "Jeton Manuel (PAT)",
     "disableVercelAuthWarning": "Attention : La désactivation d'une méthode d'authentification déconnectera les utilisateurs qui l'utilisent actuellement. Voulez-vous continuer ?"
   },

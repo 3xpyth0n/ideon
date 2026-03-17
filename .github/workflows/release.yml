@@ -59,3 +59,26 @@ jobs:
           echo "🚀 [DRY RUN] Would create/update release ${{ env.VERSION }}"
           echo "Release Notes:"
           cat RELEASE_NOTES.md
+
+      - name: Notify Discord
+        if: env.ACT != 'true'
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          BODY=$(cat RELEASE_NOTES.md | head -c 2000)
+          JSON=$(jq -n \
+            --arg title "Ideon ${{ env.VERSION }}" \
+            --arg desc "$BODY" \
+            --arg url "https://github.com/${{ github.repository }}/releases/tag/${{ env.VERSION }}" \
+            '{
+              username: "Ideon Releases",
+              embeds: [{
+                title: $title,
+                description: $desc,
+                url: $url,
+                color: 5814783
+              }]
+            }')
+          curl -H "Content-Type: application/json" \
+               -d "$JSON" \
+               "$WEBHOOK_URL"

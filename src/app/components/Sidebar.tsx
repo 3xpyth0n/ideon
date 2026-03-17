@@ -470,7 +470,7 @@ export function Sidebar({
                     dict.account.defaultUsername}
                 </span>
                 <span className="sidebar-profile-email">
-                  {user?.email || "..."}
+                  {user?.username ? `@${user.username}` : "..."}
                 </span>
               </div>
             )}

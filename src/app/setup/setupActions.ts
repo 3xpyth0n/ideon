@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 type Input = {
   email: string;
   username: string;
+  displayName: string;
   password: string;
 };
 
@@ -28,6 +29,7 @@ export async function setupAction(input: Input): Promise<boolean> {
         id: createdId,
         email: input.email,
         username: input.username,
+        displayName: input.displayName,
         passwordHash: hash,
         role: "superadmin" as const,
         color: stringToColor(input.username),

@@ -15,6 +15,7 @@ export function SetupForm() {
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,12 +44,18 @@ export function SetupForm() {
       return;
     }
 
+    if (!displayName.trim()) {
+      toast.error(dict.account.displayName + " required");
+      setBusy(false);
+      return;
+    }
+
     if (password !== confirm) {
       toast.error(dict.auth.passwordMismatch);
       setBusy(false);
       return;
     }
-    const ok = await setupAction({ email, username, password });
+    const ok = await setupAction({ email, username, displayName, password });
     setBusy(false);
     if (ok) {
       router.replace("/login?setupSuccess=true");
@@ -115,6 +122,17 @@ export function SetupForm() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={dict.auth.usernamePlaceholder}
+              required
+            />
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label">{dict.account.displayName}</label>
+            <input
+              className="auth-input"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder={dict.account.displayNamePlaceholder}
               required
             />
           </div>

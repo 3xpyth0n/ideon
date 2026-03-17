@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 const registerSchema = z.object({
   token: z.string().nullable().optional(),
   username: z.string().min(2),
+  displayName: z.string().min(2).optional(),
   password: z.string().min(8),
   email: z.string().email().nullable().optional(),
 });
@@ -97,6 +98,7 @@ export const POST = authenticatedAction(
           id: userId,
           email: userEmail!,
           username,
+          displayName: body.displayName || username,
           passwordHash,
           role: userRole as "superadmin" | "admin" | "member",
           createdAt: new Date().toISOString(),

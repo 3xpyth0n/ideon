@@ -70,7 +70,7 @@
     "lib0": "^0.2.117",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.577.0",
-    "next": "^16.1.6",
+    "next": "^16.1.7",
     "next-auth": "^5.0.0-beta.30",
     "node-html-parser": "^7.1.0",
     "node-pty": "^1.1.0",

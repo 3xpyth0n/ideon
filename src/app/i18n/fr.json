@@ -217,6 +217,7 @@
     "folderChildrenCount": "{count} enfants",
     "folderReverseLinkForbidden": "Les liens inverses sont interdits dès qu'un dossier est impliqué.",
     "folderSingleParentOnly": "Un bloc ne peut pas dépendre de plusieurs dossiers.",
+    "folderCollapsedSourceForbidden": "Impossible de créer des liens depuis un dossier fermé. Veuillez d'abord l'ouvrir.",
     "gitError": "Désolé, impossible de récupérer le dépôt...",
     "gitPlaceholder": "https://github.com/owner/repo ou https://git.exemple.com/owner/repo",
     "gitRepository": "Dépôt Git",

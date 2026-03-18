@@ -355,7 +355,10 @@ export const useProjectCanvasGraph = ({
         blocks.map((block) => ({
           id: block.id,
           type: block.type,
-          data: { blockType: block.data?.blockType },
+          data: {
+            blockType: block.data?.blockType,
+            metadata: block.data?.metadata,
+          },
         })),
         [...links, { source: link.source, target: link.target }],
       );
@@ -376,6 +379,8 @@ export const useProjectCanvasGraph = ({
             dict.blocks.folderSingleParentOnly ||
               "A block cannot depend on multiple folders.",
           );
+        } else if (violatedRule.code === "folder_collapsed_source") {
+          toast.error(dict.blocks.folderCollapsedSourceForbidden);
         }
         return;
       }

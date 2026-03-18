@@ -518,3 +518,18 @@
     min-height: 200px;
   }
 }
+.block-kanban .block-handle-left {
+  left: -10px !important;
+}
+
+.block-kanban .block-handle-right {
+  right: -10px !important;
+}
+
+.block-kanban .block-handle-top {
+  top: -10px !important;
+}
+
+.block-kanban .block-handle-bottom {
+  bottom: -4px !important;
+}

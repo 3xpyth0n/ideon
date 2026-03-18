@@ -3,6 +3,7 @@ type BlockLike = {
   type?: string;
   data?: {
     blockType?: string;
+    metadata?: string;
   };
 };
 
@@ -19,10 +20,21 @@ const getBlockType = (block?: BlockLike) => {
 const isFolder = (block?: BlockLike) => getBlockType(block) === "folder";
 const isCore = (block?: BlockLike) => getBlockType(block) === "core";
 
+const isCollapsed = (block?: BlockLike) => {
+  if (!block || !block.data?.metadata) return false;
+  try {
+    const meta = JSON.parse(block.data.metadata);
+    return !!meta.isCollapsed;
+  } catch {
+    return false;
+  }
+};
+
 export type FolderLinkRuleErrorCode =
   | "folder_to_core"
   | "folder_reverse_link"
-  | "folder_multiple_parents";
+  | "folder_multiple_parents"
+  | "folder_collapsed_source";
 
 export type FolderLinkRuleError = {
   code: FolderLinkRuleErrorCode;
@@ -39,6 +51,19 @@ export const validateFolderLinkRules = (
     links.map((link) => `${link.source}->${link.target}`),
   );
   const folderParentsByTarget = new Map<string, Set<string>>();
+
+  // Check the NEWEST link first (it's the last one in the links array in useProjectCanvasGraph)
+  const lastLink = links[links.length - 1];
+  if (lastLink) {
+    const sourceBlock = blockMap.get(lastLink.source);
+    if (isFolder(sourceBlock) && isCollapsed(sourceBlock)) {
+      return {
+        code: "folder_collapsed_source",
+        source: lastLink.source,
+        target: lastLink.target,
+      };
+    }
+  }
 
   for (const link of links) {
     const sourceBlock = blockMap.get(link.source);

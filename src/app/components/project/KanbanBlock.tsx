@@ -938,26 +938,38 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
         id="left"
         type="source"
         position={Position.Left}
-        style={{ display: connected("left") ? "none" : "flex" }}
-      />
+        isConnectable={true}
+        className="block-handle block-handle-left z-50!"
+      >
+        {!connected("left") && <div className="handle-dot" />}
+      </Handle>
       <Handle
         id="right"
         type="source"
         position={Position.Right}
-        style={{ display: connected("right") ? "none" : "flex" }}
-      />
+        isConnectable={true}
+        className="block-handle block-handle-right z-50!"
+      >
+        {!connected("right") && <div className="handle-dot" />}
+      </Handle>
       <Handle
         id="top"
         type="source"
         position={Position.Top}
-        style={{ display: connected("top") ? "none" : "flex" }}
-      />
+        isConnectable={true}
+        className="block-handle block-handle-top z-50!"
+      >
+        {!connected("top") && <div className="handle-dot" />}
+      </Handle>
       <Handle
         id="bottom"
         type="source"
         position={Position.Bottom}
-        style={{ display: connected("bottom") ? "none" : "flex" }}
-      />
+        isConnectable={true}
+        className="block-handle block-handle-bottom z-50!"
+      >
+        {!connected("bottom") && <div className="handle-dot" />}
+      </Handle>
 
       <CustomNodeResizer
         minWidth={380}

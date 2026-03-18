@@ -261,7 +261,7 @@ const linkTypes = {
 function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const { dict } = useI18n();
   const { user } = useUser();
-  const { getViewport, setViewport } = useReactFlowHook();
+  const { getViewport, setViewport, screenToFlowPosition } = useReactFlowHook();
   const router = useRouter();
   const flowContainerRef = useRef<HTMLDivElement>(null);
   const lastClickRef = useRef<{ time: number; x: number; y: number } | null>(
@@ -512,6 +512,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const [isMobileTopbar, setIsMobileTopbar] = useState(false);
   const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
   const [newBlockId, setNewBlockId] = useState<string | null>(null);
+  const [pendingConnection, setPendingConnection] = useState<{
+    sourceNodeId: string;
+    handleId: string | null;
+    position: { x: number; y: number };
+  } | null>(null);
   const mobileActionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -566,6 +571,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && pendingConnection) {
+        setPendingConnection(null);
+        window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey) {
         const target = e.target as HTMLElement;
         const isEditing =
@@ -590,7 +601,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, []);
+  }, [pendingConnection]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -660,6 +671,60 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       triggerAutoSnapshot("Connection created");
     },
     [onConnect, triggerAutoSnapshot],
+  );
+
+  const onConnectStart = useCallback(
+    (
+      _: unknown,
+      { nodeId, handleId }: { nodeId: string | null; handleId: string | null },
+    ) => {
+      if (!nodeId) return;
+      setPendingConnection({
+        sourceNodeId: nodeId,
+        handleId,
+        position: { x: 0, y: 0 },
+      });
+    },
+    [],
+  );
+
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      if (!pendingConnection) return;
+
+      const target = event.target as HTMLElement;
+      const isPane =
+        target.classList.contains("react-flow__pane") ||
+        target.closest(".react-flow__pane");
+      const isNode = !!target.closest(".react-flow__node");
+      const isEdge = !!target.closest(".react-flow__edge");
+
+      if (isPane && !isNode && !isEdge) {
+        let clientX = 0;
+        let clientY = 0;
+
+        if ("clientX" in event) {
+          clientX = event.clientX;
+          clientY = event.clientY;
+        } else {
+          const touch = event.touches?.[0] || event.changedTouches?.[0];
+          if (touch) {
+            clientX = touch.clientX;
+            clientY = touch.clientY;
+          }
+        }
+
+        const flowPos = screenToFlowPosition({ x: clientX, y: clientY });
+
+        setPendingConnection((prev) =>
+          prev ? { ...prev, position: flowPos } : null,
+        );
+        setIsAddBlockOpen(true);
+      } else {
+        setPendingConnection(null);
+      }
+    },
+    [pendingConnection, screenToFlowPosition],
   );
 
   const { rippleRef } = useTouch();
@@ -1185,6 +1250,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
                 onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
                 onConnect={isPreviewMode ? undefined : onConnectWithSnapshot}
+                onConnectStart={isPreviewMode ? undefined : onConnectStart}
+                onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
                 isValidConnection={isValidConnection}
                 onPointerMove={onPointerMove}
                 onPointerLeave={onPointerLeave}
@@ -1858,11 +1925,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
           <AddBlockModal
             isOpen={isAddBlockOpen}
-            onClose={() => setIsAddBlockOpen(false)}
+            onClose={() => {
+              setIsAddBlockOpen(false);
+              setPendingConnection(null);
+            }}
             onAddBlock={(blockType) => {
               const id = handleCreateBlock(
-                undefined,
-                undefined,
+                pendingConnection?.position || undefined,
+                pendingConnection?.sourceNodeId || undefined,
                 blockType as
                   | "text"
                   | "link"
@@ -1884,6 +1954,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 triggerAutoSnapshot("Block created");
               }
               setIsAddBlockOpen(false);
+              setPendingConnection(null);
             }}
           />
         </div>

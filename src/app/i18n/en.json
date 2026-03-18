@@ -217,6 +217,7 @@
     "folderChildrenCount": "{count} children",
     "folderReverseLinkForbidden": "Reverse links are not allowed when a folder is involved.",
     "folderSingleParentOnly": "A block cannot depend on multiple folders.",
+    "folderCollapsedSourceForbidden": "Cannot create links from a collapsed folder. Please open it first.",
     "gitError": "Sorry, couldn't fetch the repo...",
     "gitPlaceholder": "https://github.com/owner/repo or https://git.example.com/owner/repo",
     "gitRepository": "Git Repository",

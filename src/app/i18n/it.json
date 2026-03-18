@@ -217,6 +217,7 @@
     "folderChildrenCount": "{count} figli",
     "folderReverseLinkForbidden": "I collegamenti inversi non sono consentiti quando è coinvolta una cartella.",
     "folderSingleParentOnly": "Un blocco non può dipendere da più cartelle.",
+    "folderCollapsedSourceForbidden": "Impossibile creare collegamenti da una cartella compressa. Per favore, aprila prima.",
     "gitError": "Spiacenti, impossibile recuperare il repository...",
     "gitPlaceholder": "https://github.com/owner/repo o https://git.example.com/owner/repo",
     "gitRepository": "Repository Git",

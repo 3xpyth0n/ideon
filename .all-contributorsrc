@@ -36,6 +36,15 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "murlock",
+      "name": "Michael Bonfils",
+      "avatar_url": "https://avatars.githubusercontent.com/u/250625?v=4",
+      "profile": "http://www.murlock.org/blog",
+      "contributions": [
+        "doc"
+      ]
     }
   ],
   "commitConvention": "angular"

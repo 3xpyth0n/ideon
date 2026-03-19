@@ -10,6 +10,7 @@ const nextConfig = {
       bodySizeLimit: "2mb",
     },
   },
+  allowedDevOrigins: [process.env.ALLOWED_DEV_ORIGIN].filter(Boolean),
   // this resolves the issue of yjs being imported twice
   webpack: (config) => {
     config.resolve.alias = {

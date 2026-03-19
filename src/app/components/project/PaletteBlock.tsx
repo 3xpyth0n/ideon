@@ -348,7 +348,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
             <ColorPicker
               initialColor={
                 editingIndex !== null
-                  ? colors[editingIndex] ?? "#000000"
+                  ? (colors[editingIndex] ?? "#000000")
                   : "#000000"
               }
               onSelect={handleUpdateColor}

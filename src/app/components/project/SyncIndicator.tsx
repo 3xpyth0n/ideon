@@ -25,7 +25,15 @@ async function pingServer(): Promise<boolean> {
   }
 }
 
-export function SyncIndicator() {
+interface SyncIndicatorProps {
+  isSocketConnected?: boolean;
+  isRemoteSynced?: boolean;
+}
+
+export function SyncIndicator({
+  isSocketConnected = false,
+  isRemoteSynced = false,
+}: SyncIndicatorProps) {
   const { dict } = useI18n();
 
   // The page loaded → the server was reachable → start as "online".
@@ -141,12 +149,29 @@ export function SyncIndicator() {
         Icon: CloudOff,
       };
     }
+
+    if (!isSocketConnected) {
+      return {
+        label: dict.canvas.connectionError,
+        dotClass: "sync-dot sync-dot-offline animate-pulse",
+        Icon: CloudOff,
+      };
+    }
+
+    if (!isRemoteSynced) {
+      return {
+        label: dict.common.loading,
+        dotClass: "sync-dot sync-dot-offline animate-pulse",
+        Icon: Cloud,
+      };
+    }
+
     return {
       label: dict.canvas.synced,
       dotClass: "sync-dot sync-dot-synced",
       Icon: Cloud,
     };
-  }, [status, dict]);
+  }, [status, isSocketConnected, isRemoteSynced, dict]);
 
   const timeAgo = useMemo(() => {
     const seconds = Math.floor((Date.now() - lastOnlineAt.getTime()) / 1000);
@@ -158,10 +183,12 @@ export function SyncIndicator() {
     return `${hours}h`;
   }, [lastOnlineAt, dict]);
 
-  const tooltipText =
-    status === "online"
-      ? `${dict.canvas.lastSynced}: ${timeAgo}`
-      : dict.canvas.offline;
+  const tooltipText = useMemo(() => {
+    if (status === "offline") return dict.canvas.offline;
+    if (!isSocketConnected) return dict.canvas.websocketError;
+    if (!isRemoteSynced) return dict.common.loading;
+    return `${dict.canvas.lastSynced}: ${timeAgo}`;
+  }, [status, isSocketConnected, isRemoteSynced, lastOnlineAt, timeAgo, dict]);
 
   return (
     <>

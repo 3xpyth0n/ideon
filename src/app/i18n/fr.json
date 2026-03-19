@@ -345,6 +345,8 @@
     "sharePreview": "Partager cette version",
     "synced": "Synchronisé",
     "offline": "Hors ligne",
+    "connectionError": "Connexion échouée",
+    "websocketError": "Vérifiez votre reverse proxy (Upgrade WebSocket requis)",
     "lastSynced": "Dernière synchro.",
     "now": "Maintenant",
     "autoSnapshot": "Auto",

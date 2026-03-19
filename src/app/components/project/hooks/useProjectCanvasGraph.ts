@@ -162,8 +162,9 @@ export const useProjectCanvasGraph = ({
 
       // Select the edge when right-clicked/double-tapped
       setLinks((prevLinks) => {
-        const isAlreadySelected = prevLinks.find((l) => l.id === edge.id)
-          ?.selected;
+        const isAlreadySelected = prevLinks.find(
+          (l) => l.id === edge.id,
+        )?.selected;
         if (isAlreadySelected) return prevLinks;
 
         return prevLinks.map((l) => ({
@@ -637,8 +638,9 @@ export const useProjectCanvasGraph = ({
 
       // Ensure the block is selected when right-clicked
       setBlocks((prevBlocks) => {
-        const isAlreadySelected = prevBlocks.find((b) => b.id === block.id)
-          ?.selected;
+        const isAlreadySelected = prevBlocks.find(
+          (b) => b.id === block.id,
+        )?.selected;
         if (isAlreadySelected) return prevBlocks;
 
         return prevBlocks.map((b) => ({

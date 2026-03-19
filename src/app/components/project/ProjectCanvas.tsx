@@ -272,6 +272,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [isLocalSynced, setIsLocalSynced] = useState(false);
   const [isRemoteSynced, setIsRemoteSynced] = useState(false);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isAccessValidated, setIsAccessValidated] = useState(false);
 
   const dictRef = useRef(dict);
@@ -350,6 +351,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       setIsRemoteSynced(data);
     });
 
+    wsProvider.on("status", (event: { status: string }) => {
+      setIsSocketConnected(event.status === "connected");
+    });
+
     wsProvider.on("connection-close", (event: { code?: number } | null) => {
       if (event?.code === 4003) {
         wsProvider.disconnect();
@@ -369,7 +374,16 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
     setYjsData({ yDoc: doc, provider: wsProvider });
 
+    // Periodic check to ensure status is accurate even if events are missed
+    const checkInterval = setInterval(() => {
+      setIsSocketConnected(wsProvider.wsconnected);
+    }, 3000);
+
     return () => {
+      clearInterval(checkInterval);
+      wsProvider.on("sync", () => {});
+      wsProvider.on("status", () => {});
+      wsProvider.on("connection-close", () => {});
       wsProvider.destroy();
       indexeddbProvider.destroy();
       doc.destroy();
@@ -1426,7 +1440,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   <div className="project-topbar-row">
                     {!isPreviewMode && (
                       <div className="project-presence-strip">
-                        <SyncIndicator />
+                        <SyncIndicator
+                          isSocketConnected={isSocketConnected}
+                          isRemoteSynced={isRemoteSynced}
+                        />
                         <div className="project-presence-avatars">
                           {presenceUsers.map((u) => (
                             <div

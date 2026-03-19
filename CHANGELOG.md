@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-03-19
+
+### Added
+
+- Updated sync indicator to accurately reflect WebSocket connection issues. (#59)
+
 ## [0.7.2] - 2026-03-18
 
 ### Added

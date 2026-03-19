@@ -118,6 +118,7 @@ Thanks go to these wonderful people:
       <td align="center" valign="top" width="14.28%"><a href="https://zorinos.com/ "><img src="https://avatars.githubusercontent.com/u/34811668?v=4?s=100" width="75px;" alt="albanobattistella"/><br /><sub><b>albanobattistella</b></sub></a><br /><a href="#translation-albanobattistella" title="Translation">🌍</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Solirix"><img src="https://avatars.githubusercontent.com/u/99198915?v=4?s=100" width="100px;" alt="Solirix"/><br /><sub><b>Solirix</b></sub></a><br /><a href="#security-Solirix" title="Security">🛡️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/flooryyyy"><img src="https://avatars.githubusercontent.com/u/67979730?v=4?s=100" width="100px;" alt="floory"/><br /><sub><b>floory</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/issues?q=author%3Aflooryyyy" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://www.murlock.org/blog"><img src="https://avatars.githubusercontent.com/u/250625?v=4?s=100" width="100px;" alt="Michael Bonfils"/><br /><sub><b>Michael Bonfils</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/commits?author=murlock" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>

@@ -42,7 +42,10 @@ export async function GET() {
       [key, value]: [string, unknown],
     ) => {
       const provider = value as AuthProvider;
-      if (provider.enabled) {
+      const isVercel = key === "vercel";
+      const isEnabled = isVercel ? !!provider.oauthEnabled : provider.enabled;
+
+      if (isEnabled) {
         acc[key] = {
           enabled: true,
           clientId: provider.clientId,

@@ -789,6 +789,44 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
 }
 
+.project-card.folder-card-style {
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+}
+
+.project-card.folder-card-style:hover {
+  background: #c3daff;
+  border-color: #60a5fa;
+  transform: translateY(-4px);
+}
+
+.badge-owner {
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  background-color: color-mix(in srgb, var(--text-main) 5%, transparent);
+  color: color-mix(in srgb, var(--text-main) 60%, transparent);
+}
+
+.badge-collaborator {
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+  color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.folder-card-style.drag-over {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .folder-card-style {
+  background-color: #060d19;
+  border-color: #12274a;
+}
+
+[data-theme="dark"] .folder-card-style:hover {
+  background-color: #0c1a32;
+  border-color: #1e3a8a;
+}
+
 .project-card-desc {
   font-size: 14px;
   color: var(--text-muted);

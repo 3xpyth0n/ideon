@@ -785,13 +785,9 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 onDrop={(e) => !isTrash && handleDrop(e, folder.id)}
                 data-folder-id={folder.id}
                 {...touchHandlers}
-                className={`project-card group relative flex flex-col justify-between cursor-pointer transition-colors ${
+                className={`project-card folder-card-style group relative flex flex-col justify-between cursor-pointer transition-colors ${
                   isTrash ? "cursor-default opacity-75" : ""
-                } ${
-                  dragOverFolderId === folder.id
-                    ? "border-blue-500! bg-blue-800! dark:bg-blue-500/20!"
-                    : "border-blue-500/20! hover:border-blue-500/50! bg-blue-950! hover:bg-blue-900! dark:bg-blue-500/5! dark:hover:bg-blue-500/10!"
-                }`}
+                } ${dragOverFolderId === folder.id ? "drag-over" : ""}`}
               >
                 <div>
                   <div className="flex items-start justify-between mb-2">
@@ -882,8 +878,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     <span
                       className={`text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border ${
                         folder.ownerId === currentUser?.id
-                          ? "border-white/10 bg-white/5 text-white/60"
-                          : "border-accent/20 bg-accent/5 text-accent/60"
+                          ? "badge-owner"
+                          : "badge-collaborator"
                       }`}
                     >
                       {folder.ownerId === currentUser?.id ? "MINE" : "SHARED"}
@@ -1100,8 +1096,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   <span
                     className={`text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border ${
                       project.ownerId === currentUser?.id
-                        ? "border-white/10 bg-white/5 text-white/60"
-                        : "border-accent/20 bg-accent/5 text-accent/60"
+                        ? "badge-owner"
+                        : "badge-collaborator"
                     }`}
                   >
                     {project.ownerId === currentUser?.id

@@ -501,7 +501,13 @@ export function ManagementClient() {
                         <div className="provider-status">
                           <span
                             className={`status-dot ${
-                              config.enabled ? "active" : ""
+                              p.key === "vercel"
+                                ? config.oauthEnabled
+                                  ? "active"
+                                  : ""
+                                : config.enabled
+                                  ? "active"
+                                  : ""
                             }`}
                           />
                           {p.key === "vercel"

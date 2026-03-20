@@ -79,7 +79,9 @@ export function getSecurityHeaders(nonce: string) {
 
   const cspHeader = [
     "default-src 'self';",
-    `script-src 'self' 'nonce-${nonce}';`,
+    `script-src 'self' 'nonce-${nonce}' ${
+      process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""
+    };`,
     "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
     "img-src 'self' data: blob: https:;",
     "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://esm.sh;",

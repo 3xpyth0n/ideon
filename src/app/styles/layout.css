@@ -424,7 +424,6 @@
   flex-direction: column;
   border-radius: 25px;
   box-shadow: 0 4px 24px #00000026;
-  transform: translateZ(0); /* Clip fixed children with overflow: hidden */
 }
 
 [data-theme="dark"] .main-island {

@@ -878,9 +878,14 @@ const VercelBlock = (props: CanvasBlockProps) => {
                               </div>
 
                               <div className="flex items-center gap-2 ml-2">
-                                {!isReadOnly &&
+                                {idx === 0 ? (
+                                  <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-(--bg-island) border border-(--border-color) shadow-sm text-[10px] font-bold text-(--text-secondary) opacity-70 uppercase">
+                                    {blocksDict.vercelCurrentDeployment ||
+                                      "Current"}
+                                  </span>
+                                ) : (
+                                  !isReadOnly &&
                                   isBlockTokenOwner &&
-                                  idx > 0 &&
                                   !confirmingAction && (
                                     <div className="flex items-center gap-1.5 opacity-60 group-hover/item:opacity-100 transition-opacity">
                                       <button
@@ -908,7 +913,8 @@ const VercelBlock = (props: CanvasBlockProps) => {
                                             "Rollback"}
                                       </button>
                                     </div>
-                                  )}
+                                  )
+                                )}
                                 <span className="text-[9px] opacity-40 font-mono shrink-0">
                                   {new Date(d.created).toLocaleDateString([], {
                                     month: "short",

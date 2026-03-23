@@ -260,6 +260,7 @@
     "uploading": "Caricamento in corso...",
     "viewOnly": "Sola Visualizzazione",
     "vercelRightClickEdit": "Tasto DX Modifica",
+    "vercelCurrentDeployment": "Attuale",
     "vercelRedeployBadge": "Ridistribuzione",
     "checkDnsStatus": "Verifica stato DNS",
     "projectDomains": "Domini del progetto",

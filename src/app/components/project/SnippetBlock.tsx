@@ -138,6 +138,11 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     }
   });
 
+  const snippetVimExtensions = useMemo(
+    () => [getLanguageExtension(language)],
+    [language],
+  );
+
   const syncToYjs = useCallback(
     (text: string) => {
       if (!data.yText) return;
@@ -466,7 +471,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               value={code}
               onChange={handleVimChange}
               editable={!isReadOnly}
-              extensions={[getLanguageExtension(language)]}
+              extensions={snippetVimExtensions}
               theme="dark"
               className="h-full font-mono text-sm leading-relaxed"
             />

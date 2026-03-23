@@ -179,7 +179,7 @@ function buildHierarchyNodes(data: NormalizedImportData): HierarchyNode[] {
 
     const parentFolderPath = getParentFolderPath(folderPath);
     const parentKey = parentFolderPath
-      ? (folderKeyByPath.get(parentFolderPath) ?? "core")
+      ? folderKeyByPath.get(parentFolderPath) ?? "core"
       : "core";
 
     nodes.push({
@@ -197,7 +197,7 @@ function buildHierarchyNodes(data: NormalizedImportData): HierarchyNode[] {
       kind: "note",
       path: note.path,
       parentKey: parentFolderPath
-        ? (folderKeyByPath.get(parentFolderPath) ?? "core")
+        ? folderKeyByPath.get(parentFolderPath) ?? "core"
         : "core",
     });
   }
@@ -209,7 +209,7 @@ function buildHierarchyNodes(data: NormalizedImportData): HierarchyNode[] {
       kind: "asset",
       path: asset.path,
       parentKey: parentFolderPath
-        ? (folderKeyByPath.get(parentFolderPath) ?? "core")
+        ? folderKeyByPath.get(parentFolderPath) ?? "core"
         : "core",
     });
   }

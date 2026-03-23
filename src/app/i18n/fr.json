@@ -260,6 +260,7 @@
     "uploading": "Envoi en cours...",
     "viewOnly": "Lecture Seule",
     "vercelRightClickEdit": "Clic-D Éditer",
+    "vercelCurrentDeployment": "Actuel",
     "vercelRedeployBadge": "Redéploiement",
     "checkDnsStatus": "Vérifier le statut DNS",
     "projectDomains": "Domaines du projet",

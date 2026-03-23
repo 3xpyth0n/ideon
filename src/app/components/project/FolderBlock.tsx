@@ -64,9 +64,7 @@ const FolderBlock = memo(({ id, data, selected }: FolderBlockProps) => {
     }
   }, [data.title, title]);
 
-  const directChildrenCount = useMemo(() => {
-    return edges.filter((edge) => edge.source === id).length;
-  }, [edges, id]);
+  const directChildrenCount = data.directChildrenCount ?? 0;
 
   const handleTitleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

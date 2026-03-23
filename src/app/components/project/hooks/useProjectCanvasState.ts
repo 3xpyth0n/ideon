@@ -1905,6 +1905,12 @@ export const useProjectCanvasState = (
     };
   }, [checkVisibleBlocks]);
 
+  const uniqueLinks = useMemo(() => {
+    return uniqueById(links).filter(
+      (e: Edge) => e && e.id && e.source && e.target,
+    );
+  }, [links]);
+
   const blocksWithPresence = useMemo(() => {
     const processedBlocks = blocks.map((block) => {
       const typingUsers = rt.presenceUsers.filter(
@@ -1948,6 +1954,8 @@ export const useProjectCanvasState = (
           onFolderToggle: isPreviewMode
             ? undefined
             : graph.handleToggleFolderCollapse,
+          directChildrenCount: uniqueLinks.filter((l) => l.source === block.id)
+            .length,
         },
       };
     });
@@ -1964,13 +1972,8 @@ export const useProjectCanvasState = (
     graph,
     yContents,
     projectOwnerId,
+    uniqueLinks,
   ]);
-
-  const uniqueLinks = useMemo(() => {
-    return uniqueById(links).filter(
-      (e: Edge) => e && e.id && e.source && e.target,
-    );
-  }, [links]);
 
   useEffect(() => {
     if (
@@ -2264,6 +2267,7 @@ export const useProjectCanvasState = (
         let minDistance = Infinity;
 
         blocks.forEach((other) => {
+          if (other.hidden) return;
           if (other.id === currentBlock.id) return;
 
           const otherCenter = {

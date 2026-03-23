@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2026-03-23
+
+### Fixed
+
+- Fixed a memory leak in the block editors when Vim mode is enabled.
+- Minor fixes and improvements to enhance the user experience.
+
 ## [0.7.4] - 2026-03-20
 
 ### Added

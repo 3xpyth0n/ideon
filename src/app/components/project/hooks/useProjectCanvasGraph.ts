@@ -35,7 +35,10 @@ import {
 } from "@components/project/utils/alignment";
 import { parseFolderMetadata } from "@lib/metadata-parsers";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
-import { computeHiddenNodeIds } from "@components/project/utils/visibility";
+import {
+  computeHiddenNodeIds,
+  getDescendantIds,
+} from "@components/project/utils/visibility";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
@@ -162,9 +165,8 @@ export const useProjectCanvasGraph = ({
 
       // Select the edge when right-clicked/double-tapped
       setLinks((prevLinks) => {
-        const isAlreadySelected = prevLinks.find(
-          (l) => l.id === edge.id,
-        )?.selected;
+        const isAlreadySelected = prevLinks.find((l) => l.id === edge.id)
+          ?.selected;
         if (isAlreadySelected) return prevLinks;
 
         return prevLinks.map((l) => ({
@@ -298,7 +300,7 @@ export const useProjectCanvasGraph = ({
         }
       }
 
-      // Prevent core dragging
+      // Prevent core dragging and handle collapsed folders moving children
       const filteredChanges = changes.filter((c) => {
         if (c.type === "position" && c.position) {
           const block = blocks.find((b) => b.id === c.id);
@@ -307,14 +309,49 @@ export const useProjectCanvasGraph = ({
         return c.type !== "remove";
       });
 
-      if (filteredChanges.length > 0) {
+      const descendantChanges: NodeChange[] = [];
+      filteredChanges.forEach((c) => {
+        if (c.type === "position" && c.position && c.dragging) {
+          const block = blocks.find((b) => b.id === c.id);
+          if (block && block.type === "folder") {
+            const metadata = parseFolderMetadata(block.data?.metadata);
+            if (metadata.isCollapsed) {
+              const dx = c.position.x - block.position.x;
+              const dy = c.position.y - block.position.y;
+              if (dx !== 0 || dy !== 0) {
+                const descendantIds = getDescendantIds(block.id, links);
+                descendantIds.delete(block.id);
+                descendantIds.forEach((descId) => {
+                  const descBlock = blocks.find((b) => b.id === descId);
+                  if (descBlock) {
+                    descendantChanges.push({
+                      id: descId,
+                      type: "position",
+                      position: {
+                        x: descBlock.position.x + dx,
+                        y: descBlock.position.y + dy,
+                      },
+                      dragging: c.dragging,
+                    });
+                  }
+                });
+              }
+            }
+          }
+        }
+      });
+
+      if (filteredChanges.length > 0 || descendantChanges.length > 0) {
         setBlocks(
           (blocks) =>
-            applyNodeChanges(filteredChanges, blocks) as Node<BlockData>[],
+            applyNodeChanges(
+              [...filteredChanges, ...descendantChanges],
+              blocks,
+            ) as Node<BlockData>[],
         );
       }
     },
-    [handleDeleteBlock, setBlocks, blocks],
+    [handleDeleteBlock, setBlocks, blocks, links],
   );
 
   const onLinksChange = useCallback(
@@ -499,16 +536,35 @@ export const useProjectCanvasGraph = ({
         adjustedPos.x !== block.position.x ||
         adjustedPos.y !== block.position.y
       ) {
+        const dx = adjustedPos.x - block.position.x;
+        const dy = adjustedPos.y - block.position.y;
+
+        let descendantIds = new Set<string>();
+        if (block.type === "folder") {
+          const metadata = parseFolderMetadata(block.data?.metadata);
+          if (metadata.isCollapsed) {
+            descendantIds = getDescendantIds(block.id, links);
+            descendantIds.delete(block.id);
+          }
+        }
+
         setBlocks((blocks) =>
-          blocks.map((b) =>
-            b.id === block.id
-              ? ({ ...b, position: adjustedPos } as Node<BlockData>)
-              : b,
-          ),
+          blocks.map((b) => {
+            if (b.id === block.id) {
+              return { ...b, position: adjustedPos } as Node<BlockData>;
+            }
+            if (descendantIds.has(b.id)) {
+              return {
+                ...b,
+                position: { x: b.position.x + dx, y: b.position.y + dy },
+              } as Node<BlockData>;
+            }
+            return b;
+          }),
         );
       }
     },
-    [setBlocks, blocks, isReadOnly, isShiftPressed],
+    [setBlocks, blocks, links, isReadOnly, isShiftPressed],
   );
 
   const onBlockDragStop = useCallback(
@@ -638,9 +694,8 @@ export const useProjectCanvasGraph = ({
 
       // Ensure the block is selected when right-clicked
       setBlocks((prevBlocks) => {
-        const isAlreadySelected = prevBlocks.find(
-          (b) => b.id === block.id,
-        )?.selected;
+        const isAlreadySelected = prevBlocks.find((b) => b.id === block.id)
+          ?.selected;
         if (isAlreadySelected) return prevBlocks;
 
         return prevBlocks.map((b) => ({

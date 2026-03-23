@@ -13,6 +13,7 @@ import {
   Node,
   Edge,
 } from "@xyflow/react";
+
 import "@xyflow/react/dist/style.css";
 
 import { getAvatarUrl } from "@lib/utils";
@@ -1036,7 +1037,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   useLayoutEffect(() => {
     if (contextMenu && contextMenuRef.current) {
       const menu = contextMenuRef.current;
+      const parent = menu.parentElement;
+      if (!parent) return;
+
       const rect = menu.getBoundingClientRect();
+      const parentRect = parent.getBoundingClientRect();
+
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       const margin = 10;
@@ -1044,17 +1050,17 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       let adjustedTop = contextMenu.top;
       let adjustedLeft = contextMenu.left;
 
-      // Vertical repositioning: if it would overflow bottom, show it above the click point
+      // Vertical repositioning
       if (adjustedTop + rect.height > viewportHeight - margin) {
         adjustedTop = adjustedTop - rect.height;
       }
 
-      // Horizontal repositioning: if it would overflow right, show it to the left of the click point
+      // Horizontal repositioning
       if (adjustedLeft + rect.width > viewportWidth - margin) {
         adjustedLeft = adjustedLeft - rect.width;
       }
 
-      // Final clamping to ensure it's still within viewport bounds with margin
+      // Final clamping to viewport bounds
       adjustedTop = Math.max(
         margin,
         Math.min(adjustedTop, viewportHeight - rect.height - margin),
@@ -1064,9 +1070,23 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         Math.min(adjustedLeft, viewportWidth - rect.width - margin),
       );
 
-      menu.style.setProperty("--menu-top", `${adjustedTop}px`);
-      menu.style.setProperty("--menu-left", `${adjustedLeft}px`);
+      // Pass 1: Set position relative to parent
+      const finalTop = adjustedTop - parentRect.top;
+      const finalLeft = adjustedLeft - parentRect.left;
+
+      menu.style.setProperty("--menu-top", `${finalTop}px`);
+      menu.style.setProperty("--menu-left", `${finalLeft}px`);
       menu.style.opacity = "1";
+
+      // Pass 2: Detect and fix layout shift (closed-loop correction)
+      const actualRect = menu.getBoundingClientRect();
+      const errorX = actualRect.left - adjustedLeft;
+      const errorY = actualRect.top - adjustedTop;
+
+      if (Math.abs(errorX) > 1 || Math.abs(errorY) > 1) {
+        menu.style.setProperty("--menu-top", `${finalTop - errorY}px`);
+        menu.style.setProperty("--menu-left", `${finalLeft - errorX}px`);
+      }
     }
   }, [contextMenu]);
 
@@ -1695,146 +1715,144 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   </ControlButton>
                   <DownloadButton />
                 </Controls>
+              </ReactFlow>
 
-                {contextMenu && (
-                  <div
-                    ref={contextMenuRef}
-                    className="context-menu"
-                    style={
-                      {
-                        "--menu-top": `${contextMenu.top}px`,
-                        "--menu-left": `${contextMenu.left}px`,
-                        opacity: 1,
-                      } as React.CSSProperties
-                    }
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {contextMenu.type === "pane" ? (
-                      <>
-                        {!isPreviewMode && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setIsAddBlockOpen(true);
-                                setContextMenu(null);
-                              }}
-                              className="context-menu-item"
-                            >
-                              {dict.canvas.addBlock || "Add Block"}
-                            </button>
-                            <button
-                              onClick={() => {
-                                const id = handleCreateBlock(
-                                  undefined,
-                                  undefined,
-                                  "folder",
-                                );
-
-                                if (id) {
-                                  setNewBlockId(id);
-                                  setTimeout(() => setNewBlockId(null), 800);
-                                  triggerAutoSnapshot("Block created");
-                                }
-
-                                setContextMenu(null);
-                              }}
-                              className="context-menu-item"
-                            >
-                              {dict.canvas.addFolder || "Add Folder"}
-                            </button>
-                            <div className="context-menu-separator" />
-                          </>
-                        )}
-                      </>
-                    ) : contextMenu.type === "block" ? (
-                      (() => {
-                        const block = contextMenuBlock;
-                        if (!block || !currentUser) return null;
-                        const isOwner =
-                          currentUser.id &&
-                          (block.data as BlockData)?.ownerId === currentUser.id;
-                        const isProjectOwner =
-                          currentUser.id && projectOwnerId === currentUser.id;
-                        const canManage = isOwner || isProjectOwner;
-                        const isLocked = !!(block.data as BlockData).isLocked;
-
-                        return (
-                          <>
-                            {canManage && (
-                              <>
-                                <button
-                                  onClick={() => handleToggleLock(block.id)}
-                                  className="context-menu-item"
-                                >
-                                  {isLocked
-                                    ? dict.blocks.unlock || "Unlock"
-                                    : dict.blocks.lock || "Lock"}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setTransferBlock(block);
-                                    setContextMenu(null);
-                                  }}
-                                  className="context-menu-item"
-                                >
-                                  {dict.project.transferOwnership ||
-                                    "Transfer Ownership"}
-                                </button>
-                                <div className="context-menu-separator" />
-                                <button
-                                  onClick={() => {
-                                    if (contextMenuBlock) {
-                                      const skipConfirm =
-                                        typeof window !== "undefined" &&
-                                        localStorage.getItem(
-                                          "ideon_skip_delete_confirm",
-                                        ) === "true";
-
-                                      if (skipConfirm) {
-                                        _handleDeleteBlock(contextMenuBlock.id);
-                                      } else {
-                                        setBlockToDelete(contextMenuBlock.id);
-                                      }
-                                      setContextMenu(null);
-                                    }
-                                  }}
-                                  className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                >
-                                  {dict.common.delete || "Delete"}
-                                </button>
-                              </>
-                            )}
-                            {!canManage && (
-                              <div className="px-3 py-2 text-xs text-gray-500">
-                                {dict.blocks.viewOnly || "View Only"}
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()
-                    ) : contextMenu.type === "edge" ? (
-                      (() => {
-                        const edgeId = contextMenu.id;
-                        if (!edgeId) return null;
-
-                        return (
+              {contextMenu && (
+                <div
+                  ref={contextMenuRef}
+                  className="context-menu"
+                  style={
+                    {
+                      opacity: 0,
+                    } as React.CSSProperties
+                  }
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {contextMenu.type === "pane" ? (
+                    <>
+                      {!isPreviewMode && (
+                        <>
                           <button
                             onClick={() => {
-                              _deleteLinks([edgeId]);
+                              setIsAddBlockOpen(true);
                               setContextMenu(null);
-                              triggerAutoSnapshot("Connection deleted");
                             }}
-                            className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            className="context-menu-item"
                           >
-                            {dict.common.delete || "Delete"}
+                            {dict.canvas.addBlock || "Add Block"}
                           </button>
-                        );
-                      })()
-                    ) : null}
-                  </div>
-                )}
-              </ReactFlow>
+                          <button
+                            onClick={() => {
+                              const id = handleCreateBlock(
+                                undefined,
+                                undefined,
+                                "folder",
+                              );
+
+                              if (id) {
+                                setNewBlockId(id);
+                                setTimeout(() => setNewBlockId(null), 800);
+                                triggerAutoSnapshot("Block created");
+                              }
+
+                              setContextMenu(null);
+                            }}
+                            className="context-menu-item"
+                          >
+                            {dict.canvas.addFolder || "Add Folder"}
+                          </button>
+                          <div className="context-menu-separator" />
+                        </>
+                      )}
+                    </>
+                  ) : contextMenu.type === "block" ? (
+                    (() => {
+                      const block = contextMenuBlock;
+                      if (!block || !currentUser) return null;
+                      const isOwner =
+                        currentUser.id &&
+                        (block.data as BlockData)?.ownerId === currentUser.id;
+                      const isProjectOwner =
+                        currentUser.id && projectOwnerId === currentUser.id;
+                      const canManage = isOwner || isProjectOwner;
+                      const isLocked = !!(block.data as BlockData).isLocked;
+
+                      return (
+                        <>
+                          {canManage && (
+                            <>
+                              <button
+                                onClick={() => handleToggleLock(block.id)}
+                                className="context-menu-item"
+                              >
+                                {isLocked
+                                  ? dict.blocks.unlock || "Unlock"
+                                  : dict.blocks.lock || "Lock"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setTransferBlock(block);
+                                  setContextMenu(null);
+                                }}
+                                className="context-menu-item"
+                              >
+                                {dict.project.transferOwnership ||
+                                  "Transfer Ownership"}
+                              </button>
+                              <div className="context-menu-separator" />
+                              <button
+                                onClick={() => {
+                                  if (contextMenuBlock) {
+                                    const skipConfirm =
+                                      typeof window !== "undefined" &&
+                                      localStorage.getItem(
+                                        "ideon_skip_delete_confirm",
+                                      ) === "true";
+
+                                    if (skipConfirm) {
+                                      _handleDeleteBlock(contextMenuBlock.id);
+                                    } else {
+                                      setBlockToDelete(contextMenuBlock.id);
+                                    }
+                                    setContextMenu(null);
+                                  }
+                                }}
+                                className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                {dict.common.delete || "Delete"}
+                              </button>
+                            </>
+                          )}
+                          {!canManage && (
+                            <div className="px-3 py-2 text-xs text-gray-500">
+                              {dict.blocks.viewOnly || "View Only"}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()
+                  ) : contextMenu.type === "edge" ? (
+                    (() => {
+                      const edgeId = contextMenu.id;
+                      if (!edgeId) return null;
+
+                      return (
+                        <button
+                          onClick={() => {
+                            _deleteLinks([edgeId]);
+                            setContextMenu(null);
+                            triggerAutoSnapshot("Connection deleted");
+                          }}
+                          className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          {dict.common.delete || "Delete"}
+                        </button>
+                      );
+                    })()
+                  ) : null}
+                </div>
+              )}
             </DraftsProvider>
           </UserMapProvider>
 

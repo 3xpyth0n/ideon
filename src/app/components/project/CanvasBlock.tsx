@@ -124,6 +124,7 @@ export type BlockData = {
     vimMode?: boolean;
   };
   userRole?: "creator" | "owner" | "editor" | "viewer";
+  directChildrenCount?: number;
 };
 
 export interface BlockMetadata {

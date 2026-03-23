@@ -5,7 +5,6 @@ import { Trash2, Copy, Check, ChevronDown, RefreshCw } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { Button } from "@components/ui/Button";
 import { useTouchGestures } from "@components/project/hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 import { Modal } from "@components/ui/Modal";
 import { Select } from "@components/ui/Select";
 import { UserDetailsModal } from "@components/users/UserDetailsModal";
@@ -57,8 +56,6 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
   const [selectedUserForModal, setSelectedUserForModal] =
     useState<UserProfile | null>(null);
 
-  const { rippleRef } = useTouch();
-
   const onLongPress = useCallback(
     (e: React.TouchEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
@@ -75,7 +72,6 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
   );
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
     stopPropagation: true,
   });

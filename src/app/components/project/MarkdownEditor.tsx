@@ -21,6 +21,7 @@ import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
+import { toast } from "sonner";
 
 import "./markdown-editor.css";
 
@@ -261,6 +262,15 @@ const MarkdownEditor = ({
       const markdown = (
         editor.storage as unknown as MarkdownStorage
       ).markdown.getMarkdown();
+
+      if (markdown.length > 1000000) {
+        toast.error(
+          "Note is too large. Truncating to 1MB to preserve performance.",
+        );
+        onChange?.(markdown.slice(0, 1000000));
+        return;
+      }
+
       onChange?.(markdown);
     },
     onFocus: () => {

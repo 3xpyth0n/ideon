@@ -88,11 +88,15 @@ export function ExcalidrawModal({
       files: currentFiles,
     });
 
+    const MAX_SVG_SIZE = 1024 * 1024; // 1MB limit for SVG preview in Yjs
+    const svgLight = serializeSvg(lightSvgEl);
+    const svgDark = serializeSvg(darkSvgEl);
+
     onClose({
       elements: currentElements,
       files: currentFiles,
-      svgLight: serializeSvg(lightSvgEl),
-      svgDark: serializeSvg(darkSvgEl),
+      svgLight: svgLight.length < MAX_SVG_SIZE ? svgLight : "",
+      svgDark: svgDark.length < MAX_SVG_SIZE ? svgDark : "",
     });
   }, [onClose]);
 

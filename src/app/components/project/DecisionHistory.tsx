@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTouchGestures } from "./hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 
 interface TemporalState {
   id: string;
@@ -91,8 +90,6 @@ export function DecisionHistory({
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const { rippleRef } = useTouch();
-
   const onLongPress = useCallback(
     (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
       const target = e.target as HTMLElement;
@@ -115,7 +112,6 @@ export function DecisionHistory({
   );
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
     stopPropagation: true,
   });

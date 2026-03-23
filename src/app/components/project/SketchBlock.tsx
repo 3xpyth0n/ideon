@@ -41,10 +41,21 @@ function getThemeSvg(meta: SketchPersistedData, theme: "light" | "dark") {
   );
 }
 
-function parseSketchMeta(metadata?: string | null): SketchPersistedData {
+function parseSketchMeta(
+  metadata?: string | Record<string, unknown> | null,
+): SketchPersistedData {
   if (!metadata) return {};
+  if (typeof metadata !== "string") return metadata as SketchPersistedData;
   try {
-    return JSON.parse(metadata) as SketchPersistedData;
+    const parsed = JSON.parse(metadata);
+    if (typeof parsed === "string") {
+      try {
+        return JSON.parse(parsed) as SketchPersistedData;
+      } catch {
+        return {};
+      }
+    }
+    return parsed as SketchPersistedData;
   } catch {
     return {};
   }
@@ -71,20 +82,18 @@ const SketchBlock = memo((props: SketchBlockProps) => {
     (isLocked ? !isOwner && !isProjectOwner : false);
   const canReact = !isPreviewMode || isViewer;
 
-  const rawMeta =
-    typeof data.metadata === "string"
-      ? data.metadata
-      : JSON.stringify(data.metadata ?? "{}");
-
   const [title, setTitle] = useState(data.title || "");
   const [modalOpen, setModalOpen] = useState(false);
   const [svgDataUri, setSvgDataUri] = useState<string | undefined>(() =>
-    getThemeSvg(parseSketchMeta(rawMeta), theme),
+    getThemeSvg(parseSketchMeta(data.metadata), theme),
+  );
+
+  const sketchDataRef = useRef<SketchPersistedData>(
+    parseSketchMeta(data.metadata),
   );
 
   const dataRef = useRef(data);
   const titleRef = useRef(title);
-  const sketchDataRef = useRef<SketchPersistedData>(parseSketchMeta(rawMeta));
 
   useEffect(() => {
     dataRef.current = data;
@@ -101,11 +110,7 @@ const SketchBlock = memo((props: SketchBlockProps) => {
   }, [data.title, title]);
 
   useEffect(() => {
-    const parsed = parseSketchMeta(
-      typeof data.metadata === "string"
-        ? data.metadata
-        : JSON.stringify(data.metadata ?? "{}"),
-    );
+    const parsed = parseSketchMeta(data.metadata);
     sketchDataRef.current = parsed;
     setSvgDataUri(getThemeSvg(parsed, theme));
   }, [data.metadata, theme]);
@@ -137,13 +142,12 @@ const SketchBlock = memo((props: SketchBlockProps) => {
         currentData.content,
         now,
         editor,
-        JSON.stringify({
+        {
           excalidrawElements: result.elements,
           excalidrawFiles: result.files,
-          excalidrawSvg: svg,
           excalidrawSvgLight: result.svgLight,
           excalidrawSvgDark: result.svgDark,
-        }),
+        },
         titleRef.current,
         currentData.reactions,
       );

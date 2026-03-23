@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useTouchGestures } from "./hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 import { DEFAULT_BLOCK_WIDTH } from "./utils/constants";
 import * as Y from "yjs";
 import { UserPresence } from "./hooks/useProjectCanvasState";
@@ -63,7 +62,7 @@ export type BlockData = {
     | "shell"
     | "folder";
   label?: string;
-  metadata?: string;
+  metadata?: string | Record<string, unknown>;
   isLocked?: boolean;
   isSummary?: boolean;
   isPreviewMode?: boolean;
@@ -83,7 +82,7 @@ export type BlockData = {
     content: string,
     updatedAt: string,
     lastEditor: string,
-    metadata?: string,
+    metadata?: string | Record<string, unknown>,
     title?: string,
     reactions?: {
       emoji: string;
@@ -202,8 +201,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   const ownerId = data.ownerId;
   const { setNodes, getEdges } = useReactFlow();
 
-  const { rippleRef } = useTouch();
-
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
   const isViewer = userRole === "viewer";
@@ -259,7 +256,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   );
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
     stopPropagation: true,
   });
@@ -278,95 +274,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       setContent(data.content);
     }
   }, [data.content, content, isEditingLink]);
-
-  // Render loading state for summary blocks
-  if (data.isSummary) {
-    return (
-      <div
-        className="react-flow__node-default rounded-lg border border-border bg-card shadow-sm flex items-center justify-center relative transition-opacity duration-300"
-        style={{
-          width: width || DEFAULT_BLOCK_WIDTH,
-          height: height || 100,
-        }}
-      >
-        <div className="flex flex-col items-center gap-3 text-muted-foreground animate-pulse">
-          <div className="rounded-full bg-muted p-3">
-            <Icon className="h-6 w-6 opacity-50" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            <span className="text-xs font-medium opacity-70">
-              Loading {getBlockLabel(blockType)}...
-            </span>
-          </div>
-        </div>
-        {/* Hidden handles to maintain connections */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left-target"
-          style={{ opacity: 0 }}
-        />
-        <Handle
-          type="source"
-          position={Position.Left}
-          id="left"
-          style={{ opacity: 0 }}
-        />
-        <Handle
-          type="target"
-          position={Position.Right}
-          id="right-target"
-          style={{ opacity: 0 }}
-        />
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right"
-          style={{ opacity: 0 }}
-        />
-        <Handle
-          type="target"
-          position={Position.Top}
-          id="top-target"
-          style={{ opacity: 0 }}
-        />
-        <Handle
-          type="source"
-          position={Position.Top}
-          id="top"
-          style={{ opacity: 0 }}
-        />
-        <Handle
-          type="target"
-          position={Position.Bottom}
-          id="bottom-target"
-          style={{ opacity: 0 }}
-        />
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          id="bottom"
-          style={{ opacity: 0 }}
-        />
-      </div>
-    );
-  }
-
-  // Render specialized blocks
-  if ((type as string) === "core") {
-    return (
-      <ProjectCoreBlock
-        {...(props as unknown as ComponentProps<typeof ProjectCoreBlock>)}
-      />
-    );
-  }
-
-  if (type === "text") {
-    return (
-      <NoteBlock {...(props as unknown as ComponentProps<typeof NoteBlock>)} />
-    );
-  }
 
   const [metadata, setMetadata] = useState<BlockMetadata | null>(() => {
     return parseOptionalJsonRecord(data.metadata) as BlockMetadata | null;
@@ -589,11 +496,12 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     }
   }, [isEditingLink, content, fetchLinkMetadata]);
 
+  const isPublicMetadataDisabled = !!metadata?.disablePublicMetadataFetch;
+
   useEffect(() => {
     if (blockType !== "link" || !content || isEditingLink || isReadOnly) return;
 
     const hasMetadataForCurrentUrl = metadata?.metadataUrl === content;
-    const isPublicMetadataDisabled = !!metadata?.disablePublicMetadataFetch;
 
     if (
       !isPublicMetadataDisabled &&
@@ -665,13 +573,17 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     };
   }, [isEditingLink, exitEditMode]);
 
-  const edges = getEdges();
-  const isHandleConnected = (handleId: string) =>
-    edges.some(
-      (e) =>
-        (e.source === id && e.sourceHandle === handleId) ||
-        (e.target === id && e.targetHandle === handleId),
-    );
+  const isHandleConnected = useCallback(
+    (handleId: string) => {
+      const edges = getEdges();
+      return edges.some(
+        (e) =>
+          (e.source === id && e.sourceHandle === handleId) ||
+          (e.target === id && e.targetHandle === handleId),
+      );
+    },
+    [getEdges, id],
+  );
 
   const isLeftSourceConnected = isHandleConnected("left");
   const isRightSourceConnected = isHandleConnected("right");
@@ -806,7 +718,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     }
   };
 
-  const isPublicMetadataDisabled = !!metadata?.disablePublicMetadataFetch;
   const showInvalidState = metadata?.error === "invalid_format";
 
   const handleMetadataToggle = useCallback(
@@ -1036,136 +947,227 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     );
   };
 
-  return (
-    <div
-      ref={blockRef}
-      className={`block-card block-type-${blockType} ${
-        selected ? "selected" : ""
-      } ${isRemoteTyping ? "remote-typing" : ""} ${
-        isBeingMoved ? "is-moving" : ""
-      } ${
-        isReadOnly ? "read-only" : ""
-      } flex flex-col p-0! relative w-full h-full`}
-      style={
-        {
-          "--block-border-color": borderColor,
-        } as React.CSSProperties
-      }
-    >
-      <CustomNodeResizer
-        nodeId={id}
-        minWidth={250}
-        minHeight={180}
-        isVisible={!isReadOnly}
-        lineClassName="resizer-line"
-        handleClassName="resizer-handle"
-        keepAspectRatio={false}
-        onResize={handleResize}
-        onResizeEnd={handleResizeEnd}
-      />
+  let componentContent: React.ReactNode;
 
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] px-2">
-        <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
+  // Render loading state for summary blocks
+  if (data.isSummary) {
+    componentContent = (
+      <div
+        className="rounded-xl border border-border bg-island shadow-sm flex items-center justify-center relative transition-opacity duration-300 overflow-hidden"
+        style={{
+          width: width || DEFAULT_BLOCK_WIDTH,
+          height: height || 100,
+          background: "var(--bg-island)",
+        }}
+      >
+        <div className="flex flex-col items-center gap-3 text-muted-foreground animate-pulse">
+          <div className="rounded-full bg-muted/20 p-3">
+            <Icon className="h-6 w-6 opacity-40" />
+          </div>
           <div className="flex items-center gap-2">
-            <Icon
-              size={14}
-              className={`block-type-icon ${
-                blockType === "text" || !blockType ? "text" : blockType
-              }`}
-            />
-            <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
-              {dict.common[
-                `blockType${blockType.charAt(0).toUpperCase()}${blockType.slice(
-                  1,
-                )}` as keyof typeof dict.common
-              ] || blockType}
+            <Loader2 className="h-3 w-3 animate-spin opacity-40" />
+            <span className="text-[10px] uppercase tracking-widest font-bold opacity-40">
+              {dict.common.loading || "Loading"} {getBlockLabel(blockType)}...
             </span>
           </div>
-
-          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-              <input
-                value={title}
-                onChange={handleTitleChange}
-                className="block-title"
-                placeholder={dict.blocks.title || "..."}
-                readOnly={isReadOnly}
-              />
-            </div>
-          </div>
         </div>
 
-        <div className="block-content flex-1 flex flex-col min-h-0">
-          {renderContent()}
-        </div>
-
-        <BlockFooter
-          updatedAt={data.updatedAt}
-          authorName={data.authorName}
-          isLocked={isLocked}
-          dict={dict}
-          lang={lang}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left-target"
+          className="opacity-0!"
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left"
+          className="opacity-0!"
+        />
+        <Handle
+          type="target"
+          position={Position.Right}
+          id="right-target"
+          className="opacity-0!"
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          className="opacity-0!"
+        />
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="top-target"
+          className="opacity-0!"
+        />
+        <Handle
+          type="source"
+          position={Position.Top}
+          id="top"
+          className="opacity-0!"
+        />
+        <Handle
+          type="target"
+          position={Position.Bottom}
+          id="bottom-target"
+          className="opacity-0!"
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          className="opacity-0!"
         />
       </div>
-
-      <BlockReactions
-        reactions={data.reactions}
-        onReact={handleReact}
-        onRemoveReaction={handleRemoveReaction}
-        currentUserId={currentUser?.id}
-        isReadOnly={isReadOnly}
-        canReact={canReact}
+    );
+  } else if ((type as string) === "core") {
+    componentContent = (
+      <ProjectCoreBlock
+        {...(props as unknown as ComponentProps<typeof ProjectCoreBlock>)}
       />
-
-      <Handle
-        id="left"
-        type="source"
-        position={Position.Left}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-left z-50! ${
-          isReadOnly ? "opacity-0! pointer-events-none!" : ""
-        }`}
+    );
+  } else if (type === "text") {
+    componentContent = (
+      <NoteBlock {...(props as unknown as ComponentProps<typeof NoteBlock>)} />
+    );
+  } else {
+    componentContent = (
+      <div
+        ref={blockRef}
+        className={`block-card block-type-${blockType} ${
+          selected ? "selected" : ""
+        } ${isRemoteTyping ? "remote-typing" : ""} ${
+          isBeingMoved ? "is-moving" : ""
+        } ${
+          isReadOnly ? "read-only" : ""
+        } flex flex-col p-0! relative w-full h-full`}
+        style={
+          {
+            "--block-border-color": borderColor,
+          } as React.CSSProperties
+        }
       >
-        {!isLeftSourceConnected && <div className="handle-dot" />}
-      </Handle>
+        <CustomNodeResizer
+          nodeId={id}
+          minWidth={250}
+          minHeight={180}
+          isVisible={!isReadOnly}
+          lineClassName="resizer-line"
+          handleClassName="resizer-handle"
+          keepAspectRatio={false}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
+        />
 
-      <Handle
-        id="right"
-        type="source"
-        position={Position.Right}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-right z-50! ${
-          isReadOnly ? "opacity-0! pointer-events-none!" : ""
-        }`}
-      >
-        {!isRightSourceConnected && <div className="handle-dot" />}
-      </Handle>
+        <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] px-2">
+          <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
+            <div className="flex items-center gap-2">
+              <Icon
+                size={14}
+                className={`block-type-icon ${
+                  blockType === "text" || !blockType ? "text" : blockType
+                }`}
+              />
+              <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
+                {dict.common[
+                  `blockType${blockType
+                    .charAt(0)
+                    .toUpperCase()}${blockType.slice(
+                    1,
+                  )}` as keyof typeof dict.common
+                ] || blockType}
+              </span>
+            </div>
 
-      <Handle
-        id="top"
-        type="source"
-        position={Position.Top}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-top z-50! ${
-          isReadOnly ? "opacity-0! pointer-events-none!" : ""
-        }`}
-      >
-        {!isTopSourceConnected && <div className="handle-dot" />}
-      </Handle>
+            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+              <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                <input
+                  value={title}
+                  onChange={handleTitleChange}
+                  className="block-title"
+                  placeholder={dict.blocks.title || "..."}
+                  readOnly={isReadOnly}
+                />
+              </div>
+            </div>
+          </div>
 
-      <Handle
-        id="bottom"
-        type="source"
-        position={Position.Bottom}
-        isConnectable={isConnectable}
-        className={`block-handle block-handle-bottom z-50! ${
-          isReadOnly ? "opacity-0! pointer-events-none!" : ""
-        }`}
-      >
-        {!isBottomSourceConnected && <div className="handle-dot" />}
-      </Handle>
-    </div>
-  );
+          <div className="block-content flex-1 flex flex-col min-h-0">
+            {renderContent()}
+          </div>
+
+          <BlockFooter
+            updatedAt={data.updatedAt}
+            authorName={data.authorName}
+            isLocked={isLocked}
+            dict={dict}
+            lang={lang}
+          />
+        </div>
+
+        <BlockReactions
+          reactions={data.reactions}
+          onReact={handleReact}
+          onRemoveReaction={handleRemoveReaction}
+          currentUserId={currentUser?.id}
+          isReadOnly={isReadOnly}
+          canReact={canReact}
+        />
+
+        <Handle
+          id="left"
+          type="source"
+          position={Position.Left}
+          isConnectable={isConnectable}
+          className={`block-handle block-handle-left z-50! ${
+            isReadOnly ? "opacity-0! pointer-events-none!" : ""
+          }`}
+        >
+          {!isLeftSourceConnected && <div className="handle-dot" />}
+        </Handle>
+
+        <Handle
+          id="right"
+          type="source"
+          position={Position.Right}
+          isConnectable={isConnectable}
+          className={`block-handle block-handle-right z-50! ${
+            isReadOnly ? "opacity-0! pointer-events-none!" : ""
+          }`}
+        >
+          {!isRightSourceConnected && <div className="handle-dot" />}
+        </Handle>
+
+        <Handle
+          id="top"
+          type="source"
+          position={Position.Top}
+          isConnectable={isConnectable}
+          className={`block-handle block-handle-top z-50! ${
+            isReadOnly ? "opacity-0! pointer-events-none!" : ""
+          }`}
+        >
+          {!isTopSourceConnected && <div className="handle-dot" />}
+        </Handle>
+
+        <Handle
+          id="bottom"
+          type="source"
+          position={Position.Bottom}
+          isConnectable={isConnectable}
+          className={`block-handle block-handle-bottom z-50! ${
+            isReadOnly ? "opacity-0! pointer-events-none!" : ""
+          }`}
+        >
+          {!isBottomSourceConnected && <div className="handle-dot" />}
+        </Handle>
+      </div>
+    );
+  }
+
+  return componentContent;
 };
 
 export const CanvasBlock = memo(CanvasBlockComponent);

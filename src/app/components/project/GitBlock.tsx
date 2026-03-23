@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useTouchGestures } from "./hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
@@ -64,8 +63,6 @@ const GitBlock = (props: CanvasBlockProps) => {
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
   const { setNodes } = useReactFlow();
-
-  const { rippleRef } = useTouch();
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
@@ -119,7 +116,6 @@ const GitBlock = (props: CanvasBlockProps) => {
   );
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
     stopPropagation: true,
   });

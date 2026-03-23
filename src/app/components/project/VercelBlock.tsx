@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useTouchGestures } from "./hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
@@ -76,8 +75,6 @@ const VercelBlock = (props: CanvasBlockProps) => {
   const projectOwnerId = data.projectOwnerId;
   const ownerId = data.ownerId;
   const { setNodes } = useReactFlow();
-
-  const { rippleRef } = useTouch();
 
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
@@ -263,7 +260,6 @@ const VercelBlock = (props: CanvasBlockProps) => {
   );
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
     stopPropagation: true,
   });
@@ -444,7 +440,6 @@ const VercelBlock = (props: CanvasBlockProps) => {
 
   return (
     <div
-      ref={rippleRef as unknown as React.Ref<HTMLDivElement>}
       {...touchHandlers}
       className={`block-card block-type-vercel ${selected ? "selected" : ""} ${
         isReadOnly ? "read-only" : ""

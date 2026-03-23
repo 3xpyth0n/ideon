@@ -601,7 +601,7 @@ export const useProjectCanvasGraph = ({
       content: string,
       updatedAt: string,
       lastEditor: string,
-      metadata?: string,
+      metadata?: string | Record<string, unknown>,
       title?: string,
       reactions?: {
         emoji: string;

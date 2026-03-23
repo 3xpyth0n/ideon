@@ -441,6 +441,7 @@ export const useProjectCanvasState = (
   );
 
   const isInitialized = useRef(false);
+  const [isReady, setIsReady] = useState(false);
   const lastProjectId = useRef<string | null>(null);
   const lastSnapshotHash = useRef<string | null>(null);
 
@@ -531,6 +532,7 @@ export const useProjectCanvasState = (
         return hasChanges ? next : prev;
       });
       isInitialized.current = true;
+      setIsReady(true);
     };
 
     const updateLinksFromYjs = (
@@ -708,6 +710,7 @@ export const useProjectCanvasState = (
 
     if (initialBlocks.length > 0 || initialLinks.length > 0) {
       isInitialized.current = true;
+      setIsReady(true);
       setTimeout(() => {
         handleFitView();
       }, 100);
@@ -1905,12 +1908,6 @@ export const useProjectCanvasState = (
     };
   }, [checkVisibleBlocks]);
 
-  const uniqueLinks = useMemo(() => {
-    return uniqueById(links).filter(
-      (e: Edge) => e && e.id && e.source && e.target,
-    );
-  }, [links]);
-
   const blocksWithPresence = useMemo(() => {
     const processedBlocks = blocks.map((block) => {
       const typingUsers = rt.presenceUsers.filter(
@@ -1954,8 +1951,6 @@ export const useProjectCanvasState = (
           onFolderToggle: isPreviewMode
             ? undefined
             : graph.handleToggleFolderCollapse,
-          directChildrenCount: uniqueLinks.filter((l) => l.source === block.id)
-            .length,
         },
       };
     });
@@ -1972,8 +1967,13 @@ export const useProjectCanvasState = (
     graph,
     yContents,
     projectOwnerId,
-    uniqueLinks,
   ]);
+
+  const uniqueLinks = useMemo(() => {
+    return uniqueById(links).filter(
+      (e: Edge) => e && e.id && e.source && e.target,
+    );
+  }, [links]);
 
   useEffect(() => {
     if (
@@ -2267,7 +2267,6 @@ export const useProjectCanvasState = (
         let minDistance = Infinity;
 
         blocks.forEach((other) => {
-          if (other.hidden) return;
           if (other.id === currentBlock.id) return;
 
           const otherCenter = {
@@ -2482,5 +2481,6 @@ export const useProjectCanvasState = (
     hasSeenOnboarding,
     markOnboardingSeen,
     updateMyPresence: rt.updateMyPresence,
+    isReady,
   };
 };

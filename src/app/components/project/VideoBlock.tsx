@@ -6,7 +6,6 @@ import { Video } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
 import { useTouchGestures } from "./hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
@@ -25,7 +24,6 @@ type VideoBlockProps = NodeProps<Node<BlockData>> & {
 
 const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
   const { dict, lang } = useI18n();
-  const { rippleRef } = useTouch();
   const { setNodes, getEdges } = useReactFlow();
 
   const currentUser = data.currentUser;
@@ -125,8 +123,8 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
   );
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
+    stopPropagation: true,
   });
 
   const handleTitleChange = useCallback(

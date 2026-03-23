@@ -12,7 +12,6 @@ import {
 import { Check, Plus, Trash2, GripVertical } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
-import { useTouch } from "@providers/TouchProvider";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import {
   Handle,
@@ -97,7 +96,6 @@ const AutoResizeTextarea = ({
 
 const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const { dict, lang } = useI18n();
-  const { rippleRef } = useTouch();
   const { setNodes, getNode, getEdges } = useReactFlow();
 
   const currentUser = data.currentUser;
@@ -185,7 +183,6 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   }, []);
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
   });
 

@@ -25,7 +25,6 @@ import { toast } from "sonner";
 import { Button } from "@components/ui/Button";
 import { Modal } from "@components/ui/Modal";
 import { useTouchGestures } from "@components/project/hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 
 interface Project {
   id: string;
@@ -101,8 +100,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
-  const { rippleRef } = useTouch();
-
   const isTrash = view === "trash";
 
   const onLongPress = useCallback(
@@ -133,7 +130,6 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   );
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
     stopPropagation: true,
   });

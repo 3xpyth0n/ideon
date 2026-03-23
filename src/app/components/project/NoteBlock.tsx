@@ -374,7 +374,7 @@ const NoteBlock = memo(
     });
 
     const [editor, setEditor] = useState<Editor | null>(null);
-    const [isEditing, setIsEditing] = useState(data.content ? false : true);
+    const [isEditing, setIsEditing] = useState(false);
     const [showBubbleMenu, setShowBubbleMenu] = useState(false);
     const [isTitleEditing, setIsTitleEditing] = useState(false);
     const [isEditingLink, setIsEditingLink] = useState(false);
@@ -506,18 +506,48 @@ const NoteBlock = memo(
 
     const noteVimExtensions = useMemo(() => [markdown()], []);
 
-    // Sync with Yjs
+    const lastSyncedTextRef = useRef<string | null>(null);
+    const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const syncToYjs = useCallback(
       (text: string) => {
         if (!data.yText) return;
-        if (data.yText.toString() === text) return;
-        data.yText.doc?.transact(() => {
-          data.yText?.delete(0, data.yText.length);
-          data.yText?.insert(0, text);
-        });
+
+        if (text.length > 1000000) {
+          text = text.slice(0, 1000000) + "\n\n[Truncated for performance]";
+        }
+
+        if (lastSyncedTextRef.current === text) return;
+
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+        }
+
+        syncTimeoutRef.current = setTimeout(() => {
+          syncTimeoutRef.current = null;
+          if (!data.yText) return;
+
+          const currentText = data.yText.toString();
+          if (currentText === text) {
+            lastSyncedTextRef.current = text;
+            return;
+          }
+
+          data.yText.doc?.transact(() => {
+            data.yText?.delete(0, data.yText.length);
+            data.yText?.insert(0, text);
+          });
+          lastSyncedTextRef.current = text;
+        }, 500); // 500ms debounce
       },
       [data.yText],
     );
+
+    useEffect(() => {
+      return () => {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      };
+    }, []);
 
     useEffect(() => {
       setTitle(data.title || "");

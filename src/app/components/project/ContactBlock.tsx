@@ -5,7 +5,6 @@ import { User } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
 import { useTouchGestures } from "./hooks/useTouchGestures";
-import { useTouch } from "@providers/TouchProvider";
 import {
   Handle,
   Position,
@@ -35,7 +34,6 @@ interface ContactMetadata {
 const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getEdges } = useReactFlow();
-  const { rippleRef } = useTouch();
 
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
@@ -78,7 +76,6 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
   }, [isReadOnly]);
 
   const touchHandlers = useTouchGestures({
-    rippleRef,
     onLongPress,
     stopPropagation: true,
   });

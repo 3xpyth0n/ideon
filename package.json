@@ -9,10 +9,10 @@
     "type": "git",
     "url": "https://github.com/3xpyth0n/ideon"
   },
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "NODE_ENV=development NODE_OPTIONS='--max-old-space-size=8192' tsx watch src/server.ts",
-    "build": "next build && tsup",
+    "build": "next build --webpack && tsup",
     "start": "NODE_OPTIONS='--max-old-space-size=8192' node dist/server.cjs",
     "check": "eslint . --max-warnings=0; tsc --noEmit",
     "test": "vitest run",

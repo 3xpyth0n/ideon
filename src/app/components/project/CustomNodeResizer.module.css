@@ -23,18 +23,18 @@
 }
 
 /* Corners: Square hitbox centered */
-:global(.react-flow__resize-control.top.left),
-:global(.react-flow__resize-control.top.right),
-:global(.react-flow__resize-control.bottom.left),
-:global(.react-flow__resize-control.bottom.right) {
+.handle:global(.react-flow__resize-control).top.left,
+.handle:global(.react-flow__resize-control).top.right,
+.handle:global(.react-flow__resize-control).bottom.left,
+.handle:global(.react-flow__resize-control).bottom.right {
   width: var(--hitbox-size, 48px) !important;
   height: var(--hitbox-size, 48px) !important;
 }
 
-:global(.react-flow__resize-control.top.left)::before,
-:global(.react-flow__resize-control.top.right)::before,
-:global(.react-flow__resize-control.bottom.left)::before,
-:global(.react-flow__resize-control.bottom.right)::before {
+.handle:global(.react-flow__resize-control).top.left::before,
+.handle:global(.react-flow__resize-control).top.right::before,
+.handle:global(.react-flow__resize-control).bottom.left::before,
+.handle:global(.react-flow__resize-control).bottom.right::before {
   width: 100%;
   height: 100%;
   top: 0;
@@ -43,36 +43,26 @@
 
 /* Edges: Full length bars */
 /* Top & Bottom: Width 100%, Height = Hitbox Size */
-:global(.react-flow__resize-control.top):not(:global(.left)):not(
-    :global(.right)
-  ),
-:global(.react-flow__resize-control.bottom):not(:global(.left)):not(
-    :global(.right)
-  ) {
+.handle:global(.react-flow__resize-control).top:not(.left):not(.right),
+.handle:global(.react-flow__resize-control).bottom:not(.left):not(.right) {
   width: 100% !important;
   height: var(--hitbox-size) !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
 }
 
-:global(.react-flow__resize-control.top):not(:global(.left)):not(
-    :global(.right)
-  ) {
+.handle:global(.react-flow__resize-control).top:not(.left):not(.right) {
   top: 0 !important;
 }
 
-:global(.react-flow__resize-control.bottom):not(:global(.left)):not(
-    :global(.right)
-  ) {
+.handle:global(.react-flow__resize-control).bottom:not(.left):not(.right) {
   bottom: 0 !important;
   transform: translate(-50%, 50%) !important;
 }
 
-:global(.react-flow__resize-control.top):not(:global(.left)):not(
-    :global(.right)
-  )::before,
-:global(.react-flow__resize-control.bottom):not(:global(.left)):not(
-    :global(.right)
+.handle:global(.react-flow__resize-control).top:not(.left):not(.right)::before,
+.handle:global(.react-flow__resize-control).bottom:not(.left):not(
+    .right
   )::before {
   width: 100%;
   height: 100%;
@@ -81,36 +71,26 @@
 }
 
 /* Left & Right: Height 100%, Width = Hitbox Size */
-:global(.react-flow__resize-control.left):not(:global(.top)):not(
-    :global(.bottom)
-  ),
-:global(.react-flow__resize-control.right):not(:global(.top)):not(
-    :global(.bottom)
-  ) {
+.handle:global(.react-flow__resize-control).left:not(.top):not(.bottom),
+.handle:global(.react-flow__resize-control).right:not(.top):not(.bottom) {
   height: 100% !important;
   width: var(--hitbox-size) !important;
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
 }
 
-:global(.react-flow__resize-control.left):not(:global(.top)):not(
-    :global(.bottom)
-  ) {
+.handle:global(.react-flow__resize-control).left:not(.top):not(.bottom) {
   left: 0 !important;
 }
 
-:global(.react-flow__resize-control.right):not(:global(.top)):not(
-    :global(.bottom)
-  ) {
+.handle:global(.react-flow__resize-control).right:not(.top):not(.bottom) {
   right: 0 !important;
   transform: translate(50%, -50%) !important;
 }
 
-:global(.react-flow__resize-control.left):not(:global(.top)):not(
-    :global(.bottom)
-  )::before,
-:global(.react-flow__resize-control.right):not(:global(.top)):not(
-    :global(.bottom)
+.handle:global(.react-flow__resize-control).left:not(.top):not(.bottom)::before,
+.handle:global(.react-flow__resize-control).right:not(.top):not(
+    .bottom
   )::before {
   width: 100%;
   height: 100%;

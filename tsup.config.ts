@@ -17,6 +17,11 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   shims: true,
+  outExtension({ format }) {
+    return {
+      js: format === "cjs" ? ".cjs" : ".js",
+    };
+  },
   external: externalPackages,
   noExternal: [new RegExp(`^(?!(${externalPackages.join("|")})($|/))`)],
 });

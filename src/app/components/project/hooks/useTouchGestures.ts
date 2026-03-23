@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { RippleHandle } from "@components/ui/TouchRipple";
 
-interface UseTouchGesturesProps {
-  rippleRef?: React.RefObject<RippleHandle | null>;
-  onLongPress: (e: React.TouchEvent | TouchEvent, x: number, y: number) => void;
+export interface UseTouchGesturesProps {
+  onLongPress: (
+    e: React.TouchEvent | TouchEvent,
+    clientX: number,
+    clientY: number,
+  ) => void;
   onDoubleTap?: (
     e: React.TouchEvent | TouchEvent,
     x: number,
@@ -20,7 +22,6 @@ interface UseTouchGesturesProps {
 }
 
 export const useTouchGestures = ({
-  rippleRef,
   onLongPress,
   onDoubleTap,
   onPinch,
@@ -31,9 +32,7 @@ export const useTouchGestures = ({
   allowLongPress = true,
 }: UseTouchGesturesProps) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const rippleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
-  const activeRippleIdRef = useRef<number | null>(null);
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(
     null,
   );
@@ -61,10 +60,6 @@ export const useTouchGestures = ({
           clearTimeout(timerRef.current);
           timerRef.current = null;
         }
-        if (rippleTimerRef.current) {
-          clearTimeout(rippleTimerRef.current);
-          rippleTimerRef.current = null;
-        }
         return;
       }
 
@@ -86,14 +81,10 @@ export const useTouchGestures = ({
           // It's a double tap
           onDoubleTap(e, clientX, clientY);
 
-          // Cancel long press and ripple
+          // Cancel long press
           if (timerRef.current) {
             clearTimeout(timerRef.current);
             timerRef.current = null;
-          }
-          if (rippleTimerRef.current) {
-            clearTimeout(rippleTimerRef.current);
-            rippleTimerRef.current = null;
           }
           lastTapRef.current = null;
           return;
@@ -105,16 +96,6 @@ export const useTouchGestures = ({
       isClickRef.current = true;
 
       if (!allowLongPress) return;
-
-      // Start ripple timer (appears after a short delay to avoid single click ripples)
-      rippleTimerRef.current = setTimeout(() => {
-        if (rippleRef?.current) {
-          activeRippleIdRef.current = rippleRef.current.addRipple(
-            clientX,
-            clientY,
-          );
-        }
-      }, 150); // Show ripple after 150ms of holding
 
       // Start long press timer
       timerRef.current = setTimeout(() => {
@@ -129,7 +110,6 @@ export const useTouchGestures = ({
     [
       onLongPress,
       longPressDelay,
-      rippleRef,
       stopPropagation,
       allowLongPress,
       onDoubleTap,
@@ -159,7 +139,7 @@ export const useTouchGestures = ({
         return;
       }
 
-      if (!timerRef.current && !activeRippleIdRef.current) return;
+      if (!timerRef.current) return;
 
       const touch = e.touches[0];
       if (!touch) return;
@@ -178,17 +158,9 @@ export const useTouchGestures = ({
           clearTimeout(timerRef.current);
           timerRef.current = null;
         }
-        if (rippleTimerRef.current) {
-          clearTimeout(rippleTimerRef.current);
-          rippleTimerRef.current = null;
-        }
-        if (activeRippleIdRef.current !== null && rippleRef?.current) {
-          rippleRef.current.removeRipple(activeRippleIdRef.current);
-          activeRippleIdRef.current = null;
-        }
       }
     },
-    [moveThreshold, rippleRef, onPinch],
+    [moveThreshold, onPinch],
   );
 
   const handleTouchEnd = useCallback(() => {
@@ -198,20 +170,12 @@ export const useTouchGestures = ({
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (rippleTimerRef.current) {
-      clearTimeout(rippleTimerRef.current);
-      rippleTimerRef.current = null;
-    }
-    if (activeRippleIdRef.current !== null && rippleRef?.current) {
-      rippleRef.current.removeRipple(activeRippleIdRef.current);
-      activeRippleIdRef.current = null;
-    }
     if (!isClickRef.current) {
       lastTapRef.current = null;
     }
     startPosRef.current = null;
     isClickRef.current = true;
-  }, [rippleRef]);
+  }, []);
 
   return {
     onTouchStart: handleTouchStart,

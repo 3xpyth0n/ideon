@@ -3,7 +3,7 @@ type BlockLike = {
   type?: string;
   data?: {
     blockType?: string;
-    metadata?: string;
+    metadata?: string | Record<string, unknown>;
   };
 };
 
@@ -21,13 +21,19 @@ const isFolder = (block?: BlockLike) => getBlockType(block) === "folder";
 const isCore = (block?: BlockLike) => getBlockType(block) === "core";
 
 const isCollapsed = (block?: BlockLike) => {
-  if (!block || !block.data?.metadata) return false;
-  try {
-    const meta = JSON.parse(block.data.metadata);
-    return !!meta.isCollapsed;
-  } catch {
-    return false;
+  const metadata = block?.data?.metadata;
+  if (!metadata) return false;
+
+  if (typeof metadata === "string") {
+    try {
+      const meta = JSON.parse(metadata);
+      return !!meta.isCollapsed;
+    } catch {
+      return false;
+    }
   }
+
+  return !!(metadata as { isCollapsed?: boolean }).isCollapsed;
 };
 
 export type FolderLinkRuleErrorCode =

@@ -1,9 +1,18 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { uniqueById } from "@lib/utils";
 import { UserPresence } from "./useProjectCanvasState";
 
 import type { Awareness } from "y-protocols/awareness";
+import uniqBy from "lodash/uniqBy";
+
+/**
+ * Deduplicates an array of objects by a specific property, keeping the last occurrence.
+ */
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const reversed = items.slice().reverse();
+  const deduped = uniqBy(reversed, "id");
+  return deduped.reverse();
+}
 
 const CURSOR_THROTTLE_MS = 33;
 const AWARENESS_THROTTLE_MS = 50;
@@ -96,7 +105,7 @@ export const useProjectCanvasRealtime = (
         },
       );
 
-      const unique = uniqueById(users);
+      const unique = dedupeById(users);
 
       // Update cursor ref (no React state, no re-renders)
       remoteCursorsRef.current = nextCursors;
@@ -226,7 +235,7 @@ export const useProjectCanvasRealtime = (
                   // ignore
                 }
 
-                const unique = uniqueById(users);
+                const unique = dedupeById(users);
                 // Update cursor ref and presence state similarly
                 remoteCursorsRef.current = nextCursors;
                 if (presenceChanged(prevPresenceRef.current, unique)) {

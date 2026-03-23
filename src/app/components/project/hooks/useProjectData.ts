@@ -3,8 +3,14 @@ import { Node, Edge, useReactFlow } from "@xyflow/react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import { useRouter } from "next/navigation";
-import { uniqueById } from "@lib/utils";
 import { BlockData } from "@components/project/CanvasBlock";
+
+/**
+ * Deduplicates an array of objects by the `id` property, keeping the last occurrence.
+ */
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  return Array.from(new Map(items.map((i) => [i.id, i])).values());
+}
 import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
@@ -114,7 +120,7 @@ export const useProjectData = ({
         }
         const data = await res.json();
         const newBlocks = data.blocks || [];
-        const newLinks = uniqueById((data.links || []) as Edge[]).map(
+        const newLinks = dedupeById((data.links || []) as Edge[]).map(
           (l: Edge) => ({
             ...l,
             type: l.type || "connection",

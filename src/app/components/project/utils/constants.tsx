@@ -7,4 +7,4 @@ export const CORE_BLOCK_X = -320;
 export const CORE_BLOCK_Y = -240;
 export const CORE_BLOCK_MARGIN = 20;
 
-export const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 };
+export const DEFAULT_VIEWPORT = { x: 800, y: 500, zoom: 1 };

@@ -154,8 +154,10 @@ export function getReactFlowViewportSize(): ViewportSize | null {
   if (typeof window === "undefined") return null;
 
   const root = document.querySelector(".react-flow") as HTMLElement | null;
-  const width = toPositiveNumber(root?.clientWidth, window.innerWidth);
-  const height = toPositiveNumber(root?.clientHeight, window.innerHeight);
+  if (!root) return null;
+
+  const width = root.clientWidth;
+  const height = root.clientHeight;
 
   if (width <= 0 || height <= 0) return null;
 

@@ -354,9 +354,65 @@ const ldb = new LeveldbPersistence(persistenceDir);
 setPersistence({
   bindState: async (docName: string, ydoc: Doc) => {
     const persistedYdoc = await ldb.getYDoc(docName);
+
+    // Prevent project poisoning by clearing massive text content
+    // on the server before syncing to clients. This fixes sync crashes (ERR_STRING_TOO_LONG).
+    if (docName.startsWith("project-")) {
+      try {
+        const contents = persistedYdoc.getMap("contents");
+        let hasChanges = false;
+
+        contents.forEach((v, k) => {
+          if (v instanceof Y.Text && v.length > 5 * 1024 * 1024) {
+            logger.warn(
+              { docName, key: k, length: v.length },
+              "[YJS] Truncating massive note content on server",
+            );
+            v.delete(1 * 1024 * 1024, v.length - 1 * 1024 * 1024);
+            v.insert(
+              v.length,
+              "\n\n[... Truncated by server due to excessive size ...]",
+            );
+            hasChanges = true;
+          }
+        });
+
+        const blocks = persistedYdoc.getMap("blocks");
+        blocks.forEach((v, k) => {
+          if (v && typeof v === "object") {
+            const data = (v as { data?: { content?: unknown } }).data;
+            if (
+              data &&
+              data.content &&
+              typeof data.content === "string" &&
+              data.content.length > 5 * 1024 * 1024
+            ) {
+              logger.warn(
+                { docName, key: k, length: data.content.length },
+                "[YJS] Truncating massive block data.content on server",
+              );
+              data.content =
+                data.content.slice(0, 1 * 1024 * 1024) + "\n\n[Truncated]";
+              hasChanges = true;
+            }
+          }
+        });
+
+        if (hasChanges) {
+          await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(persistedYdoc));
+        }
+      } catch (e) {
+        logger.error(
+          { err: e, docName },
+          "[YJS] Failed to apply emergency cleanup",
+        );
+      }
+    }
+
     const newUpdates = Y.encodeStateAsUpdate(ydoc);
     ldb.storeUpdate(docName, newUpdates);
     Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYdoc));
+
     ydoc.on("update", (update: Uint8Array) => {
       ldb.storeUpdate(docName, update);
     });
@@ -382,8 +438,30 @@ initDb()
       }
     });
 
-    const wss = new WebSocketServer({ noServer: true });
-    const shellWss = new WebSocketServer({ noServer: true });
+    const wss = new WebSocketServer({
+      noServer: true,
+      maxPayload: 1024 * 1024 * 1024, // 1GB
+      perMessageDeflate: {
+        zlibDeflateOptions: {
+          chunkSize: 1024,
+          memLevel: 7,
+          level: 3,
+        },
+        zlibInflateOptions: {
+          chunkSize: 10 * 1024,
+        },
+        clientNoContextTakeover: true,
+        serverNoContextTakeover: true,
+        serverMaxWindowBits: 10,
+        concurrencyLimit: 10,
+        threshold: 1024,
+      },
+    });
+    const shellWss = new WebSocketServer({
+      noServer: true,
+      maxPayload: 1024 * 1024 * 1024, // 1GB
+      perMessageDeflate: false,
+    });
     const nextUpgradeHandler = app.getUpgradeHandler();
 
     server.on("upgrade", async (request, socket, head) => {

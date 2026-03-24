@@ -402,7 +402,7 @@ const FileBlock = (props: CanvasBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
-              className="block-title"
+              className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />

@@ -85,6 +85,7 @@ import {
 } from "./hooks/useProjectCanvasState";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
 import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useCanvasTouchViewport } from "./hooks/useCanvasTouchViewport";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
   [-5000, -4000],
   [8000, 5000],
@@ -279,22 +280,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   const routerRef = useRef(router);
   const dictRef = useRef(dict);
-  const isTouchRef = useRef(false);
-
-  useEffect(() => {
-    const onTouch = () => {
-      isTouchRef.current = true;
-    };
-    const onMouse = () => {
-      isTouchRef.current = false;
-    };
-    document.addEventListener("touchstart", onTouch, true);
-    document.addEventListener("mousedown", onMouse, true);
-    return () => {
-      document.removeEventListener("touchstart", onTouch, true);
-      document.removeEventListener("mousedown", onMouse, true);
-    };
-  }, []);
+  // Track the last pointer type ("touch" | "pen" | "mouse") so we can
+  // suppress the browser context menu for non-mouse input.
+  const pointerTypeRef = useRef<string>("");
 
   useEffect(() => {
     dictRef.current = dict;
@@ -761,7 +749,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   );
 
   const onLongPress = useCallback(
-    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+    (
+      e: React.PointerEvent | PointerEvent | React.TouchEvent | TouchEvent,
+      x: number,
+      y: number,
+    ) => {
       if (isReadOnly) return;
 
       // Clear any existing selection to prevent text selection on long press
@@ -854,34 +846,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     [onBlockContextMenu, originalOnPaneClick],
   );
 
-  const onPinch = useCallback(
-    (delta: number, centerX: number, centerY: number) => {
-      if (isReadOnly) return;
-      const { x, y, zoom } = getViewport();
-
-      const sensitivity = 0.01; // Boosted
-      const factor = Math.pow(2, delta * sensitivity);
-      const nextZoom = Math.min(Math.max(zoom * factor, 0.1), 4);
-
-      if (nextZoom === zoom) return;
-
-      const rect = flowContainerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const localX = centerX - rect.left;
-      const localY = centerY - rect.top;
-
-      const flowX = (localX - x) / zoom;
-      const flowY = (localY - y) / zoom;
-
-      const nextX = localX - flowX * nextZoom;
-      const nextY = localY - flowY * nextZoom;
-
-      setViewport({ x: nextX, y: nextY, zoom: nextZoom }, { duration: 0 });
-    },
-    [getViewport, setViewport, isReadOnly],
-  );
-
   const touchHandlers = useTouchGestures({
     onLongPress,
     onDoubleTap: (e, x, y) => {
@@ -917,8 +881,22 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         clientY: y,
       } as unknown as React.MouseEvent);
     },
-    onPinch,
     allowLongPress: false,
+  });
+
+  const canvasTouchViewportHandlers = useCanvasTouchViewport({
+    disabled: isReadOnly,
+    minZoom: 0.1,
+    maxZoom: 4,
+    getViewport,
+    setViewport,
+    onPaneDoubleTap: (x, y) => {
+      onPaneContextMenu({
+        preventDefault: () => {},
+        clientX: x,
+        clientY: y,
+      } as unknown as React.MouseEvent);
+    },
   });
 
   useEffect(() => {
@@ -1231,6 +1209,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           onDrop={handleExternalDrop}
           tabIndex={0}
           ref={flowContainerRef}
+          onPointerDownCapture={(e) => {
+            pointerTypeRef.current = e.pointerType;
+            canvasTouchViewportHandlers.onPointerDownCapture(e);
+          }}
+          onPointerMoveCapture={canvasTouchViewportHandlers.onPointerMoveCapture}
+          onPointerUpCapture={canvasTouchViewportHandlers.onPointerUpCapture}
+          onPointerCancelCapture={
+            canvasTouchViewportHandlers.onPointerCancelCapture
+          }
           {...touchHandlers}
         >
           {isLoading && (
@@ -1311,7 +1298,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   onPointerMove={onPointerMove}
                   onPointerLeave={onPointerLeave}
                   onPaneContextMenu={(e) => {
-                    if (isTouchRef.current) {
+                    if (
+                      pointerTypeRef.current === "touch" ||
+                      pointerTypeRef.current === "pen"
+                    ) {
                       e.preventDefault();
                       return;
                     }

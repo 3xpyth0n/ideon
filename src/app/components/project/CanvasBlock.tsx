@@ -249,7 +249,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   );
 
   const onLongPress = useCallback(
-    (e: React.TouchEvent | TouchEvent) => {
+    (e: React.PointerEvent | PointerEvent | React.TouchEvent | TouchEvent) => {
       handleContentContextMenu(e as unknown as React.MouseEvent);
     },
     [handleContentContextMenu],
@@ -1086,7 +1086,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                 <input
                   value={title}
                   onChange={handleTitleChange}
-                  className="block-title"
+                  className="block-title nodrag"
                   placeholder={dict.blocks.title || "..."}
                   readOnly={isReadOnly}
                 />

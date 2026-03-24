@@ -169,18 +169,19 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
   const status =
     percentage === 100 ? "complete" : percentage > 0 ? "in-progress" : "idle";
 
-  const onLongPress = useCallback((e: React.TouchEvent | TouchEvent) => {
-    const target = e.target as HTMLElement;
-    const event = new MouseEvent("contextmenu", {
-      bubbles: true,
-      cancelable: true,
-      clientX:
-        "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX,
-      clientY:
-        "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY,
-    });
-    target.dispatchEvent(event);
-  }, []);
+  const onLongPress = useCallback(
+    (e: React.PointerEvent | PointerEvent | React.TouchEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: (e as PointerEvent).clientX,
+        clientY: (e as PointerEvent).clientY,
+      });
+      target.dispatchEvent(event);
+    },
+    [],
+  );
 
   const touchHandlers = useTouchGestures({
     onLongPress,
@@ -831,7 +832,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
-              className="block-title"
+              className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />

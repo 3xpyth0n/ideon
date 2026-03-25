@@ -668,7 +668,7 @@ const GitBlock = (props: CanvasBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] px-2">
+      <div className="w-full h-full flex flex-col">
         <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
           <div className="flex items-center gap-2">
             <GitGraph size={14} className="block-type-icon git" />

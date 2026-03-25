@@ -809,7 +809,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
+      <div className="w-full h-full flex flex-col">
         <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
           <div className="flex items-center gap-2">
             <Check size={16} />

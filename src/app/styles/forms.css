@@ -650,17 +650,15 @@ input:-webkit-autofill:active {
 @keyframes block-enter {
   0% {
     opacity: 0;
-    filter: blur(4px);
   }
 
   100% {
     opacity: 1;
-    filter: blur(0);
   }
 }
 
 .project-canvas .react-flow__node.block-just-created {
-  animation: block-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: block-enter 0.25s ease-out;
 }
 
 @media (max-width: 768px) {

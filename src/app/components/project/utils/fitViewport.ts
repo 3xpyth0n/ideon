@@ -150,6 +150,63 @@ export function computeLongestSideViewport(
   };
 }
 
+export function computeViewportToRevealBounds(
+  viewport: FitViewport,
+  viewportSize: ViewportSize,
+  bounds: Bounds,
+  options?: Pick<FitOptions, "padding">,
+): FitViewport {
+  const padding = clamp(options?.padding ?? FALLBACK_PADDING, 0, 0.45);
+  const zoom = toPositiveNumber(viewport.zoom, 1);
+  const viewportLeft = -viewport.x / zoom;
+  const viewportTop = -viewport.y / zoom;
+  const viewportWidth = viewportSize.width / zoom;
+  const viewportHeight = viewportSize.height / zoom;
+  const insetX = (viewportSize.width * padding) / zoom;
+  const insetY = (viewportSize.height * padding) / zoom;
+  const safeWidth = Math.max(1, viewportWidth - insetX * 2);
+  const safeHeight = Math.max(1, viewportHeight - insetY * 2);
+  const targetRight = bounds.x + bounds.width;
+  const targetBottom = bounds.y + bounds.height;
+  let nextLeft = viewportLeft;
+  let nextTop = viewportTop;
+
+  if (bounds.width > safeWidth) {
+    nextLeft = bounds.x + bounds.width / 2 - viewportWidth / 2;
+  } else {
+    const safeLeft = viewportLeft + insetX;
+    const safeRight = viewportLeft + viewportWidth - insetX;
+
+    if (bounds.x < safeLeft) nextLeft = bounds.x - insetX;
+    else if (targetRight > safeRight)
+      nextLeft = targetRight + insetX - viewportWidth;
+  }
+
+  if (bounds.height > safeHeight) {
+    nextTop = bounds.y + bounds.height / 2 - viewportHeight / 2;
+  } else {
+    const safeTop = viewportTop + insetY;
+    const safeBottom = viewportTop + viewportHeight - insetY;
+
+    if (bounds.y < safeTop) nextTop = bounds.y - insetY;
+    else if (targetBottom > safeBottom)
+      nextTop = targetBottom + insetY - viewportHeight;
+  }
+
+  if (
+    Math.abs(nextLeft - viewportLeft) < Number.EPSILON &&
+    Math.abs(nextTop - viewportTop) < Number.EPSILON
+  ) {
+    return viewport;
+  }
+
+  return {
+    zoom,
+    x: -nextLeft * zoom,
+    y: -nextTop * zoom,
+  };
+}
+
 export function getReactFlowViewportSize(): ViewportSize | null {
   if (typeof window === "undefined") return null;
 

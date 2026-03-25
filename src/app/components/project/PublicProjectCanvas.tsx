@@ -36,6 +36,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Y from "yjs";
 import { DEFAULT_VIEWPORT, DEFAULT_BLOCK_WIDTH } from "./utils/constants";
 import {
+  computeViewportToRevealBounds,
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
@@ -79,8 +80,15 @@ function PublicProjectCanvasContent({
   projectName,
 }: PublicProjectCanvasProps) {
   const { dict } = useI18n();
-  const { fitView, zoomIn, zoomOut, setViewport, getNodes, setNodes } =
-    useReactFlow();
+  const {
+    fitView,
+    getViewport,
+    zoomIn,
+    zoomOut,
+    setViewport,
+    getNodes,
+    setNodes,
+  } = useReactFlow();
   const [zoom, setZoom] = useState(100);
 
   const applyLongestSideFit = useCallback(
@@ -127,6 +135,25 @@ function PublicProjectCanvasContent({
       setViewport({ x: 0, y: 0, zoom: 1 }, { duration: FIT_DURATION });
     else applyLongestSideFit(allNodes as Node<BlockData>[], FIT_MAX_ZOOM_ALL);
   }, [getNodes, applyLongestSideFit, setViewport]);
+
+  const revealNodesAtCurrentZoom = useCallback(
+    (targetNodes: Node<BlockData>[]) => {
+      const bounds = getNodesBoundsWithFallback(targetNodes);
+      const viewportSize = getReactFlowViewportSize();
+
+      if (!bounds || !viewportSize) return;
+
+      const nextViewport = computeViewportToRevealBounds(
+        getViewport(),
+        viewportSize,
+        bounds,
+        { padding: FIT_PADDING },
+      );
+
+      setViewport(nextViewport, { duration: FIT_DURATION });
+    },
+    [getViewport, setViewport],
+  );
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -202,10 +229,10 @@ function PublicProjectCanvasContent({
             selected: n.id === (best as Node<BlockData>).id,
           })),
         );
-        applyLongestSideFit([best], FIT_MAX_ZOOM_SELECTED);
+        revealNodesAtCurrentZoom([best]);
       }
     },
-    [getNodes, setNodes, handleFitView, applyLongestSideFit],
+    [getNodes, setNodes, handleFitView, revealNodesAtCurrentZoom],
   );
 
   const onMove = useCallback(
@@ -275,6 +302,7 @@ function PublicProjectCanvasContent({
         defaultViewport={DEFAULT_VIEWPORT}
         minZoom={0.1}
         maxZoom={4}
+        disableKeyboardA11y
         nodesDraggable={false}
         nodesConnectable={false}
         edgesReconnectable={false}

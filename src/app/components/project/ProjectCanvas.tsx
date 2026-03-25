@@ -1326,6 +1326,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 minZoom={0.1}
                 maxZoom={4}
                 deleteKeyCode={null}
+                disableKeyboardA11y
                 selectionOnDrag={!isReadOnly}
                 selectionKeyCode={null}
                 nodesDraggable={!isReadOnly}

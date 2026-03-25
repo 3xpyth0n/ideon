@@ -25,6 +25,7 @@ import {
   updateSelectedBlockOrder,
 } from "@components/project/utils/interaction";
 import {
+  computeViewportToRevealBounds,
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
@@ -369,8 +370,14 @@ export const useProjectCanvasState = (
   onGraphMutation?: (intent: string) => void,
 ) => {
   const { dict } = useI18n();
-  const { fitView, getZoom, zoomTo, setViewport, screenToFlowPosition } =
-    useReactFlow();
+  const {
+    fitView,
+    getViewport,
+    getZoom,
+    zoomTo,
+    setViewport,
+    screenToFlowPosition,
+  } = useReactFlow();
 
   const applyLongestSideFit = useCallback(
     (targetBlocks: Node<BlockData>[], maxZoom: number) => {
@@ -405,6 +412,25 @@ export const useProjectCanvasState = (
       setViewport(nextViewport, { duration: FIT_DURATION });
     },
     [fitView, setViewport],
+  );
+
+  const revealBlocksAtCurrentZoom = useCallback(
+    (targetBlocks: Node<BlockData>[]) => {
+      const bounds = getNodesBoundsWithFallback(targetBlocks);
+      const viewportSize = getReactFlowViewportSize();
+
+      if (!bounds || !viewportSize) return;
+
+      const nextViewport = computeViewportToRevealBounds(
+        getViewport(),
+        viewportSize,
+        bounds,
+        { padding: FIT_PADDING },
+      );
+
+      setViewport(nextViewport, { duration: FIT_DURATION });
+    },
+    [getViewport, setViewport],
   );
 
   const [blocks, setBlocksState] = useState<Node<BlockData>[]>([]);
@@ -2393,7 +2419,7 @@ export const useProjectCanvasState = (
             })),
           );
 
-          applyLongestSideFit([bestCandidate], FIT_MAX_ZOOM_SELECTED);
+          revealBlocksAtCurrentZoom([bestCandidate]);
         }
         return;
       }
@@ -2430,6 +2456,7 @@ export const useProjectCanvasState = (
       graph,
       projectOwnerId,
       handleFitView,
+      revealBlocksAtCurrentZoom,
     ],
   );
 

@@ -49,15 +49,31 @@ const getRateLimiter = () => {
   });
 };
 
-import { authConfig } from "./auth.config";
-
 // Auth configuration
 export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
   const freshConfig = await getAuthProviders();
   const db = getDb();
 
   return {
-    ...authConfig,
+    session: { strategy: "jwt" },
+    cookies: {
+      sessionToken: {
+        name: `authjs.session-token`,
+        options: {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          secure:
+            process.env.NODE_ENV === "production" &&
+            (process.env.APP_URL?.startsWith("https") ?? false),
+        },
+      },
+    },
+    pages: {
+      signIn: "/login",
+      error: "/login",
+    },
+    secret: process.env.SECRET_KEY || process.env.AUTH_SECRET,
     trustHost: true,
     adapter: KyselyAdapter(),
     providers: [
@@ -458,10 +474,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         return session;
       },
     },
-    pages: {
-      signIn: "/login",
-      error: "/login",
-    },
+
     logger: {
       error(error) {
         // Suppress CredentialsSignin stack trace but keep the 401 status in logs

@@ -1213,7 +1213,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             pointerTypeRef.current = e.pointerType;
             canvasTouchViewportHandlers.onPointerDownCapture(e);
           }}
-          onPointerMoveCapture={canvasTouchViewportHandlers.onPointerMoveCapture}
+          onPointerMoveCapture={
+            canvasTouchViewportHandlers.onPointerMoveCapture
+          }
           onPointerUpCapture={canvasTouchViewportHandlers.onPointerUpCapture}
           onPointerCancelCapture={
             canvasTouchViewportHandlers.onPointerCancelCapture

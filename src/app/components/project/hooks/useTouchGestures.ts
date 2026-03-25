@@ -2,21 +2,7 @@
 
 import { useCallback, useRef } from "react";
 
-/**
- * Touch and pointer gesture handler using the Pointer Events API.
- *
- * Why Pointer Events?
- * - Unified API for touch, pen, and mouse input (one handler for all).
- * - ReactFlow v12 calls preventDefault() on its pointerdown handler, which
- *   per the Pointer Events spec suppresses the corresponding legacy
- *   touchstart event. Using Pointer Events ourselves means our handlers
- *   fire on the same event channel that ReactFlow uses, so they are never
- *   suppressed.
- *
- * Fallback: if the browser does not support PointerEvent, we fall back to
- * legacy Touch Events so the hook still works.
- */
-
+// Uses Pointer Events to prevent event suppression by ReactFlow v12, with Touch fallback
 export interface UseTouchGesturesProps {
   onLongPress: (
     e: React.PointerEvent | PointerEvent | React.TouchEvent | TouchEvent,

@@ -57,7 +57,7 @@ export default function UsersClient({ currentUserRole }: UsersClientProps) {
     useState<UserProfile | null>(null);
 
   const onLongPress = useCallback(
-    (e: React.TouchEvent | TouchEvent) => {
+    (e: React.TouchEvent | TouchEvent | React.PointerEvent | PointerEvent) => {
       const target = e.target as HTMLElement;
       const userCard = target.closest("[data-user-id]");
       if (userCard) {

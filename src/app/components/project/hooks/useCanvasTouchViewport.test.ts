@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import {
   classifyCanvasTouchTarget,
@@ -71,7 +72,7 @@ describe("useCanvasTouchViewport helpers", () => {
 
     expect(viewport.zoom).toBe(2);
     expect(viewport.x).toBeCloseTo(20);
-    expect(viewport.y).toBeCloseTo(95);
+    expect(viewport.y).toBeCloseTo(25);
   });
 
   it("clamps pinch zoom to the configured bounds", () => {

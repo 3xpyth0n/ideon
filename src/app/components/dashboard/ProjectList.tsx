@@ -103,7 +103,11 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   const isTrash = view === "trash";
 
   const onLongPress = useCallback(
-    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+    (
+      e: React.TouchEvent | TouchEvent | React.PointerEvent | PointerEvent,
+      x: number,
+      y: number,
+    ) => {
       const target = e.target as HTMLElement;
 
       const folderCard = target.closest("[data-folder-id]");

@@ -182,13 +182,10 @@ export const useCanvasTouchViewport = ({
     [clearGestureState],
   );
 
-  const stopCanvasTouchEvent = useCallback(
-    (event: React.PointerEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    [],
-  );
+  const stopCanvasTouchEvent = useCallback((event: React.PointerEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
 
   const onPointerDownCapture = useCallback(
     (event: React.PointerEvent) => {

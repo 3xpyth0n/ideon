@@ -1929,6 +1929,7 @@ export const useProjectCanvasState = (
       return {
         ...block,
         draggable: isPreviewMode ? false : isLocked ? !!isOwner : true,
+        dragHandle: ".block-header, .shell-block-header, .handle-drag-target",
         selectable: !isPreviewMode,
         deletable: isPreviewMode ? false : !!canManage,
         data: {

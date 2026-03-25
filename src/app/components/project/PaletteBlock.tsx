@@ -130,7 +130,11 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
   );
 
   const onLongPress = useCallback(
-    (e: React.TouchEvent | TouchEvent, x: number, y: number) => {
+    (
+      e: React.PointerEvent | PointerEvent | React.TouchEvent | TouchEvent,
+      x: number,
+      y: number,
+    ) => {
       if (isReadOnly) return;
       const target = e.target as HTMLElement;
       const colorItem = target.closest("[data-color-index]");
@@ -278,7 +282,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
           <input
             value={title}
             onChange={handleTitleChange}
-            className="block-title"
+            className="block-title nodrag"
             placeholder={dict.blocks.title || "..."}
             readOnly={isReadOnly}
           />

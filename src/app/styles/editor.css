@@ -115,10 +115,36 @@
   background-color: white;
   user-select: none;
   -webkit-touch-callout: none;
+  overscroll-behavior: contain;
 }
 
 .project-canvas {
   transition: filter 0.16s ease;
+}
+
+.project-canvas .react-flow__pane {
+  touch-action: none;
+}
+
+.project-canvas .block-header,
+.project-canvas .shell-block-header,
+.project-canvas .handle-drag-target {
+  touch-action: none;
+}
+
+.project-canvas .checklist-block-container,
+.project-canvas .contact-block-container,
+.project-canvas .palette-block-container,
+.project-canvas .snippet-block-container,
+.project-canvas .kb-tasks,
+.project-canvas .block-content.overflow-y-auto,
+.project-canvas .block-description,
+.preview-mode .block-content {
+  touch-action: pan-y;
+}
+
+.project-canvas .kb-scroll {
+  touch-action: pan-x;
 }
 
 .project-canvas-container.drop-active .project-canvas {

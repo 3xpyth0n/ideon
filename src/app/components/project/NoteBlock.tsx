@@ -733,7 +733,7 @@ const NoteBlock = memo(
                   onChange={handleTitleChange}
                   onFocus={() => setIsTitleEditing(true)}
                   onBlur={() => setIsTitleEditing(false)}
-                  className="block-title"
+                  className="block-title nodrag"
                   placeholder={dict.blocks.title || "..."}
                   disabled={isReadOnly}
                 />

@@ -467,7 +467,12 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Node<BlockData>>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+      if (
+        (transaction.local &&
+          !(transaction.origin instanceof Y.UndoManager) &&
+          transaction.origin !== "local-react-update") ||
+        transaction.origin === "local-react-update"
+      )
         return;
 
       const changes: Array<{
@@ -539,7 +544,12 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Edge>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+      if (
+        (transaction.local &&
+          !(transaction.origin instanceof Y.UndoManager) &&
+          transaction.origin !== "local-react-update") ||
+        transaction.origin === "local-react-update"
+      )
         return;
 
       const changes: Array<{
@@ -595,7 +605,12 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Y.Text>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+      if (
+        (transaction.local &&
+          !(transaction.origin instanceof Y.UndoManager) &&
+          transaction.origin !== "local-react-update") ||
+        transaction.origin === "local-react-update"
+      )
         return;
 
       const keys = Array.from(event.keysChanged);
@@ -663,6 +678,10 @@ export const useProjectCanvasState = (
     setBlocksState(
       initialBlocks.map((rn) => {
         const yText = yContents.get(rn.id);
+        // Defer toString() to avoid main thread freeze during initial sync of 1000+ blocks
+        const initialContent = (rn.data as unknown as { content?: string })
+          ?.content;
+
         return {
           ...rn,
           selected: false,
@@ -675,9 +694,8 @@ export const useProjectCanvasState = (
           data: {
             ...(rn.data as unknown as Record<string, unknown>),
             yText,
-            content: yText
-              ? yText.toString()
-              : (rn.data as unknown as { content?: string }).content || "",
+            // Only use existing content string if available, don't force a yText.toString() here
+            content: initialContent || "",
           },
         } as Node<BlockData>;
       }),
@@ -742,14 +760,18 @@ export const useProjectCanvasState = (
         );
 
         const enrichedNextBlocks = nextBlocks;
+        const prevBlocksMap = new Map(prev.map((b) => [b.id, b]));
 
         if (!isPreviewModeRef.current) {
           yBlocks.doc?.transact(() => {
             nextBlocks.forEach((block) => {
+              const prevBlock = prevBlocksMap.get(block.id);
+              if (prevBlock === block) return;
+
+              const existing = yBlocks.get(block.id);
               const blockToSync = { ...block };
 
               if (currentUserRole === "viewer") {
-                const existing = yBlocks.get(block.id);
                 if (!existing) return;
 
                 const existingData = existing.data || {};
@@ -788,7 +810,6 @@ export const useProjectCanvasState = (
                 data: blockData,
               };
 
-              const existing = yBlocks.get(block.id);
               const isSummaryUpdate = !!cleanBlockToSync.data?.isSummary;
               const isExistingDetailed = existing && !existing.data?.isSummary;
 
@@ -816,6 +837,7 @@ export const useProjectCanvasState = (
                 existing.position.y !== cleanBlockToSync.position.y ||
                 existing.width !== cleanBlockToSync.width ||
                 existing.height !== cleanBlockToSync.height ||
+                existing.type !== cleanBlockToSync.type ||
                 JSON.stringify(existing.data) !==
                   JSON.stringify(cleanBlockToSync.data);
 
@@ -823,7 +845,7 @@ export const useProjectCanvasState = (
                 yBlocks.set(block.id, cleanBlockToSync as Node<BlockData>);
               }
             });
-          }, yBlocks.doc.clientID);
+          }, "local-react-update");
         }
 
         // Return blocks
@@ -855,10 +877,15 @@ export const useProjectCanvasState = (
 
       setLinksState((prev) => {
         const nextLinks = typeof update === "function" ? update(prev) : update;
+        const prevLinksMap = new Map((prev || []).map((l) => [l.id, l]));
 
         if (!isPreviewModeRef.current && currentUserRole !== "viewer") {
           yLinks.doc?.transact(() => {
             nextLinks.forEach((link) => {
+              const prevLink = prevLinksMap.get(link.id);
+              if (prevLink === link) return;
+
+              const existing = yLinks.get(link.id);
               const linkToSync = { ...link };
               delete linkToSync.selected;
 
@@ -871,16 +898,20 @@ export const useProjectCanvasState = (
 
               linkToSync.data = cleanData;
 
-              const existing = yLinks.get(link.id);
               const hasChanged =
                 !existing ||
-                JSON.stringify(existing) !== JSON.stringify(linkToSync);
+                existing.source !== linkToSync.source ||
+                existing.target !== linkToSync.target ||
+                existing.sourceHandle !== linkToSync.sourceHandle ||
+                existing.targetHandle !== linkToSync.targetHandle ||
+                JSON.stringify(existing.data) !==
+                  JSON.stringify(linkToSync.data);
 
               if (hasChanged) {
                 yLinks.set(link.id, linkToSync as Edge);
               }
             });
-          }, yLinks.doc.clientID);
+          }, "local-react-update");
         }
 
         return nextLinks;
@@ -1929,7 +1960,8 @@ export const useProjectCanvasState = (
       return {
         ...block,
         draggable: isPreviewMode ? false : isLocked ? !!isOwner : true,
-        dragHandle: ".block-header, .shell-block-header, .handle-drag-target",
+        dragHandle:
+          ".block-card, .block-header, .block-footer, .shell-block-header, .handle-drag-target",
         selectable: !isPreviewMode,
         deletable: isPreviewMode ? false : !!canManage,
         data: {

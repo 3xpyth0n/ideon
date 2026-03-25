@@ -1330,6 +1330,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 panOnDrag={true}
                 multiSelectionKeyCode="Control"
                 fitView
+                onlyRenderVisibleElements={true}
                 className={`project-canvas ${isReadOnly ? "read-only" : ""}`}
                 proOptions={{ hideAttribution: true }}
               >

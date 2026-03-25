@@ -11,7 +11,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "dev": "NODE_ENV=development NODE_OPTIONS='--max-old-space-size=8192' tsx watch src/server.ts",
+    "dev": "./compose.sh build && ./compose.sh restart",
     "build": "next build --webpack && tsup",
     "start": "NODE_OPTIONS='--max-old-space-size=8192' node dist/server.cjs",
     "check": "eslint . --max-warnings=0; tsc --noEmit",

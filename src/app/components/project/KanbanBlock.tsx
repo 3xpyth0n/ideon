@@ -983,7 +983,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
       />
 
       <div className="kb-root">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="block-header handle-drag-target flex items-center gap-2 mb-2">
           <div className="flex items-center gap-2">
             <Kanban size={14} />
             <span className="text-sm uppercase tracking-wider opacity-50 font-bold">

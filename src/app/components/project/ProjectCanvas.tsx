@@ -82,6 +82,7 @@ import {
   UserPresence,
 } from "./hooks/useProjectCanvasState";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
+import { shouldIgnoreNodeContextMenuShortcut } from "./utils/interaction";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useCanvasTouchViewport } from "./hooks/useCanvasTouchViewport";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
@@ -828,6 +829,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     (event: React.MouseEvent, node: Node) => {
       // Clear context menu as per original onBlockClick
       originalOnPaneClick();
+
+      if (shouldIgnoreNodeContextMenuShortcut(event.target)) {
+        lastNodeClickRef.current = null;
+        return;
+      }
 
       const now = Date.now();
       if (lastNodeClickRef.current && lastNodeClickRef.current.id === node.id) {

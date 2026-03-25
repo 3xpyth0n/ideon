@@ -46,6 +46,7 @@ import { BlockFooter } from "./BlockFooter";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { shouldStartNoteInEditMode } from "./utils/interaction";
 import dynamic from "next/dynamic";
 import { markdown } from "@codemirror/lang-markdown";
 import "./markdown-editor.css";
@@ -364,7 +365,9 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   });
 
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(() =>
+    shouldStartNoteInEditMode(data.content, isReadOnly),
+  );
   const [showBubbleMenu, setShowBubbleMenu] = useState(false);
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isEditingLink, setIsEditingLink] = useState(false);

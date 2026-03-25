@@ -7,6 +7,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.7.6] - 2026-03-XX
 
+### Added
+
+- Ability to copy multiple blocks content by concatenating them in the order they were selected.
+
 ### Fixed
 
 - Fixed blurry content when zooming out in the canvas.

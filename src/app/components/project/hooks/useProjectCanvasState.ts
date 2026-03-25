@@ -20,6 +20,11 @@ import {
 } from "@components/project/utils/constants";
 import { generateStateHash } from "@components/project/utils/hash";
 import {
+  buildMultiBlockCopyText,
+  shouldOverrideMultiBlockCopy,
+  updateSelectedBlockOrder,
+} from "@components/project/utils/interaction";
+import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
@@ -416,6 +421,7 @@ export const useProjectCanvasState = (
     });
   const isPreviewModeRef = useRef(false);
   const externalDragDepthRef = useRef(0);
+  const selectedBlockOrderRef = useRef<string[]>([]);
 
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -760,6 +766,10 @@ export const useProjectCanvasState = (
         );
 
         const enrichedNextBlocks = nextBlocks;
+        selectedBlockOrderRef.current = updateSelectedBlockOrder(
+          selectedBlockOrderRef.current,
+          enrichedNextBlocks,
+        );
         const prevBlocksMap = new Map(prev.map((b) => [b.id, b]));
 
         if (!isPreviewModeRef.current) {
@@ -1874,7 +1884,44 @@ export const useProjectCanvasState = (
   const blocksRef = useRef(blocks);
   useEffect(() => {
     blocksRef.current = blocks;
+    selectedBlockOrderRef.current = updateSelectedBlockOrder(
+      selectedBlockOrderRef.current,
+      blocks,
+    );
   }, [blocks]);
+
+  useEffect(() => {
+    const handleCopy = (event: ClipboardEvent) => {
+      const selectedBlocks = blocksRef.current.filter(
+        (block) => block.selected,
+      );
+      const selectedText = (window.getSelection?.() ?? null)?.toString() ?? "";
+      const hasTextSelection = selectedText.trim().length > 0;
+
+      if (
+        !shouldOverrideMultiBlockCopy({
+          selectedBlockCount: selectedBlocks.length,
+          activeElement: document.activeElement,
+          hasTextSelection,
+        })
+      ) {
+        return;
+      }
+
+      const copiedText = buildMultiBlockCopyText(
+        selectedBlocks,
+        selectedBlockOrderRef.current,
+      );
+
+      if (!copiedText || !event.clipboardData) return;
+
+      event.clipboardData.setData("text/plain", copiedText);
+      event.preventDefault();
+    };
+
+    window.addEventListener("copy", handleCopy);
+    return () => window.removeEventListener("copy", handleCopy);
+  }, []);
 
   const io = useProjectData({
     initialProjectId,

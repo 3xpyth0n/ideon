@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Ability to copy multiple blocks content by concatenating them in the order they were selected.
+- Added `Ctrl+E` and `Ctrl+P` note block shortcuts to switch between edit and preview modes while preserving inline code formatting and command palette conflicts.
 
 ### Fixed
 
@@ -24,9 +25,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.7.4] - 2026-03-20
 
-### Added
+### Fixed
 
-- Improved folder block styling [#61](https://github.com/3xpyth0n/ideon/issues/61).
+- Fixed poor readability of folder cards in light mode dashboard view [#61](https://github.com/3xpyth0n/ideon/issues/61).
 
 ## [0.7.3] - 2026-03-19
 

@@ -46,7 +46,11 @@ import { BlockFooter } from "./BlockFooter";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
-import { shouldStartNoteInEditMode } from "./utils/interaction";
+import {
+  resolveNoteModeShortcutAction,
+  shouldStartNoteInEditMode,
+  type NoteModeShortcutHandler,
+} from "./utils/interaction";
 import dynamic from "next/dynamic";
 import { markdown } from "@codemirror/lang-markdown";
 import "./markdown-editor.css";
@@ -636,6 +640,48 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     [id, data],
   );
 
+  const handleNoteModeShortcut = useCallback<NoteModeShortcutHandler>(
+    (key) => {
+      const action = resolveNoteModeShortcutAction({
+        key,
+        isEditing,
+        isReadOnly,
+        vimMode: !!currentUser?.vimMode,
+        hasRichTextEditor: !!editor && !currentUser?.vimMode,
+      });
+
+      switch (action) {
+        case "switchToPreview":
+          setIsEditing(false);
+          return "handled";
+        case "switchToEdit":
+          setIsEditing(true);
+          return "handled";
+        case "toggleInlineCode":
+          editor?.chain().focus().toggleCode().run();
+          return "handled";
+        case "noop":
+          return "handled";
+        case "passThrough":
+        default:
+          return "passThrough";
+      }
+    },
+    [currentUser?.vimMode, editor, isEditing, isReadOnly],
+  );
+
+  useEffect(() => {
+    data.registerNoteModeShortcutHandler?.(id, handleNoteModeShortcut);
+
+    return () => {
+      data.registerNoteModeShortcutHandler?.(id, null);
+    };
+  }, [data.registerNoteModeShortcutHandler, handleNoteModeShortcut, id]);
+
+  const handleEditorPreviewShortcut = useCallback(() => {
+    handleNoteModeShortcut("p");
+  }, [handleNoteModeShortcut]);
+
   return (
     <>
       <CustomNodeResizer
@@ -689,6 +735,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                   extensions={noteVimExtensions}
                   theme="dark"
                   className="h-full font-mono text-sm leading-relaxed"
+                  onPreviewShortcut={handleEditorPreviewShortcut}
                 />
               ) : (
                 <MarkdownEditor
@@ -700,6 +747,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                   className="text-base prosemirror-full-height"
                   onEditorReady={setEditor}
                   onLinkShortcut={openLinkModal}
+                  onPreviewShortcut={handleEditorPreviewShortcut}
                 />
               )
             ) : (

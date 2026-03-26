@@ -82,7 +82,12 @@ import {
   UserPresence,
 } from "./hooks/useProjectCanvasState";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
-import { shouldIgnoreNodeContextMenuShortcut } from "./utils/interaction";
+import {
+  getSelectedNoteBlockIdForShortcut,
+  shouldIgnoreNodeContextMenuShortcut,
+  type NoteModeShortcutHandler,
+  type NoteModeShortcutKey,
+} from "./utils/interaction";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useCanvasTouchViewport } from "./hooks/useCanvasTouchViewport";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
@@ -537,6 +542,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     position: { x: number; y: number };
   } | null>(null);
   const mobileActionsRef = useRef<HTMLDivElement>(null);
+  const noteModeShortcutHandlersRef = useRef(
+    new Map<string, NoteModeShortcutHandler>(),
+  );
+
+  const registerNoteModeShortcutHandler = useCallback(
+    (blockId: string, handler: NoteModeShortcutHandler | null) => {
+      if (handler) {
+        noteModeShortcutHandlersRef.current.set(blockId, handler);
+      } else {
+        noteModeShortcutHandlersRef.current.delete(blockId);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -597,20 +616,45 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       }
 
       if (e.ctrlKey || e.metaKey) {
-        const target = e.target as HTMLElement;
+        const target = e.target as HTMLElement | null;
+        const activeElement =
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : target;
+        const shortcutKey = e.key.toLowerCase();
         const isEditing =
-          ["INPUT", "TEXTAREA"].includes(target.tagName) ||
-          target.isContentEditable;
+          !!activeElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+            activeElement.isContentEditable);
+
         if (!isEditing) {
-          if (e.key === "p") {
+          if (shortcutKey === "p" || shortcutKey === "e") {
+            const noteBlockId = getSelectedNoteBlockIdForShortcut({
+              blocks,
+              activeElement,
+            });
+            const shortcutResult = noteBlockId
+              ? noteModeShortcutHandlersRef.current.get(noteBlockId)?.(
+                  shortcutKey as NoteModeShortcutKey,
+                )
+              : undefined;
+
+            if (shortcutResult === "handled") {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
+          }
+
+          if (shortcutKey === "p") {
             e.preventDefault();
             e.stopPropagation();
             setIsPaletteOpen((v) => !v);
-          } else if (e.key === "a") {
+          } else if (shortcutKey === "a") {
             e.preventDefault();
             e.stopPropagation();
             setIsAddBlockOpen((v) => !v);
-          } else if (e.key === "h") {
+          } else if (shortcutKey === "h") {
             e.preventDefault();
             e.stopPropagation();
             setIsHistoryOpen((v) => !v);
@@ -620,7 +664,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [pendingConnection]);
+  }, [blocks, pendingConnection]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -1163,6 +1207,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           ...block.data,
           isPreviewMode,
           currentUser: currentUser || undefined,
+          registerNoteModeShortcutHandler,
           userRole: currentUserRole || undefined,
         },
       }));
@@ -1172,6 +1217,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     currentUser,
     currentUserRole,
     newBlockId,
+    registerNoteModeShortcutHandler,
     visibleBlockIds,
   ]);
 

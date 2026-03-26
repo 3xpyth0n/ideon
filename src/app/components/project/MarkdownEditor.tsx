@@ -142,6 +142,7 @@ interface MarkdownEditorProps {
   onBlur?: () => void;
   onEditorReady?: (editor: Editor) => void;
   onLinkShortcut?: () => void;
+  onPreviewShortcut?: () => void;
 }
 
 interface MarkdownStorage {
@@ -160,6 +161,7 @@ const MarkdownEditor = ({
   onBlur,
   onEditorReady,
   onLinkShortcut,
+  onPreviewShortcut,
 }: MarkdownEditorProps) => {
   const [, setIsFocused] = useState(false);
   const isSyncingRef = useRef(false);
@@ -403,6 +405,18 @@ const MarkdownEditor = ({
           : ""
       }`}
       onClick={handleContainerClick}
+      onKeyDownCapture={(event) => {
+        if (
+          !isReadOnly &&
+          onPreviewShortcut &&
+          (event.ctrlKey || event.metaKey) &&
+          event.key.toLowerCase() === "p"
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          onPreviewShortcut();
+        }
+      }}
     >
       <EditorContext.Provider value={{ editor }}>
         <EditorContent editor={editor} className="h-full" />

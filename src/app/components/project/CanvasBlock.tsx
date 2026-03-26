@@ -36,6 +36,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
 import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
+import type { NoteModeShortcutHandler } from "./utils/interaction";
 
 export type BlockData = {
   title?: string;
@@ -112,6 +113,10 @@ export type BlockData = {
     },
   ) => void;
   onFolderToggle?: (folderId: string, isCollapsed: boolean) => void;
+  registerNoteModeShortcutHandler?: (
+    blockId: string,
+    handler: NoteModeShortcutHandler | null,
+  ) => void;
   typingUsers?: UserPresence[];
   movingUserColor?: string;
   projectOwnerId?: string | null;

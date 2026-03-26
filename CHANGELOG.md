@@ -15,6 +15,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fixed blurry content when zooming out in the canvas.
+- Fixed OIDC/SSO login lockout for invited or existing users when the provider returned `email_verified=false` [#62](https://github.com/3xpyth0n/ideon/issues/62).
 
 ## [0.7.5] - 2026-03-23
 

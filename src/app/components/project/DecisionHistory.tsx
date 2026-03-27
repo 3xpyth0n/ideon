@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
 } from "react";
 import { useI18n } from "@providers/I18nProvider";
+import { formatDateParts } from "../../../lib/formatDate";
 import { Button } from "@components/ui/Button";
 import {
   History,
@@ -237,18 +238,10 @@ export function DecisionHistory({
     setTimeout(checkScroll, 100);
   };
 
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
-    return new Intl.DateTimeFormat(lang === "fr" ? "fr-FR" : "en-US", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    })
-      .format(date)
-      .replace(",", ""); // Remove comma if present
+  const formatDate = (isoString?: string) => {
+    if (!isoString) return "";
+    const { date } = formatDateParts(isoString, lang);
+    return date;
   };
 
   const handleSelectState = (stateId: string) => {

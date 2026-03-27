@@ -1,5 +1,6 @@
 import { Lock, User } from "lucide-react";
 import type { Dict } from "@providers/I18nProvider";
+import { formatDateParts } from "../../../lib/formatDate";
 
 interface BlockFooterProps {
   updatedAt?: string;
@@ -18,24 +19,10 @@ export function BlockFooter({
   lang,
   children,
 }: BlockFooterProps) {
-  const formatDate = (isoString: string) => {
+  const formatDate = (isoString?: string) => {
     if (!isoString) return "";
-    const date = new Date(isoString);
-    const options: Intl.DateTimeFormatOptions = {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    };
-
-    const formatted = new Intl.DateTimeFormat(
-      lang === "fr" ? "fr-FR" : "en-US",
-      options,
-    ).format(date);
-
-    return formatted.replace(",", "").replace(" ", ` ${dict.project.at} `);
+    const { date, time } = formatDateParts(isoString, lang);
+    return time ? `${date} ${dict.project.at} ${time}` : date;
   };
 
   return (

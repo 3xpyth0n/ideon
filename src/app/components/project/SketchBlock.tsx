@@ -16,6 +16,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { useTheme } from "@providers/ThemeProvider";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 import { ExcalidrawModal, type SketchModalResult } from "./ExcalidrawModal";
@@ -260,6 +261,14 @@ const SketchBlock = memo((props: SketchBlockProps) => {
               <input
                 value={title}
                 onChange={handleTitleChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.target as HTMLElement)?.blur?.();
+                    focusProjectCanvas();
+                  }
+                }}
                 className="block-title nodrag"
                 placeholder={dict.blocks.title || "..."}
                 readOnly={isReadOnly}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useMemo, useCallback, memo } from "react";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import CodeMirror, {
   ReactCodeMirrorProps,
   ReactCodeMirrorRef,
@@ -72,6 +73,7 @@ const VimEditorContent = memo(
             onQuitRef.current();
           } else {
             editorRef.current?.view?.contentDOM?.blur();
+            focusProjectCanvas();
           }
         });
 
@@ -81,6 +83,7 @@ const VimEditorContent = memo(
             onQuitRef.current();
           } else {
             editorRef.current?.view?.contentDOM?.blur();
+            focusProjectCanvas();
           }
         });
 
@@ -90,6 +93,7 @@ const VimEditorContent = memo(
             onQuitRef.current();
           } else {
             editorRef.current?.view?.contentDOM?.blur();
+            focusProjectCanvas();
           }
         });
       } catch (e) {

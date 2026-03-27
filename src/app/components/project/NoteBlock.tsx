@@ -46,6 +46,7 @@ import { BlockFooter } from "./BlockFooter";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import {
   resolveNoteModeShortcutAction,
   shouldStartNoteInEditMode,
@@ -159,9 +160,14 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
+                  e.stopPropagation();
                   applyLink();
+                  focusProjectCanvas();
                 } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
                   cancelLink();
+                  focusProjectCanvas();
                 }
               }}
               autoFocus
@@ -713,6 +719,14 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                 onChange={handleTitleChange}
                 onFocus={() => setIsTitleEditing(true)}
                 onBlur={() => setIsTitleEditing(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.target as HTMLElement)?.blur?.();
+                    focusProjectCanvas();
+                  }
+                }}
                 className="block-title nodrag"
                 placeholder={dict.blocks.title || "..."}
                 disabled={isReadOnly}

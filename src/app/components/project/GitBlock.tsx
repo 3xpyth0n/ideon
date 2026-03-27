@@ -2,8 +2,6 @@
 import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import {
-  Github,
-  Gitlab,
   GitGraph,
   Star,
   Tag,
@@ -13,6 +11,7 @@ import {
   Users,
   Check,
 } from "lucide-react";
+import { FaGithub, FaGitlab } from "react-icons/fa";
 import { useI18n } from "@providers/I18nProvider";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { CanvasBlockProps } from "./CanvasBlock";
@@ -20,6 +19,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
 
 interface GitStats {
@@ -547,9 +547,9 @@ const GitBlock = (props: CanvasBlockProps) => {
 
     const ProviderIcon =
       provider === "gitlab"
-        ? Gitlab
+        ? FaGitlab
         : provider === "github"
-          ? Github
+          ? FaGithub
           : GitGraph;
 
     return (
@@ -681,6 +681,14 @@ const GitBlock = (props: CanvasBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.target as HTMLElement)?.blur?.();
+                  focusProjectCanvas();
+                }
+              }}
               className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}

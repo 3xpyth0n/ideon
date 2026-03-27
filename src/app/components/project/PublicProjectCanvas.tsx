@@ -41,6 +41,7 @@ import {
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
 } from "./utils/fitViewport";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
@@ -169,6 +170,19 @@ function PublicProjectCanvasContent({
       }
 
       if (e.key === "Escape") {
+        const activeElement = document.activeElement as HTMLElement | null;
+        if (
+          activeElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+            activeElement.isContentEditable)
+        ) {
+          activeElement.blur();
+          e.preventDefault();
+          e.stopPropagation();
+          focusProjectCanvas();
+          return;
+        }
+
         setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
         return;
       }
@@ -246,6 +260,7 @@ function PublicProjectCanvasContent({
     const activeElement = document.activeElement;
     if (activeElement instanceof HTMLElement) {
       activeElement.blur();
+      focusProjectCanvas();
     }
   }, []);
 

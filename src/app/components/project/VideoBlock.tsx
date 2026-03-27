@@ -17,6 +17,7 @@ import { BlockData } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 type VideoBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -309,7 +310,11 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
                 onBlur={() => setIsEditing(false)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.target as HTMLElement)?.blur?.();
                     setIsEditing(false);
+                    focusProjectCanvas();
                   }
                 }}
               />

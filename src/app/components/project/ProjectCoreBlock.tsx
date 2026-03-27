@@ -17,6 +17,7 @@ import { CORE_BLOCK_WIDTH, CORE_BLOCK_HEIGHT } from "./utils/constants";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 export type ProjectCoreBlockProps = NodeProps<Node<BlockData, "core">>;
 
@@ -205,6 +206,14 @@ const ProjectCoreBlock = memo(
               <input
                 value={title}
                 onChange={handleTitleChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.target as HTMLElement)?.blur?.();
+                    focusProjectCanvas();
+                  }
+                }}
                 className="core-title-input text-7xl font-black text-center focus:outline-none placeholder:opacity-10 tracking-tighter leading-none bg-transparent w-full nodrag"
                 placeholder={dict.blocks.title}
                 disabled={isReadOnly}

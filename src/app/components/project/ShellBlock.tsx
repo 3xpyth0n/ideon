@@ -24,6 +24,7 @@ import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import "@xterm/xterm/css/xterm.css";
 import "./shell-block.css";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 type ShellBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -423,6 +424,14 @@ const ShellBlock = memo(({ id, data, selected }: ShellBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.target as HTMLElement)?.blur?.();
+                  focusProjectCanvas();
+                }
+              }}
               className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}

@@ -24,6 +24,7 @@ import "./kanban-block.css";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 interface Task {
   id: string;
@@ -994,6 +995,14 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.target as HTMLElement)?.blur?.();
+                  focusProjectCanvas();
+                }
+              }}
               className="block-title nodrag"
               placeholder={tr("blocks.title", "...")}
               readOnly={isReadOnly}

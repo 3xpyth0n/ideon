@@ -18,6 +18,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { parseContactMetadata } from "@lib/metadata-parsers";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 type ContactBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -112,6 +113,20 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" || e.key === "Enter") {
+        const activeElement = document.activeElement as HTMLElement | null;
+        if (
+          activeElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+            activeElement.isContentEditable)
+        ) {
+          activeElement.blur();
+          if (typeof e.preventDefault === "function") e.preventDefault();
+          if (typeof e.stopPropagation === "function") e.stopPropagation();
+          // restore focus to canvas after input blur
+          focusProjectCanvas();
+          return;
+        }
+
         setIsEditing(false);
       }
     };

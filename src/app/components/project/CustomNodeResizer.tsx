@@ -16,21 +16,28 @@ const DEFAULT_BLOCK_WIDTH = 320;
 const DEFAULT_BLOCK_HEIGHT = 240;
 const SNAP_THRESHOLD = 0.1;
 
-interface ResizeState {
-  handle:
-    | "top-left"
-    | "top-right"
-    | "bottom-left"
-    | "bottom-right"
-    | "top"
-    | "bottom"
-    | "left"
-    | "right";
-  fixedCorner: { x: number; y: number };
-  originalDims: { width: number; height: number };
+type ResizeHandle =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+  | "top"
+  | "bottom"
+  | "left"
+  | "right";
+
+interface NodeGeometry {
+  position: { x: number; y: number };
+  width?: number;
+  height?: number;
 }
 
-type ResizeHandle = ResizeState["handle"];
+interface ResizeState {
+  handle: ResizeHandle;
+  fixedCorner: { x: number; y: number };
+  startPosition: { x: number; y: number };
+  originalDims: { width: number; height: number };
+}
 
 interface ResizeParams {
   x: number;
@@ -39,31 +46,29 @@ interface ResizeParams {
   height: number;
 }
 
-interface NodeGeometry {
-  position: { x: number; y: number };
-  width?: number;
-  height?: number;
-}
+const extractHandleFromResizeEvent = (event: unknown): ResizeHandle | null => {
+  if (!event || typeof event !== "object" || !("target" in event)) return null;
 
-const extractHandleFromEvent = (event: unknown): ResizeHandle | null => {
-  if (event && typeof event === "object" && "target" in event) {
-    const target = event.target as HTMLElement;
-    const className = target.className;
-    if (!className) return null;
+  const target = (event as { target?: EventTarget | null }).target;
+  if (!(target instanceof Element)) return null;
 
-    if (className.includes("top") && className.includes("left"))
-      return "top-left";
-    if (className.includes("top") && className.includes("right"))
-      return "top-right";
-    if (className.includes("bottom") && className.includes("left"))
-      return "bottom-left";
-    if (className.includes("bottom") && className.includes("right"))
-      return "bottom-right";
-    if (className.includes("top")) return "top";
-    if (className.includes("bottom")) return "bottom";
-    if (className.includes("left")) return "left";
-    if (className.includes("right")) return "right";
-  }
+  const handleElement = target.closest(".react-flow__resize-control");
+  if (!(handleElement instanceof HTMLElement)) return null;
+
+  const classNames = handleElement.classList;
+  const isTop = classNames.contains("top");
+  const isBottom = classNames.contains("bottom");
+  const isLeft = classNames.contains("left");
+  const isRight = classNames.contains("right");
+
+  if (isTop && isLeft) return "top-left";
+  if (isTop && isRight) return "top-right";
+  if (isBottom && isLeft) return "bottom-left";
+  if (isBottom && isRight) return "bottom-right";
+  if (isTop) return "top";
+  if (isBottom) return "bottom";
+  if (isLeft) return "left";
+  if (isRight) return "right";
   return null;
 };
 
@@ -111,8 +116,9 @@ const calculateFixedCorner = (
 
 const calculateCorrectedPosition = (
   node: NodeGeometry,
-  handle: string,
+  handle: ResizeHandle,
   fixedCorner: { x: number; y: number },
+  startPosition: { x: number; y: number },
   newWidth: number,
   newHeight: number,
 ): { x: number; y: number } => {
@@ -130,13 +136,13 @@ const calculateCorrectedPosition = (
     case "bottom-right":
       return { x: fixedCorner.x, y: fixedCorner.y };
     case "top":
-      return { x: node.position.x, y: fixedCorner.y - newHeight };
+      return { x: startPosition.x, y: fixedCorner.y - newHeight };
     case "bottom":
-      return { x: node.position.x, y: fixedCorner.y };
+      return { x: startPosition.x, y: fixedCorner.y };
     case "left":
-      return { x: fixedCorner.x - newWidth, y: node.position.y };
+      return { x: fixedCorner.x - newWidth, y: startPosition.y };
     case "right":
-      return { x: fixedCorner.x, y: node.position.y };
+      return { x: fixedCorner.x, y: startPosition.y };
     default:
       return node.position;
   }
@@ -158,6 +164,14 @@ const applySnapToGrid = (
     height: snapH ? DEFAULT_BLOCK_HEIGHT : Math.round(height),
   };
 };
+
+const resolveFallbackPosition = (
+  params: { x?: number; y?: number },
+  node: NodeGeometry,
+): { x: number; y: number } => ({
+  x: typeof params.x === "number" ? params.x : node.position.x,
+  y: typeof params.y === "number" ? params.y : node.position.y,
+});
 
 const CustomNodeResizer = memo((props: NodeResizerProps) => {
   const { zoom } = useViewport();
@@ -188,20 +202,30 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
     NonNullable<NodeResizerProps["onResizeStart"]>
   >(
     (event, params) => {
-      if (!resizingNode) return;
+      const handle = extractHandleFromResizeEvent(event);
 
-      const handle = extractHandleFromEvent(event);
-      if (!handle) return;
-
-      const fixedCorner = calculateFixedCorner(resizingNode, handle);
-      setResizeState({
-        handle,
-        fixedCorner,
-        originalDims: {
-          width: resizingNode.width || 0,
-          height: resizingNode.height || 0,
-        },
-      });
+      if (resizingNode && handle && params) {
+        const startRect: NodeGeometry = {
+          position: { x: params.x, y: params.y },
+          width: params.width,
+          height: params.height,
+        };
+        const fixedCorner = calculateFixedCorner(startRect, handle);
+        setResizeState({
+          handle,
+          fixedCorner,
+          startPosition: {
+            x: params.x,
+            y: params.y,
+          },
+          originalDims: {
+            width: params.width,
+            height: params.height,
+          },
+        });
+      } else {
+        setResizeState(null);
+      }
 
       props.onResizeStart?.(event, params);
     },
@@ -241,10 +265,11 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
       const currentHandle = resizeState?.handle;
 
       if (!resizeState || !currentHandle) {
+        const fallbackPosition = resolveFallbackPosition(params, resizingNode);
         const corrected = {
           ...params,
-          x: resizingNode.position.x,
-          y: resizingNode.position.y,
+          x: fallbackPosition.x,
+          y: fallbackPosition.y,
           width,
           height,
         };
@@ -254,11 +279,12 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
         return;
       }
 
-      const { fixedCorner } = resizeState;
+      const { fixedCorner, startPosition } = resizeState;
       const position = calculateCorrectedPosition(
         resizingNode,
         currentHandle,
         fixedCorner,
+        startPosition,
         width,
         height,
       );

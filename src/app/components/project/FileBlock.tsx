@@ -20,6 +20,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 interface BlockMetadata {
   name?: string;
@@ -402,6 +403,14 @@ const FileBlock = (props: CanvasBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.target as HTMLElement)?.blur?.();
+                  focusProjectCanvas();
+                }
+              }}
               className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}

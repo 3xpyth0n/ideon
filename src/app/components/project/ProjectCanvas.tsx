@@ -63,12 +63,12 @@ import {
   File as FileIcon,
   Undo2,
   Redo2,
-  Figma,
   Share2,
-  Github,
   Loader2,
   Menu,
 } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
+import { SiFigma } from "react-icons/si";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
 import { DownloadButton } from "./DownloadButton";
@@ -1423,9 +1423,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   >
                     <div className="onboarding-content">
                       <div className="onboarding-icons">
-                        <Github size={20} />
+                        <FaGithub size={20} />
                         <div className="separator" />
-                        <Figma size={20} />
+                        <SiFigma size={20} />
                         <div className="separator" />
                         <FileIcon size={20} />
                       </div>

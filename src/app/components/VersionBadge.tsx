@@ -29,7 +29,8 @@ function parseChangelog(
   currentVersion: string,
 ): ChangelogSection[] {
   const sections: ChangelogSection[] = [];
-  const versionRegex = /^## \[v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]\s*-\s*(\d{4}-\d{2}-\d{2})/;
+  const versionRegex =
+    /^## \[v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]\s*-\s*(\d{4}-\d{2}-\d{2})/;
   const lines = markdown.split("\n");
   let current: ChangelogSection | null = null;
 
@@ -166,7 +167,8 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
           setLatestVersion(data.latest);
           const a = semver.clean(data.latest) || data.latest;
           const b = semver.clean(currentVersion) || currentVersion;
-          const updated = semver.valid(a) && semver.valid(b) ? semver.gt(a, b) : false;
+          const updated =
+            semver.valid(a) && semver.valid(b) ? semver.gt(a, b) : false;
           setHasUpdate(updated);
         }
       })

@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { Awareness } from "y-protocols/awareness";
 import { useProjectCanvasGraph } from "./useProjectCanvasGraph";
 import { useProjectCanvasRealtime } from "./useProjectCanvasRealtime";
+import { focusProjectCanvas } from "../utils/focusCanvas";
 import { useUndoRedo } from "./useUndoRedo";
 import { useProjectData } from "./useProjectData";
 import { BlockData } from "@components/project/CanvasBlock";
@@ -2012,6 +2013,45 @@ export const useProjectCanvasState = (
     };
   }, [checkVisibleBlocks]);
 
+  const directChildrenCountByFolder = useMemo(() => {
+    const folderIds = new Set(
+      blocks
+        .filter((block) => block.type === "folder")
+        .map((block) => block.id),
+    );
+    if (folderIds.size === 0) {
+      return new Map<string, number>();
+    }
+
+    const nodeIds = new Set(blocks.map((block) => block.id));
+    const childrenByFolder = new Map<string, Set<string>>();
+
+    links.forEach((link) => {
+      if (!link.source || !link.target || link.source === link.target) {
+        return;
+      }
+
+      if (link.type && link.type !== "connection") {
+        return;
+      }
+
+      if (!folderIds.has(link.source) || !nodeIds.has(link.target)) {
+        return;
+      }
+
+      const children = childrenByFolder.get(link.source) || new Set<string>();
+      children.add(link.target);
+      childrenByFolder.set(link.source, children);
+    });
+
+    const counts = new Map<string, number>();
+    folderIds.forEach((folderId) => {
+      counts.set(folderId, childrenByFolder.get(folderId)?.size ?? 0);
+    });
+
+    return counts;
+  }, [blocks, links]);
+
   const blocksWithPresence = useMemo(() => {
     const processedBlocks = blocks.map((block) => {
       const typingUsers = rt.presenceUsers.filter(
@@ -2029,6 +2069,10 @@ export const useProjectCanvasState = (
         currentUser?.id && projectOwnerId === currentUser.id;
       const canManage = isOwner || isProjectOwner;
       const yText = yContents?.get(block.id);
+      const directChildrenCount =
+        block.type === "folder"
+          ? directChildrenCountByFolder.get(block.id) ?? 0
+          : block.data?.directChildrenCount;
 
       return {
         ...block,
@@ -2048,6 +2092,7 @@ export const useProjectCanvasState = (
           currentUser: currentUser
             ? { id: currentUser.id, username: currentUser.username }
             : undefined,
+          directChildrenCount,
           onContentChange: isPreviewMode ? undefined : graph.onContentChange,
           onFocus: isPreviewMode ? undefined : rt.onFocus,
           onBlur: isPreviewMode ? undefined : rt.onBlur,
@@ -2073,6 +2118,7 @@ export const useProjectCanvasState = (
     graph,
     yContents,
     projectOwnerId,
+    directChildrenCountByFolder,
   ]);
 
   const uniqueLinks = useMemo(() => {
@@ -2276,8 +2322,22 @@ export const useProjectCanvasState = (
         }
       }
 
-      // Handle Escape to unselect
+      // Handle Escape to unselect — but first blur active editable element
       if (e.key === "Escape") {
+        const activeElement = document.activeElement as HTMLElement | null;
+        if (
+          activeElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+            activeElement.isContentEditable)
+        ) {
+          activeElement.blur();
+          e.preventDefault();
+          e.stopPropagation();
+          // restore focus to canvas so keyboard navigation remains reliable
+          focusProjectCanvas();
+          return;
+        }
+
         setBlocks((nds) => nds.map((n) => ({ ...n, selected: false })));
         setLinks((eds) => eds.map((e) => ({ ...e, selected: false })));
         return;

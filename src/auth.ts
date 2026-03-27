@@ -320,11 +320,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
 
           const email = user.email.toLowerCase();
 
-          const existingUser = await db
-            .selectFrom("users")
-            .selectAll()
-            .where("email", "=", email)
-            .executeTakeFirst();
+          // Prefer exact provider->user mapping via accounts table when present
+          let existingUser = null;
+          if (account?.provider && account?.providerAccountId) {
+            const accountRow = await db
+              .selectFrom("accounts")
+              .select("userId")
+              .where("provider", "=", account.provider)
+              .where("providerAccountId", "=", account.providerAccountId)
+              .executeTakeFirst();
+
+            if (accountRow?.userId) {
+              existingUser = await db
+                .selectFrom("users")
+                .selectAll()
+                .where("id", "=", accountRow.userId)
+                .executeTakeFirst();
+            }
+          }
+
+          // Fallback: match by email if no provider account mapping exists
+          if (!existingUser) {
+            existingUser = await db
+              .selectFrom("users")
+              .selectAll()
+              .where("email", "=", email)
+              .executeTakeFirst();
+          }
 
           const invitation = await db
             .selectFrom("invitations")
@@ -341,13 +363,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
 
           // Mitigate allowDangerousEmailAccountLinking:
           // keep blocking unknown unverified SSO users, but allow trusted users.
-          const emailVerificationResult = resolveSsoEmailVerificationPolicy({
-            accountType: account?.type,
-            provider: account?.provider,
-            profile: profile as Record<string, unknown> | null,
-            hasExistingUser: !!existingUser,
-            hasValidInvitation: !!invitation,
-          });
+          const acct = account as unknown as
+            | Record<string, unknown>
+            | undefined;
+          const idTokenVal = acct
+            ? typeof acct.id_token === "string"
+              ? (acct.id_token as string)
+              : typeof acct.idToken === "string"
+                ? (acct.idToken as string)
+                : null
+            : null;
+
+          const emailVerificationResult =
+            await resolveSsoEmailVerificationPolicy({
+              accountType: account?.type,
+              provider: account?.provider,
+              profile: profile as Record<string, unknown> | null,
+              hasExistingUser: !!existingUser,
+              hasValidInvitation: !!invitation,
+              idToken: idTokenVal,
+            });
 
           if (emailVerificationResult.hasUnverifiedClaim) {
             await logSecurityEvent(
@@ -401,7 +436,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           // Return true to allow NextAuth to proceed with Adapter's createUser
           return true;
         } catch (error) {
-          console.error("[Auth] SignIn error:", error);
+          const errMsg = String(error);
+          await logSecurityEvent("loginSSO:error", "failure", {
+            error: errMsg,
+          });
+          appLogger.error({ error }, "[Auth] SignIn error");
           return false;
         }
       },

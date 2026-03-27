@@ -264,6 +264,18 @@ export interface auditLogsTable {
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+export interface accountsTable {
+  id: Generated<string>;
+  userId: string;
+  provider: string;
+  providerAccountId: string;
+  accessToken: string | null;
+  refreshToken: string | null;
+  expiresAt: number | null;
+  scope: string | null;
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 export interface magicLinksTable {
   id: string;
   email: string;
@@ -304,6 +316,7 @@ export interface database {
   githubRepoStats: githubRepoStatsTable;
   linkPreviews: linkPreviewsTable;
   userGitTokens: userGitTokensTable;
+  accounts: accountsTable;
   blockReactions: blockReactionsTable;
   projectRequests: projectRequestsTable;
   userVercelTokens: userVercelTokensTable;

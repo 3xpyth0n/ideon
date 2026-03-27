@@ -1,4 +1,4 @@
-import { Adapter, AdapterUser } from "next-auth/adapters";
+import { Adapter, AdapterUser, AdapterAccount } from "next-auth/adapters";
 import { getDb } from "./db";
 import { stringToColor } from "./utils";
 import { v4 as uuidv4 } from "uuid";
@@ -11,9 +11,14 @@ export function KyselyAdapter(): Adapter {
   const db = getDb();
 
   return {
-    async createUser(user) {
-      const headersList = await headers();
-      const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+    async createUser(user: AdapterUser) {
+      let ip = "127.0.0.1";
+      try {
+        const headersList = await headers();
+        ip = headersList.get("x-forwarded-for") || ip;
+      } catch {
+        // headers() may be unavailable outside of a request context (tests, background jobs)
+      }
       const email = user.email.toLowerCase();
 
       // Check registration conditions and invitations
@@ -70,44 +75,85 @@ export function KyselyAdapter(): Adapter {
       const userColor = stringToColor(chosenUsername);
       const newUserId = uuidv4();
 
-      await db.transaction().execute(async (trx) => {
-        await trx
-          .insertInto("users")
-          .values({
-            id: newUserId,
-            email: email,
-            username: chosenUsername,
-            displayName: user.name || chosenUsername,
-            avatarUrl: user.image || null,
-            role:
-              (invitation?.role as "superadmin" | "admin" | "member") ||
-              "member",
-            color: userColor,
-            createdAt: new Date().toISOString(),
-          })
-          .execute();
+      try {
+        // Try an insert that does nothing on email conflict, then select the
+        // existing or newly created row inside the same transaction. This
+        // avoids a race where two concurrent SSO callbacks try to create the
+        // same user.
+        const createdOrExisting = await db
+          .transaction()
+          .execute(async (trx) => {
+            await trx
+              .insertInto("users")
+              .values({
+                id: newUserId,
+                email: email,
+                username: chosenUsername,
+                displayName: user.name || chosenUsername,
+                avatarUrl: user.image || null,
+                role:
+                  (invitation?.role as "superadmin" | "admin" | "member") ||
+                  "member",
+                color: userColor,
+                createdAt: new Date().toISOString(),
+              })
+              .onConflict((oc) => oc.column("email").doNothing())
+              .execute();
 
-        if (invitation) {
-          await trx
-            .updateTable("invitations")
-            .set({ acceptedAt: new Date().toISOString() })
-            .where("id", "=", invitation.id)
-            .execute();
+            // Ensure invitations are marked accepted when present.
+            if (invitation) {
+              await trx
+                .updateTable("invitations")
+                .set({ acceptedAt: new Date().toISOString() })
+                .where("id", "=", invitation.id)
+                .execute();
+            }
+
+            const userRow = await trx
+              .selectFrom("users")
+              .selectAll()
+              .where("email", "=", email)
+              .executeTakeFirst();
+
+            if (!userRow) {
+              throw new Error("Failed to create or locate user after insert");
+            }
+
+            return userRow;
+          });
+
+        // If the returned row id matches our generated id, it means we
+        // successfully created the user; otherwise another concurrent
+        // creation won the race and we should treat it as a conflict but
+        // return the existing user.
+        if (createdOrExisting.id === newUserId) {
+          await logSecurityEvent("register:success", "success", {
+            userId: newUserId,
+            ip,
+          });
+        } else {
+          await logSecurityEvent("register:conflict", "success", {
+            existingUserId: createdOrExisting.id,
+            ip,
+          });
         }
-      });
 
-      await logSecurityEvent("register:success", "success", {
-        userId: newUserId,
-        ip,
-      });
-
-      return {
-        id: newUserId,
-        email: email,
-        emailVerified: null,
-        name: user.name || chosenUsername,
-        image: user.image || null,
-      } as AdapterUser;
+        return {
+          id: createdOrExisting.id,
+          email: createdOrExisting.email,
+          emailVerified: user.emailVerified ?? null,
+          name: createdOrExisting.displayName,
+          image: createdOrExisting.avatarUrl || null,
+        } as AdapterUser;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        logger.error({ err, email, ip }, "User creation failed");
+        await logSecurityEvent("register:error", "failure", {
+          error: errMsg,
+          ip,
+        });
+        throw err;
+      }
     },
 
     async getUser(id) {
@@ -146,9 +192,38 @@ export function KyselyAdapter(): Adapter {
       } as AdapterUser;
     },
 
-    async getUserByAccount() {
-      // Not implemented as we don't have accounts table yet
-      return null;
+    async getUserByAccount({
+      provider,
+      providerAccountId,
+    }: {
+      provider: string;
+      providerAccountId: string;
+    }) {
+      // Look up account by provider+providerAccountId and return linked user
+      const accountRow = await db
+        .selectFrom("accounts")
+        .selectAll()
+        .where("provider", "=", provider)
+        .where("providerAccountId", "=", providerAccountId)
+        .executeTakeFirst();
+
+      if (!accountRow) return null;
+
+      const user = await db
+        .selectFrom("users")
+        .selectAll()
+        .where("id", "=", accountRow.userId)
+        .executeTakeFirst();
+
+      if (!user) return null;
+
+      return {
+        id: user.id,
+        email: user.email,
+        emailVerified: null,
+        name: user.displayName,
+        image: user.avatarUrl,
+      } as AdapterUser;
     },
 
     async updateUser(user) {
@@ -173,8 +248,39 @@ export function KyselyAdapter(): Adapter {
       await db.deleteFrom("users").where("id", "=", userId).execute();
     },
 
-    async linkAccount(account) {
-      // Not implemented
+    async linkAccount(account: AdapterAccount) {
+      // Persist provider account mapping to avoid relying on email-only linking.
+      try {
+        await db
+          .insertInto("accounts")
+          .values({
+            id: uuidv4(),
+            userId: account.userId,
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+            accessToken: account.access_token || null,
+            refreshToken: account.refresh_token || null,
+            expiresAt: account.expires_at || null,
+            scope: account.scope || null,
+            createdAt: new Date().toISOString(),
+          })
+          .onConflict((oc) =>
+            oc.columns(["provider", "providerAccountId"]).doNothing(),
+          )
+          .execute();
+      } catch (err) {
+        // Log but do not fail linking for now
+        logger.warn(
+          { err, account },
+          "linkAccount: failed to persist account mapping",
+        );
+        await logSecurityEvent("sso:linkAccount:error", "failure", {
+          error: String(err),
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+        });
+      }
+
       return account;
     },
 

@@ -74,7 +74,7 @@
     "next-auth": "^5.0.0-beta.30",
     "node-html-parser": "^7.1.0",
     "node-pty": "^1.1.0",
-    "nodemailer": "^8.0.3",
+    "nodemailer": "^8.0.4",
     "perfect-freehand": "^1.2.3",
     "pg": "^8.20.0",
     "pino": "^10.3.1",

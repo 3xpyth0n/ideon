@@ -33,6 +33,7 @@ import {
   calculateHelperLines,
   HelperLine,
 } from "@components/project/utils/alignment";
+import * as Y from "yjs";
 import { parseFolderMetadata } from "@lib/metadata-parsers";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import {
@@ -471,6 +472,65 @@ export const useProjectCanvasGraph = ({
       });
     },
     [isReadOnly, setBlocks, applyFolderVisibility, links],
+  );
+
+  const duplicateBlock = useCallback(
+    (blockId: string) => {
+      if (isReadOnly) return null;
+      const src = blocks.find((b) => b.id === blockId);
+      if (!src) return null;
+      if (src.type === "core") return null;
+
+      const newId = uuidv4();
+      const offset = 20;
+
+      const srcContent = src.data?.yText
+        ? (src.data.yText as Y.Text).toString()
+        : (src.data?.content as string) || "";
+
+      const newData = {
+        ...(src.data as Record<string, unknown>),
+        content: srcContent,
+        updatedAt: new Date().toISOString(),
+        lastEditor: currentUser?.username || src.data?.lastEditor,
+      } as Partial<BlockData>;
+
+      // Remove runtime-only props
+      delete newData.yText;
+      delete newData.onContentChange;
+      delete newData.onFocus;
+      delete newData.onBlur;
+
+      const blockWidth = src.width || DEFAULT_BLOCK_WIDTH;
+      const blockHeight = src.height || DEFAULT_BLOCK_HEIGHT;
+
+      const newBlock: Node<BlockData> = {
+        ...src,
+        id: newId,
+        position: {
+          x: (src.position?.x || 0) + offset,
+          y: (src.position?.y || 0) + offset,
+        },
+        width: blockWidth,
+        height: blockHeight,
+        style: { ...(src.style || {}), width: blockWidth, height: blockHeight },
+        selected: true,
+        data: newData as BlockData,
+      } as unknown as Node<BlockData>;
+
+      applyMutation({
+        intent: "Created new block",
+        // Deselect existing nodes/links and add the new block as selected
+        blocksUpdate: (nds) => [
+          ...nds.map((n) => ({ ...n, selected: false })),
+          newBlock,
+        ],
+        linksUpdate: (lks) => lks.map((l) => ({ ...l, selected: false })),
+      });
+
+      return newId;
+    },
+    [blocks, applyMutation, currentUser, isReadOnly],
   );
 
   useEffect(() => {
@@ -940,6 +1000,7 @@ export const useProjectCanvasGraph = ({
     onEdgeContextMenu,
     onPaneContextMenu,
     handleCreateBlock,
+    duplicateBlock,
     handleDeleteBlock,
     handleToggleLock,
     handleToggleFolderCollapse,

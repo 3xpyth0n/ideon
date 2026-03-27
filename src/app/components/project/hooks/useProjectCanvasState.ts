@@ -2529,6 +2529,19 @@ export const useProjectCanvasState = (
     onGraphMutation?.("Block deleted");
   }, [blockToDelete, blocksToDelete, graph, onGraphMutation]);
 
+  const handleDuplicateBlock = useCallback(
+    (blockId: string) => {
+      if (isReadOnly) return null;
+      try {
+        const id = graph.duplicateBlock(blockId);
+        return id as string | null;
+      } catch {
+        return null;
+      }
+    },
+    [isReadOnly, graph],
+  );
+
   return {
     blocks: blocksWithPresence,
     setBlocks,
@@ -2626,6 +2639,7 @@ export const useProjectCanvasState = (
     onBlockClick: () => setContextMenu(null),
     onLinkClick: () => setContextMenu(null),
     handleCreateBlock: handleCreateBlockWrapper,
+    handleDuplicateBlock,
     onExternalDragEnter,
     onExternalDragLeave,
     onExternalDragOver,

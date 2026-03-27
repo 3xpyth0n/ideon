@@ -81,6 +81,7 @@ import {
   useProjectCanvasState,
   UserPresence,
 } from "./hooks/useProjectCanvasState";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
 import {
   getSelectedNoteBlockIdForShortcut,
@@ -489,6 +490,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onPaneClick: originalOnPaneClick,
     onLinkClick,
     handleCreateBlock,
+    handleDuplicateBlock,
     onExternalDragEnter,
     onExternalDragLeave,
     onExternalDragOver,
@@ -1221,6 +1223,35 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     visibleBlockIds,
   ]);
 
+  // Focus newly created / duplicated block.
+  useEffect(() => {
+    if (!newBlockId) return;
+    const id = newBlockId;
+
+    const timer = setTimeout(() => {
+      try {
+        // Ensure the node is present in the DOM, then place keyboard focus
+        // back on the canvas container so the block is selected.
+        const blockEl = document.querySelector(
+          `[data-id="${id}"]`,
+        ) as HTMLElement | null;
+        if (blockEl) {
+          try {
+            blockEl.scrollIntoView({ block: "center", inline: "center" });
+          } catch {
+            // ignore
+          }
+        }
+
+        focusProjectCanvas();
+      } catch {
+        // ignore
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [newBlockId, blocks]);
+
   if (!isAccessValidated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -1858,6 +1889,39 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                               >
                                 {dict.project.transferOwnership ||
                                   "Transfer Ownership"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (contextMenuBlock) {
+                                    const id = handleDuplicateBlock(
+                                      contextMenuBlock.id,
+                                    );
+                                    if (id) {
+                                      setNewBlockId(id);
+                                      setTimeout(
+                                        () => setNewBlockId(null),
+                                        800,
+                                      );
+                                      triggerAutoSnapshot("Block created");
+                                    }
+                                  }
+                                  setContextMenu(null);
+                                }}
+                                className="context-menu-item"
+                              >
+                                {(
+                                  dict.blocks as unknown as Record<
+                                    string,
+                                    string
+                                  >
+                                ).duplicate ||
+                                  (
+                                    dict.common as unknown as Record<
+                                      string,
+                                      string
+                                    >
+                                  ).duplicate ||
+                                  "Duplicate"}
                               </button>
                               <div className="context-menu-separator" />
                               <button

@@ -1188,8 +1188,8 @@ export const useProjectCanvasState = (
       overrideBlocks?: Node<BlockData>[],
       overrideLinks?: Edge[],
       options?: { isAuto?: boolean },
-    ): Promise<boolean> => {
-      if (!initialProjectId || isReadOnly) return false;
+    ): Promise<{ success: boolean; unchanged?: boolean }> => {
+      if (!initialProjectId || isReadOnly) return { success: false };
       const isAuto = options?.isAuto ?? false;
       try {
         const blocksToSave = (overrideBlocks || blocks).map((n) => ({
@@ -1209,7 +1209,9 @@ export const useProjectCanvasState = (
           if (!isAuto) {
             toast.info(dict.modals.noChanges || "No changes to save");
           }
-          return false;
+          // Report success with unchanged=true so callers (DecisionHistory)
+          // treat this as a successful no-op instead of a server rejection.
+          return { success: true, unchanged: true };
         }
 
         const res = await fetch(`/api/projects/${initialProjectId}/temporal`, {
@@ -1232,16 +1234,26 @@ export const useProjectCanvasState = (
               toast.error(dict.modals.saveError || "Failed to save changes");
             }
           }
-          return false;
+          return { success: false };
+        }
+
+        try {
+          const j = await res.json();
+          if (j && j.unchanged) {
+            lastSnapshotHash.current = currentHash;
+            return { success: true, unchanged: true };
+          }
+        } catch {
+          // ignore parse errors
         }
 
         lastSnapshotHash.current = currentHash;
-        return true;
+        return { success: true };
       } catch {
         if (!isAuto) {
           toast.error(dict.modals.saveError || "Failed to save changes");
         }
-        return false;
+        return { success: false };
       }
     },
     [initialProjectId, blocks, links],

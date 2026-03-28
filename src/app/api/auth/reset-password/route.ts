@@ -7,6 +7,7 @@ import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
 import { z } from "zod";
 import { getClientIp } from "@/lib/security-utils";
+import { logger } from "@lib/logger";
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1),
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Reset password error:", error);
+    logger.error({ error }, "Reset password error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

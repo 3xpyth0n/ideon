@@ -7,7 +7,7 @@ export default defineConfig({
     setupFiles: ["src/test/setup.ts"],
     env: {
       SQLITE_PATH: ":memory:",
-      NODE_ENV: "development",
+      NODE_ENV: "test",
     },
     include: ["src/**/*.test.ts"],
     exclude: ["**/.next/**", "**/node_modules/**", "**/dist/**"],

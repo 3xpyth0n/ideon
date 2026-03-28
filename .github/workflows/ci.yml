@@ -24,6 +24,7 @@ jobs:
     name: Build and Validate
     runs-on: ubuntu-latest
     env:
+      NODE_ENV: test
       IS_NEXT_BUILD: "1"
       SECRET_KEY: ci_secret_key_ideon
       APP_PORT: ${{ vars.APP_PORT }}
@@ -49,6 +50,10 @@ jobs:
         run: npm run check
 
       - name: Run unit tests
+        env:
+          VITEST: "1"
+          SQLITE_PATH: ":memory:"
+          NODE_ENV: test
         run: npm run test
 
       - name: Build application

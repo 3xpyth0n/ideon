@@ -113,13 +113,20 @@ export function getDatabaseUrl() {
 }
 
 export function shouldUseSqlite() {
-  const { NODE_ENV } = process.env;
-  return NODE_ENV === "development";
+  const nodeRaw = process.env.NODE_ENV;
+  return typeof nodeRaw === "string" && ["test", "dev"].includes(nodeRaw);
 }
 
 function initializeSqlite(reason: string) {
   if (state.isInitialized && state.activeType === "sqlite") return;
-  logger.info(`Development mode detected (or no NODE_ENV). ${reason}`);
+  const nodeRaw = process.env.NODE_ENV;
+  const isDev =
+    typeof nodeRaw === "string" && ["test", "dev"].includes(nodeRaw);
+  const detected = isDev ? "test" : "production";
+  logger.info(
+    { env: detected },
+    `Environment indicates SQLite usage. ${reason}`,
+  );
   state.activeType = "sqlite";
   state.isInitialized = true;
 }

@@ -44,6 +44,9 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { useUser } from "@providers/UserProvider";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { clientLogger } from "../../../lib/clientLogger";
+import { getMessage } from "../../../lib/getMessage";
+import { classifyIndexedDbError } from "../../../lib/classifyIndexedDbError";
 import {
   useState,
   useEffect,
@@ -348,57 +351,146 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   useEffect(() => {
     if (typeof window === "undefined" || !initialProjectId) return;
 
-    const doc = new Y.Doc();
-    const wsProvider = new WebsocketProvider(
-      `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
-        window.location.host
-      }/yjs`,
-      `project-${initialProjectId}`,
-      doc,
-      { connect: true },
-    );
+    let doc: Y.Doc | null = new Y.Doc();
+    let wsProvider: WebsocketProvider | null = null;
+    let indexeddbProvider: IndexeddbPersistence | null = null;
 
-    wsProvider.on("sync", (data: boolean) => {
-      setIsRemoteSynced(data);
-    });
+    try {
+      clientLogger.debug("yjs:init:start");
 
-    wsProvider.on("status", (event: { status: string }) => {
-      setIsSocketConnected(event.status === "connected");
-    });
-
-    wsProvider.on("connection-close", (event: { code?: number } | null) => {
-      if (event?.code === 4003) {
-        wsProvider.disconnect();
-        toast.error(dictRef.current.common.accessRevoked || "Access revoked");
-        routerRef.current.push("/home");
+      try {
+        const update = Y.encodeStateAsUpdate(doc!);
+        const docSizeBytes = (update && (update as Uint8Array).byteLength) || 0;
+        clientLogger.debug("yjs:doc:estimated_size_bytes", { docSizeBytes });
+      } catch (e) {
+        clientLogger.debug("yjs:doc:size_estimate_failed", String(e));
       }
-    });
 
-    const indexeddbProvider = new IndexeddbPersistence(
-      `project-${initialProjectId}`,
-      doc,
-    );
+      wsProvider = new WebsocketProvider(
+        `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
+          window.location.host
+        }/yjs`,
+        `project-${initialProjectId}`,
+        doc,
+        { connect: true },
+      );
 
-    indexeddbProvider.on("synced", () => {
-      setIsLocalSynced(true);
-    });
+      wsProvider.on("sync", (data: boolean) => {
+        let size = 0;
+        try {
+          const u = Y.encodeStateAsUpdate(doc!);
+          size = (u && (u as Uint8Array).byteLength) || 0;
+        } catch {
+          void 0;
+        }
+        clientLogger.debug("yjs:sync", {
+          synced: Boolean(data),
+          docSizeBytes: size,
+        });
+        setIsRemoteSynced(Boolean(data));
+      });
 
-    setYjsData({ yDoc: doc, provider: wsProvider });
+      wsProvider.on("status", (event: { status: string }) => {
+        clientLogger.info("yjs:status", { status: event.status });
+        setIsSocketConnected(event.status === "connected");
+      });
 
-    // Periodic check to ensure status is accurate even if events are missed
-    const checkInterval = setInterval(() => {
-      setIsSocketConnected(wsProvider.wsconnected);
-    }, 3000);
+      wsProvider.on("connection-close", (event: { code?: number } | null) => {
+        clientLogger.warn("yjs:connection-close", {
+          code: event?.code ?? null,
+        });
+        if (event?.code === 4003) {
+          wsProvider?.disconnect();
+          toast.error(dictRef.current.common.accessRevoked || "Access revoked");
+          routerRef.current.push("/home");
+        }
+      });
 
-    return () => {
-      clearInterval(checkInterval);
-      wsProvider.on("sync", () => {});
-      wsProvider.on("status", () => {});
-      wsProvider.on("connection-close", () => {});
-      wsProvider.destroy();
-      indexeddbProvider.destroy();
-      doc.destroy();
-    };
+      try {
+        indexeddbProvider = new IndexeddbPersistence(
+          `project-${initialProjectId}`,
+          doc!,
+        );
+        indexeddbProvider.on("synced", () => {
+          setIsLocalSynced(true);
+          clientLogger.debug("indexeddb:synced");
+        });
+      } catch (err) {
+        const classified = classifyIndexedDbError(err);
+        clientLogger.error("indexeddb:init:error", {
+          reason: classified.reason,
+          hint: classified.hint,
+          message: getMessage(err),
+        });
+
+        try {
+          if (navigator?.storage?.estimate) {
+            navigator.storage
+              .estimate()
+              .then((estimate: { usage?: number; quota?: number }) => {
+                clientLogger.debug("indexeddb:storage:estimate", {
+                  usage: estimate?.usage ?? null,
+                  quota: estimate?.quota ?? null,
+                  usageRatio:
+                    estimate?.usage && estimate?.quota
+                      ? estimate.usage / estimate.quota
+                      : null,
+                });
+              })
+              .catch((e) =>
+                clientLogger.debug(
+                  "indexeddb:storage:estimate:error",
+                  String(e),
+                ),
+              );
+          }
+        } catch (e) {
+          clientLogger.debug("indexeddb:storage:estimate:error", String(e));
+        }
+      }
+
+      setYjsData({ yDoc: doc!, provider: wsProvider });
+      clientLogger.debug("yjs:init:complete");
+
+      const checkInterval = setInterval(() => {
+        try {
+          setIsSocketConnected(Boolean(wsProvider?.wsconnected));
+        } catch {
+          void 0;
+        }
+      }, 3000);
+
+      return () => {
+        clearInterval(checkInterval);
+        try {
+          wsProvider?.on("sync", () => {});
+          wsProvider?.on("status", () => {});
+          wsProvider?.on("connection-close", () => {});
+          wsProvider?.destroy?.();
+        } catch {
+          void 0;
+        }
+        try {
+          indexeddbProvider?.destroy?.();
+        } catch {
+          void 0;
+        }
+        try {
+          doc?.destroy?.();
+        } catch {
+          void 0;
+        }
+      };
+    } catch (err) {
+      clientLogger.error("yjs:init:failed", {
+        message: getMessage(err),
+      });
+      try {
+        doc?.destroy?.();
+      } catch {
+        void 0;
+      }
+    }
   }, [initialProjectId]);
 
   const { yDoc, provider } = yjsData || { yDoc: null, provider: null };
@@ -424,7 +516,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         overrideBlocks?: Node<BlockData>[],
         overrideLinks?: Edge[],
         options?: { isAuto?: boolean },
-      ) => Promise<boolean>)
+      ) => Promise<boolean | { success: boolean; unchanged?: boolean }>)
     | null
   >(null);
 
@@ -691,7 +783,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           setPendingRequestsCount(pending);
         }
       } catch (e) {
-        console.error("Failed to fetch requests count", e);
+        clientLogger.error("Failed to fetch requests count", e);
       }
     };
 

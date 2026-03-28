@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { clientLogger } from "../../../lib/clientLogger";
 import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
@@ -278,10 +279,10 @@ const FileBlock = (props: CanvasBlockProps) => {
         }
       } else {
         const err = await res.json();
-        console.error("Upload failed:", err);
+        clientLogger.error("Upload failed", err);
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      clientLogger.error("Upload error", error);
     }
   };
 
@@ -298,7 +299,7 @@ const FileBlock = (props: CanvasBlockProps) => {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error("Download error:", error);
+      clientLogger.error("Download error", error);
     }
   };
 
@@ -317,7 +318,7 @@ const FileBlock = (props: CanvasBlockProps) => {
           },
         );
       } catch (error) {
-        console.error("Delete physical file error:", error);
+        clientLogger.error("Delete physical file error", error);
       }
     }
 

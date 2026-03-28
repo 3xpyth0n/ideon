@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw, MessageSquare } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { toast } from "sonner";
+import { clientLogger } from "../../../lib/clientLogger";
 
 interface Props {
   children: ReactNode;
@@ -83,7 +84,7 @@ export class ProjectCanvasErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error in ProjectCanvas:", error, errorInfo);
+    clientLogger.error("Uncaught error in ProjectCanvas", { error, errorInfo });
   }
 
   public render() {

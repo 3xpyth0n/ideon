@@ -11,6 +11,7 @@ import {
 import type { BlockData } from "@components/project/CanvasBlock";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import { v4 as uuidv4 } from "uuid";
+import { logger } from "@lib/logger";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -317,7 +318,10 @@ export const POST = projectAction(
                 .values(reactionsToInsert.slice(i, i + 1000))
                 .execute();
             } catch (error) {
-              console.error("Failed to insert reactions:", error);
+              logger.error(
+                { error, projectId: project.id },
+                "Failed to insert reactions",
+              );
             }
           }
         }

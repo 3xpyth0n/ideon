@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export async function GET() {
     const data = await response.json();
     return NextResponse.json({ latest: data.tag_name });
   } catch (error) {
-    console.error("Failed to check for updates:", error);
+    logger.error({ error }, "Failed to check for updates");
     return NextResponse.json(
       { error: "Failed to check for updates" },
       { status: 500 },

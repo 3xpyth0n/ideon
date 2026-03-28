@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb, getPool } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { v4 as uuidv4 } from "uuid";
+import { logger } from "@lib/logger";
 
 export const POST = authenticatedAction<{ error?: string; status?: string }>(
   async (req, { params, user }) => {
@@ -46,7 +47,10 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
         );
       }
     } catch (e) {
-      console.error("[RequestAccess] Error checking project:", e);
+      logger.error(
+        { err: e, projectId },
+        "[RequestAccess] Error checking project",
+      );
       throw e;
     }
 
@@ -66,7 +70,10 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
         );
       }
     } catch (e) {
-      console.error("[RequestAccess] Error checking collaborator:", e);
+      logger.error(
+        { err: e, projectId },
+        "[RequestAccess] Error checking collaborator",
+      );
       throw e;
     }
 
@@ -92,7 +99,10 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
         );
       }
     } catch (e) {
-      console.error("[RequestAccess] Error checking existing request:", e);
+      logger.error(
+        { err: e, projectId },
+        "[RequestAccess] Error checking existing request",
+      );
       throw e;
     }
 
@@ -117,12 +127,15 @@ export const POST = authenticatedAction<{ error?: string; status?: string }>(
           await global.updateProjectRequests(projectId);
         }
       } catch (wsError) {
-        console.error("WebSocket notification failed:", wsError);
+        logger.error(
+          { err: wsError, projectId },
+          "WebSocket notification failed",
+        );
       }
 
       return NextResponse.json({ status: "pending" });
     } catch (error) {
-      console.error("[RequestAccess] Insert failed:", error);
+      logger.error({ err: error, projectId }, "[RequestAccess] Insert failed");
       // Rethrow to let authenticatedAction handle it, or return 500 explicitly
       throw error;
     }

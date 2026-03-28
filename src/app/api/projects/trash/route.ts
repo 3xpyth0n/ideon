@@ -1,6 +1,7 @@
 import { getDb, runTransaction } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
+import { logger } from "@lib/logger";
 import { headers } from "next/headers";
 
 export const DELETE = authenticatedAction(
@@ -34,7 +35,7 @@ export const DELETE = authenticatedAction(
 
       return { success: true };
     } catch (error) {
-      console.error("Empty trash failed:", error);
+      logger.error({ error, userId: user.id }, "Empty trash failed");
       await logSecurityEvent("emptyTrash", "failure", {
         userId: user.id,
         ip,

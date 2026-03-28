@@ -1,4 +1,5 @@
-import { createServer, IncomingMessage } from "http";
+import { createServer, IncomingMessage, ServerResponse } from "http";
+import { randomUUID } from "crypto";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import * as Y from "yjs";
@@ -429,10 +430,88 @@ initDb()
   .then(() => app.prepare())
   .then(async () => {
     const server = createServer(async (req, res) => {
+      const method = req.method;
+      const url = req.url;
+
+      // socket.remoteAddress is the transport-level address; prefer it for
+      // loopback detection (not from headers, which can be spoofed).
+      const socketRemote = (req.socket && req.socket.remoteAddress) || null;
+
+      // Determine the client IP from common proxy headers when available.
+      const xForwardedFor =
+        (req.headers &&
+          (req.headers["x-forwarded-for"] as string | undefined)) ||
+        undefined;
+      const cfConnecting =
+        (req.headers &&
+          (req.headers["cf-connecting-ip"] as string | undefined)) ||
+        undefined;
+      const xRealIp =
+        (req.headers && (req.headers["x-real-ip"] as string | undefined)) ||
+        undefined;
+
+      const clientIpFromHeader = (() => {
+        if (typeof xForwardedFor === "string" && xForwardedFor.trim()) {
+          return xForwardedFor.split(",")[0].trim();
+        }
+        if (typeof cfConnecting === "string" && cfConnecting.trim())
+          return cfConnecting.trim();
+        if (typeof xRealIp === "string" && xRealIp.trim())
+          return xRealIp.trim();
+        return null;
+      })();
+
+      const clientIp = clientIpFromHeader || socketRemote || null;
+
+      const isLoopback =
+        socketRemote === "::1" ||
+        socketRemote === "127.0.0.1" ||
+        (typeof socketRemote === "string" &&
+          socketRemote.startsWith("::ffff:127."));
+
+      const reqId = randomUUID();
+      try {
+        res.setHeader("x-request-id", reqId);
+      } catch {
+        // ignore
+      }
+
+      try {
+        if (!isLoopback) {
+          logger.info({ method, url, remoteAddress: clientIp }, "");
+        }
+      } catch {
+        // ignore
+      }
+
+      const startHr = process.hrtime.bigint();
+
+      const onFinish = () => {
+        try {
+          if (!isLoopback) {
+            const durationMs = Number(process.hrtime.bigint() - startHr) / 1e6;
+            logger.info(
+              {
+                method,
+                url,
+                status: (res && (res as ServerResponse).statusCode) || null,
+                durationMs,
+                remoteAddress: clientIp,
+              },
+              "",
+            );
+          }
+        } catch {
+          // swallow
+        }
+      };
+
+      res.once("finish", onFinish);
+
       try {
         await handle(req, res);
       } catch (err) {
-        logger.error({ err, url: req.url }, "Error occurred handling request");
+        logger.error({ err, url }, "Error occurred handling request");
         res.statusCode = 500;
         res.end("internal server error");
       }

@@ -9,6 +9,9 @@ import {
 } from "react";
 import { useI18n } from "@providers/I18nProvider";
 import { formatDateParts } from "../../../lib/formatDate";
+import clientLogger from "../../../lib/clientLogger";
+import { getMessage } from "../../../lib/getMessage";
+import { classifySaveError } from "../../../lib/classifySaveError";
 import { Button } from "@components/ui/Button";
 import {
   History,
@@ -39,7 +42,9 @@ interface DecisionHistoryProps {
   projectId: string;
   onPreview: (stateId: string | null) => void;
   onApply: (stateId: string) => Promise<void>;
-  onSave: (intent?: string) => Promise<boolean>;
+  onSave: (
+    intent?: string,
+  ) => Promise<boolean | { success: boolean; unchanged?: boolean }>;
   onDelete?: (stateId: string) => Promise<void>;
   onRename?: (stateId: string, newIntent: string) => Promise<void>;
   isPreviewing: boolean;
@@ -220,13 +225,57 @@ export function DecisionHistory({
 
   const handleSave = async () => {
     setIsSaving(true);
+    const startTs = Date.now();
+
     try {
-      const success = await onSave();
+      clientLogger.debug("DecisionHistory: starting manual save");
+
+      const result = await onSave();
+      const durationMs = Date.now() - startTs;
+
+      // Support both legacy boolean return and new { success, unchanged? } shape
+      const success =
+        typeof result === "boolean"
+          ? result
+          : (result && result.success) || false;
+      const unchanged =
+        typeof result === "object" && result?.unchanged === true;
+
       if (success) {
-        toast.success(dict.modals.milestoneSuccess);
-        fetchHistory();
+        if (unchanged) {
+          clientLogger.info("DecisionHistory: manual save skipped", {
+            reason: "identical_snapshot",
+            hint: "Snapshot identical to last saved state; nothing was saved.",
+            durationMs,
+          });
+          toast.info(dict.modals.noChanges || "No changes to save");
+        } else {
+          clientLogger.debug("DecisionHistory: manual save succeeded", {
+            durationMs,
+          });
+          toast.success(dict.modals.milestoneSuccess);
+          fetchHistory();
+        }
+      } else {
+        clientLogger.error("DecisionHistory: manual save rejected by server", {
+          reason: "server_rejected",
+          hint: "Server returned a non-success response or an internal error occurred.",
+          durationMs,
+        });
+        toast.error(dict.modals.saveStateError);
       }
-    } catch {
+    } catch (err) {
+      const durationMs = Date.now() - startTs;
+      const classified = classifySaveError(err);
+      clientLogger.error("DecisionHistory: manual save error", {
+        reason: classified.reason,
+        hint: classified.hint,
+        message: getMessage(err),
+        durationMs,
+      });
+      clientLogger.debug("DecisionHistory: manual save stack", {
+        stack: err instanceof Error ? err.stack || "" : "",
+      });
       toast.error(dict.modals.saveStateError);
     } finally {
       setIsSaving(false);

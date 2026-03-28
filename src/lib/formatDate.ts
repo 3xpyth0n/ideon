@@ -8,7 +8,8 @@ export function formatDateParts(isoString?: string | null, lang = "en") {
     year: "numeric",
   }).formatToParts(date);
 
-  const find = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  const find = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "";
   const day = find("day");
   let month = find("month");
   if (lang !== "fr" && month && !month.endsWith(".")) {

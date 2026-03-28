@@ -9,7 +9,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Ability to copy multiple blocks content by concatenating them in the order they were selected.
+- Added Ability to copy multiple blocks content by concatenating them in the order they were selected.
+- Added ability to set the application's log level via environment variables.
 - Added `Ctrl+E` and `Ctrl+P` note block shortcuts to switch between edit and preview modes while preserving inline code formatting and command palette conflicts.
 - Added `Duplicate` option in the block context menu to quickly duplicate a block.
 

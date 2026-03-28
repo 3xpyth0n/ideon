@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useEffect } from "react";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export type AutoSnapshotIntent =
   | "Block created"
   | "Block deleted"
@@ -10,8 +12,10 @@ export type AutoSnapshotIntent =
   | "Block transferred"
   | "Periodic snapshot";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SaveStateFn = (...args: any[]) => Promise<boolean>;
+// allow wide signature here to accept project's specific typed save function
+type SaveStateFn = (
+  ...args: any[]
+) => Promise<boolean | { success: boolean; unchanged?: boolean }>;
 
 interface UseAutoSnapshotOptions {
   handleSaveStateRef: React.RefObject<SaveStateFn | null>;

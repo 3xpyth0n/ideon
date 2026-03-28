@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@lib/db";
 import { sql } from "kysely";
+import { logger } from "@lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export async function GET() {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Health check failed:", error);
+    logger.error({ error }, "Health check failed");
     return NextResponse.json(
       { status: "error", message: "Service unhealthy" },
       { status: 500 },

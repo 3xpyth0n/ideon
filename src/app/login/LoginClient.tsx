@@ -9,6 +9,7 @@ import { signIn } from "next-auth/react";
 import { ThemeSwitch } from "@components/ThemeSwitch";
 import { Button } from "@components/ui/Button";
 import { toast } from "sonner";
+import { clientLogger } from "../../lib/clientLogger";
 
 export function LoginClient() {
   const { dict } = useI18n();
@@ -61,7 +62,7 @@ export function LoginClient() {
         }
       })
       .catch((err) => {
-        console.error("Auth settings error:", err);
+        clientLogger.error("Auth settings error", err);
       })
       .finally(() => setLoading(false));
   }, [dict.auth.failedToFetchSettings]);
@@ -131,6 +132,7 @@ export function LoginClient() {
     setBusy(false);
 
     if (res?.error) {
+      clientLogger.warn("signIn failed", res.error);
       if (res.error === "too_many_requests") {
         toast.error(dict.auth.tooManyRequests);
       } else {
@@ -159,7 +161,8 @@ export function LoginClient() {
       // Always show success to prevent enumeration
       toast.success(dict.auth.emailSent);
       toast.message(dict.auth.emailSentDescription);
-    } catch {
+    } catch (err) {
+      clientLogger.error("forgot-password error", err);
       toast.error(dict.common.error || "An error occurred");
     } finally {
       setForgotPasswordLoading(false);
@@ -187,7 +190,8 @@ export function LoginClient() {
       } else {
         toast.error(dict.auth.magicLinkError);
       }
-    } catch {
+    } catch (err) {
+      clientLogger.error("magic link request failed", err);
       toast.error(dict.auth.magicLinkError);
     } finally {
       setSendingMagic(false);

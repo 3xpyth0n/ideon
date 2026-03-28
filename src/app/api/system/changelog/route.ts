@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET() {
     const content = await response.text();
     return NextResponse.json({ content });
   } catch (error) {
-    console.error("Failed to fetch changelog:", error);
+    logger.error({ error }, "Failed to fetch changelog");
     return NextResponse.json(
       { error: "Failed to fetch changelog" },
       { status: 500 },

@@ -3,6 +3,7 @@ import { writeFile, unlink } from "fs/promises";
 import { join } from "path";
 import crypto from "crypto";
 import { authenticatedAction } from "@lib/server-utils";
+import { logger } from "@lib/logger";
 
 export const POST = authenticatedAction(
   async (req, { user: auth }) => {
@@ -52,7 +53,7 @@ export const POST = authenticatedAction(
 
       await writeFile(filePath, buffer);
     } catch (error) {
-      console.error("Avatar upload error:", error);
+      logger.error({ error, userId }, "Avatar upload error");
       throw {
         status: 500,
         message: "Avatar upload error.",

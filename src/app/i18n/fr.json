@@ -110,10 +110,10 @@
     "usernameRequired": "Veuillez saisir un nom d'utilisateur."
   },
   "blocks": {
-    "duplicate": "Dupliquer",
     "addColor": "Ajouter une couleur",
     "addReaction": "Ajouter une réaction",
     "addTask": "Ajouter une tâche",
+    "duplicate": "Dupliquer",
     "blockTransferred": "Propriété transférée avec succès",
     "blockTypeChecklist": "Checklist",
     "blockTypeContact": "Contact",

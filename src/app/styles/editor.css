@@ -1,16 +1,27 @@
 .react-flow__node,
 .react-flow__node *,
-.react-flow__node:focus,
-.react-flow__node:focus-visible,
 .react-flow__renderer,
 .react-flow__renderer *,
 .react-flow__viewport *,
 .react-flow__viewport:focus,
-.react-flow__viewport:focus-visible,
-.react-flow__viewport:active:not(:focus) {
+.react-flow__viewport:focus-visible {
   outline: none;
-  outline: 0;
-  box-shadow: none;
+  -webkit-font-smoothing: antialiased !important;
+  text-rendering: geometricPrecision !important;
+}
+
+.react-flow__viewport {
+  will-change: transform !important;
+  transform-style: preserve-3d !important;
+  backface-visibility: hidden !important;
+  perspective: 1000px !important;
+}
+
+.block-card {
+  transform: translateZ(0) !important;
+  transform-style: preserve-3d !important;
+  backface-visibility: hidden !important;
+  contain: content !important;
 }
 
 /* Remote Cursor Styles */
@@ -20,13 +31,11 @@
   left: 0;
   pointer-events: none;
   z-index: 1000;
-  will-change: transform;
 }
 
 .remote-cursor-svg {
   width: 24px;
   height: 24px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .remote-cursor-name {
@@ -119,7 +128,6 @@
 }
 
 .project-canvas {
-  transition: filter 0.16s ease;
 }
 
 .project-canvas .react-flow__pane {
@@ -148,7 +156,7 @@
 }
 
 .project-canvas-container.drop-active .project-canvas {
-  filter: blur(2px);
+  /* Disabled filter to prevent global canvas blur issues */
 }
 
 [data-theme="dark"] .project-canvas-container {
@@ -396,7 +404,9 @@ body.sketch-modal-open
   border: 2px solid var(--border);
   border-radius: 50px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    border-color 0.3s ease,
+    background-color 0.3s ease;
   cursor: default !important;
   box-sizing: border-box;
 }
@@ -653,6 +663,8 @@ body.sketch-modal-open
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    -webkit-font-smoothing: subpixel-antialiased !important;
+    text-rendering: optimizeLegibility !important;
     scrollbar-width: none;
   }
 
@@ -849,10 +861,6 @@ body.sketch-modal-open
   box-sizing: border-box;
   user-select: none;
   -webkit-touch-callout: none;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
   background: var(--bg-island);
   padding: 16px;
   border: 2px solid var(--border);

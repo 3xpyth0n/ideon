@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import * as semver from "semver";
 import { useI18n } from "@providers/I18nProvider";
 import { Modal } from "./ui/Modal";
 
@@ -17,15 +18,10 @@ interface ChangelogSection {
 }
 
 function isVersionNewer(version: string, current: string): boolean {
-  const v1 = version.replace(/^v/, "").split(".").map(Number);
-  const v2 = current.replace(/^v/, "").split(".").map(Number);
-  for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-    const a = v1[i] || 0;
-    const b = v2[i] || 0;
-    if (a > b) return true;
-    if (a < b) return false;
-  }
-  return false;
+  const a = semver.clean(version) || version;
+  const b = semver.clean(current) || current;
+  if (!semver.valid(a) || !semver.valid(b)) return false;
+  return semver.gt(a, b);
 }
 
 function parseChangelog(
@@ -33,7 +29,8 @@ function parseChangelog(
   currentVersion: string,
 ): ChangelogSection[] {
   const sections: ChangelogSection[] = [];
-  const versionRegex = /^## \[(\d+\.\d+\.\d+)\]\s*-\s*(\d{4}-\d{2}-\d{2})/;
+  const versionRegex =
+    /^## \[v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]\s*-\s*(\d{4}-\d{2}-\d{2})/;
   const lines = markdown.split("\n");
   let current: ChangelogSection | null = null;
 
@@ -168,21 +165,10 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
       .then((data) => {
         if (data.latest) {
           setLatestVersion(data.latest);
-          const clean1 = currentVersion
-            .replace(/^v/, "")
-            .split(".")
-            .map(Number);
-          const clean2 = data.latest.replace(/^v/, "").split(".").map(Number);
-          let updated = false;
-          for (let i = 0; i < Math.max(clean1.length, clean2.length); i++) {
-            const a = clean1[i] || 0;
-            const b = clean2[i] || 0;
-            if (b > a) {
-              updated = true;
-              break;
-            }
-            if (a > b) break;
-          }
+          const a = semver.clean(data.latest) || data.latest;
+          const b = semver.clean(currentVersion) || currentVersion;
+          const updated =
+            semver.valid(a) && semver.valid(b) ? semver.gt(a, b) : false;
           setHasUpdate(updated);
         }
       })

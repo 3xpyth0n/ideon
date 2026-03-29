@@ -7,13 +7,12 @@ import { Modal } from "@components/ui/Modal";
 import {
   PlusIcon,
   TrashIcon,
-  GithubIcon,
-  GitlabIcon,
   ServerIcon,
   GitBranch,
   ChevronDown,
   Check,
 } from "lucide-react";
+import { FaGithub, FaGitlab } from "react-icons/fa";
 import "./git-token-manager.css";
 
 interface GitToken {
@@ -138,9 +137,9 @@ export function GitTokenManager() {
   const getIcon = (provider: string) => {
     switch (provider) {
       case "github":
-        return <GithubIcon className="w-5 h-5" />;
+        return <FaGithub className="w-5 h-5" />;
       case "gitlab":
-        return <GitlabIcon className="w-5 h-5" />;
+        return <FaGitlab className="w-5 h-5" />;
       case "gitea":
       case "forgejo":
         return <GitBranch className="w-5 h-5" />;

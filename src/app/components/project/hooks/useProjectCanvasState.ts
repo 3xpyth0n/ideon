@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { Awareness } from "y-protocols/awareness";
 import { useProjectCanvasGraph } from "./useProjectCanvasGraph";
 import { useProjectCanvasRealtime } from "./useProjectCanvasRealtime";
+import { focusProjectCanvas } from "../utils/focusCanvas";
 import { useUndoRedo } from "./useUndoRedo";
 import { useProjectData } from "./useProjectData";
 import { BlockData } from "@components/project/CanvasBlock";
@@ -20,6 +21,12 @@ import {
 } from "@components/project/utils/constants";
 import { generateStateHash } from "@components/project/utils/hash";
 import {
+  buildMultiBlockCopyText,
+  shouldOverrideMultiBlockCopy,
+  updateSelectedBlockOrder,
+} from "@components/project/utils/interaction";
+import {
+  computeViewportToRevealBounds,
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
@@ -364,8 +371,14 @@ export const useProjectCanvasState = (
   onGraphMutation?: (intent: string) => void,
 ) => {
   const { dict } = useI18n();
-  const { fitView, getZoom, zoomTo, setViewport, screenToFlowPosition } =
-    useReactFlow();
+  const {
+    fitView,
+    getViewport,
+    getZoom,
+    zoomTo,
+    setViewport,
+    screenToFlowPosition,
+  } = useReactFlow();
 
   const applyLongestSideFit = useCallback(
     (targetBlocks: Node<BlockData>[], maxZoom: number) => {
@@ -402,6 +415,25 @@ export const useProjectCanvasState = (
     [fitView, setViewport],
   );
 
+  const revealBlocksAtCurrentZoom = useCallback(
+    (targetBlocks: Node<BlockData>[]) => {
+      const bounds = getNodesBoundsWithFallback(targetBlocks);
+      const viewportSize = getReactFlowViewportSize();
+
+      if (!bounds || !viewportSize) return;
+
+      const nextViewport = computeViewportToRevealBounds(
+        getViewport(),
+        viewportSize,
+        bounds,
+        { padding: FIT_PADDING },
+      );
+
+      setViewport(nextViewport, { duration: FIT_DURATION });
+    },
+    [getViewport, setViewport],
+  );
+
   const [blocks, setBlocksState] = useState<Node<BlockData>[]>([]);
   const [links, setLinksState] = useState<Edge[]>([]);
   const [draftsByBlock, setDraftsByBlock] = useState<DraftsMap>({});
@@ -416,6 +448,7 @@ export const useProjectCanvasState = (
     });
   const isPreviewModeRef = useRef(false);
   const externalDragDepthRef = useRef(0);
+  const selectedBlockOrderRef = useRef<string[]>([]);
 
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -467,7 +500,12 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Node<BlockData>>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+      if (
+        (transaction.local &&
+          !(transaction.origin instanceof Y.UndoManager) &&
+          transaction.origin !== "local-react-update") ||
+        transaction.origin === "local-react-update"
+      )
         return;
 
       const changes: Array<{
@@ -539,7 +577,12 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Edge>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+      if (
+        (transaction.local &&
+          !(transaction.origin instanceof Y.UndoManager) &&
+          transaction.origin !== "local-react-update") ||
+        transaction.origin === "local-react-update"
+      )
         return;
 
       const changes: Array<{
@@ -595,7 +638,12 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Y.Text>,
       transaction: Y.Transaction,
     ) => {
-      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+      if (
+        (transaction.local &&
+          !(transaction.origin instanceof Y.UndoManager) &&
+          transaction.origin !== "local-react-update") ||
+        transaction.origin === "local-react-update"
+      )
         return;
 
       const keys = Array.from(event.keysChanged);
@@ -663,6 +711,10 @@ export const useProjectCanvasState = (
     setBlocksState(
       initialBlocks.map((rn) => {
         const yText = yContents.get(rn.id);
+        // Defer toString() to avoid main thread freeze during initial sync of 1000+ blocks
+        const initialContent = (rn.data as unknown as { content?: string })
+          ?.content;
+
         return {
           ...rn,
           selected: false,
@@ -675,9 +727,8 @@ export const useProjectCanvasState = (
           data: {
             ...(rn.data as unknown as Record<string, unknown>),
             yText,
-            content: yText
-              ? yText.toString()
-              : (rn.data as unknown as { content?: string }).content || "",
+            // Only use existing content string if available, don't force a yText.toString() here
+            content: initialContent || "",
           },
         } as Node<BlockData>;
       }),
@@ -742,14 +793,22 @@ export const useProjectCanvasState = (
         );
 
         const enrichedNextBlocks = nextBlocks;
+        selectedBlockOrderRef.current = updateSelectedBlockOrder(
+          selectedBlockOrderRef.current,
+          enrichedNextBlocks,
+        );
+        const prevBlocksMap = new Map(prev.map((b) => [b.id, b]));
 
         if (!isPreviewModeRef.current) {
           yBlocks.doc?.transact(() => {
             nextBlocks.forEach((block) => {
+              const prevBlock = prevBlocksMap.get(block.id);
+              if (prevBlock === block) return;
+
+              const existing = yBlocks.get(block.id);
               const blockToSync = { ...block };
 
               if (currentUserRole === "viewer") {
-                const existing = yBlocks.get(block.id);
                 if (!existing) return;
 
                 const existingData = existing.data || {};
@@ -788,7 +847,6 @@ export const useProjectCanvasState = (
                 data: blockData,
               };
 
-              const existing = yBlocks.get(block.id);
               const isSummaryUpdate = !!cleanBlockToSync.data?.isSummary;
               const isExistingDetailed = existing && !existing.data?.isSummary;
 
@@ -816,6 +874,7 @@ export const useProjectCanvasState = (
                 existing.position.y !== cleanBlockToSync.position.y ||
                 existing.width !== cleanBlockToSync.width ||
                 existing.height !== cleanBlockToSync.height ||
+                existing.type !== cleanBlockToSync.type ||
                 JSON.stringify(existing.data) !==
                   JSON.stringify(cleanBlockToSync.data);
 
@@ -823,7 +882,7 @@ export const useProjectCanvasState = (
                 yBlocks.set(block.id, cleanBlockToSync as Node<BlockData>);
               }
             });
-          }, yBlocks.doc.clientID);
+          }, "local-react-update");
         }
 
         // Return blocks
@@ -855,10 +914,15 @@ export const useProjectCanvasState = (
 
       setLinksState((prev) => {
         const nextLinks = typeof update === "function" ? update(prev) : update;
+        const prevLinksMap = new Map((prev || []).map((l) => [l.id, l]));
 
         if (!isPreviewModeRef.current && currentUserRole !== "viewer") {
           yLinks.doc?.transact(() => {
             nextLinks.forEach((link) => {
+              const prevLink = prevLinksMap.get(link.id);
+              if (prevLink === link) return;
+
+              const existing = yLinks.get(link.id);
               const linkToSync = { ...link };
               delete linkToSync.selected;
 
@@ -871,16 +935,20 @@ export const useProjectCanvasState = (
 
               linkToSync.data = cleanData;
 
-              const existing = yLinks.get(link.id);
               const hasChanged =
                 !existing ||
-                JSON.stringify(existing) !== JSON.stringify(linkToSync);
+                existing.source !== linkToSync.source ||
+                existing.target !== linkToSync.target ||
+                existing.sourceHandle !== linkToSync.sourceHandle ||
+                existing.targetHandle !== linkToSync.targetHandle ||
+                JSON.stringify(existing.data) !==
+                  JSON.stringify(linkToSync.data);
 
               if (hasChanged) {
                 yLinks.set(link.id, linkToSync as Edge);
               }
             });
-          }, yLinks.doc.clientID);
+          }, "local-react-update");
         }
 
         return nextLinks;
@@ -1120,8 +1188,8 @@ export const useProjectCanvasState = (
       overrideBlocks?: Node<BlockData>[],
       overrideLinks?: Edge[],
       options?: { isAuto?: boolean },
-    ): Promise<boolean> => {
-      if (!initialProjectId || isReadOnly) return false;
+    ): Promise<{ success: boolean; unchanged?: boolean }> => {
+      if (!initialProjectId || isReadOnly) return { success: false };
       const isAuto = options?.isAuto ?? false;
       try {
         const blocksToSave = (overrideBlocks || blocks).map((n) => ({
@@ -1141,7 +1209,9 @@ export const useProjectCanvasState = (
           if (!isAuto) {
             toast.info(dict.modals.noChanges || "No changes to save");
           }
-          return false;
+          // Report success with unchanged=true so callers (DecisionHistory)
+          // treat this as a successful no-op instead of a server rejection.
+          return { success: true, unchanged: true };
         }
 
         const res = await fetch(`/api/projects/${initialProjectId}/temporal`, {
@@ -1164,16 +1234,26 @@ export const useProjectCanvasState = (
               toast.error(dict.modals.saveError || "Failed to save changes");
             }
           }
-          return false;
+          return { success: false };
+        }
+
+        try {
+          const j = await res.json();
+          if (j && j.unchanged) {
+            lastSnapshotHash.current = currentHash;
+            return { success: true, unchanged: true };
+          }
+        } catch {
+          // ignore parse errors
         }
 
         lastSnapshotHash.current = currentHash;
-        return true;
+        return { success: true };
       } catch {
         if (!isAuto) {
           toast.error(dict.modals.saveError || "Failed to save changes");
         }
-        return false;
+        return { success: false };
       }
     },
     [initialProjectId, blocks, links],
@@ -1843,7 +1923,44 @@ export const useProjectCanvasState = (
   const blocksRef = useRef(blocks);
   useEffect(() => {
     blocksRef.current = blocks;
+    selectedBlockOrderRef.current = updateSelectedBlockOrder(
+      selectedBlockOrderRef.current,
+      blocks,
+    );
   }, [blocks]);
+
+  useEffect(() => {
+    const handleCopy = (event: ClipboardEvent) => {
+      const selectedBlocks = blocksRef.current.filter(
+        (block) => block.selected,
+      );
+      const selectedText = (window.getSelection?.() ?? null)?.toString() ?? "";
+      const hasTextSelection = selectedText.trim().length > 0;
+
+      if (
+        !shouldOverrideMultiBlockCopy({
+          selectedBlockCount: selectedBlocks.length,
+          activeElement: document.activeElement,
+          hasTextSelection,
+        })
+      ) {
+        return;
+      }
+
+      const copiedText = buildMultiBlockCopyText(
+        selectedBlocks,
+        selectedBlockOrderRef.current,
+      );
+
+      if (!copiedText || !event.clipboardData) return;
+
+      event.clipboardData.setData("text/plain", copiedText);
+      event.preventDefault();
+    };
+
+    window.addEventListener("copy", handleCopy);
+    return () => window.removeEventListener("copy", handleCopy);
+  }, []);
 
   const io = useProjectData({
     initialProjectId,
@@ -1908,6 +2025,45 @@ export const useProjectCanvasState = (
     };
   }, [checkVisibleBlocks]);
 
+  const directChildrenCountByFolder = useMemo(() => {
+    const folderIds = new Set(
+      blocks
+        .filter((block) => block.type === "folder")
+        .map((block) => block.id),
+    );
+    if (folderIds.size === 0) {
+      return new Map<string, number>();
+    }
+
+    const nodeIds = new Set(blocks.map((block) => block.id));
+    const childrenByFolder = new Map<string, Set<string>>();
+
+    links.forEach((link) => {
+      if (!link.source || !link.target || link.source === link.target) {
+        return;
+      }
+
+      if (link.type && link.type !== "connection") {
+        return;
+      }
+
+      if (!folderIds.has(link.source) || !nodeIds.has(link.target)) {
+        return;
+      }
+
+      const children = childrenByFolder.get(link.source) || new Set<string>();
+      children.add(link.target);
+      childrenByFolder.set(link.source, children);
+    });
+
+    const counts = new Map<string, number>();
+    folderIds.forEach((folderId) => {
+      counts.set(folderId, childrenByFolder.get(folderId)?.size ?? 0);
+    });
+
+    return counts;
+  }, [blocks, links]);
+
   const blocksWithPresence = useMemo(() => {
     const processedBlocks = blocks.map((block) => {
       const typingUsers = rt.presenceUsers.filter(
@@ -1925,11 +2081,16 @@ export const useProjectCanvasState = (
         currentUser?.id && projectOwnerId === currentUser.id;
       const canManage = isOwner || isProjectOwner;
       const yText = yContents?.get(block.id);
+      const directChildrenCount =
+        block.type === "folder"
+          ? directChildrenCountByFolder.get(block.id) ?? 0
+          : block.data?.directChildrenCount;
 
       return {
         ...block,
         draggable: isPreviewMode ? false : isLocked ? !!isOwner : true,
-        dragHandle: ".block-header, .shell-block-header, .handle-drag-target",
+        dragHandle:
+          ".block-card, .block-header, .block-footer, .shell-block-header, .handle-drag-target",
         selectable: !isPreviewMode,
         deletable: isPreviewMode ? false : !!canManage,
         data: {
@@ -1943,6 +2104,7 @@ export const useProjectCanvasState = (
           currentUser: currentUser
             ? { id: currentUser.id, username: currentUser.username }
             : undefined,
+          directChildrenCount,
           onContentChange: isPreviewMode ? undefined : graph.onContentChange,
           onFocus: isPreviewMode ? undefined : rt.onFocus,
           onBlur: isPreviewMode ? undefined : rt.onBlur,
@@ -1968,6 +2130,7 @@ export const useProjectCanvasState = (
     graph,
     yContents,
     projectOwnerId,
+    directChildrenCountByFolder,
   ]);
 
   const uniqueLinks = useMemo(() => {
@@ -2171,8 +2334,22 @@ export const useProjectCanvasState = (
         }
       }
 
-      // Handle Escape to unselect
+      // Handle Escape to unselect — but first blur active editable element
       if (e.key === "Escape") {
+        const activeElement = document.activeElement as HTMLElement | null;
+        if (
+          activeElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+            activeElement.isContentEditable)
+        ) {
+          activeElement.blur();
+          e.preventDefault();
+          e.stopPropagation();
+          // restore focus to canvas so keyboard navigation remains reliable
+          focusProjectCanvas();
+          return;
+        }
+
         setBlocks((nds) => nds.map((n) => ({ ...n, selected: false })));
         setLinks((eds) => eds.map((e) => ({ ...e, selected: false })));
         return;
@@ -2314,7 +2491,7 @@ export const useProjectCanvasState = (
             })),
           );
 
-          applyLongestSideFit([bestCandidate], FIT_MAX_ZOOM_SELECTED);
+          revealBlocksAtCurrentZoom([bestCandidate]);
         }
         return;
       }
@@ -2351,6 +2528,7 @@ export const useProjectCanvasState = (
       graph,
       projectOwnerId,
       handleFitView,
+      revealBlocksAtCurrentZoom,
     ],
   );
 
@@ -2362,6 +2540,19 @@ export const useProjectCanvasState = (
     setBlocksToDelete([]);
     onGraphMutation?.("Block deleted");
   }, [blockToDelete, blocksToDelete, graph, onGraphMutation]);
+
+  const handleDuplicateBlock = useCallback(
+    (blockId: string) => {
+      if (isReadOnly) return null;
+      try {
+        const id = graph.duplicateBlock(blockId);
+        return id as string | null;
+      } catch {
+        return null;
+      }
+    },
+    [isReadOnly, graph],
+  );
 
   return {
     blocks: blocksWithPresence,
@@ -2460,6 +2651,7 @@ export const useProjectCanvasState = (
     onBlockClick: () => setContextMenu(null),
     onLinkClick: () => setContextMenu(null),
     handleCreateBlock: handleCreateBlockWrapper,
+    handleDuplicateBlock,
     onExternalDragEnter,
     onExternalDragLeave,
     onExternalDragOver,

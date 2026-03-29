@@ -11,6 +11,7 @@ import {
 } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import "./canvas-edge.css";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 interface EdgeData extends Record<string, unknown> {
   label?: string;
@@ -167,10 +168,15 @@ export default function CanvasEdge({
               onBlur={() => data?.onLabelSubmit?.(id, inputValue)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
                   data?.onLabelSubmit?.(id, inputValue);
-                }
-                if (e.key === "Escape") {
+                  focusProjectCanvas();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
                   data?.onLabelCancel?.(id);
+                  focusProjectCanvas();
                 }
               }}
             />

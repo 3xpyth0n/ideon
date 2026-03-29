@@ -4,17 +4,17 @@ import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
 import { LanguageSelect } from "@setup/components/LanguageSelect";
 import { Eye, EyeOff } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { ThemeSwitch } from "@components/ThemeSwitch";
 import { Button } from "@components/ui/Button";
 import { toast } from "sonner";
+import { clientLogger } from "../../lib/clientLogger";
 
 export function LoginClient() {
   const { dict } = useI18n();
   const { refreshUser } = useUser();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -62,7 +62,7 @@ export function LoginClient() {
         }
       })
       .catch((err) => {
-        console.error("Auth settings error:", err);
+        clientLogger.error("Auth settings error", err);
       })
       .finally(() => setLoading(false));
   }, [dict.auth.failedToFetchSettings]);
@@ -72,22 +72,41 @@ export function LoginClient() {
 
     const params = new URLSearchParams(window.location.search);
     const setupSuccess = params.get("setupSuccess") === "true";
-    const regDisabled = params.get("error") === "registrationDisabled";
-    const accessDenied = params.get("error") === "AccessDenied";
+    const error = params.get("error");
+    let shouldClearParams = false;
 
     if (setupSuccess) {
       toast.success(dict.setup.setupSuccess);
-    } else if (regDisabled) {
-      toast.error(dict.auth.registrationDisabledError);
-    } else if (accessDenied) {
-      toast.error(dict.auth.accessDenied || "Access Denied");
+      shouldClearParams = true;
     }
 
-    if (setupSuccess || regDisabled || accessDenied) {
+    if (error === "registrationDisabled") {
+      toast.error(dict.auth.registrationDisabledError);
+      shouldClearParams = true;
+    } else if (error === "AccessDenied") {
+      toast.error(dict.auth.accessDenied || "Access Denied");
+      shouldClearParams = true;
+    } else if (error === "invalidToken") {
+      toast.error(dict.auth.invalidToken || "Invalid or expired link");
+      shouldClearParams = true;
+    } else if (error === "internalError") {
+      toast.error(dict.auth.magicLinkError);
+      shouldClearParams = true;
+    } else if (error === "unverified_email") {
+      // Returned when SSO providers report an unverified email and the user does not meet bypass rules.
+      toast.error(dict.auth.unverifiedEmailError);
+      shouldClearParams = true;
+    }
+
+    if (shouldClearParams) {
       // Clear URL
       const url = new URL(window.location.href);
-      url.searchParams.delete("setupSuccess");
-      url.searchParams.delete("error");
+      if (setupSuccess) {
+        url.searchParams.delete("setupSuccess");
+      }
+      if (error) {
+        url.searchParams.delete("error");
+      }
       window.history.replaceState({}, "", url.toString());
     }
   }, [
@@ -95,6 +114,9 @@ export function LoginClient() {
     dict.setup.setupSuccess,
     dict.auth.registrationDisabledError,
     dict.auth.accessDenied,
+    dict.auth.invalidToken,
+    dict.auth.magicLinkError,
+    dict.auth.unverifiedEmailError,
   ]);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -110,6 +132,7 @@ export function LoginClient() {
     setBusy(false);
 
     if (res?.error) {
+      clientLogger.warn("signIn failed", res.error);
       if (res.error === "too_many_requests") {
         toast.error(dict.auth.tooManyRequests);
       } else {
@@ -138,7 +161,8 @@ export function LoginClient() {
       // Always show success to prevent enumeration
       toast.success(dict.auth.emailSent);
       toast.message(dict.auth.emailSentDescription);
-    } catch {
+    } catch (err) {
+      clientLogger.error("forgot-password error", err);
       toast.error(dict.common.error || "An error occurred");
     } finally {
       setForgotPasswordLoading(false);
@@ -166,28 +190,13 @@ export function LoginClient() {
       } else {
         toast.error(dict.auth.magicLinkError);
       }
-    } catch {
+    } catch (err) {
+      clientLogger.error("magic link request failed", err);
       toast.error(dict.auth.magicLinkError);
     } finally {
       setSendingMagic(false);
     }
   };
-
-  useEffect(() => {
-    const error = searchParams.get("error");
-    if (error) {
-      if (error === "invalidToken") {
-        toast.error(dict.auth.invalidToken || "Invalid or expired link");
-      } else if (error === "internalError") {
-        toast.error(dict.auth.magicLinkError);
-      } else if (error === "unverified_email") {
-        toast.error(
-          dict.auth.unverifiedEmailError ||
-            "Email not verified. Please verify with your provider.",
-        );
-      }
-    }
-  }, [searchParams, dict]);
 
   if (!mounted || loading) {
     return (

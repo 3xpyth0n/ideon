@@ -1,21 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
-import { v4 as uuidv4 } from "uuid";
-import { getSecurityHeaders } from "@lib/utils";
 import NextAuth from "next-auth";
-import { authConfig } from "./auth.config";
+
+const secret = process.env.SECRET_KEY || process.env.AUTH_SECRET;
 
 const { auth } = NextAuth({
-  ...authConfig,
+  session: { strategy: "jwt" },
+  cookies: {
+    sessionToken: {
+      name: `authjs.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure:
+          process.env.NODE_ENV === "production" &&
+          (process.env.APP_URL?.startsWith("https") ?? false),
+      },
+    },
+  },
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+  secret,
+  providers: [],
 });
 
-export async function proxy(req: NextRequest) {
-  // Use a stable nonce for CSP
-  let nonce: string;
-  try {
-    nonce = uuidv4();
-  } catch {
-    nonce = Math.random().toString(36).substring(2);
+function getSecurityHeaders(nonce: string): Record<string, string> {
+  const appUrl = process.env.APP_URL || "";
+  const isSecure = appUrl.startsWith("https://");
+
+  const cspHeader = [
+    "default-src 'self';",
+    `script-src 'self' 'nonce-${nonce}' ${
+      process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""
+    };`,
+    "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
+    "img-src 'self' data: blob: https:;",
+    "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://esm.sh;",
+    "connect-src 'self' ws: wss: https:;",
+    "frame-src 'self' https:;",
+    "frame-ancestors 'none';",
+    "base-uri 'self';",
+    "form-action 'self';",
+    "object-src 'none';",
+    isSecure ? "upgrade-insecure-requests;" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const headers: Record<string, string> = {
+    "Content-Security-Policy": cspHeader,
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "X-XSS-Protection": "1; mode=block",
+  };
+
+  if (isSecure) {
+    headers["Strict-Transport-Security"] =
+      "max-age=31536000; includeSubDomains; preload";
   }
+
+  return headers;
+}
+
+export async function proxy(req: NextRequest) {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  const nonce = Array.from(array, (b) => b.toString(16).padStart(2, "0")).join(
+    "",
+  );
 
   const url = req.nextUrl;
   const pathname = url.pathname;

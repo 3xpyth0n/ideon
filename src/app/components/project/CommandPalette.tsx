@@ -63,6 +63,10 @@ export default function CommandPalette({
       { label: dict.canvas.cheatLink, keys: ["Ctrl", "K"] },
       { label: dict.canvas.cheatCode, keys: ["Ctrl", "E"] },
     ],
+    [dict.canvas.cheatNote]: [
+      { label: dict.canvas.cheatSwitchToEditMode, keys: ["Ctrl", "E"] },
+      { label: dict.canvas.cheatSwitchToPreviewMode, keys: ["Ctrl", "P"] },
+    ],
     [dict.canvas.cheatTasks]: [
       { label: dict.canvas.cheatIndent, keys: ["Tab"] },
       { label: dict.canvas.cheatOutdent, keys: ["⇧", "Tab"] },

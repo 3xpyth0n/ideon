@@ -4,41 +4,41 @@ Thank you for your interest in contributing to Ideon! We appreciate your help in
 
 ## Getting Started
 
-Ideon is designed to be easy to develop on. It supports two database modes depending on the environment:
+Ideon uses a **Docker-standardized development environment** to ensure high-fidelity performance and consistency across all machines.
 
-- **SQLite** (Development): Used automatically when running in dev mode. Zero setup required.
-- **PostgreSQL** (Production): Used when running via Docker or `npm start`.
+### Prerequisites
 
-### Local Development (SQLite)
+- **Docker** & **Docker Compose v2**
+- **Node.js** (for running checks and tests locally)
 
-This is the recommended way to work on the codebase. It uses a local SQLite file (`storage/dev.db`).
+### Initial Setup
 
 1.  **Fork the repository** and clone it locally.
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
-3.  **Run the development server**:
-    ```bash
-    npm run dev
-    ```
-    The app will be available at `http://localhost:3000`.
-
-### Production Simulation (PostgreSQL)
-
-If you need to test the production behavior or database migrations with Postgres:
-
-1.  **Configure the environment**:
-
+2.  **Configure the environment**:
     ```bash
     cp env.example .env
     # Edit .env and ensure SECRET_KEY is set (e.g. using openssl rand -hex 32)
     ```
-
-2.  **Start the services**:
+3.  **Install local dependencies** (required for IDE support and linting):
     ```bash
-    docker compose up -d
+    npm install
     ```
+
+### Running the Development Environment
+
+The development server runs within Docker to guarantee production-like performance, especially for large spatial canvases.
+
+```bash
+npm run dev
+```
+
+This command will:
+
+1.  Build the Ideon container images.
+2.  Start the stack including the application and a **PostgreSQL** database.
+3.  The app will be available at `http://localhost:3000`.
+
+_Note: Ideon runs in production mode within Docker for maximum performance. You must run `npm run dev` each time you want to apply your changes, as this will trigger a rebuild of the local container image._
 
 ## Development Workflow
 
@@ -49,6 +49,7 @@ If you need to test the production behavior or database migrations with Postgres
     # Install pre-commit (if not already installed)
     # macOS: brew install pre-commit
     # Linux: sudo apt install pre-commit
+    # Arch: sudo pacman -S pre-commit
 
     # Install the git hooks
     pre-commit install
@@ -82,7 +83,7 @@ If you need to test the production behavior or database migrations with Postgres
 - We use **Prettier** for formatting.
 - We use **ESLint** for linting.
 - Follow the existing naming conventions (camelCase for logic, PascalCase for components).
-- **No inline styles** allowed (use CSS modules or global CSS).
+- **No inline styles** allowed (use CSS files).
 - **No hardcoded strings** in the UI (use i18n dictionaries).
 
 ## Adding a New Language

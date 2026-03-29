@@ -7,7 +7,6 @@ import {
   FileText,
   Link,
   File,
-  Github,
   Palette,
   Contact,
   Video,
@@ -18,6 +17,7 @@ import {
   Kanban,
   Folder,
 } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
 
 type AddableBlockType =
@@ -50,7 +50,7 @@ const BLOCK_TYPES = [
   { type: "text", icon: FileText, labelKey: "blockTypeText" },
   { type: "link", icon: Link, labelKey: "blockTypeLink" },
   { type: "file", icon: File, labelKey: "blockTypeFile" },
-  { type: "github", icon: Github, labelKey: "blockTypeGit" },
+  { type: "github", icon: FaGithub, labelKey: "blockTypeGit" },
   { type: "palette", icon: Palette, labelKey: "blockTypePalette" },
   { type: "contact", icon: Contact, labelKey: "blockTypeContact" },
   { type: "video", icon: Video, labelKey: "blockTypeVideo" },

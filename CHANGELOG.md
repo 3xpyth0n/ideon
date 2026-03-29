@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.6] - 2026-03-XX
+
+### Added
+
+- Added Ability to copy multiple blocks content by concatenating them in the order they were selected.
+- Added ability to set the application's log level via environment variables.
+- Added `Ctrl+E` and `Ctrl+P` note block shortcuts to switch between edit and preview modes while preserving inline code formatting and command palette conflicts.
+- Added `Duplicate` option in the block context menu to quickly duplicate a block.
+
+### Fixed
+
+- Fixed blurry content when zooming out in the canvas.
+- Fixed OIDC/SSO login lockout for invited or existing users when the provider returned `email_verified=false` [#62](https://github.com/3xpyth0n/ideon/issues/62).
+
 ## [0.7.5] - 2026-03-23
 
 ### Fixed
@@ -14,9 +28,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.7.4] - 2026-03-20
 
-### Added
+### Fixed
 
-- Improved folder block styling [#61](https://github.com/3xpyth0n/ideon/issues/61).
+- Fixed poor readability of folder cards in light mode dashboard view [#61](https://github.com/3xpyth0n/ideon/issues/61).
 
 ## [0.7.3] - 2026-03-19
 

@@ -8,6 +8,7 @@ import React, {
   useCallback,
 } from "react";
 import { signOut } from "next-auth/react";
+import { clientLogger } from "../../lib/clientLogger";
 
 export interface UserProfile {
   id: string;
@@ -48,6 +49,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      clientLogger.debug("fetchUser:start", { path: window.location.pathname });
       setLoading(true);
       const res = await fetch("/api/account");
 
@@ -67,6 +69,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           window.location.pathname.startsWith(p),
         );
 
+        clientLogger.warn("fetchUser:unauthorized", {
+          path: window.location.pathname,
+        });
         if (!isPublic) {
           await signOut({ callbackUrl: "/login" });
         }
@@ -80,7 +85,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         throw new Error(`Failed to fetch user: ${res.statusText}`);
       }
     } catch (err) {
-      console.error("UserProvider: Error fetching user", err);
+      clientLogger.error("UserProvider: Error fetching user", err);
       setError(err instanceof Error ? err : new Error("Unknown error"));
       setUser(null);
     } finally {

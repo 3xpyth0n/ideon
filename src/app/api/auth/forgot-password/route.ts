@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
 import { hashToken } from "@lib/crypto";
 import { checkRateLimit } from "@lib/rate-limit";
+import { logger } from "@lib/logger";
 import { getClientIp } from "@lib/security-utils";
 
 export async function POST(req: Request) {
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
     // Always return success to prevent account enumeration
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Forgot password error:", error);
+    logger.error({ error }, "Forgot password error");
     return NextResponse.json({ success: true });
   }
 }

@@ -2,6 +2,9 @@
   display: flex;
   flex-direction: column;
   padding: 0;
+  border: none;
+  background: transparent;
+  isolation: isolate;
 }
 
 .block-card.folder-block {
@@ -10,25 +13,52 @@
     var(--block-border-color, var(--border)) 72%,
     var(--text-main)
   );
+  --folder-border-active: var(--folder-border-strong);
   position: relative;
-  z-index: auto !important;
-  border-color: var(--folder-border-strong);
-  border-top-left-radius: 12px;
+}
+
+.block-card.folder-block.selected {
+  --folder-border-active: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .block-card.folder-block.selected {
+  --folder-border-active: rgba(255, 255, 255, 0.6);
+}
+
+.preview-mode .block-card.folder-block.selected {
+  --folder-border-active: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .preview-mode .block-card.folder-block.selected {
+  --folder-border-active: rgba(255, 255, 255, 0.4);
 }
 
 .folder-block::before {
   content: "";
   position: absolute;
   top: -20px;
-  left: -2px;
   width: 118px;
   height: 44px;
   background: color-mix(in srgb, var(--bg-island) 60%, var(--border));
   border: 2px solid var(--folder-border-strong);
   border-bottom: none;
   border-radius: 7px 22px 0 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
+}
+
+.folder-block-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-island);
+  border: 2px solid var(--folder-border-active);
+  border-radius: 1rem;
+  border-top-left-radius: 12px;
 }
 
 .folder-block-shell {

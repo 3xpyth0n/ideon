@@ -6,8 +6,6 @@ import {
   ReactFlowProvider,
   ControlButton,
   Panel,
-  Background,
-  BackgroundVariant,
   ConnectionMode,
   useReactFlow as useReactFlowHook,
   Node,
@@ -46,6 +44,9 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { useUser } from "@providers/UserProvider";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { clientLogger } from "../../../lib/clientLogger";
+import { getMessage } from "../../../lib/getMessage";
+import { classifyIndexedDbError } from "../../../lib/classifyIndexedDbError";
 import {
   useState,
   useEffect,
@@ -65,12 +66,12 @@ import {
   File as FileIcon,
   Undo2,
   Redo2,
-  Figma,
   Share2,
-  Github,
   Loader2,
   Menu,
 } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
+import { SiFigma } from "react-icons/si";
 import { DecisionHistory } from "./DecisionHistory";
 import { ShareModal } from "./ShareModal";
 import { DownloadButton } from "./DownloadButton";
@@ -83,7 +84,14 @@ import {
   useProjectCanvasState,
   UserPresence,
 } from "./hooks/useProjectCanvasState";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
+import {
+  getSelectedNoteBlockIdForShortcut,
+  shouldIgnoreNodeContextMenuShortcut,
+  type NoteModeShortcutHandler,
+  type NoteModeShortcutKey,
+} from "./utils/interaction";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useCanvasTouchViewport } from "./hooks/useCanvasTouchViewport";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
@@ -343,57 +351,146 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   useEffect(() => {
     if (typeof window === "undefined" || !initialProjectId) return;
 
-    const doc = new Y.Doc();
-    const wsProvider = new WebsocketProvider(
-      `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
-        window.location.host
-      }/yjs`,
-      `project-${initialProjectId}`,
-      doc,
-      { connect: true },
-    );
+    let doc: Y.Doc | null = new Y.Doc();
+    let wsProvider: WebsocketProvider | null = null;
+    let indexeddbProvider: IndexeddbPersistence | null = null;
 
-    wsProvider.on("sync", (data: boolean) => {
-      setIsRemoteSynced(data);
-    });
+    try {
+      clientLogger.debug("yjs:init:start");
 
-    wsProvider.on("status", (event: { status: string }) => {
-      setIsSocketConnected(event.status === "connected");
-    });
-
-    wsProvider.on("connection-close", (event: { code?: number } | null) => {
-      if (event?.code === 4003) {
-        wsProvider.disconnect();
-        toast.error(dictRef.current.common.accessRevoked || "Access revoked");
-        routerRef.current.push("/home");
+      try {
+        const update = Y.encodeStateAsUpdate(doc!);
+        const docSizeBytes = (update && (update as Uint8Array).byteLength) || 0;
+        clientLogger.debug("yjs:doc:estimated_size_bytes", { docSizeBytes });
+      } catch (e) {
+        clientLogger.debug("yjs:doc:size_estimate_failed", String(e));
       }
-    });
 
-    const indexeddbProvider = new IndexeddbPersistence(
-      `project-${initialProjectId}`,
-      doc,
-    );
+      wsProvider = new WebsocketProvider(
+        `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
+          window.location.host
+        }/yjs`,
+        `project-${initialProjectId}`,
+        doc,
+        { connect: true },
+      );
 
-    indexeddbProvider.on("synced", () => {
-      setIsLocalSynced(true);
-    });
+      wsProvider.on("sync", (data: boolean) => {
+        let size = 0;
+        try {
+          const u = Y.encodeStateAsUpdate(doc!);
+          size = (u && (u as Uint8Array).byteLength) || 0;
+        } catch {
+          void 0;
+        }
+        clientLogger.debug("yjs:sync", {
+          synced: Boolean(data),
+          docSizeBytes: size,
+        });
+        setIsRemoteSynced(Boolean(data));
+      });
 
-    setYjsData({ yDoc: doc, provider: wsProvider });
+      wsProvider.on("status", (event: { status: string }) => {
+        clientLogger.info("yjs:status", { status: event.status });
+        setIsSocketConnected(event.status === "connected");
+      });
 
-    // Periodic check to ensure status is accurate even if events are missed
-    const checkInterval = setInterval(() => {
-      setIsSocketConnected(wsProvider.wsconnected);
-    }, 3000);
+      wsProvider.on("connection-close", (event: { code?: number } | null) => {
+        clientLogger.warn("yjs:connection-close", {
+          code: event?.code ?? null,
+        });
+        if (event?.code === 4003) {
+          wsProvider?.disconnect();
+          toast.error(dictRef.current.common.accessRevoked || "Access revoked");
+          routerRef.current.push("/home");
+        }
+      });
 
-    return () => {
-      clearInterval(checkInterval);
-      wsProvider.on("sync", () => {});
-      wsProvider.on("status", () => {});
-      wsProvider.on("connection-close", () => {});
-      wsProvider.destroy();
-      indexeddbProvider.destroy();
-      doc.destroy();
-    };
+      try {
+        indexeddbProvider = new IndexeddbPersistence(
+          `project-${initialProjectId}`,
+          doc!,
+        );
+        indexeddbProvider.on("synced", () => {
+          setIsLocalSynced(true);
+          clientLogger.debug("indexeddb:synced");
+        });
+      } catch (err) {
+        const classified = classifyIndexedDbError(err);
+        clientLogger.error("indexeddb:init:error", {
+          reason: classified.reason,
+          hint: classified.hint,
+          message: getMessage(err),
+        });
+
+        try {
+          if (navigator?.storage?.estimate) {
+            navigator.storage
+              .estimate()
+              .then((estimate: { usage?: number; quota?: number }) => {
+                clientLogger.debug("indexeddb:storage:estimate", {
+                  usage: estimate?.usage ?? null,
+                  quota: estimate?.quota ?? null,
+                  usageRatio:
+                    estimate?.usage && estimate?.quota
+                      ? estimate.usage / estimate.quota
+                      : null,
+                });
+              })
+              .catch((e) =>
+                clientLogger.debug(
+                  "indexeddb:storage:estimate:error",
+                  String(e),
+                ),
+              );
+          }
+        } catch (e) {
+          clientLogger.debug("indexeddb:storage:estimate:error", String(e));
+        }
+      }
+
+      setYjsData({ yDoc: doc!, provider: wsProvider });
+      clientLogger.debug("yjs:init:complete");
+
+      const checkInterval = setInterval(() => {
+        try {
+          setIsSocketConnected(Boolean(wsProvider?.wsconnected));
+        } catch {
+          void 0;
+        }
+      }, 3000);
+
+      return () => {
+        clearInterval(checkInterval);
+        try {
+          wsProvider?.on("sync", () => {});
+          wsProvider?.on("status", () => {});
+          wsProvider?.on("connection-close", () => {});
+          wsProvider?.destroy?.();
+        } catch {
+          void 0;
+        }
+        try {
+          indexeddbProvider?.destroy?.();
+        } catch {
+          void 0;
+        }
+        try {
+          doc?.destroy?.();
+        } catch {
+          void 0;
+        }
+      };
+    } catch (err) {
+      clientLogger.error("yjs:init:failed", {
+        message: getMessage(err),
+      });
+      try {
+        doc?.destroy?.();
+      } catch {
+        void 0;
+      }
+    }
   }, [initialProjectId]);
 
   const { yDoc, provider } = yjsData || { yDoc: null, provider: null };
@@ -419,7 +516,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         overrideBlocks?: Node<BlockData>[],
         overrideLinks?: Edge[],
         options?: { isAuto?: boolean },
-      ) => Promise<boolean>)
+      ) => Promise<boolean | { success: boolean; unchanged?: boolean }>)
     | null
   >(null);
 
@@ -485,6 +582,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onPaneClick: originalOnPaneClick,
     onLinkClick,
     handleCreateBlock,
+    handleDuplicateBlock,
     onExternalDragEnter,
     onExternalDragLeave,
     onExternalDragOver,
@@ -506,7 +604,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     canRedo,
     hasSeenOnboarding,
     helperLines,
-    isReady,
   } = useProjectCanvasState(
     initialProjectId,
     currentUser,
@@ -539,6 +636,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     position: { x: number; y: number };
   } | null>(null);
   const mobileActionsRef = useRef<HTMLDivElement>(null);
+  const noteModeShortcutHandlersRef = useRef(
+    new Map<string, NoteModeShortcutHandler>(),
+  );
+
+  const registerNoteModeShortcutHandler = useCallback(
+    (blockId: string, handler: NoteModeShortcutHandler | null) => {
+      if (handler) {
+        noteModeShortcutHandlersRef.current.set(blockId, handler);
+      } else {
+        noteModeShortcutHandlersRef.current.delete(blockId);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -599,20 +710,45 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       }
 
       if (e.ctrlKey || e.metaKey) {
-        const target = e.target as HTMLElement;
+        const target = e.target as HTMLElement | null;
+        const activeElement =
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : target;
+        const shortcutKey = e.key.toLowerCase();
         const isEditing =
-          ["INPUT", "TEXTAREA"].includes(target.tagName) ||
-          target.isContentEditable;
+          !!activeElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+            activeElement.isContentEditable);
+
         if (!isEditing) {
-          if (e.key === "p") {
+          if (shortcutKey === "p" || shortcutKey === "e") {
+            const noteBlockId = getSelectedNoteBlockIdForShortcut({
+              blocks,
+              activeElement,
+            });
+            const shortcutResult = noteBlockId
+              ? noteModeShortcutHandlersRef.current.get(noteBlockId)?.(
+                  shortcutKey as NoteModeShortcutKey,
+                )
+              : undefined;
+
+            if (shortcutResult === "handled") {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
+          }
+
+          if (shortcutKey === "p") {
             e.preventDefault();
             e.stopPropagation();
             setIsPaletteOpen((v) => !v);
-          } else if (e.key === "a") {
+          } else if (shortcutKey === "a") {
             e.preventDefault();
             e.stopPropagation();
             setIsAddBlockOpen((v) => !v);
-          } else if (e.key === "h") {
+          } else if (shortcutKey === "h") {
             e.preventDefault();
             e.stopPropagation();
             setIsHistoryOpen((v) => !v);
@@ -622,7 +758,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [pendingConnection]);
+  }, [blocks, pendingConnection]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -647,7 +783,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           setPendingRequestsCount(pending);
         }
       } catch (e) {
-        console.error("Failed to fetch requests count", e);
+        clientLogger.error("Failed to fetch requests count", e);
       }
     };
 
@@ -831,6 +967,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     (event: React.MouseEvent, node: Node) => {
       // Clear context menu as per original onBlockClick
       originalOnPaneClick();
+
+      if (shouldIgnoreNodeContextMenuShortcut(event.target)) {
+        lastNodeClickRef.current = null;
+        return;
+      }
 
       const now = Date.now();
       if (lastNodeClickRef.current && lastNodeClickRef.current.id === node.id) {
@@ -1160,6 +1301,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           ...block.data,
           isPreviewMode,
           currentUser: currentUser || undefined,
+          registerNoteModeShortcutHandler,
           userRole: currentUserRole || undefined,
         },
       }));
@@ -1169,8 +1311,38 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     currentUser,
     currentUserRole,
     newBlockId,
+    registerNoteModeShortcutHandler,
     visibleBlockIds,
   ]);
+
+  // Focus newly created / duplicated block.
+  useEffect(() => {
+    if (!newBlockId) return;
+    const id = newBlockId;
+
+    const timer = setTimeout(() => {
+      try {
+        // Ensure the node is present in the DOM, then place keyboard focus
+        // back on the canvas container so the block is selected.
+        const blockEl = document.querySelector(
+          `[data-id="${id}"]`,
+        ) as HTMLElement | null;
+        if (blockEl) {
+          try {
+            blockEl.scrollIntoView({ block: "center", inline: "center" });
+          } catch {
+            // ignore
+          }
+        }
+
+        focusProjectCanvas();
+      } catch {
+        // ignore
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [newBlockId, blocks]);
 
   if (!isAccessValidated) {
     return (
@@ -1274,470 +1446,458 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 deleteDraft,
               }}
             >
-              <div
-                className={`canvas-main-inner w-full h-full transition-opacity duration-300 ${
-                  isReady ? "opacity-100" : "opacity-0"
-                }`}
+              <ReactFlow
+                nodes={blocksWithPreview}
+                edges={links.filter(
+                  (edge) =>
+                    !blocks.find((b) => b.id === edge.source && b.hidden) &&
+                    !blocks.find((b) => b.id === edge.target && b.hidden) &&
+                    visibleBlockIds.has(edge.source) &&
+                    visibleBlockIds.has(edge.target),
+                )}
+                onNodesChange={isPreviewMode ? undefined : onBlocksChange}
+                onEdgesChange={isPreviewMode ? undefined : onLinksChange}
+                onNodeDragStart={isPreviewMode ? undefined : onBlockDragStart}
+                onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
+                onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
+                onConnect={isPreviewMode ? undefined : onConnectWithSnapshot}
+                onConnectStart={isPreviewMode ? undefined : onConnectStart}
+                onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
+                isValidConnection={isValidConnection}
+                onPointerMove={onPointerMove}
+                onPointerLeave={onPointerLeave}
+                onPaneContextMenu={(e) => {
+                  if (
+                    pointerTypeRef.current === "touch" ||
+                    pointerTypeRef.current === "pen"
+                  ) {
+                    e.preventDefault();
+                    return;
+                  }
+                  onPaneContextMenu(e);
+                }}
+                onNodeContextMenu={onBlockContextMenu}
+                onEdgeContextMenu={onEdgeContextMenu}
+                onPaneClick={handlePaneClick}
+                onNodeClick={handleNodeClick}
+                onEdgeClick={onLinkClick}
+                onEdgeDoubleClick={onLinkDoubleClick}
+                onMove={onMove}
+                onViewportChange={onViewportChange}
+                zoomOnPinch={true}
+                zoomOnDoubleClick={false}
+                nodeTypes={blockTypes}
+                edgeTypes={linkTypes}
+                defaultViewport={DEFAULT_VIEWPORT}
+                connectionMode={ConnectionMode.Loose}
+                connectionRadius={30}
+                translateExtent={FIXED_EXTENT}
+                minZoom={0.1}
+                maxZoom={4}
+                deleteKeyCode={null}
+                disableKeyboardA11y
+                selectionOnDrag={!isReadOnly}
+                selectionKeyCode={null}
+                nodesDraggable={!isReadOnly}
+                nodesConnectable={!isReadOnly}
+                elementsSelectable={true}
+                edgesReconnectable={!isReadOnly}
+                panOnScroll
+                panOnDrag={true}
+                multiSelectionKeyCode="Control"
+                fitView
+                onlyRenderVisibleElements={true}
+                className={`project-canvas ${isReadOnly ? "read-only" : ""}`}
+                proOptions={{ hideAttribution: true }}
               >
-                <ReactFlow
-                  nodes={blocksWithPreview}
-                  edges={links.filter(
-                    (edge) =>
-                      !blocks.find((b) => b.id === edge.source && b.hidden) &&
-                      !blocks.find((b) => b.id === edge.target && b.hidden) &&
-                      visibleBlockIds.has(edge.source) &&
-                      visibleBlockIds.has(edge.target),
-                  )}
-                  onNodesChange={isPreviewMode ? undefined : onBlocksChange}
-                  onEdgesChange={isPreviewMode ? undefined : onLinksChange}
-                  onNodeDragStart={isPreviewMode ? undefined : onBlockDragStart}
-                  onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
-                  onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
-                  onConnect={isPreviewMode ? undefined : onConnectWithSnapshot}
-                  onConnectStart={isPreviewMode ? undefined : onConnectStart}
-                  onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
-                  isValidConnection={isValidConnection}
-                  onPointerMove={onPointerMove}
-                  onPointerLeave={onPointerLeave}
-                  onPaneContextMenu={(e) => {
-                    if (
-                      pointerTypeRef.current === "touch" ||
-                      pointerTypeRef.current === "pen"
-                    ) {
-                      e.preventDefault();
-                      return;
-                    }
-                    onPaneContextMenu(e);
-                  }}
-                  onNodeContextMenu={onBlockContextMenu}
-                  onEdgeContextMenu={onEdgeContextMenu}
-                  onPaneClick={handlePaneClick}
-                  onNodeClick={handleNodeClick}
-                  onEdgeClick={onLinkClick}
-                  onEdgeDoubleClick={onLinkDoubleClick}
-                  onMove={onMove}
-                  onViewportChange={onViewportChange}
-                  zoomOnPinch={true}
-                  zoomOnDoubleClick={false}
-                  nodeTypes={blockTypes}
-                  edgeTypes={linkTypes}
-                  defaultViewport={DEFAULT_VIEWPORT}
-                  connectionMode={ConnectionMode.Loose}
-                  connectionRadius={30}
-                  translateExtent={FIXED_EXTENT}
-                  minZoom={0.1}
-                  maxZoom={4}
-                  deleteKeyCode={null}
-                  selectionOnDrag={!isReadOnly}
-                  selectionKeyCode={null}
-                  nodesDraggable={!isReadOnly}
-                  nodesConnectable={!isReadOnly}
-                  elementsSelectable={true}
-                  edgesReconnectable={!isReadOnly}
-                  panOnScroll
-                  panOnDrag={true}
-                  multiSelectionKeyCode="Control"
-                  fitView
-                  className={`project-canvas ${isReadOnly ? "read-only" : ""}`}
-                  proOptions={{ hideAttribution: true }}
+                <div
+                  className={`canvas-cursor-overlay ${
+                    isTyping ? "hide-native-cursor" : ""
+                  }`}
+                />
+                <Panel
+                  position="top-left"
+                  className="pointer-events-none m-0!"
+                  style={{ width: "100%", height: "100%", zIndex: 1500 }}
                 >
-                  <div
-                    className={`canvas-cursor-overlay ${
-                      isTyping ? "hide-native-cursor" : ""
-                    }`}
+                  <RemoteCursors
+                    presenceUsers={presenceUsers}
+                    currentUserId={currentUser?.id}
+                    remoteCursorsRef={remoteCursorsRef}
                   />
+                </Panel>
+                {!isReadOnly && (
                   <Panel
                     position="top-left"
                     className="pointer-events-none m-0!"
-                    style={{ width: "100%", height: "100%", zIndex: 1500 }}
+                    style={{ width: "100%", height: "100%", zIndex: 999 }}
                   >
-                    <RemoteCursors
-                      presenceUsers={presenceUsers}
-                      currentUserId={currentUser?.id}
-                      remoteCursorsRef={remoteCursorsRef}
-                    />
+                    <HelperLines helperLines={helperLines} />
                   </Panel>
-                  {!isReadOnly && (
-                    <Panel
-                      position="top-left"
-                      className="pointer-events-none m-0!"
-                      style={{ width: "100%", height: "100%", zIndex: 999 }}
-                    >
-                      <HelperLines helperLines={helperLines} />
-                    </Panel>
-                  )}
-                  <Background
-                    variant={BackgroundVariant.Dots}
-                    gap={25}
-                    size={1.5}
-                    color="var(--text-muted)"
-                    className="opacity-20"
-                  />
+                )}
+                {/* Background disabled to prevent global rasterization blur */}
 
-                  {!hasSeenOnboarding && isCoreOnly && !isPreviewMode && (
-                    <Panel
-                      position="bottom-center"
-                      className="onboarding-panel"
-                      role="status"
-                      aria-label="Magic Paste Onboarding Hint"
-                    >
-                      <div className="onboarding-content">
-                        <div className="onboarding-icons">
-                          <Github size={20} />
-                          <div className="separator" />
-                          <Figma size={20} />
-                          <div className="separator" />
-                          <FileIcon size={20} />
-                        </div>
-                        <div className="onboarding-text">
-                          <h3>Magic Paste</h3>
-                          <p>{dict.project.onboardingHint}</p>
-                        </div>
-                      </div>
-                    </Panel>
-                  )}
+                {!hasSeenOnboarding && isCoreOnly && !isPreviewMode && (
                   <Panel
-                    position="top-left"
-                    className="m-6! ml-12! mt-3!"
-                    style={{ zIndex: 2000 }}
+                    position="bottom-center"
+                    className="onboarding-panel"
+                    role="status"
+                    aria-label="Magic Paste Onboarding Hint"
                   >
-                    {!isPreviewMode && !isMobileTopbar && (
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-sm font-bold opacity-40 select-none">
-                          {dict.project.shareCursor}
-                        </span>
-                        <input
-                          type="checkbox"
-                          className="theme-checkbox"
-                          checked={shareCursor}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            setShareCursor(e.target.checked);
-                          }}
-                        />
-                        <button
-                          className="command-palette-hint"
-                          onClick={() => setIsAddBlockOpen(true)}
-                        >
-                          <kbd>Ctrl + A</kbd>
-                          <span>{dict.canvas.addBlock}</span>
-                        </button>
-                        <button
-                          className="command-palette-hint"
-                          onClick={() => setIsPaletteOpen(true)}
-                        >
-                          <kbd>Ctrl + P</kbd>
-                          <span>{dict.canvas.commandPalette}</span>
-                        </button>
+                    <div className="onboarding-content">
+                      <div className="onboarding-icons">
+                        <FaGithub size={20} />
+                        <div className="separator" />
+                        <SiFigma size={20} />
+                        <div className="separator" />
+                        <FileIcon size={20} />
                       </div>
-                    )}
+                      <div className="onboarding-text">
+                        <h3>Magic Paste</h3>
+                        <p>{dict.project.onboardingHint}</p>
+                      </div>
+                    </div>
                   </Panel>
+                )}
+                <Panel
+                  position="top-left"
+                  className="m-6! ml-12! mt-3!"
+                  style={{ zIndex: 2000 }}
+                >
+                  {!isPreviewMode && !isMobileTopbar && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-sm font-bold opacity-40 select-none">
+                        {dict.project.shareCursor}
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="theme-checkbox"
+                        checked={shareCursor}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setShareCursor(e.target.checked);
+                        }}
+                      />
+                      <button
+                        className="command-palette-hint"
+                        onClick={() => setIsAddBlockOpen(true)}
+                      >
+                        <kbd>Ctrl + A</kbd>
+                        <span>{dict.canvas.addBlock}</span>
+                      </button>
+                      <button
+                        className="command-palette-hint"
+                        onClick={() => setIsPaletteOpen(true)}
+                      >
+                        <kbd>Ctrl + P</kbd>
+                        <span>{dict.canvas.commandPalette}</span>
+                      </button>
+                    </div>
+                  )}
+                </Panel>
 
-                  <Panel
-                    position="top-right"
-                    className={`flex items-center gap-2 m-6! mt-3! ${
-                      isMobileTopbar ? "project-topbar-panel-mobile" : ""
-                    }`}
-                    style={{ zIndex: 2000 }}
-                  >
-                    {isPreviewMode && (
-                      <div className="preview-mode-banner">
-                        <span className="preview-mode-text">
-                          {dict.canvas.previewMode}
-                        </span>
-                        <div className="preview-mode-actions">
+                <Panel
+                  position="top-right"
+                  className={`flex items-center gap-2 m-6! mt-3! ${
+                    isMobileTopbar ? "project-topbar-panel-mobile" : ""
+                  }`}
+                  style={{ zIndex: 2000 }}
+                >
+                  {isPreviewMode && (
+                    <div className="preview-mode-banner">
+                      <span className="preview-mode-text">
+                        {dict.canvas.previewMode}
+                      </span>
+                      <div className="preview-mode-actions">
+                        <button
+                          onClick={() => handlePreview(null)}
+                          className="preview-action-btn preview-return-btn"
+                          title={dict.canvas.returnToPresent}
+                        >
+                          <ArrowLeft size={14} />
+                          <span className="preview-btn-text">
+                            {dict.canvas.return}
+                          </span>
+                        </button>
+                        {currentUser?.id === projectOwnerId && (
                           <button
-                            onClick={() => handlePreview(null)}
-                            className="preview-action-btn preview-return-btn"
-                            title={dict.canvas.returnToPresent}
+                            onClick={() =>
+                              selectedStateId &&
+                              handleApplyState(selectedStateId)
+                            }
+                            className="preview-action-btn preview-apply-btn"
+                            title={dict.canvas.apply}
+                            disabled={!selectedStateId}
                           >
-                            <ArrowLeft size={14} />
+                            <Check size={14} />
                             <span className="preview-btn-text">
-                              {dict.canvas.return}
+                              {dict.canvas.apply}
                             </span>
                           </button>
-                          {currentUser?.id === projectOwnerId && (
-                            <button
-                              onClick={() =>
-                                selectedStateId &&
-                                handleApplyState(selectedStateId)
-                              }
-                              className="preview-action-btn preview-apply-btn"
-                              title={dict.canvas.apply}
-                              disabled={!selectedStateId}
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="project-topbar-row">
+                    {!isPreviewMode && (
+                      <div className="project-presence-strip">
+                        <SyncIndicator
+                          isSocketConnected={isSocketConnected}
+                          isRemoteSynced={isRemoteSynced}
+                        />
+                        <div className="project-presence-avatars">
+                          {presenceUsers.map((u) => (
+                            <div
+                              key={u.id}
+                              className="user-presence-item relative shrink-0"
                             >
-                              <Check size={14} />
-                              <span className="preview-btn-text">
-                                {dict.canvas.apply}
-                              </span>
-                            </button>
-                          )}
+                              <div
+                                className="user-presence-avatar"
+                                style={{ borderColor: u.color || "#000" }}
+                              >
+                                <img
+                                  src={getAvatarUrl(u.avatarUrl, u.username)}
+                                  alt={u.displayName || u.username}
+                                  className="user-presence-avatar-img"
+                                  referrerPolicy="no-referrer"
+                                />
+                              </div>
+
+                              <div
+                                className="user-presence-tooltip"
+                                style={
+                                  {
+                                    "--user-color": u.color || "#000",
+                                  } as React.CSSProperties
+                                }
+                              >
+                                {u.displayName || u.username}
+                                <div className="user-presence-tooltip-arrow" />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
 
-                    <div className="project-topbar-row">
-                      {!isPreviewMode && (
-                        <div className="project-presence-strip">
-                          <SyncIndicator
-                            isSocketConnected={isSocketConnected}
-                            isRemoteSynced={isRemoteSynced}
-                          />
-                          <div className="project-presence-avatars">
-                            {presenceUsers.map((u) => (
-                              <div
-                                key={u.id}
-                                className="user-presence-item relative shrink-0"
-                              >
-                                <div
-                                  className="user-presence-avatar"
-                                  style={{ borderColor: u.color || "#000" }}
-                                >
-                                  <img
-                                    src={getAvatarUrl(u.avatarUrl, u.username)}
-                                    alt={u.displayName || u.username}
-                                    className="user-presence-avatar-img"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                </div>
-
-                                <div
-                                  className="user-presence-tooltip"
-                                  style={
-                                    {
-                                      "--user-color": u.color || "#000",
-                                    } as React.CSSProperties
-                                  }
-                                >
-                                  {u.displayName || u.username}
-                                  <div className="user-presence-tooltip-arrow" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {isMobileTopbar ? (
-                        <div
-                          className="project-mobile-actions"
-                          ref={mobileActionsRef}
+                    {isMobileTopbar ? (
+                      <div
+                        className="project-mobile-actions"
+                        ref={mobileActionsRef}
+                      >
+                        <button
+                          className={`project-mobile-actions-trigger ${
+                            isMobileActionsOpen ? "active" : ""
+                          }`}
+                          onClick={() =>
+                            setIsMobileActionsOpen((open) => !open)
+                          }
+                          title={dict.project.mobileActions}
+                          aria-label={dict.project.mobileActions}
                         >
-                          <button
-                            className={`project-mobile-actions-trigger ${
-                              isMobileActionsOpen ? "active" : ""
-                            }`}
-                            onClick={() =>
-                              setIsMobileActionsOpen((open) => !open)
-                            }
-                            title={dict.project.mobileActions}
-                            aria-label={dict.project.mobileActions}
-                          >
-                            <Menu size={18} />
-                          </button>
+                          <Menu size={18} />
+                        </button>
 
-                          {isMobileActionsOpen && (
-                            <div className="project-mobile-actions-menu">
-                              {!isPreviewMode && (
-                                <label className="project-mobile-actions-item project-mobile-actions-switch">
-                                  <span>{dict.project.shareCursor}</span>
-                                  <input
-                                    type="checkbox"
-                                    className="theme-checkbox"
-                                    checked={shareCursor}
-                                    onChange={(e) => {
-                                      e.stopPropagation();
-                                      setShareCursor(e.target.checked);
-                                    }}
-                                  />
-                                </label>
-                              )}
-
-                              {!isPreviewMode && (
-                                <button
-                                  className="project-mobile-actions-item"
-                                  onClick={() => {
-                                    setIsAddBlockOpen(true);
-                                    setIsMobileActionsOpen(false);
+                        {isMobileActionsOpen && (
+                          <div className="project-mobile-actions-menu">
+                            {!isPreviewMode && (
+                              <label className="project-mobile-actions-item project-mobile-actions-switch">
+                                <span>{dict.project.shareCursor}</span>
+                                <input
+                                  type="checkbox"
+                                  className="theme-checkbox"
+                                  checked={shareCursor}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    setShareCursor(e.target.checked);
                                   }}
-                                >
-                                  {dict.canvas.addBlock}
-                                </button>
-                              )}
+                                />
+                              </label>
+                            )}
 
-                              {!isPreviewMode && (
-                                <button
-                                  className="project-mobile-actions-item"
-                                  onClick={() => {
-                                    setIsPaletteOpen(true);
-                                    setIsMobileActionsOpen(false);
-                                  }}
-                                >
-                                  {dict.canvas.commandPalette}
-                                </button>
-                              )}
+                            {!isPreviewMode && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsAddBlockOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                              >
+                                {dict.canvas.addBlock}
+                              </button>
+                            )}
 
-                              {currentUserRole !== "viewer" && (
-                                <button
-                                  className="project-mobile-actions-item relative"
-                                  onClick={() => {
-                                    setIsInviteModalOpen(true);
-                                    setIsMobileActionsOpen(false);
-                                  }}
-                                  disabled={isPreviewMode}
-                                >
-                                  <span>{dict.project.access || "Access"}</span>
-                                  {pendingRequestsCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                      {pendingRequestsCount}
-                                    </span>
-                                  )}
-                                </button>
-                              )}
+                            {!isPreviewMode && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsPaletteOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                              >
+                                {dict.canvas.commandPalette}
+                              </button>
+                            )}
 
-                              {currentUser?.id === projectOwnerId && (
-                                <button
-                                  className="project-mobile-actions-item"
-                                  onClick={() => {
-                                    setIsShareModalOpen(true);
-                                    setIsMobileActionsOpen(false);
-                                  }}
-                                  disabled={isPreviewMode}
-                                >
-                                  {dict.project.share || "Share"}
-                                </button>
-                              )}
-
-                              {!isPreviewMode && (
-                                <button
-                                  className="project-mobile-actions-item"
-                                  onClick={() => {
-                                    setIsHistoryOpen(true);
-                                    setIsMobileActionsOpen(false);
-                                  }}
-                                >
-                                  {dict.canvas.temporalHistory || "History"}
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          {currentUserRole !== "viewer" && (
-                            <div className="relative">
-                              <Button
-                                onClick={() => setIsInviteModalOpen(true)}
-                                className="btn-primary"
+                            {currentUserRole !== "viewer" && (
+                              <button
+                                className="project-mobile-actions-item relative"
+                                onClick={() => {
+                                  setIsInviteModalOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
                                 disabled={isPreviewMode}
                               >
-                                {(
-                                  dict.project.access || "Access"
-                                ).toUpperCase()}
-                              </Button>
-                              {pendingRequestsCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                  {pendingRequestsCount}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {currentUser?.id === projectOwnerId && (
+                                <span>{dict.project.access || "Access"}</span>
+                                {pendingRequestsCount > 0 && (
+                                  <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                    {pendingRequestsCount}
+                                  </span>
+                                )}
+                              </button>
+                            )}
+
+                            {currentUser?.id === projectOwnerId && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsShareModalOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                                disabled={isPreviewMode}
+                              >
+                                {dict.project.share || "Share"}
+                              </button>
+                            )}
+
+                            {!isPreviewMode && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsHistoryOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                              >
+                                {dict.canvas.temporalHistory || "History"}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {currentUserRole !== "viewer" && (
+                          <div className="relative">
                             <Button
-                              onClick={() => setIsShareModalOpen(true)}
-                              className="btn-secondary px-3!"
+                              onClick={() => setIsInviteModalOpen(true)}
+                              className="btn-primary"
                               disabled={isPreviewMode}
-                              title={dict.project.share || "Share"}
                             >
-                              <Share2 size={16} />
+                              {(dict.project.access || "Access").toUpperCase()}
                             </Button>
-                          )}
-                          <DecisionHistory
-                            projectId={initialProjectId!}
-                            onPreview={handlePreview}
-                            onApply={handleApplyState}
-                            onSave={handleSaveState}
-                            onDelete={handleDeleteState}
-                            onRename={handleRenameState}
-                            isPreviewing={isPreviewMode}
-                            selectedStateId={selectedStateId}
-                            projectOwnerId={projectOwnerId}
-                            currentUserId={currentUser?.id}
-                            isHistoryOpen={isHistoryOpen}
-                            onHistoryOpenChange={setIsHistoryOpen}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </Panel>
-
-                  {isMobileTopbar && (
-                    <DecisionHistory
-                      projectId={initialProjectId!}
-                      onPreview={handlePreview}
-                      onApply={handleApplyState}
-                      onSave={handleSaveState}
-                      onDelete={handleDeleteState}
-                      onRename={handleRenameState}
-                      isPreviewing={isPreviewMode}
-                      selectedStateId={selectedStateId}
-                      projectOwnerId={projectOwnerId}
-                      currentUserId={currentUser?.id}
-                      isHistoryOpen={isHistoryOpen}
-                      onHistoryOpenChange={setIsHistoryOpen}
-                    />
-                  )}
-
-                  <div className="zoom-indicator">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold opacity-40 tabular-nums">
-                        {zoom}%
-                      </span>
-                    </div>
+                            {pendingRequestsCount > 0 && (
+                              <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                {pendingRequestsCount}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {currentUser?.id === projectOwnerId && (
+                          <Button
+                            onClick={() => setIsShareModalOpen(true)}
+                            className="btn-secondary px-3!"
+                            disabled={isPreviewMode}
+                            title={dict.project.share || "Share"}
+                          >
+                            <Share2 size={16} />
+                          </Button>
+                        )}
+                        <DecisionHistory
+                          projectId={initialProjectId!}
+                          onPreview={handlePreview}
+                          onApply={handleApplyState}
+                          onSave={handleSaveState}
+                          onDelete={handleDeleteState}
+                          onRename={handleRenameState}
+                          isPreviewing={isPreviewMode}
+                          selectedStateId={selectedStateId}
+                          projectOwnerId={projectOwnerId}
+                          currentUserId={currentUser?.id}
+                          isHistoryOpen={isHistoryOpen}
+                          onHistoryOpenChange={setIsHistoryOpen}
+                        />
+                      </div>
+                    )}
                   </div>
+                </Panel>
 
-                  <Controls
-                    showInteractive={false}
-                    showZoom={false}
-                    showFitView={false}
-                    position="bottom-right"
+                {isMobileTopbar && (
+                  <DecisionHistory
+                    projectId={initialProjectId!}
+                    onPreview={handlePreview}
+                    onApply={handleApplyState}
+                    onSave={handleSaveState}
+                    onDelete={handleDeleteState}
+                    onRename={handleRenameState}
+                    isPreviewing={isPreviewMode}
+                    selectedStateId={selectedStateId}
+                    projectOwnerId={projectOwnerId}
+                    currentUserId={currentUser?.id}
+                    isHistoryOpen={isHistoryOpen}
+                    onHistoryOpenChange={setIsHistoryOpen}
+                  />
+                )}
+
+                <div className="zoom-indicator">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold opacity-40 tabular-nums">
+                      {zoom}%
+                    </span>
+                  </div>
+                </div>
+
+                <Controls
+                  showInteractive={false}
+                  showZoom={false}
+                  showFitView={false}
+                  position="bottom-right"
+                >
+                  <ControlButton
+                    onClick={undo}
+                    disabled={!canUndo || isPreviewMode}
+                    title={dict.canvas.undo || "Undo"}
                   >
-                    <ControlButton
-                      onClick={undo}
-                      disabled={!canUndo || isPreviewMode}
-                      title={dict.canvas.undo || "Undo"}
-                    >
-                      <Undo2 />
-                    </ControlButton>
-                    <ControlButton
-                      onClick={redo}
-                      disabled={!canRedo || isPreviewMode}
-                      title={dict.canvas.redo || "Redo"}
-                    >
-                      <Redo2 />
-                    </ControlButton>
-                    <ControlButton
-                      onClick={handleZoomIn}
-                      title={dict.canvas.zoomIn}
-                    >
-                      <Plus />
-                    </ControlButton>
-                    <ControlButton
-                      onClick={handleZoomOut}
-                      title={dict.canvas.zoomOut}
-                    >
-                      <Minus />
-                    </ControlButton>
-                    <ControlButton
-                      onClick={handleFitView}
-                      title={dict.canvas.fitView}
-                    >
-                      <Maximize />
-                    </ControlButton>
-                    <DownloadButton />
-                  </Controls>
-                </ReactFlow>
-              </div>
+                    <Undo2 />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={redo}
+                    disabled={!canRedo || isPreviewMode}
+                    title={dict.canvas.redo || "Redo"}
+                  >
+                    <Redo2 />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={handleZoomIn}
+                    title={dict.canvas.zoomIn}
+                  >
+                    <Plus />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={handleZoomOut}
+                    title={dict.canvas.zoomOut}
+                  >
+                    <Minus />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={handleFitView}
+                    title={dict.canvas.fitView}
+                  >
+                    <Maximize />
+                  </ControlButton>
+                  <DownloadButton />
+                </Controls>
+              </ReactFlow>
 
               {contextMenu && (
                 <div
@@ -1821,6 +1981,39 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                               >
                                 {dict.project.transferOwnership ||
                                   "Transfer Ownership"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (contextMenuBlock) {
+                                    const id = handleDuplicateBlock(
+                                      contextMenuBlock.id,
+                                    );
+                                    if (id) {
+                                      setNewBlockId(id);
+                                      setTimeout(
+                                        () => setNewBlockId(null),
+                                        800,
+                                      );
+                                      triggerAutoSnapshot("Block created");
+                                    }
+                                  }
+                                  setContextMenu(null);
+                                }}
+                                className="context-menu-item"
+                              >
+                                {(
+                                  dict.blocks as unknown as Record<
+                                    string,
+                                    string
+                                  >
+                                ).duplicate ||
+                                  (
+                                    dict.common as unknown as Record<
+                                      string,
+                                      string
+                                    >
+                                  ).duplicate ||
+                                  "Duplicate"}
                               </button>
                               <div className="context-menu-separator" />
                               <button

@@ -36,6 +36,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { markdown } from "@codemirror/lang-markdown";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import { javascript } from "@codemirror/lang-javascript";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
@@ -432,6 +433,14 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.target as HTMLElement)?.blur?.();
+                  focusProjectCanvas();
+                }
+              }}
               className="block-title nodrag mr-2"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}

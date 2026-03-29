@@ -3,6 +3,7 @@ import { getRepoStats } from "@lib/client/git-providers";
 import { getDb, withAuthenticatedSession } from "@lib/db";
 import { auth } from "@auth";
 import { decryptApiKey } from "@lib/crypto";
+import { logger } from "@lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,10 @@ export async function GET(req: NextRequest) {
           try {
             token = decryptApiKey(matchedToken.token, userId).trim();
           } catch (e) {
-            console.error("[GitStats] Failed to decrypt token:", e);
+            logger.error(
+              { err: e, userId },
+              "[GitStats] Failed to decrypt token",
+            );
           }
         }
       });
@@ -78,7 +82,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Git proxy error:", error);
+    logger.error({ error, url }, "Git proxy error");
     return NextResponse.json(
       { error: "Failed to fetch git stats" },
       { status: 500 },

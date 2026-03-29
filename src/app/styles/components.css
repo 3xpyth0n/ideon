@@ -1493,12 +1493,29 @@
 /* Block Reactions Styles */
 .block-reactions-container {
   position: absolute;
-  top: 100%;
-  right: 16px;
+  bottom: -10px;
+  right: 12px;
   left: auto;
-  transform: translateY(-50%);
-  z-index: 100;
+  top: auto;
+  transform: none;
+  z-index: 10001;
   pointer-events: auto;
+}
+
+.project-canvas .react-flow__node,
+.project-canvas .react-flow__node > * {
+  overflow: visible !important;
+}
+
+.project-canvas .react-flow__node,
+.project-canvas .block-card {
+  overflow: visible !important;
+  contain: none !important;
+}
+
+.block-reactions-container {
+  contain: none !important;
+  z-index: 10001 !important;
 }
 
 .reactions-wrapper {
@@ -1544,6 +1561,14 @@
   background-color: rgba(var(--accent-rgb), 0.1);
   border-color: rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
+}
+
+.block-footer {
+  cursor: grab;
+}
+
+.block-footer:active {
+  cursor: grabbing;
 }
 
 .add-reaction-group {

@@ -189,67 +189,68 @@ const FolderBlock = memo(({ id, data, selected }: FolderBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="folder-block-shell">
-        <div className="folder-block-type-pill">
-          <Folder size={14} />
-          <span>{dict.blocks.blockTypeFolder || "Folder"}</span>
-        </div>
+      <div className="folder-block-main">
+        <div className="folder-block-shell">
+          <div className="folder-block-type-pill">
+            <Folder size={14} />
+            <span>{dict.blocks.blockTypeFolder || "Folder"}</span>
+          </div>
 
-        <div className="folder-block-body">
-          <input
-            value={title}
-            onChange={handleTitleChange}
-            className="folder-block-name"
-            placeholder={dict.blocks.title || "..."}
-            readOnly={isReadOnly}
-          />
-        </div>
+          <div className="folder-block-body">
+            <input
+              value={title}
+              onChange={handleTitleChange}
+              className="folder-block-name"
+              placeholder={dict.blocks.title || "..."}
+              readOnly={isReadOnly}
+            />
+          </div>
 
-        <div className="folder-block-toolbar">
-          <span className="folder-block-count">
-            {dict.blocks.folderChildrenCount
-              ? dict.blocks.folderChildrenCount.replace(
-                  "{count}",
-                  String(directChildrenCount),
-                )
-              : `${directChildrenCount} children`}
-          </span>
-
-          <button
-            className="folder-block-toggle"
-            onClick={handleToggleCollapse}
-            disabled={isReadOnly}
-          >
-            {folderMetadata.isCollapsed ? (
-              <Maximize2 size={15} />
-            ) : (
-              <Minimize2 size={15} />
-            )}
-            <span>
-              {folderMetadata.isCollapsed
-                ? dict.blocks.expandChildren || "Expand"
-                : dict.blocks.collapseChildren || "Collapse"}
+          <div className="folder-block-toolbar">
+            <span className="folder-block-count">
+              {dict.blocks.folderChildrenCount
+                ? dict.blocks.folderChildrenCount.replace(
+                    "{count}",
+                    String(directChildrenCount),
+                  )
+                : `${directChildrenCount} children`}
             </span>
-          </button>
+
+            <button
+              className="folder-block-toggle"
+              onClick={handleToggleCollapse}
+              disabled={isReadOnly}
+            >
+              {folderMetadata.isCollapsed ? (
+                <Maximize2 size={15} />
+              ) : (
+                <Minimize2 size={15} />
+              )}
+              <span>
+                {folderMetadata.isCollapsed
+                  ? dict.blocks.expandChildren || "Expand"
+                  : dict.blocks.collapseChildren || "Collapse"}
+              </span>
+            </button>
+          </div>
         </div>
+        <BlockFooter
+          updatedAt={data.updatedAt}
+          authorName={data.authorName}
+          isLocked={isLocked}
+          dict={dict}
+          lang={lang}
+        />
+
+        <BlockReactions
+          reactions={data.reactions}
+          onReact={handleReact}
+          onRemoveReaction={handleRemoveReaction}
+          currentUserId={currentUser?.id}
+          isReadOnly={isReadOnly}
+          canReact={canReact}
+        />
       </div>
-
-      <BlockFooter
-        updatedAt={data.updatedAt}
-        authorName={data.authorName}
-        isLocked={isLocked}
-        dict={dict}
-        lang={lang}
-      />
-
-      <BlockReactions
-        reactions={data.reactions}
-        onReact={handleReact}
-        onRemoveReaction={handleRemoveReaction}
-        currentUserId={currentUser?.id}
-        isReadOnly={isReadOnly}
-        canReact={canReact}
-      />
 
       <Handle
         id="left"

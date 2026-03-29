@@ -36,6 +36,8 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
 import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
+import type { NoteModeShortcutHandler } from "./utils/interaction";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 export type BlockData = {
   title?: string;
@@ -112,6 +114,10 @@ export type BlockData = {
     },
   ) => void;
   onFolderToggle?: (folderId: string, isCollapsed: boolean) => void;
+  registerNoteModeShortcutHandler?: (
+    blockId: string,
+    handler: NoteModeShortcutHandler | null,
+  ) => void;
   typingUsers?: UserPresence[];
   movingUserColor?: string;
   projectOwnerId?: string | null;
@@ -1086,6 +1092,14 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                 <input
                   value={title}
                   onChange={handleTitleChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      (e.target as HTMLElement)?.blur?.();
+                      focusProjectCanvas();
+                    }
+                  }}
                   className="block-title nodrag"
                   placeholder={dict.blocks.title || "..."}
                   readOnly={isReadOnly}

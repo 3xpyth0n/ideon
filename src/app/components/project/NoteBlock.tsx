@@ -46,6 +46,12 @@ import { BlockFooter } from "./BlockFooter";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { focusProjectCanvas } from "./utils/focusCanvas";
+import {
+  resolveNoteModeShortcutAction,
+  shouldStartNoteInEditMode,
+  type NoteModeShortcutHandler,
+} from "./utils/interaction";
 import dynamic from "next/dynamic";
 import { markdown } from "@codemirror/lang-markdown";
 import "./markdown-editor.css";
@@ -154,9 +160,14 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
+                  e.stopPropagation();
                   applyLink();
+                  focusProjectCanvas();
                 } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
                   cancelLink();
+                  focusProjectCanvas();
                 }
               }}
               autoFocus
@@ -336,119 +347,564 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
 
 BubbleMenuComponent.displayName = "BubbleMenuComponent";
 
-const NoteBlock = memo(
-  ({
-    data,
-    selected,
+const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
+  const { dict, lang } = useI18n();
+  const { getEdges } = useReactFlow();
+
+  const currentUser = data.currentUser;
+  const projectOwnerId = data.projectOwnerId;
+  const ownerId = data.ownerId;
+  const isPreviewMode = data.isPreviewMode;
+  const isLocked = data.isLocked;
+
+  const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
+  const isOwner = currentUser?.id && ownerId === currentUser.id;
+  const isViewer = data.userRole === "viewer";
+  const isReadOnly =
+    isPreviewMode ||
+    isViewer ||
+    (isLocked ? !isOwner && !isProjectOwner : false);
+  const canReact = !isPreviewMode || isViewer;
+
+  const { handleReact, handleRemoveReaction } = useBlockReactions({
     id,
-    positionAbsoluteX,
-    positionAbsoluteY,
-    width,
-    height,
-  }: NoteBlockProps) => {
-    const { dict, lang } = useI18n();
-    const { getEdges } = useReactFlow();
-    const viewport = useViewport();
+    data,
+    currentUser,
+    isReadOnly,
+    canReact,
+  });
 
-    const currentUser = data.currentUser;
-    const projectOwnerId = data.projectOwnerId;
-    const ownerId = data.ownerId;
-    const isPreviewMode = data.isPreviewMode;
-    const isLocked = data.isLocked;
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [isEditing, setIsEditing] = useState(() =>
+    shouldStartNoteInEditMode(data.content, isReadOnly),
+  );
+  const [showBubbleMenu, setShowBubbleMenu] = useState(false);
+  const [isTitleEditing, setIsTitleEditing] = useState(false);
+  const [isEditingLink, setIsEditingLink] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const blockRef = useRef<HTMLDivElement>(null);
 
-    const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
-    const isOwner = currentUser?.id && ownerId === currentUser.id;
-    const isViewer = data.userRole === "viewer";
-    const isReadOnly =
-      isPreviewMode ||
-      isViewer ||
-      (isLocked ? !isOwner && !isProjectOwner : false);
-    const canReact = !isPreviewMode || isViewer;
+  useEffect(() => {
+    if (isReadOnly || !isEditing) {
+      setShowBubbleMenu(false);
+    }
+  }, [isReadOnly, isEditing]);
 
-    const { handleReact, handleRemoveReaction } = useBlockReactions({
-      id,
-      data,
-      currentUser,
-      isReadOnly,
-      canReact,
-    });
+  useEffect(() => {
+    if (!currentUser?.vimMode && isEditing && !isReadOnly) {
+      setShowBubbleMenu(true);
+    }
+  }, [currentUser?.vimMode, isEditing, isReadOnly]);
 
-    const [editor, setEditor] = useState<Editor | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [showBubbleMenu, setShowBubbleMenu] = useState(false);
-    const [isTitleEditing, setIsTitleEditing] = useState(false);
-    const [isEditingLink, setIsEditingLink] = useState(false);
-    const [linkUrl, setLinkUrl] = useState("");
-    const blockRef = useRef<HTMLDivElement>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
-    const [blockRect, setBlockRect] = useState<DOMRect | null>(null);
+  useEffect(() => {
+    const isNonVimEdit = !currentUser?.vimMode && isEditing && !isReadOnly;
 
-    useEffect(() => {
-      if (isReadOnly || !isEditing) {
-        setShowBubbleMenu(false);
+    if (!editor) {
+      if (!isNonVimEdit) setShowBubbleMenu(false);
+      return;
+    }
+
+    const handleSelectionUpdate = () => {
+      if (isNonVimEdit) return;
+      const { from, head } = editor.state.selection;
+      const hasSelection = from !== head;
+      setShowBubbleMenu(
+        hasSelection && !isTitleEditing && !isReadOnly && isEditing,
+      );
+    };
+
+    const handleFocus = () => {
+      if (isNonVimEdit) return;
+      if (isReadOnly || !isEditing) return;
+      const { from, head } = editor.state.selection;
+      if (from !== head) setShowBubbleMenu(true);
+    };
+
+    editor.on("selectionUpdate", handleSelectionUpdate);
+    editor.on("transaction", handleSelectionUpdate);
+    editor.on("focus", handleFocus);
+
+    return () => {
+      editor.off("selectionUpdate", handleSelectionUpdate);
+      editor.off("transaction", handleSelectionUpdate);
+      editor.off("focus", handleFocus);
+    };
+  }, [editor, isTitleEditing, isReadOnly, isEditing, currentUser?.vimMode]);
+
+  // Moved viewport listener to BubbleMenuContainer to avoid NoteBlock re-renders during zoom
+
+  const [title, setTitle] = useState(data.title || "");
+
+  const edges = getEdges();
+  const isHandleConnected = (handleId: string) =>
+    edges.some(
+      (e) =>
+        (e.source === id && e.sourceHandle === handleId) ||
+        (e.target === id && e.targetHandle === handleId),
+    );
+
+  const isLeftSourceConnected = isHandleConnected("left");
+  const isRightSourceConnected = isHandleConnected("right");
+  const isTopSourceConnected = isHandleConnected("top");
+  const isBottomSourceConnected = isHandleConnected("bottom");
+
+  const noteVimExtensions = useMemo(() => [markdown()], []);
+
+  const lastSyncedTextRef = useRef<string | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const syncToYjs = useCallback(
+    (text: string) => {
+      if (!data.yText) return;
+
+      if (text.length > 1000000) {
+        text = text.slice(0, 1000000) + "\n\n[Truncated for performance]";
       }
-    }, [isReadOnly, isEditing]);
 
-    useEffect(() => {
-      if (!currentUser?.vimMode && isEditing && !isReadOnly) {
-        setShowBubbleMenu(true);
-      }
-    }, [currentUser?.vimMode, isEditing, isReadOnly]);
+      if (lastSyncedTextRef.current === text) return;
 
-    useEffect(() => {
-      const isNonVimEdit = !currentUser?.vimMode && isEditing && !isReadOnly;
-
-      if (!editor) {
-        if (!isNonVimEdit) setShowBubbleMenu(false);
-        return;
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
       }
 
-      const handleSelectionUpdate = () => {
-        if (isNonVimEdit) return;
-        const { from, head } = editor.state.selection;
-        const hasSelection = from !== head;
-        setShowBubbleMenu(
-          hasSelection && !isTitleEditing && !isReadOnly && isEditing,
-        );
-      };
+      syncTimeoutRef.current = setTimeout(() => {
+        syncTimeoutRef.current = null;
+        if (!data.yText) return;
 
-      const handleFocus = () => {
-        if (isNonVimEdit) return;
-        if (isReadOnly || !isEditing) return;
-        const { from, head } = editor.state.selection;
-        if (from !== head) setShowBubbleMenu(true);
-      };
-
-      const handleDomBlur = (e: FocusEvent) => {
-        if (isNonVimEdit) return;
-
-        const relatedTarget = e.relatedTarget;
-        if (
-          menuRef.current &&
-          relatedTarget instanceof Node &&
-          menuRef.current.contains(relatedTarget)
-        ) {
+        const currentText = data.yText.toString();
+        if (currentText === text) {
+          lastSyncedTextRef.current = text;
           return;
         }
-        setShowBubbleMenu(false);
-      };
 
-      editor.on("selectionUpdate", handleSelectionUpdate);
-      editor.on("transaction", handleSelectionUpdate);
-      editor.on("focus", handleFocus);
-      if (editor.view && !editor.isDestroyed) {
-        editor.view.dom.addEventListener("blur", handleDomBlur);
+        data.yText.doc?.transact(() => {
+          data.yText?.delete(0, data.yText.length);
+          data.yText?.insert(0, text);
+        });
+        lastSyncedTextRef.current = text;
+      }, 500); // 500ms debounce
+    },
+    [data.yText],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    setTitle(data.title || "");
+  }, [data.title]);
+
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      const now = new Date().toISOString();
+      const editor =
+        currentUser?.displayName ||
+        currentUser?.username ||
+        dict.project.anonymous;
+
+      data.onContentChange?.(
+        id,
+        data.content || "",
+        now,
+        editor,
+        data.metadata ? JSON.stringify(data.metadata) : undefined,
+        newTitle,
+        data.reactions,
+      );
+    },
+    [id, data, currentUser, dict],
+  );
+
+  const handleContentChange = useCallback(
+    (newContent: string) => {
+      syncToYjs(newContent);
+      data.onContentChange?.(
+        id,
+        newContent,
+        new Date().toISOString(),
+        data.lastEditor,
+        data.metadata ? JSON.stringify(data.metadata) : undefined,
+        title,
+        data.reactions,
+      );
+    },
+    [
+      id,
+      data.onContentChange,
+      data.lastEditor,
+      data.metadata,
+      title,
+      syncToYjs,
+    ],
+  );
+
+  const handleVimChange = useCallback(
+    (value: string) => {
+      syncToYjs(value);
+      data.onContentChange?.(
+        id,
+        value,
+        new Date().toISOString(),
+        data.lastEditor,
+        data.metadata ? JSON.stringify(data.metadata) : undefined,
+        title,
+        data.reactions,
+      );
+    },
+    [
+      id,
+      data.onContentChange,
+      data.lastEditor,
+      data.metadata,
+      title,
+      syncToYjs,
+    ],
+  );
+
+  const openLinkModal = useCallback(() => {
+    if (!editor || isReadOnly) return;
+    const previousUrl = editor.getAttributes("link").href;
+    setLinkUrl(previousUrl || "");
+    setIsEditingLink(true);
+    setShowBubbleMenu(true);
+  }, [editor]);
+
+  const applyLink = useCallback(() => {
+    if (!editor) return;
+    if (linkUrl) {
+      let finalUrl = linkUrl.trim();
+      // If the URL doesn't start with a protocol (http://, https://, mailto:, etc.), prepend https://
+      if (
+        finalUrl &&
+        !/^https?:\/\//i.test(finalUrl) &&
+        !/^mailto:/i.test(finalUrl) &&
+        !/^tel:/i.test(finalUrl)
+      ) {
+        finalUrl = `https://${finalUrl}`;
       }
 
-      return () => {
-        editor.off("selectionUpdate", handleSelectionUpdate);
-        editor.off("transaction", handleSelectionUpdate);
-        editor.off("focus", handleFocus);
-        if (editor.view && !editor.isDestroyed && editor.view.dom) {
-          editor.view.dom.removeEventListener("blur", handleDomBlur);
-        }
-      };
-    }, [editor, isTitleEditing, isReadOnly, isEditing, currentUser?.vimMode]);
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: finalUrl })
+        .run();
+    } else {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    }
+    setIsEditingLink(false);
+  }, [editor, linkUrl]);
+
+  const removeLink = useCallback(() => {
+    if (!editor) return;
+    editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    setIsEditingLink(false);
+  }, [editor]);
+
+  const cancelLink = useCallback(() => {
+    setIsEditingLink(false);
+    setLinkUrl("");
+    editor?.commands.focus();
+  }, [editor]);
+
+  const handleResize = useCallback(
+    (
+      _evt: unknown,
+      params: { width: number; height: number; x: number; y: number },
+    ) => {
+      const { width, height, x, y } = params;
+      const onResize = data.onResize;
+      onResize?.(id, {
+        width: Math.round(width),
+        height: Math.round(height),
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    },
+    [id, data],
+  );
+
+  const handleResizeEnd = useCallback(
+    (
+      _evt: unknown,
+      params: { width: number; height: number; x: number; y: number },
+    ) => {
+      const { width, height, x, y } = params;
+      const onResizeEnd = data.onResizeEnd;
+      onResizeEnd?.(id, {
+        width: Math.round(width),
+        height: Math.round(height),
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    },
+    [id, data],
+  );
+
+  const handleNoteModeShortcut = useCallback<NoteModeShortcutHandler>(
+    (key) => {
+      const action = resolveNoteModeShortcutAction({
+        key,
+        isEditing,
+        isReadOnly,
+        vimMode: !!currentUser?.vimMode,
+        hasRichTextEditor: !!editor && !currentUser?.vimMode,
+      });
+
+      switch (action) {
+        case "switchToPreview":
+          setIsEditing(false);
+          return "handled";
+        case "switchToEdit":
+          setIsEditing(true);
+          return "handled";
+        case "toggleInlineCode":
+          editor?.chain().focus().toggleCode().run();
+          return "handled";
+        case "noop":
+          return "handled";
+        case "passThrough":
+        default:
+          return "passThrough";
+      }
+    },
+    [currentUser?.vimMode, editor, isEditing, isReadOnly],
+  );
+
+  useEffect(() => {
+    data.registerNoteModeShortcutHandler?.(id, handleNoteModeShortcut);
+
+    return () => {
+      data.registerNoteModeShortcutHandler?.(id, null);
+    };
+  }, [data.registerNoteModeShortcutHandler, handleNoteModeShortcut, id]);
+
+  const handleEditorPreviewShortcut = useCallback(() => {
+    handleNoteModeShortcut("p");
+  }, [handleNoteModeShortcut]);
+
+  return (
+    <>
+      <CustomNodeResizer
+        isVisible={!isReadOnly}
+        minWidth={200}
+        minHeight={180}
+        lineClassName="resizer-line"
+        handleClassName="resizer-handle"
+        onResize={handleResize}
+        onResizeEnd={handleResizeEnd}
+      />
+      <div
+        ref={blockRef}
+        className={`block-card block-type-note ${selected ? "selected" : ""} ${
+          isReadOnly ? "read-only" : ""
+        } flex flex-col p-0!`}
+      >
+        <div className="w-full h-full flex flex-col rounded-[inherit]">
+          <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
+            <div className="flex items-center gap-2">
+              <FileText size={16} />
+              <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
+                {dict.blocks.blockTypeText || "Note"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+              <input
+                value={title}
+                onChange={handleTitleChange}
+                onFocus={() => setIsTitleEditing(true)}
+                onBlur={() => setIsTitleEditing(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.target as HTMLElement)?.blur?.();
+                    focusProjectCanvas();
+                  }
+                }}
+                className="block-title nodrag"
+                placeholder={dict.blocks.title || "..."}
+                disabled={isReadOnly}
+              />
+            </div>
+          </div>
+
+          <div
+            className="flex-1 min-h-0 px-4 overflow-y-auto nodrag nopan nowheel"
+            onContextMenu={(e) => e.preventDefault()}
+            onWheel={(e) => e.stopPropagation()}
+          >
+            {isEditing && !isReadOnly ? (
+              currentUser?.vimMode ? (
+                <VimEditor
+                  value={data.content || ""}
+                  onChange={handleVimChange}
+                  editable={!isReadOnly}
+                  vimEnabled={true}
+                  extensions={noteVimExtensions}
+                  theme="dark"
+                  className="h-full font-mono text-sm leading-relaxed"
+                  onPreviewShortcut={handleEditorPreviewShortcut}
+                />
+              ) : (
+                <MarkdownEditor
+                  key={data.yText ? `collab-edit-${id}` : `local-edit-${id}`}
+                  content={data.content}
+                  onChange={handleContentChange}
+                  isReadOnly={false}
+                  placeholder={dict.blocks.contentPlaceholder || "..."}
+                  className="text-base prosemirror-full-height"
+                  onEditorReady={setEditor}
+                  onLinkShortcut={openLinkModal}
+                  onPreviewShortcut={handleEditorPreviewShortcut}
+                />
+              )
+            ) : (
+              <MarkdownEditor
+                key={data.yText ? `collab-prev-${id}` : `local-prev-${id}`}
+                content={data.content}
+                onChange={handleContentChange}
+                isReadOnly={true}
+                placeholder=""
+                className="text-base prosemirror-full-height"
+                onEditorReady={setEditor}
+                onLinkShortcut={openLinkModal}
+              />
+            )}
+          </div>
+
+          <BlockFooter
+            updatedAt={data.updatedAt}
+            authorName={data.authorName}
+            isLocked={data.isLocked}
+            dict={dict}
+            lang={lang}
+          >
+            {!isReadOnly && (
+              <div className="zen-mode-switch">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className={`zen-mode-switch-btn ${isEditing ? "active" : ""}`}
+                >
+                  {dict.common.edit}
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className={`zen-mode-switch-btn ${
+                    !isEditing ? "active" : ""
+                  }`}
+                >
+                  {dict.common.preview}
+                </button>
+              </div>
+            )}
+          </BlockFooter>
+        </div>
+
+        <BlockReactions
+          reactions={data.reactions}
+          onReact={handleReact}
+          onRemoveReaction={handleRemoveReaction}
+          currentUserId={currentUser?.id}
+          isReadOnly={isReadOnly}
+          canReact={canReact}
+        />
+
+        {/* Handles for connections - Left Side */}
+        <Handle
+          id="left"
+          type="source"
+          position={Position.Left}
+          isConnectable={true}
+          className="block-handle block-handle-left z-50!"
+        >
+          {!isLeftSourceConnected && <div className="handle-dot" />}
+        </Handle>
+
+        {/* Handles for connections - Right Side */}
+        <Handle
+          id="right"
+          type="source"
+          position={Position.Right}
+          isConnectable={true}
+          className="block-handle block-handle-right z-50!"
+        >
+          {!isRightSourceConnected && <div className="handle-dot" />}
+        </Handle>
+
+        {/* Handles for connections - Top Side */}
+        <Handle
+          id="top"
+          type="source"
+          position={Position.Top}
+          isConnectable={true}
+          className="block-handle block-handle-top z-50!"
+        >
+          {!isTopSourceConnected && <div className="handle-dot" />}
+        </Handle>
+
+        {/* Handles for connections - Bottom Side */}
+        <Handle
+          id="bottom"
+          type="source"
+          position={Position.Bottom}
+          isConnectable={true}
+          className="block-handle block-handle-bottom z-50!"
+        >
+          {!isBottomSourceConnected && <div className="handle-dot" />}
+        </Handle>
+      </div>
+
+      {showBubbleMenu && editor && (
+        <NoteBubbleMenu
+          editor={editor}
+          isEditingLink={isEditingLink}
+          linkUrl={linkUrl}
+          setLinkUrl={setLinkUrl}
+          openLinkModal={openLinkModal}
+          applyLink={applyLink}
+          removeLink={removeLink}
+          cancelLink={cancelLink}
+          blockRef={blockRef}
+          showBubbleMenu={showBubbleMenu}
+        />
+      )}
+    </>
+  );
+});
+
+const NoteBubbleMenu = memo(
+  ({
+    editor,
+    isEditingLink,
+    linkUrl,
+    setLinkUrl,
+    openLinkModal,
+    applyLink,
+    removeLink,
+    cancelLink,
+    blockRef,
+    showBubbleMenu,
+  }: {
+    editor: Editor;
+    isEditingLink: boolean;
+    linkUrl: string;
+    setLinkUrl: (url: string) => void;
+    openLinkModal: () => void;
+    applyLink: () => void;
+    removeLink: () => void;
+    cancelLink: () => void;
+    blockRef: React.RefObject<HTMLDivElement | null>;
+    showBubbleMenu: boolean;
+  }) => {
+    const viewport = useViewport();
+    const [blockRect, setBlockRect] = useState<DOMRect | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
       const updateRect = () => {
@@ -458,10 +914,8 @@ const NoteBlock = memo(
       };
 
       const handleSidebarToggle = () => {
-        // Run updateRect for 350ms to cover the 300ms transition
         const startTime = Date.now();
         const duration = 350;
-
         const loop = () => {
           updateRect();
           if (Date.now() - startTime < duration) {
@@ -472,7 +926,6 @@ const NoteBlock = memo(
       };
 
       updateRect();
-
       window.addEventListener("resize", updateRect);
       window.addEventListener("sidebar-toggle", handleSidebarToggle);
 
@@ -480,415 +933,30 @@ const NoteBlock = memo(
         window.removeEventListener("resize", updateRect);
         window.removeEventListener("sidebar-toggle", handleSidebarToggle);
       };
-    }, [
-      showBubbleMenu,
-      viewport,
-      positionAbsoluteX,
-      positionAbsoluteY,
-      width,
-      height,
-    ]);
+    }, [showBubbleMenu, viewport, blockRef]);
 
-    const [title, setTitle] = useState(data.title || "");
+    if (!blockRect) return null;
 
-    const edges = getEdges();
-    const isHandleConnected = (handleId: string) =>
-      edges.some(
-        (e) =>
-          (e.source === id && e.sourceHandle === handleId) ||
-          (e.target === id && e.targetHandle === handleId),
-      );
-
-    const isLeftSourceConnected = isHandleConnected("left");
-    const isRightSourceConnected = isHandleConnected("right");
-    const isTopSourceConnected = isHandleConnected("top");
-    const isBottomSourceConnected = isHandleConnected("bottom");
-
-    const noteVimExtensions = useMemo(() => [markdown()], []);
-
-    const lastSyncedTextRef = useRef<string | null>(null);
-    const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const syncToYjs = useCallback(
-      (text: string) => {
-        if (!data.yText) return;
-
-        if (text.length > 1000000) {
-          text = text.slice(0, 1000000) + "\n\n[Truncated for performance]";
-        }
-
-        if (lastSyncedTextRef.current === text) return;
-
-        if (syncTimeoutRef.current) {
-          clearTimeout(syncTimeoutRef.current);
-        }
-
-        syncTimeoutRef.current = setTimeout(() => {
-          syncTimeoutRef.current = null;
-          if (!data.yText) return;
-
-          const currentText = data.yText.toString();
-          if (currentText === text) {
-            lastSyncedTextRef.current = text;
-            return;
-          }
-
-          data.yText.doc?.transact(() => {
-            data.yText?.delete(0, data.yText.length);
-            data.yText?.insert(0, text);
-          });
-          lastSyncedTextRef.current = text;
-        }, 500); // 500ms debounce
-      },
-      [data.yText],
-    );
-
-    useEffect(() => {
-      return () => {
-        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-      };
-    }, []);
-
-    useEffect(() => {
-      setTitle(data.title || "");
-    }, [data.title]);
-
-    const handleTitleChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newTitle = e.target.value;
-        setTitle(newTitle);
-        const now = new Date().toISOString();
-        const editor =
-          currentUser?.displayName ||
-          currentUser?.username ||
-          dict.project.anonymous;
-
-        data.onContentChange?.(
-          id,
-          data.content || "",
-          now,
-          editor,
-          data.metadata ? JSON.stringify(data.metadata) : undefined,
-          newTitle,
-          data.reactions,
-        );
-      },
-      [id, data, currentUser, dict],
-    );
-
-    const handleContentChange = useCallback(
-      (newContent: string) => {
-        syncToYjs(newContent);
-        data.onContentChange?.(
-          id,
-          newContent,
-          new Date().toISOString(),
-          data.lastEditor,
-          data.metadata ? JSON.stringify(data.metadata) : undefined,
-          title,
-          data.reactions,
-        );
-      },
-      [
-        id,
-        data.onContentChange,
-        data.lastEditor,
-        data.metadata,
-        title,
-        syncToYjs,
-      ],
-    );
-
-    const handleVimChange = useCallback(
-      (value: string) => {
-        syncToYjs(value);
-        data.onContentChange?.(
-          id,
-          value,
-          new Date().toISOString(),
-          data.lastEditor,
-          data.metadata ? JSON.stringify(data.metadata) : undefined,
-          title,
-          data.reactions,
-        );
-      },
-      [
-        id,
-        data.onContentChange,
-        data.lastEditor,
-        data.metadata,
-        title,
-        syncToYjs,
-      ],
-    );
-
-    const openLinkModal = useCallback(() => {
-      if (!editor || isReadOnly) return;
-      const previousUrl = editor.getAttributes("link").href;
-      setLinkUrl(previousUrl || "");
-      setIsEditingLink(true);
-      setShowBubbleMenu(true);
-    }, [editor]);
-
-    const applyLink = useCallback(() => {
-      if (!editor) return;
-      if (linkUrl) {
-        let finalUrl = linkUrl.trim();
-        // If the URL doesn't start with a protocol (http://, https://, mailto:, etc.), prepend https://
-        if (
-          finalUrl &&
-          !/^https?:\/\//i.test(finalUrl) &&
-          !/^mailto:/i.test(finalUrl) &&
-          !/^tel:/i.test(finalUrl)
-        ) {
-          finalUrl = `https://${finalUrl}`;
-        }
-
-        editor
-          .chain()
-          .focus()
-          .extendMarkRange("link")
-          .setLink({ href: finalUrl })
-          .run();
-      } else {
-        editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      }
-      setIsEditingLink(false);
-    }, [editor, linkUrl]);
-
-    const removeLink = useCallback(() => {
-      if (!editor) return;
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      setIsEditingLink(false);
-    }, [editor]);
-
-    const cancelLink = useCallback(() => {
-      setIsEditingLink(false);
-      setLinkUrl("");
-      editor?.commands.focus();
-    }, [editor]);
-
-    const handleResize = useCallback(
-      (
-        _evt: unknown,
-        params: { width: number; height: number; x: number; y: number },
-      ) => {
-        const { width, height, x, y } = params;
-        const onResize = data.onResize;
-        onResize?.(id, {
-          width: Math.round(width),
-          height: Math.round(height),
-          x: Math.round(x),
-          y: Math.round(y),
-        });
-      },
-      [id, data],
-    );
-
-    const handleResizeEnd = useCallback(
-      (
-        _evt: unknown,
-        params: { width: number; height: number; x: number; y: number },
-      ) => {
-        const { width, height, x, y } = params;
-        const onResizeEnd = data.onResizeEnd;
-        onResizeEnd?.(id, {
-          width: Math.round(width),
-          height: Math.round(height),
-          x: Math.round(x),
-          y: Math.round(y),
-        });
-      },
-      [id, data],
-    );
-
-    return (
-      <>
-        <CustomNodeResizer
-          isVisible={!isReadOnly}
-          minWidth={200}
-          minHeight={180}
-          lineClassName="resizer-line"
-          handleClassName="resizer-handle"
-          onResize={handleResize}
-          onResizeEnd={handleResizeEnd}
-        />
-        <div
-          ref={blockRef}
-          className={`block-card block-type-note ${
-            selected ? "selected" : ""
-          } ${isReadOnly ? "read-only" : ""} flex flex-col p-0!`}
-        >
-          <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
-            <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
-              <div className="flex items-center gap-2">
-                <FileText size={16} />
-                <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
-                  {dict.blocks.blockTypeText || "Note"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-                <input
-                  value={title}
-                  onChange={handleTitleChange}
-                  onFocus={() => setIsTitleEditing(true)}
-                  onBlur={() => setIsTitleEditing(false)}
-                  className="block-title nodrag"
-                  placeholder={dict.blocks.title || "..."}
-                  disabled={isReadOnly}
-                />
-              </div>
-            </div>
-
-            <div
-              className="flex-1 min-h-0 relative px-4 overflow-y-auto nodrag nopan nowheel"
-              onContextMenu={(e) => e.preventDefault()}
-              onWheel={(e) => e.stopPropagation()}
-            >
-              {isEditing && !isReadOnly ? (
-                currentUser?.vimMode ? (
-                  <VimEditor
-                    value={data.content || ""}
-                    onChange={handleVimChange}
-                    editable={!isReadOnly}
-                    vimEnabled={true}
-                    extensions={noteVimExtensions}
-                    theme="dark"
-                    className="h-full font-mono text-sm leading-relaxed"
-                  />
-                ) : (
-                  <MarkdownEditor
-                    key={data.yText ? `collab-edit-${id}` : `local-edit-${id}`}
-                    content={data.content}
-                    onChange={handleContentChange}
-                    isReadOnly={false}
-                    placeholder={dict.blocks.contentPlaceholder || "..."}
-                    className="text-base prosemirror-full-height"
-                    onEditorReady={setEditor}
-                    onLinkShortcut={openLinkModal}
-                  />
-                )
-              ) : (
-                <MarkdownEditor
-                  key={data.yText ? `collab-prev-${id}` : `local-prev-${id}`}
-                  content={data.content}
-                  onChange={handleContentChange}
-                  isReadOnly={true}
-                  placeholder=""
-                  className="text-base prosemirror-full-height"
-                  onEditorReady={setEditor}
-                  onLinkShortcut={openLinkModal}
-                />
-              )}
-            </div>
-
-            <BlockFooter
-              updatedAt={data.updatedAt}
-              authorName={data.authorName}
-              isLocked={data.isLocked}
-              dict={dict}
-              lang={lang}
-            >
-              {!isReadOnly && (
-                <div className="zen-mode-switch">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className={`zen-mode-switch-btn ${
-                      isEditing ? "active" : ""
-                    }`}
-                  >
-                    {dict.common.edit}
-                  </button>
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className={`zen-mode-switch-btn ${
-                      !isEditing ? "active" : ""
-                    }`}
-                  >
-                    {dict.common.preview}
-                  </button>
-                </div>
-              )}
-            </BlockFooter>
-          </div>
-
-          <BlockReactions
-            reactions={data.reactions}
-            onReact={handleReact}
-            onRemoveReaction={handleRemoveReaction}
-            currentUserId={currentUser?.id}
-            isReadOnly={isReadOnly}
-            canReact={canReact}
-          />
-
-          {/* Handles for connections - Left Side */}
-          <Handle
-            id="left"
-            type="source"
-            position={Position.Left}
-            isConnectable={true}
-            className="block-handle block-handle-left z-50!"
-          >
-            {!isLeftSourceConnected && <div className="handle-dot" />}
-          </Handle>
-
-          {/* Handles for connections - Right Side */}
-          <Handle
-            id="right"
-            type="source"
-            position={Position.Right}
-            isConnectable={true}
-            className="block-handle block-handle-right z-50!"
-          >
-            {!isRightSourceConnected && <div className="handle-dot" />}
-          </Handle>
-
-          {/* Handles for connections - Top Side */}
-          <Handle
-            id="top"
-            type="source"
-            position={Position.Top}
-            isConnectable={true}
-            className="block-handle block-handle-top z-50!"
-          >
-            {!isTopSourceConnected && <div className="handle-dot" />}
-          </Handle>
-
-          {/* Handles for connections - Bottom Side */}
-          <Handle
-            id="bottom"
-            type="source"
-            position={Position.Bottom}
-            isConnectable={true}
-            className="block-handle block-handle-bottom z-50!"
-          >
-            {!isBottomSourceConnected && <div className="handle-dot" />}
-          </Handle>
-        </div>
-
-        {showBubbleMenu &&
-          editor &&
-          blockRect &&
-          createPortal(
-            <BubbleMenuComponent
-              ref={menuRef}
-              editor={editor}
-              isEditingLink={isEditingLink}
-              linkUrl={linkUrl}
-              setLinkUrl={setLinkUrl}
-              openLinkModal={openLinkModal}
-              applyLink={applyLink}
-              removeLink={removeLink}
-              cancelLink={cancelLink}
-              blockRect={blockRect}
-              zoom={viewport.zoom}
-            />,
-            document.getElementById("app-main-container") || document.body,
-          )}
-      </>
+    return createPortal(
+      <BubbleMenuComponent
+        ref={menuRef}
+        editor={editor}
+        isEditingLink={isEditingLink}
+        linkUrl={linkUrl}
+        setLinkUrl={setLinkUrl}
+        openLinkModal={openLinkModal}
+        applyLink={applyLink}
+        removeLink={removeLink}
+        cancelLink={cancelLink}
+        blockRect={blockRect}
+        zoom={viewport.zoom}
+      />,
+      document.getElementById("app-main-container") || document.body,
     );
   },
 );
+
+NoteBubbleMenu.displayName = "NoteBubbleMenu";
 
 NoteBlock.displayName = "NoteBlock";
 

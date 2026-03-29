@@ -161,9 +161,25 @@ export function handleError(error: unknown, req: NextRequest) {
     (error as { message?: string })?.message ||
     (status === 500 ? "Internal Server Error" : "Error");
 
-  if (status === 500 && !isExplicitError) {
-    logger.error({ error, path: req.nextUrl.pathname }, "API Error");
-    message = "Internal Server Error";
+  // Log errors so rejected client requests show up in container logs.
+  try {
+    if (status === 500) {
+      // Internal server errors are errors
+      if (!isExplicitError) {
+        logger.error({ error, path: req.nextUrl.pathname }, "API Error");
+        message = "Internal Server Error";
+      } else {
+        logger.error(
+          { error, status, path: req.nextUrl.pathname },
+          "API Error",
+        );
+      }
+    } else {
+      // Client / expected errors (4xx) or explicit non-500: log as warnings
+      logger.warn({ error, status, path: req.nextUrl.pathname }, "API Error");
+    }
+  } catch {
+    // swallow
   }
 
   return NextResponse.json({ error: message }, { status });

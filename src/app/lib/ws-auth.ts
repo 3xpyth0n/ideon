@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { getDb, withAuthenticatedSession } from "./db";
+import { logger } from "./logger";
 import { IncomingMessage } from "http";
 
 /**
@@ -15,7 +16,7 @@ export async function validateWebsocketRequest(
     const secret = process.env.SECRET_KEY || process.env.AUTH_SECRET;
 
     if (!secret) {
-      console.error(
+      logger.error(
         "[WS Auth] CRITICAL: No SECRET_KEY or AUTH_SECRET found in environment.",
       );
       return null;
@@ -40,7 +41,7 @@ export async function validateWebsocketRequest(
     }
 
     if (!token || !token.sub) {
-      console.warn("[WS Auth] No valid session token found.");
+      logger.warn("[WS Auth] No valid session token found.");
       return null;
     }
 
@@ -123,14 +124,14 @@ export async function validateWebsocketRequest(
         if (folderAccess) return userId;
       }
 
-      console.warn(
-        `[WS Auth] Access denied for user ${userId} to project ${projectId}`,
+      logger.warn(
+        { userId, projectId },
+        "[WS Auth] Access denied for user to project",
       );
       return null;
     });
   } catch (err) {
-    // Log error but fail safe (deny access)
-    console.error("[WS Auth] Error validating request:", err);
+    logger.error({ error: err }, "[WS Auth] Error validating request");
     return null;
   }
 }

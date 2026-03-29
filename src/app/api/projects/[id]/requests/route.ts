@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { z } from "zod";
+import { logger } from "@lib/logger";
 
 // Declare global helper
 declare global {
@@ -113,7 +114,10 @@ export const PATCH = authenticatedAction<unknown, z.infer<typeof updateSchema>>(
           await global.notifyAccessGranted(projectId, userId);
         }
       } catch (wsError) {
-        console.error("Access granted notification failed:", wsError);
+        logger.error(
+          { err: wsError, projectId },
+          "Access granted notification failed",
+        );
       }
     } else if (action === "reject") {
       await db
@@ -137,7 +141,7 @@ export const PATCH = authenticatedAction<unknown, z.infer<typeof updateSchema>>(
         await global.updateProjectRequests(projectId);
       }
     } catch (wsError) {
-      console.error("WebSocket update failed:", wsError);
+      logger.error({ err: wsError, projectId }, "WebSocket update failed");
     }
 
     return NextResponse.json({ success: true });

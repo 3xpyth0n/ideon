@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import { useRouter } from "next/navigation";
 import { BlockData } from "@components/project/CanvasBlock";
+import { clientLogger } from "../../../../lib/clientLogger";
 
 /**
  * Deduplicates an array of objects by the `id` property, keeping the last occurrence.
@@ -186,6 +187,32 @@ export const useProjectData = ({
           const data = await res.json();
           const newBlocks = (data.blocks || []) as BlockResponse[];
 
+          try {
+            newBlocks.forEach((b) => {
+              try {
+                const maybeData =
+                  typeof b.data === "string" ? JSON.parse(b.data) : b.data;
+                const content = maybeData?.content;
+                if (typeof content === "string") {
+                  const len = content.length;
+                  if (len > 1024 * 1024) {
+                    clientLogger.warn("Large block content detected", {
+                      id: b.id,
+                      length: len,
+                    });
+                  }
+                }
+              } catch (e) {
+                clientLogger.debug("Failed to parse block data", {
+                  id: b.id,
+                  error: e,
+                });
+              }
+            });
+          } catch (e) {
+            clientLogger.error("Error scanning block sizes", e);
+          }
+
           setBlocks((currentBlocks) => {
             const newBlocksMap = new Map(newBlocks.map((b) => [b.id, b]));
             return currentBlocks.map((b) => {
@@ -208,7 +235,7 @@ export const useProjectData = ({
             });
           });
         } catch (error) {
-          console.error("Failed to fetch block details", error);
+          clientLogger.error("Failed to fetch block details", error);
           // Allow retrying on error
           chunk.forEach((id) => loadedBlockIds.current.delete(id));
         }
@@ -228,7 +255,7 @@ export const useProjectData = ({
         }
       }
     } catch (error) {
-      console.error("Failed to fetch project metadata", error);
+      clientLogger.error("Failed to fetch project metadata", error);
     }
   }, [initialProjectId, setProjectOwnerId]);
 

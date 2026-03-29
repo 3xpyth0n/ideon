@@ -1,4 +1,5 @@
 import http from "http";
+import { logger } from "../../app/lib/logger";
 import {
   Doc,
   Array as YArray,
@@ -74,11 +75,11 @@ const callbackRequest = (url: URL, timeout: number, data: CallbackData) => {
   };
   const req = http.request(options);
   req.on("timeout", () => {
-    console.warn("Callback request timed out.");
+    logger.warn("[YJS Callback] Callback request timed out.");
     req.destroy();
   });
   req.on("error", (e) => {
-    console.error("Callback request error.", e);
+    logger.error({ err: e }, "[YJS Callback] Callback request error");
     req.destroy();
   });
   req.write(stringifiedData);

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useMemo, useCallback, memo } from "react";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 import CodeMirror, {
   ReactCodeMirrorProps,
   ReactCodeMirrorRef,
@@ -25,6 +26,7 @@ interface VimEditorProps extends Omit<ReactCodeMirrorProps, "extensions"> {
   onSave?: () => void;
   onQuit?: () => void;
   vimEnabled?: boolean;
+  onPreviewShortcut?: () => void;
 }
 
 const VimEditorContent = memo(
@@ -34,6 +36,7 @@ const VimEditorContent = memo(
     onSave,
     onQuit,
     vimEnabled = true,
+    onPreviewShortcut,
     ...props
   }: VimEditorProps) => {
     const editorRef = useRef<ReactCodeMirrorRef>(null);
@@ -70,6 +73,7 @@ const VimEditorContent = memo(
             onQuitRef.current();
           } else {
             editorRef.current?.view?.contentDOM?.blur();
+            focusProjectCanvas();
           }
         });
 
@@ -79,6 +83,7 @@ const VimEditorContent = memo(
             onQuitRef.current();
           } else {
             editorRef.current?.view?.contentDOM?.blur();
+            focusProjectCanvas();
           }
         });
 
@@ -88,6 +93,7 @@ const VimEditorContent = memo(
             onQuitRef.current();
           } else {
             editorRef.current?.view?.contentDOM?.blur();
+            focusProjectCanvas();
           }
         });
       } catch (e) {
@@ -134,7 +140,20 @@ const VimEditorContent = memo(
     );
 
     return (
-      <div className="vim-editor-wrapper relative w-full h-full flex flex-col">
+      <div
+        className="vim-editor-wrapper relative w-full h-full flex flex-col"
+        onKeyDownCapture={(event) => {
+          if (
+            onPreviewShortcut &&
+            (event.ctrlKey || event.metaKey) &&
+            event.key.toLowerCase() === "p"
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+            onPreviewShortcut();
+          }
+        }}
+      >
         <CodeMirror
           ref={editorRef}
           height="100%"

@@ -92,7 +92,8 @@ body {
   width: 100vw;
   overflow: hidden;
   transition: background 0.2s ease;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: subpixel-antialiased !important;
+  text-rendering: optimizeLegibility !important;
 }
 
 .hide-native-cursor {

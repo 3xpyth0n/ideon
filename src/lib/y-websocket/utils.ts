@@ -9,6 +9,7 @@ import { callbackHandler, isCallbackSet } from "./callback";
 import { IncomingMessage } from "http";
 import { WebSocket } from "ws";
 import { LeveldbPersistence } from "y-leveldb";
+import { logger } from "../../app/lib/logger";
 
 const CALLBACK_DEBOUNCE_WAIT = process.env.CALLBACK_DEBOUNCE_WAIT
   ? parseInt(process.env.CALLBACK_DEBOUNCE_WAIT)
@@ -33,7 +34,10 @@ export interface Persistence {
 let persistence: Persistence | null = null;
 
 if (typeof persistenceDir === "string") {
-  console.info('Persisting documents to "' + persistenceDir + '"');
+  logger.info(
+    { persistenceDir },
+    `[YJS] Persisting documents to directory: ${persistenceDir}`,
+  );
   const ldb = new LeveldbPersistence(persistenceDir);
   persistence = {
     provider: ldb,
@@ -177,7 +181,7 @@ const messageListener = (
       }
     }
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, "[YJS] message handling error");
   }
 };
 

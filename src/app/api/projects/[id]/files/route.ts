@@ -1,4 +1,5 @@
 import { projectAction } from "@lib/server-utils";
+import { logger } from "@lib/logger";
 import { writeFile, readFile, unlink, mkdir } from "fs/promises";
 import { join } from "path";
 import { NextResponse } from "next/server";
@@ -41,7 +42,7 @@ export const POST = projectAction(async (req, { project }) => {
       type: file.type,
     };
   } catch (error) {
-    console.error("File upload error:", error);
+    logger.error({ error, projectId: project.id }, "File upload error");
     throw {
       status: 500,
       message: "File upload error.",
@@ -69,7 +70,7 @@ export const GET = projectAction(async (req, { project }) => {
   );
 
   if (!existsSync(filePath)) {
-    console.error(`File not found at path: ${filePath}`);
+    logger.warn({ filePath, projectId: project.id }, "File not found at path");
     throw { status: 404, message: "File not found" };
   }
 
@@ -133,7 +134,10 @@ export const DELETE = projectAction(async (req, { project }) => {
     }
     return { success: true };
   } catch (error) {
-    console.error("Error deleting file:", error);
+    logger.error(
+      { error, filePath, projectId: project.id },
+      "Error deleting file",
+    );
     throw { status: 500, message: "Failed to delete file" };
   }
 });

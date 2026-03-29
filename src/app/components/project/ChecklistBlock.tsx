@@ -27,6 +27,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { parseChecklistMetadata, parseJsonRecord } from "@lib/metadata-parsers";
+import { focusProjectCanvas } from "./utils/focusCanvas";
 
 type ChecklistBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
@@ -85,6 +86,9 @@ const AutoResizeTextarea = ({
       placeholder={placeholder}
       readOnly={readOnly}
       rows={1}
+      draggable={false}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onKeyDown={onKeyDown}
       onFocus={onFocus}
       onBlur={onBlur}
@@ -155,6 +159,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         blockElement.contains(activeElement)
       ) {
         (activeElement as HTMLElement).blur();
+        focusProjectCanvas();
       }
     }
   }, [selected, id]);
@@ -319,7 +324,9 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
 
       if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
         (e.target as HTMLElement).blur();
+        focusProjectCanvas();
         return;
       }
 
@@ -809,7 +816,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit]">
+      <div className="w-full h-full flex flex-col">
         <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
           <div className="flex items-center gap-2">
             <Check size={16} />
@@ -832,6 +839,14 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             <input
               value={title}
               onChange={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.target as HTMLElement)?.blur?.();
+                  focusProjectCanvas();
+                }
+              }}
               className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
@@ -865,9 +880,9 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
               <div key={item.id}>
                 {dragTaskPreview &&
                   dropTargetIndex === index &&
-                  dragSourceIndex !== null &&
                   !(
-                    dragSourceIndex === index || dragSourceIndex + 1 === index
+                    typeof dragSourceIndex === "number" &&
+                    (dragSourceIndex === index || dragSourceIndex + 1 === index)
                   ) && (
                     <div
                       className="checklist-item checklist-item-placeholder"
@@ -911,9 +926,6 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                   className={`checklist-item group ${
                     dragSourceIndex === index ? "is-dragging" : ""
                   }`}
-                  draggable={!isReadOnly}
-                  onDragStart={(e) => handleDragStart(e, item, index)}
-                  onDragEnd={handleDragEnd}
                   onDrop={(e) => handleDrop(e, dropTargetIndex ?? index)}
                   style={{ paddingLeft: `${(item.depth || 0) * 24}px` }}
                   data-item-index={index}
@@ -922,6 +934,9 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                     <div
                       className="checklist-drag-handle"
                       title={dict.common?.dragToReorder || "Drag to reorder"}
+                      draggable={!isReadOnly}
+                      onDragStart={(e) => handleDragStart(e, item, index)}
+                      onDragEnd={handleDragEnd}
                     >
                       <GripVertical size={12} />
                     </div>
@@ -960,8 +975,10 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
 
             {dragTaskPreview &&
               dropTargetIndex === items.length &&
-              dragSourceIndex !== null &&
-              dragSourceIndex !== items.length - 1 && (
+              !(
+                typeof dragSourceIndex === "number" &&
+                dragSourceIndex === items.length - 1
+              ) && (
                 <div
                   className="checklist-item checklist-item-placeholder"
                   style={{

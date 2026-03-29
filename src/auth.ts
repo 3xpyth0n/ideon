@@ -17,6 +17,7 @@ import { render } from "@react-email/components";
 import MagicLinkEmail from "@emails/MagicLinkEmail";
 import { sendEmail } from "@lib/email";
 import { getClientIp } from "@lib/security-utils";
+import { resolveSsoEmailVerificationPolicy } from "@lib/auth/ssoEmailVerificationPolicy";
 import { RateLimiterPostgres, RateLimiterMemory } from "rate-limiter-flexible";
 
 // Ensure Auth.js uses the correct public URL for callbacks behind reverse proxy
@@ -49,15 +50,31 @@ const getRateLimiter = () => {
   });
 };
 
-import { authConfig } from "./auth.config";
-
 // Auth configuration
 export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
   const freshConfig = await getAuthProviders();
   const db = getDb();
 
   return {
-    ...authConfig,
+    session: { strategy: "jwt" },
+    cookies: {
+      sessionToken: {
+        name: `authjs.session-token`,
+        options: {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          secure:
+            process.env.NODE_ENV === "production" &&
+            (process.env.APP_URL?.startsWith("https") ?? false),
+        },
+      },
+    },
+    pages: {
+      signIn: "/login",
+      error: "/login",
+    },
+    secret: process.env.SECRET_KEY || process.env.AUTH_SECRET,
     trustHost: true,
     adapter: KyselyAdapter(),
     providers: [
@@ -296,35 +313,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
 
           if (account?.provider === "credentials") return true;
 
-          // Mitigate allowDangerousEmailAccountLinking
-          if (account?.type === "oauth" || account?.type === "oidc") {
-            if (profile) {
-              // Standard OIDC email_verified claim
-              if (
-                "email_verified" in profile &&
-                profile.email_verified === false
-              ) {
-                await logSecurityEvent("loginSSO:unverified_email", "failure", {
-                  ip,
-                  email: user.email,
-                });
-                return "/login?error=unverified_email";
-              }
-              // Discord verified claim
-              if (
-                account.provider === "discord" &&
-                "verified" in profile &&
-                profile.verified === false
-              ) {
-                await logSecurityEvent("loginSSO:unverified_email", "failure", {
-                  ip,
-                  email: user.email,
-                });
-                return "/login?error=unverified_email";
-              }
-            }
-          }
-
           if (!user.email) {
             await logSecurityEvent("loginSSO:unknown", "failure", { ip });
             return false;
@@ -332,11 +320,88 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
 
           const email = user.email.toLowerCase();
 
-          const existingUser = await db
-            .selectFrom("users")
+          // Prefer exact provider->user mapping via accounts table when present
+          let existingUser = null;
+          if (account?.provider && account?.providerAccountId) {
+            const accountRow = await db
+              .selectFrom("accounts")
+              .select("userId")
+              .where("provider", "=", account.provider)
+              .where("providerAccountId", "=", account.providerAccountId)
+              .executeTakeFirst();
+
+            if (accountRow?.userId) {
+              existingUser = await db
+                .selectFrom("users")
+                .selectAll()
+                .where("id", "=", accountRow.userId)
+                .executeTakeFirst();
+            }
+          }
+
+          // Fallback: match by email if no provider account mapping exists
+          if (!existingUser) {
+            existingUser = await db
+              .selectFrom("users")
+              .selectAll()
+              .where("email", "=", email)
+              .executeTakeFirst();
+          }
+
+          const invitation = await db
+            .selectFrom("invitations")
             .selectAll()
             .where("email", "=", email)
+            .where("acceptedAt", "is", null)
+            .where(
+              "expiresAt",
+              ">",
+              new Date().toISOString() as unknown as Date,
+            )
+            .orderBy("createdAt", "desc")
             .executeTakeFirst();
+
+          // Mitigate allowDangerousEmailAccountLinking:
+          // keep blocking unknown unverified SSO users, but allow trusted users.
+          const acct = account as unknown as
+            | Record<string, unknown>
+            | undefined;
+          const idTokenVal = acct
+            ? typeof acct.id_token === "string"
+              ? (acct.id_token as string)
+              : typeof acct.idToken === "string"
+                ? (acct.idToken as string)
+                : null
+            : null;
+
+          const emailVerificationResult =
+            await resolveSsoEmailVerificationPolicy({
+              accountType: account?.type,
+              provider: account?.provider,
+              profile: profile as Record<string, unknown> | null,
+              hasExistingUser: !!existingUser,
+              hasValidInvitation: !!invitation,
+              idToken: idTokenVal,
+            });
+
+          if (emailVerificationResult.hasUnverifiedClaim) {
+            await logSecurityEvent(
+              "loginSSO:unverified_email",
+              emailVerificationResult.shouldBlock ? "failure" : "success",
+              {
+                userId: existingUser?.id,
+                ip,
+                email,
+                provider: account?.provider,
+                bypassReason: emailVerificationResult.bypassReason,
+                emailVerificationBypass: !emailVerificationResult.shouldBlock,
+              },
+            );
+          }
+
+          if (emailVerificationResult.shouldBlock) {
+            return "/login?error=unverified_email";
+          }
 
           if (existingUser) {
             // User exists, clean up any pending invitations
@@ -361,19 +426,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           const isPublicEnabled = settings?.publicRegistrationEnabled === 1;
           const isSsoEnabled = settings?.ssoRegistrationEnabled === 1;
 
-          const invitation = await db
-            .selectFrom("invitations")
-            .selectAll()
-            .where("email", "=", email)
-            .where("acceptedAt", "is", null)
-            .where(
-              "expiresAt",
-              ">",
-              new Date().toISOString() as unknown as Date,
-            )
-            .orderBy("createdAt", "desc")
-            .executeTakeFirst();
-
           if (!invitation && !isPublicEnabled && !isSsoEnabled) {
             await logSecurityEvent(`loginSSO:${account?.provider}`, "failure", {
               ip,
@@ -384,7 +436,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           // Return true to allow NextAuth to proceed with Adapter's createUser
           return true;
         } catch (error) {
-          console.error("[Auth] SignIn error:", error);
+          const errMsg = String(error);
+          await logSecurityEvent("loginSSO:error", "failure", {
+            error: errMsg,
+          });
+          appLogger.error({ error }, "[Auth] SignIn error");
           return false;
         }
       },
@@ -458,10 +514,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         return session;
       },
     },
-    pages: {
-      signIn: "/login",
-      error: "/login",
-    },
+
     logger: {
       error(error) {
         // Suppress CredentialsSignin stack trace but keep the 401 status in logs

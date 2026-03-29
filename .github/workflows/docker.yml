@@ -14,11 +14,15 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  build-amd:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    env:
+      ARCH: amd64
+    outputs:
+      temp_tag: ${{ steps.set-temp.outputs.temp_tag }}
 
     steps:
       - name: Checkout repository
@@ -61,15 +65,238 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      - name: Build and push Docker image
+      - name: Set ephemeral push tag
+        id: set-temp
+        run: |
+          echo "temp_tag=${GITHUB_SHA}-${ARCH}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image (amd64)
         if: steps.check-tag.outputs.skip != 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/${{ env.ARCH }}
           push: true
           provenance: false
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.set-temp.outputs.temp_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  build-arm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      ARCH: arm64
+    outputs:
+      temp_tag: ${{ steps.set-temp.outputs.temp_tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check for concurrent tag
+        id: check-tag
+        run: |
+          git fetch --tags --force
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] && git describe --exact-match --tags HEAD >/dev/null 2>&1; then
+            echo "Skipping main build because a tag exists for this commit."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Set ephemeral push tag
+        id: set-temp
+        run: |
+          echo "temp_tag=${GITHUB_SHA}-${ARCH}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image (arm64)
+        if: steps.check-tag.outputs.skip != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/${{ env.ARCH }}
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.set-temp.outputs.temp_tag }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-amd:
+    needs: [build-amd]
+    runs-on: ubuntu-latest
+    if: needs.build-amd.result == 'success'
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Publish single-arch manifests for AMD
+        env:
+          AMD_TEMP: ${{ needs.build-amd.outputs.temp_tag }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          tags="${{ steps.meta.outputs.tags }}"
+          tags="${tags//,/ }"
+          if [ -z "${AMD_TEMP}" ]; then
+            echo "No AMD temp tag available, skipping"
+            exit 0
+          fi
+          amd_image="${REGISTRY}/${IMAGE_NAME}:${AMD_TEMP}"
+          for t in $tags; do
+            base_tag="${t##*:}"
+            echo "Publishing single-arch manifest for ${base_tag} from ${amd_image}"
+            docker buildx imagetools create -t "${REGISTRY}/${IMAGE_NAME}:${base_tag}" "${amd_image}"
+          done
+
+  publish-final:
+    needs: [build-amd, build-arm]
+    runs-on: ubuntu-latest
+    if: needs.build-amd.result == 'success' || needs.build-arm.result == 'success'
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Create multi-arch manifests from ephemeral images and cleanup
+        env:
+          OWNER: ${{ github.repository_owner }}
+          IMAGE_NAME_RAW: ${{ env.IMAGE_NAME }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AMD_TEMP: ${{ needs.build-amd.outputs.temp_tag }}
+          ARM_TEMP: ${{ needs.build-arm.outputs.temp_tag }}
+        run: |
+          set -euo pipefail
+
+          tags="${{ steps.meta.outputs.tags }}"
+          tags="${tags//,/ }"
+          echo "Tags to process: $tags"
+
+          amd_temp="$AMD_TEMP"
+          arm_temp="$ARM_TEMP"
+          registry="${REGISTRY}"
+          image_name="${IMAGE_NAME_RAW}"
+
+          echo "Ephemeral amd tag: $amd_temp"
+          echo "Ephemeral arm tag: $arm_temp"
+
+          for t in $tags; do
+            base_tag="${t##*:}"
+            images=()
+            if [ -n "$amd_temp" ]; then
+              amd_image="$registry/$image_name:$amd_temp"
+              if docker buildx imagetools inspect "$amd_image" >/dev/null 2>&1; then
+                echo "Found $amd_image"
+                images+=("$amd_image")
+              else
+                echo "Missing $amd_image"
+              fi
+            fi
+            if [ -n "$arm_temp" ]; then
+              arm_image="$registry/$image_name:$arm_temp"
+              if docker buildx imagetools inspect "$arm_image" >/dev/null 2>&1; then
+                echo "Found $arm_image"
+                images+=("$arm_image")
+              else
+                echo "Missing $arm_image"
+              fi
+            fi
+            if [ ${#images[@]} -eq 0 ]; then
+              echo "No arch images found for $base_tag, skipping"
+              continue
+            fi
+            echo "Creating manifest ${registry}/${image_name}:${base_tag} from: ${images[*]}"
+            docker buildx imagetools create -t "${registry}/${image_name}:${base_tag}" ${images[*]}
+          done
+
+          # Cleanup ephemeral tags from GHCR (try org then user endpoint)
+          owner="$OWNER"
+          package_name="$(echo "$IMAGE_NAME_RAW" | cut -d'/' -f2)"
+          token="$GITHUB_TOKEN"
+
+          delete_version_by_tag() {
+            tag_to_delete="$1"
+            if [ -z "$tag_to_delete" ]; then
+              return
+            fi
+            echo "Attempting to delete package versions for tag: $tag_to_delete"
+            for endpoint in orgs users; do
+              url="https://api.github.com/${endpoint}/${owner}/packages/container/${package_name}/versions?per_page=100"
+              resp=$(curl -s -H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" "$url")
+              ids=$(echo "$resp" | jq -r --arg TAG "$tag_to_delete" '.[] | select(.metadata.container.tags != null and (.metadata.container.tags | index($TAG))) | .id') || true
+              if [ -n "$ids" ]; then
+                for id in $ids; do
+                  echo "Deleting version id $id via $endpoint endpoint"
+                  delurl="https://api.github.com/${endpoint}/${owner}/packages/container/${package_name}/versions/${id}"
+                  curl -s -X DELETE -H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" "$delurl" || true
+                done
+                break
+              fi
+            done
+          }
+
+          delete_version_by_tag "$amd_temp"
+          delete_version_by_tag "$arm_temp"

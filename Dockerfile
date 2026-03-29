@@ -1,9 +1,9 @@
-FROM node:24.11-alpine AS base
+FROM node:24-slim AS base
 WORKDIR /app
 
 # 1. Install dependencies and build app
 FROM base AS builder
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apt-get update && apt-get install -y --no-install-recommends python3 build-essential ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
@@ -13,7 +13,7 @@ RUN rm -rf .next/cache
 
 # 2. Install only the packages nft misses
 FROM base AS server-runtime
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apt-get update && apt-get install -y --no-install-recommends python3 build-essential ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY package-lock.json ./
 RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kysely":"*","nanoid":"*","node-pty":"*"}}' > package.json \
     && npm install --no-audit --no-fund
@@ -21,8 +21,8 @@ RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kyse
 # 3. Production image
 FROM base AS runner
 ENV NODE_ENV=production
-RUN apk add --no-cache tini curl su-exec shadow
-RUN adduser -D -u 1001 appuser \
+RUN apt-get update && apt-get install -y --no-install-recommends tini curl && rm -rf /var/lib/apt/lists/*
+RUN useradd -u 1001 -m appuser \
     && mkdir -p /app/storage/avatars /app/storage/yjs /app/storage/uploads \
     && mkdir -p /app/.next/cache \
     && chown -R appuser:appuser /app/storage /app/.next/cache
@@ -41,5 +41,5 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 RUN chmod +x /app/docker-entrypoint.sh
 EXPOSE 3000
-ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]
+ENTRYPOINT ["tini", "--", "/app/docker-entrypoint.sh"]
 CMD ["node", "dist/server.cjs"]

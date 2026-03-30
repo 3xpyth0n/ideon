@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7] - 2026-03-30
+
+### Fixed
+
+- Prevented invited users with view-only permissions from moving blocks on the canvas [#74](https://github.com/3xpyth0n/ideon/issues/74)
+
 ## [0.7.6] - 2026-03-29
 
 ### Added

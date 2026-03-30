@@ -164,6 +164,40 @@ const messageListener = (
     const messageType = decoding.readVarUint(decoder);
     switch (messageType) {
       case messageSync:
+        // Enforce server-side permission: only allow sync/update messages from
+        // connections that have an explicit write-capable role.
+        try {
+          const connRole = (conn as WebSocket & { userRole?: string }).userRole;
+          if (connRole === undefined || connRole === null) {
+            logger.error(
+              { doc: doc.name },
+              "[YJS] Sync message from connection without userRole — closing",
+            );
+            try {
+              conn.close(4001, "Missing user role");
+            } catch {
+              // ignore
+            }
+            return;
+          }
+
+          const canWrite =
+            connRole === "owner" ||
+            connRole === "admin" ||
+            connRole === "editor";
+
+          if (!canWrite) {
+            logger.info(
+              { role: connRole },
+              "[YJS] Ignoring sync message from read-only connection",
+            );
+            return;
+          }
+        } catch (e) {
+          logger.error({ err: e }, "[YJS] Failed to check connection role");
+          return;
+        }
+
         encoding.writeVarUint(encoder, messageSync);
         syncProtocol.readSyncMessage(decoder, encoder, doc, conn);
 
@@ -235,6 +269,30 @@ export const setupWSConnection = (
   conn.binaryType = "arraybuffer";
   const doc = getYDoc(docName, gc);
   doc.conns.set(conn, new Set());
+
+  try {
+    const connRole = (conn as WebSocket & { userRole?: string }).userRole;
+    if (connRole === undefined || connRole === null) {
+      logger.error(
+        { docName, conn: (conn as unknown as { url?: string }).url },
+        "[YJS] Rejecting WS connection without userRole attached",
+      );
+      try {
+        conn.close(4001, "Missing user role");
+      } catch {
+        // ignore
+      }
+      return;
+    }
+  } catch (e) {
+    logger.error({ err: e }, "[YJS] Failed to validate connection role");
+    try {
+      conn.close(4001, "Invalid connection");
+    } catch {
+      // ignore
+    }
+    return;
+  }
 
   conn.on("message", (message: ArrayBuffer) =>
     messageListener(conn, doc, new Uint8Array(message)),

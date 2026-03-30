@@ -7,7 +7,10 @@ import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
 import { initDb, getDb, getPool } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
-import { validateWebsocketRequest } from "./app/lib/ws-auth";
+import {
+  validateWebsocketRequest,
+  getUserProjectRole,
+} from "./app/lib/ws-auth";
 import * as pty from "node-pty";
 
 import {
@@ -596,9 +599,25 @@ initDb()
         (
           request as IncomingMessage & {
             userId: string;
+            userRole?: string;
             shellProjectId: string;
           }
         ).userId = userId;
+
+        // Attach user role for this project so WS handlers can enforce permissions
+        try {
+          const role = await getUserProjectRole(userId, `project-${projectId}`);
+          if (!role) {
+            socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+            socket.destroy();
+            return;
+          }
+          (request as IncomingMessage & { userRole?: string }).userRole = role;
+        } catch {
+          socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+          socket.destroy();
+          return;
+        }
         (
           request as IncomingMessage & { shellProjectId: string }
         ).shellProjectId = projectId;
@@ -619,6 +638,24 @@ initDb()
 
         (request as IncomingMessage & { userId: string }).userId = userId;
 
+        try {
+          const role = await getUserProjectRole(userId, docName);
+          if (!role) {
+            socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+            socket.destroy();
+            return;
+          }
+          (request as IncomingMessage & { userRole?: string }).userRole = role;
+        } catch (err) {
+          logger.error(
+            { err, docName, userId },
+            "Failed to resolve user project role",
+          );
+          socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+
         wss.handleUpgrade(request, socket, head, (ws) => {
           wss.emit("connection", ws, request);
         });
@@ -633,9 +670,12 @@ initDb()
       const { pathname } = new URL(req.url!, `http://${hostname}:${port}`);
       const docName = pathname?.split("/").pop() || "default";
 
-      (ws as WebSocket & { userId: string }).userId = (
+      (ws as WebSocket & { userId: string; userRole?: string }).userId = (
         req as IncomingMessage & { userId: string }
       ).userId;
+      (ws as WebSocket & { userRole?: string }).userRole = (
+        req as IncomingMessage & { userRole?: string }
+      ).userRole;
 
       setupWSConnection(ws, req, {
         docName,

@@ -135,3 +135,84 @@ export async function validateWebsocketRequest(
     return null;
   }
 }
+
+export async function getUserProjectRole(
+  userId: string,
+  docName: string,
+): Promise<string | null> {
+  try {
+    const isAccessChannel = docName.endsWith("-access");
+    const projectId = docName.replace(/^project-/, "").replace(/-access$/, "");
+
+    return withAuthenticatedSession(userId, async () => {
+      const db = getDb();
+
+      const project = await db
+        .selectFrom("projects")
+        .select(["id", "ownerId"])
+        .where("id", "=", projectId)
+        .executeTakeFirst();
+
+      if (project) {
+        if (project.ownerId === userId) return "owner";
+      }
+
+      const collaborator = await db
+        .selectFrom("projectCollaborators")
+        .select("role")
+        .where("projectId", "=", projectId)
+        .where("userId", "=", userId)
+        .executeTakeFirst();
+
+      if ((collaborator as { role?: string })?.role) {
+        return (collaborator as { role?: string }).role as string;
+      }
+
+      if (isAccessChannel) {
+        const pendingRequest = await db
+          .selectFrom("projectRequests")
+          .select("id")
+          .where("projectId", "=", projectId)
+          .where("userId", "=", userId)
+          .where("status", "=", "pending")
+          .executeTakeFirst();
+
+        if (pendingRequest) return "pending";
+      }
+
+      const projectInFolder = await db
+        .selectFrom("projects")
+        .select("folderId")
+        .where("id", "=", projectId)
+        .executeTakeFirst();
+
+      if (projectInFolder?.folderId) {
+        const folderAccess = await db
+          .selectFrom("folders")
+          .select("id")
+          .where("id", "=", projectInFolder.folderId)
+          .where((eb) =>
+            eb.or([
+              eb("ownerId", "=", userId),
+              eb(
+                "id",
+                "in",
+                eb
+                  .selectFrom("folderCollaborators")
+                  .select("folderId")
+                  .where("userId", "=", userId),
+              ),
+            ]),
+          )
+          .executeTakeFirst();
+
+        if (folderAccess) return "viewer";
+      }
+
+      return null;
+    });
+  } catch (err) {
+    logger.error({ error: err }, "[WS Auth] Error fetching user role");
+    return null;
+  }
+}

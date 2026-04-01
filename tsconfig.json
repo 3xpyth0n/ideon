@@ -14,17 +14,16 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/app/*"],
-      "@lib/*": ["src/app/lib/*"],
-      "@providers/*": ["src/app/providers/*"],
-      "@i18n/*": ["src/app/i18n/*"],
-      "@components/*": ["src/app/components/*"],
-      "@db/*": ["src/app/db/*"],
-      "@auth": ["src/auth.ts"],
-      "@emails/*": ["src/app/emails/*"],
-      "@setup/*": ["src/app/setup/*"]
+      "@/*": ["./src/app/*"],
+      "@lib/*": ["./src/app/lib/*"],
+      "@providers/*": ["./src/app/providers/*"],
+      "@i18n/*": ["./src/app/i18n/*"],
+      "@components/*": ["./src/app/components/*"],
+      "@db/*": ["./src/app/db/*"],
+      "@auth": ["./src/auth.ts"],
+      "@emails/*": ["./src/app/emails/*"],
+      "@setup/*": ["./src/app/setup/*"]
     },
     "incremental": true,
     "plugins": [

@@ -6,6 +6,7 @@ import {
   prepareBlockForDb,
   prepareLinkForDb,
   GraphState,
+  Mutation,
 } from "@lib/graph";
 import { uniqueById } from "@lib/utils";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
@@ -13,6 +14,21 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
+
+const mutationSchema = z.object({
+  type: z.string(),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+
+function parseTemporalDiff(diff: string): Mutation[] {
+  const parsed = JSON.parse(diff);
+  const result = z.array(mutationSchema).safeParse(parsed);
+  if (!result.success) {
+    throw { status: 500, message: "Invalid temporal state payload" };
+  }
+
+  return result.data as Mutation[];
+}
 
 export const GET = projectAction(async (req, { project }) => {
   const db = getDb();
@@ -70,7 +86,7 @@ export const GET = projectAction(async (req, { project }) => {
 
     let graph: GraphState = { blocks: [], links: [] };
     for (const step of history) {
-      const mutations = JSON.parse(step.diff);
+      const mutations = parseTemporalDiff(step.diff);
       for (const mutation of mutations) {
         graph = applyGraphMutation(graph, mutation);
       }
@@ -347,7 +363,7 @@ export const POST = projectAction(
 
       let graph: GraphState = { blocks: [], links: [] };
       for (const step of history) {
-        const mutations = JSON.parse(step.diff);
+        const mutations = parseTemporalDiff(step.diff);
         for (const mutation of mutations) {
           graph = applyGraphMutation(graph, mutation);
         }

@@ -458,6 +458,60 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             }
           } else {
             try {
+              let shouldResetIndexedDb = false;
+              try {
+                const res = await fetch(
+                  `/api/projects/${initialProjectId}/graph?mode=summary`,
+                );
+                if (res.ok) {
+                  const payload = (await res.json()) as {
+                    currentStateId?: unknown;
+                  };
+                  const serverStateId =
+                    typeof payload.currentStateId === "string"
+                      ? payload.currentStateId
+                      : null;
+                  const localStateId = localStorage.getItem(
+                    `ideon:yjs:lastServerState:${initialProjectId}`,
+                  );
+
+                  if (
+                    serverStateId &&
+                    localStateId &&
+                    serverStateId !== localStateId
+                  ) {
+                    shouldResetIndexedDb = true;
+                  }
+
+                  if (serverStateId) {
+                    localStorage.setItem(
+                      `ideon:yjs:lastServerState:${initialProjectId}`,
+                      serverStateId,
+                    );
+                  }
+                }
+              } catch (e) {
+                clientLogger.debug("indexeddb:state-check:error", {
+                  projectId: initialProjectId,
+                  operation: "fetch-project-graph-summary",
+                  message: getMessage(e),
+                });
+              }
+
+              if (shouldResetIndexedDb) {
+                await new Promise<void>((resolve) => {
+                  const req = indexedDB.deleteDatabase(
+                    `project-${initialProjectId}`,
+                  );
+                  req.onsuccess = () => resolve();
+                  req.onerror = () => resolve();
+                  req.onblocked = () => resolve();
+                });
+                clientLogger.warn("indexeddb:purged-on-state-mismatch", {
+                  projectId: initialProjectId,
+                });
+              }
+
               indexeddbProvider = new IndexeddbPersistence(
                 `project-${initialProjectId}`,
                 doc!,
@@ -583,10 +637,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       ) => Promise<boolean | { success: boolean; unchanged?: boolean }>)
     | null
   >(null);
+  const isPreviewModeRef = useRef(false);
 
   const { triggerAutoSnapshot } = useAutoSnapshot({
     handleSaveStateRef,
     isPreviewMode: false,
+    isPreviewModeRef,
     isReadOnly: currentUserRole === "viewer",
     isRemoteSynced,
   });
@@ -687,6 +743,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   }, [handleSaveState]);
 
   const isReadOnly = isPreviewMode || currentUserRole === "viewer";
+
+  useEffect(() => {
+    isPreviewModeRef.current = isPreviewMode;
+  }, [isPreviewMode]);
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);

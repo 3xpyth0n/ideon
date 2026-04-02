@@ -20,6 +20,7 @@ type SaveStateFn = (
 interface UseAutoSnapshotOptions {
   handleSaveStateRef: React.RefObject<SaveStateFn | null>;
   isPreviewMode: boolean;
+  isPreviewModeRef?: React.RefObject<boolean>;
   isReadOnly: boolean;
   isRemoteSynced: boolean;
 }
@@ -30,6 +31,7 @@ const MAX_INTERVAL_MS = 120_000;
 export function useAutoSnapshot({
   handleSaveStateRef,
   isPreviewMode,
+  isPreviewModeRef,
   isReadOnly,
   isRemoteSynced,
 }: UseAutoSnapshotOptions) {
@@ -41,7 +43,8 @@ export function useAutoSnapshot({
 
   const doSnapshot = useCallback(
     async (intent: AutoSnapshotIntent) => {
-      if (isSaving.current || isPreviewMode || isReadOnly || !isRemoteSynced)
+      const previewActive = isPreviewMode || isPreviewModeRef?.current === true;
+      if (isSaving.current || previewActive || isReadOnly || !isRemoteSynced)
         return;
       const saveFn = handleSaveStateRef.current;
       if (!saveFn) return;
@@ -54,7 +57,13 @@ export function useAutoSnapshot({
         isSaving.current = false;
       }
     },
-    [handleSaveStateRef, isPreviewMode, isReadOnly, isRemoteSynced],
+    [
+      handleSaveStateRef,
+      isPreviewMode,
+      isPreviewModeRef,
+      isReadOnly,
+      isRemoteSynced,
+    ],
   );
 
   const clearTimers = useCallback(() => {
@@ -70,7 +79,8 @@ export function useAutoSnapshot({
 
   const triggerAutoSnapshot = useCallback(
     (intent: AutoSnapshotIntent) => {
-      if (isPreviewMode || isReadOnly) return;
+      const previewActive = isPreviewMode || isPreviewModeRef?.current === true;
+      if (previewActive || isReadOnly) return;
 
       pendingIntent.current = intent;
 
@@ -111,7 +121,7 @@ export function useAutoSnapshot({
         }, remaining);
       }
     },
-    [isPreviewMode, isReadOnly, doSnapshot, clearTimers],
+    [isPreviewMode, isPreviewModeRef, isReadOnly, doSnapshot, clearTimers],
   );
 
   useEffect(() => {

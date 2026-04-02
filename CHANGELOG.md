@@ -14,6 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Completed the viewer block-move fix by preventing local drag interactions and forcing viewer canvas state to reset from synced project state on open.
+- Fixed note content loss when previewing or applying temporal snapshots [#76](https://github.com/3xpyth0n/ideon/issues/76).
 
 ## [0.7.7] - 2026-03-30
 

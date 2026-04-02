@@ -31,7 +31,11 @@ interface UseProjectDataProps {
     blocks: Node<BlockData>[] | ((nds: Node<BlockData>[]) => Node<BlockData>[]),
   ) => void;
   setLinks: (links: Edge[] | ((lks: Edge[]) => Edge[])) => void;
-  replaceGraph: (blocks: Node<BlockData>[], links: Edge[]) => void;
+  replaceGraph: (
+    blocks: Node<BlockData>[],
+    links: Edge[],
+    options?: { force?: boolean },
+  ) => void;
   setIsPreviewMode: (val: boolean) => void;
   setSelectedStateId: (val: string | null) => void;
   setIsLoading: (val: boolean) => void;
@@ -66,6 +70,24 @@ export const useProjectData = ({
   const router = useRouter();
   const { fitView, setViewport } = useReactFlow();
   const loadedBlockIds = useRef<Set<string>>(new Set());
+  const prePreviewGraphRef = useRef<{
+    blocks: Node<BlockData>[];
+    links: Edge[];
+  } | null>(null);
+
+  const cloneBlocks = useCallback(
+    (source: Node<BlockData>[]) =>
+      source.map((block) => ({
+        ...block,
+        data: { ...(block.data || {}) },
+      })),
+    [],
+  );
+
+  const cloneLinks = useCallback(
+    (source: Edge[]) => source.map((link) => ({ ...link })),
+    [],
+  );
 
   const fitBlocksByLongestSide = useCallback(
     (targetBlocks: Node<BlockData>[]) => {
@@ -130,8 +152,18 @@ export const useProjectData = ({
           }),
         );
 
+        if (typeof window !== "undefined") {
+          const serverStateId = data.currentStateId;
+          if (typeof serverStateId === "string" && serverStateId.length > 0) {
+            localStorage.setItem(
+              `ideon:yjs:lastServerState:${initialProjectId}`,
+              serverStateId,
+            );
+          }
+        }
+
         if (isExplicitApply) {
-          replaceGraph(newBlocks, newLinks);
+          replaceGraph(newBlocks, newLinks, { force: true });
         } else {
           setBlocks(newBlocks);
           setLinks(newLinks);
@@ -262,9 +294,24 @@ export const useProjectData = ({
   const handlePreview = useCallback(
     async (stateId: string | null) => {
       if (!stateId) {
-        handleExitPreview();
+        const previousGraph = prePreviewGraphRef.current;
+        if (previousGraph) {
+          setBlocks(cloneBlocks(previousGraph.blocks));
+          setLinks(cloneLinks(previousGraph.links));
+          prePreviewGraphRef.current = null;
+          setIsPreviewMode(false);
+        } else {
+          handleExitPreview();
+        }
         setSelectedStateId(null);
         return;
+      }
+
+      if (!isPreviewMode && !prePreviewGraphRef.current) {
+        prePreviewGraphRef.current = {
+          blocks: cloneBlocks(blocks),
+          links: cloneLinks(links),
+        };
       }
 
       setIsPreviewMode(true);
@@ -285,6 +332,9 @@ export const useProjectData = ({
           })),
         );
       } catch {
+        prePreviewGraphRef.current = null;
+        setIsPreviewMode(false);
+        setSelectedStateId(null);
         toast.error(dict.modals.noHistory);
       }
     },
@@ -296,6 +346,8 @@ export const useProjectData = ({
       dict.common,
       setBlocks,
       setLinks,
+      cloneBlocks,
+      cloneLinks,
       setIsPreviewMode,
       setSelectedStateId,
       handleExitPreview,
@@ -312,12 +364,14 @@ export const useProjectData = ({
         });
         if (!res.ok) throw new Error();
 
-        handleExitPreview();
+        setIsPreviewMode(false);
         setSelectedStateId(null);
         toast.success(dict.modals.stateApplied);
 
-        // Refresh the graph to pull the newly applied state and sync it to Yjs
-        fetchGraph(true);
+        queueMicrotask(() => {
+          fetchGraph(true);
+        });
+        prePreviewGraphRef.current = null;
       } catch {
         toast.error(dict.modals.noHistory);
       }
@@ -327,7 +381,6 @@ export const useProjectData = ({
       dict.common,
       setIsPreviewMode,
       setSelectedStateId,
-      handleExitPreview,
       fetchGraph,
     ],
   );

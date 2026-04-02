@@ -343,6 +343,16 @@ const cleanBlockDataForSync = (
   return rest;
 };
 
+const resolveBlockContent = (
+  yText: Y.Text | undefined,
+  fallback: unknown,
+): string => {
+  const fallbackContent = typeof fallback === "string" ? fallback : "";
+  if (!yText) return fallbackContent;
+  const live = yText.toString();
+  return live.length > 0 ? live : fallbackContent;
+};
+
 export interface UserPresence {
   id: string;
   username: string;
@@ -464,11 +474,10 @@ export const useProjectCanvasState = (
 
   const setIsPreviewMode = useCallback(
     (value: boolean | ((prev: boolean) => boolean)) => {
-      setIsPreviewModeState((prev) => {
-        const next = typeof value === "function" ? value(prev) : value;
-        isPreviewModeRef.current = next;
-        return next;
-      });
+      const next =
+        typeof value === "function" ? value(isPreviewModeRef.current) : value;
+      isPreviewModeRef.current = next;
+      setIsPreviewModeState(next);
     },
     [],
   );
@@ -542,10 +551,10 @@ export const useProjectCanvasState = (
                 data: {
                   ...(rn.data as unknown as Record<string, unknown>),
                   yText,
-                  content: yText
-                    ? yText.toString()
-                    : (rn.data as unknown as { content?: string }).content ||
-                      "",
+                  content: resolveBlockContent(
+                    yText,
+                    (rn.data as unknown as { content?: string }).content,
+                  ),
                 },
               };
 
@@ -660,14 +669,15 @@ export const useProjectCanvasState = (
             if (
               yText &&
               (next[index].data.yText !== yText ||
-                next[index].data.content !== yText.toString())
+                next[index].data.content !==
+                  resolveBlockContent(yText, next[index].data.content))
             ) {
               next[index] = {
                 ...next[index],
                 data: {
                   ...next[index].data,
                   yText,
-                  content: yText ? yText.toString() : next[index].data.content,
+                  content: resolveBlockContent(yText, next[index].data.content),
                 },
               };
               hasChanges = true;
@@ -729,7 +739,7 @@ export const useProjectCanvasState = (
             ...(rn.data as unknown as Record<string, unknown>),
             yText,
             // Only use existing content string if available, don't force a yText.toString() here
-            content: initialContent || "",
+            content: resolveBlockContent(yText, initialContent),
           },
         } as Node<BlockData>;
       }),
@@ -1029,8 +1039,13 @@ export const useProjectCanvasState = (
   );
 
   const replaceGraph = useCallback(
-    (newBlocks: Node<BlockData>[], newLinks: Edge[]) => {
-      if (!yBlocks || !yLinks || !yContents || isReadOnly) return;
+    (
+      newBlocks: Node<BlockData>[],
+      newLinks: Edge[],
+      options?: { force?: boolean },
+    ) => {
+      const force = options?.force === true;
+      if (!yBlocks || !yLinks || !yContents || (isReadOnly && !force)) return;
 
       yBlocks.doc?.transact(() => {
         // 1. Delete everything in Yjs
@@ -1207,8 +1222,6 @@ export const useProjectCanvasState = (
   }, []);
 
   const handleExitPreview = useCallback(() => {
-    setIsPreviewMode(false);
-
     if (yBlocks && yLinks && yContents) {
       const initialBlocks = Array.from(yBlocks.values());
       const initialLinks = Array.from(yLinks.values());
@@ -1228,7 +1241,7 @@ export const useProjectCanvasState = (
             data: {
               ...rn.data,
               yText,
-              content: yText ? yText.toString() : rn.data?.content || "",
+              content: resolveBlockContent(yText, rn.data?.content),
             },
           } as Node<BlockData>;
         }),
@@ -1236,6 +1249,8 @@ export const useProjectCanvasState = (
 
       setLinksState(initialLinks.map((rl) => ({ ...rl, selected: false })));
     }
+
+    setIsPreviewMode(false);
   }, [yBlocks, yLinks, yContents]);
 
   const handleSaveState = useCallback(
@@ -1252,7 +1267,10 @@ export const useProjectCanvasState = (
           ...n,
           data: {
             ...n.data,
-            content: n.data.yText ? n.data.yText.toString() : n.data.content,
+            content: resolveBlockContent(
+              yContents?.get(n.id) || n.data.yText,
+              n.data.content,
+            ),
           },
         }));
 
@@ -1312,7 +1330,7 @@ export const useProjectCanvasState = (
         return { success: false };
       }
     },
-    [initialProjectId, blocks, links],
+    [initialProjectId, blocks, links, yContents],
   );
 
   const handleDeleteState = useCallback(

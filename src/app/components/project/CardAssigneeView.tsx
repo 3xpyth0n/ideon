@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Avatar from "@components/ui/Avatar";
 import { UserPlus } from "lucide-react";
 import FloatingMenu from "./FloatingMenu";
@@ -17,23 +17,33 @@ interface Props {
   collaborators: UserProfile[];
   value?: string[];
   onChange: (ids: string[]) => void;
+  isOpen?: boolean;
+  onOpen?: (pos: { x: number; y: number }) => void;
+  onClose?: () => void;
 }
 
 export default function CardAssigneeView({
   collaborators,
   value = [],
   onChange,
+  isOpen = false,
+  onOpen,
+  onClose,
 }: Props) {
   const { dict } = useI18n();
-  const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const btnRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) setMenuPos(null);
+  }, [isOpen]);
 
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMenuPos({ x: Math.round(rect.left), y: Math.round(rect.bottom + 6) });
-    setOpen(true);
+    const pos = { x: Math.round(rect.left), y: Math.round(rect.bottom + 6) };
+    setMenuPos(pos);
+    onOpen?.(pos);
   };
 
   const selected = collaborators.filter((c) => value.includes(c.id));
@@ -66,7 +76,7 @@ export default function CardAssigneeView({
         )}
       </div>
 
-      {open && menuPos && (
+      {isOpen && menuPos && (
         <FloatingMenu
           style={{ top: menuPos.y, left: menuPos.x } as React.CSSProperties}
           onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
@@ -85,7 +95,7 @@ export default function CardAssigneeView({
               className="px-2 py-1 rounded"
               onClick={(e) => {
                 e.stopPropagation();
-                setOpen(false);
+                onClose?.();
               }}
             >
               {dict.common.close}

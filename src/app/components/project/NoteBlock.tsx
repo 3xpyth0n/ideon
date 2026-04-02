@@ -913,10 +913,29 @@ const NoteBubbleMenu = memo(
     const menuRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
+      if (!showBubbleMenu || !blockRef.current) {
+        setBlockRect(null);
+        return;
+      }
+
+      const blockElement = blockRef.current;
+      const reactFlowNodeElement = blockElement.closest(".react-flow__node");
+
       const updateRect = () => {
-        if (showBubbleMenu && blockRef.current) {
-          setBlockRect(blockRef.current.getBoundingClientRect());
-        }
+        if (!showBubbleMenu || !blockRef.current) return;
+        const nextRect = blockRef.current.getBoundingClientRect();
+        setBlockRect((prevRect) => {
+          if (
+            prevRect &&
+            prevRect.top === nextRect.top &&
+            prevRect.left === nextRect.left &&
+            prevRect.width === nextRect.width &&
+            prevRect.height === nextRect.height
+          ) {
+            return prevRect;
+          }
+          return nextRect;
+        });
       };
 
       const handleSidebarToggle = () => {
@@ -931,11 +950,27 @@ const NoteBubbleMenu = memo(
         requestAnimationFrame(loop);
       };
 
+      const resizeObserver = new ResizeObserver(updateRect);
+      resizeObserver.observe(blockElement);
+      if (reactFlowNodeElement instanceof HTMLElement) {
+        resizeObserver.observe(reactFlowNodeElement);
+      }
+
+      const mutationObserver = new MutationObserver(updateRect);
+      if (reactFlowNodeElement instanceof HTMLElement) {
+        mutationObserver.observe(reactFlowNodeElement, {
+          attributes: true,
+          attributeFilter: ["style", "class"],
+        });
+      }
+
       updateRect();
       window.addEventListener("resize", updateRect);
       window.addEventListener("sidebar-toggle", handleSidebarToggle);
 
       return () => {
+        resizeObserver.disconnect();
+        mutationObserver.disconnect();
         window.removeEventListener("resize", updateRect);
         window.removeEventListener("sidebar-toggle", handleSidebarToggle);
       };

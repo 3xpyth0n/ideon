@@ -369,6 +369,7 @@ const SketchBlock = memo((props: SketchBlockProps) => {
           elements={sketchDataRef.current.excalidrawElements}
           files={sketchDataRef.current.excalidrawFiles}
           theme={theme}
+          fileNameBase={title}
           onClose={handleModalClose}
         />
       )}

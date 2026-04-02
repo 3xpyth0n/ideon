@@ -1239,6 +1239,12 @@ body.sketch-modal-open
   z-index: 1;
 }
 
+.sketch-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sketch-modal-canvas {
   flex: 1;
   position: relative;
@@ -1276,6 +1282,81 @@ body.sketch-modal-open
 
 .sketch-modal-btn-save:hover {
   opacity: 0.88;
+}
+
+.sketch-modal-btn-export {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.sketch-modal-btn-export:hover {
+  opacity: 0.9;
+}
+
+.sketch-modal-btn-danger {
+  background: #b42318;
+  color: #fff;
+}
+
+.sketch-modal-btn-danger:hover {
+  opacity: 0.9;
+}
+
+.sketch-discard-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.sketch-discard-confirm {
+  width: min(480px, calc(100% - 32px));
+  border-radius: 10px;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.35);
+  padding: 18px;
+}
+
+.sketch-discard-confirm h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.sketch-discard-confirm p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.sketch-discard-confirm-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .sketch-modal-header {
+    padding: 8px 10px;
+  }
+
+  .sketch-modal-header-actions {
+    gap: 6px;
+  }
+
+  .sketch-modal-btn {
+    padding: 6px 10px;
+  }
+
+  .sketch-discard-confirm-actions {
+    flex-wrap: wrap;
+  }
 }
 
 .block-title {

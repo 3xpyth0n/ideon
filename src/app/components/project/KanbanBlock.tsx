@@ -294,6 +294,49 @@ const parseKanbanMetadata = (
   }
 };
 
+const getDefaultPlaceholderTask = (
+  tr: (path: string, fallback: string) => string,
+): Task => ({
+  id: `t-${Math.random().toString(36).slice(2, 9)}`,
+  text: tr("kanban.defaultTask.placeholder", "New task"),
+  checked: false,
+  assigneeIds: [],
+  assigneeName: undefined,
+  fields: {},
+});
+
+const getDefaultKanbanColumns = (
+  tr: (path: string, fallback: string) => string,
+): Column[] => [
+  {
+    id: `c-${Math.random().toString(36).slice(2, 9)}`,
+    title: tr("kanban.defaultColumn.todo", "TO-DO"),
+    color: "#111184",
+    description: tr("kanban.defaultColumn.todoDesc", "Tasks to be done"),
+    tasks: [getDefaultPlaceholderTask(tr)],
+    widthPx: MIN_COLUMN_PX,
+  },
+  {
+    id: `c-${Math.random().toString(36).slice(2, 9)}`,
+    title: tr("kanban.defaultColumn.inProgress", "In Progress"),
+    color: "#FF4D00",
+    description: tr(
+      "kanban.defaultColumn.inProgressDesc",
+      "Tasks being worked on",
+    ),
+    tasks: [getDefaultPlaceholderTask(tr)],
+    widthPx: MIN_COLUMN_PX,
+  },
+  {
+    id: `c-${Math.random().toString(36).slice(2, 9)}`,
+    title: tr("kanban.defaultColumn.done", "Done"),
+    color: "#008000",
+    description: tr("kanban.defaultColumn.doneDesc", "Completed tasks"),
+    tasks: [getDefaultPlaceholderTask(tr)],
+    widthPx: MIN_COLUMN_PX,
+  },
+];
+
 const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
   const { dict, lang } = useI18n();
   const [columns, setColumns] = useState<Column[]>([]);
@@ -338,6 +381,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
   >(null);
 
   const [collaborators, setCollaborators] = useState<UserProfile[]>([]);
+  const trRef = useRef<(path: string, fallback: string) => string>(() => "");
 
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
@@ -366,6 +410,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     }
     return typeof v === "string" ? v : fallback;
   };
+  trRef.current = tr;
 
   const getEditorName = () =>
     currentUser?.displayName ||
@@ -381,7 +426,11 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
 
   useEffect(() => {
     const meta = parseKanbanMetadata(data.metadata);
-    setColumns(meta.columns);
+    if (meta.columns.length === 0 && !data.metadata) {
+      setColumns(getDefaultKanbanColumns(trRef.current));
+    } else {
+      setColumns(meta.columns);
+    }
     setFields(meta.fields || []);
   }, [data.metadata]);
 

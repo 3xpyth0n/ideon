@@ -353,8 +353,10 @@ export default function KanbanCard({
                       ? [t.assigneeId]
                       : []
                 }
+                isOpen={openMenuKey === `assignee:${t.id}`}
+                onOpen={(pos) => onRequestOpenMenu?.(`assignee:${t.id}`, pos)}
+                onClose={() => onRequestCloseMenu?.()}
                 onChange={(ids) => {
-                  // persist immediately (optimistic)
                   save(
                     columns.map((c) =>
                       c.id === col.id

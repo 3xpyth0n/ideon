@@ -73,6 +73,7 @@ import {
   Unlock,
   UserPlus,
   Copy,
+  Trash2,
 } from "lucide-react";
 import { LuPencilOff } from "react-icons/lu";
 import { TbLocationOff } from "react-icons/tb";
@@ -837,6 +838,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       }
 
       if (e.ctrlKey || e.metaKey) {
+        if (document.body.classList.contains("sketch-modal-open")) {
+          return;
+        }
+
         const target = e.target as HTMLElement | null;
         const activeElement =
           document.activeElement instanceof HTMLElement
@@ -2218,9 +2223,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                     setContextMenu(null);
                                   }
                                 }}
-                                className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                className="context-menu-item danger"
                               >
-                                {dict.common.delete || "Delete"}
+                                <span className="context-menu-icon">
+                                  <Trash2 size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {dict.common.delete || "Delete"}
+                                </span>
                               </button>
                             </>
                           )}

@@ -113,6 +113,7 @@
 
 .checklist-input.checked {
   text-decoration: line-through;
+  text-decoration-thickness: 3px;
   opacity: 0.5;
 }
 

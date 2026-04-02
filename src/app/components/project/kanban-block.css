@@ -7,18 +7,11 @@
 }
 
 .block-card.block-kanban.selected {
-  box-shadow: none !important;
   border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
 }
 
 [data-theme="dark"] .block-card.block-kanban.selected {
-  box-shadow: none !important;
   border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
-}
-
-.preview-mode .block-card.block-kanban.selected,
-[data-theme="dark"] .preview-mode .block-card.block-kanban.selected {
-  box-shadow: none !important;
 }
 
 .block-kanban .block-footer {
@@ -153,33 +146,13 @@
   border-bottom: 1px solid var(--border);
   min-height: 28px;
 }
-/* Ensure title + drag handle are laid out inline (handle to the left of title) */
+
 .kb-col-title-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.kb-sep::before {
-  /* hidden by default; shown only during column-drag */
-  display: none;
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  left: 50%;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: var(--border);
-  transform: translateX(-50%);
-  transition:
-    background 200ms ease,
-    opacity 150ms ease;
-}
 
-/* show vertical separators only while dragging columns */
-.kb-root.kb-dragging-columns .kb-sep::before {
-  display: block;
-}
 .kb-col-drag-handle {
   cursor: grab;
   color: var(--text-muted);
@@ -605,10 +578,10 @@
 .kb-sep {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   min-height: 240px;
-  padding: 0;
+  padding-top: 30px;
   background: transparent !important;
   border: none;
   color: var(--text-muted);
@@ -617,39 +590,8 @@
   flex-shrink: 0;
 }
 
-.kb-sep::before {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  left: 50%;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: var(--border);
-  transform: translateX(-50%);
-  transition: background 200ms ease;
-}
-
-.kb-sep svg {
-  position: relative;
-  z-index: 1;
-  width: 14px;
-  height: 30px;
-  stroke-width: 3px;
-  background: var(--bg-island);
-}
-
 .kb-sep:hover {
   color: var(--accent);
-}
-
-.kb-sep:hover::before {
-  width: 2px;
-  background: var(--accent);
-}
-
-.kb-sep-drop-target::before {
-  display: none;
 }
 
 .kb-sep-drop-target {

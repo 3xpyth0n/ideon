@@ -23,6 +23,8 @@ import { useI18n } from "@providers/I18nProvider";
 import {
   DEFAULT_BLOCK_WIDTH,
   DEFAULT_BLOCK_HEIGHT,
+  DEFAULT_KANBAN_BLOCK_WIDTH,
+  DEFAULT_KANBAN_BLOCK_HEIGHT,
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
   CORE_BLOCK_WIDTH,
@@ -51,8 +53,6 @@ const FIT_MIN_ZOOM = 0.1;
 const FIT_MAX_ZOOM_SELECTED = 2;
 const FIT_MAX_ZOOM_ALL = 1;
 const SNAP_THRESHOLD_PX = 8;
-const DEFAULT_SKETCH_BLOCK_WIDTH = 600;
-const DEFAULT_SKETCH_BLOCK_HEIGHT = 450;
 
 interface UseProjectCanvasGraphProps {
   currentUser: UserPresence | null;
@@ -819,12 +819,17 @@ export const useProjectCanvasGraph = ({
       if (!currentUser) return null;
 
       const isSketch = blockType === "sketch";
+      const isKanban = blockType === "kanban";
       const blockWidth = isSketch
-        ? DEFAULT_SKETCH_BLOCK_WIDTH
-        : DEFAULT_BLOCK_WIDTH;
+        ? 600
+        : isKanban
+          ? DEFAULT_KANBAN_BLOCK_WIDTH
+          : DEFAULT_BLOCK_WIDTH;
       const blockHeight = isSketch
-        ? DEFAULT_SKETCH_BLOCK_HEIGHT
-        : DEFAULT_BLOCK_HEIGHT;
+        ? 450
+        : isKanban
+          ? DEFAULT_KANBAN_BLOCK_HEIGHT
+          : DEFAULT_BLOCK_HEIGHT;
 
       const screenPos = pos
         ? null

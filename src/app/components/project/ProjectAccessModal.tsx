@@ -136,14 +136,14 @@ export function ProjectAccessModal({
       if (res.ok) {
         await fetchCollaborators();
         onUpdate?.();
-        toast.success(dict.common.success || "Invitation sent");
+        toast.success(dict.common.invitationSent);
       } else {
         const data = await res.json();
         toast.error(data.error || dict.common.error);
       }
     } catch (err) {
       console.error("Failed to invite user", err);
-      toast.error(dict.common.error || "Failed to invite user");
+      toast.error(dict.common.failedToInvite);
     } finally {
       setInvitingId(null);
     }
@@ -161,14 +161,14 @@ export function ProjectAccessModal({
       if (res.ok) {
         await fetchCollaborators();
         onUpdate?.();
-        toast.success(dict.common.success || "Role updated");
+        toast.success(dict.common.roleUpdated);
       } else {
         const data = await res.json();
         toast.error(data.error || dict.common.error);
       }
     } catch (err) {
       console.error(err);
-      toast.error(dict.common.error);
+      toast.error(dict.common.actionFailed);
     } finally {
       setActionId(null);
     }
@@ -185,14 +185,14 @@ export function ProjectAccessModal({
       if (res.ok) {
         await fetchCollaborators();
         onUpdate?.();
-        toast.success(dict.common.success || "User removed");
+        toast.success(dict.common.userRemoved);
       } else {
         const data = await res.json();
         toast.error(data.error || dict.common.error);
       }
     } catch (err) {
       console.error(err);
-      toast.error(dict.common.error);
+      toast.error(dict.common.actionFailed);
     } finally {
       setActionId(null);
     }
@@ -215,9 +215,9 @@ export function ProjectAccessModal({
         if (action === "approve") {
           await fetchCollaborators();
           onUpdate?.();
-          toast.success(dict.common.success || "Request approved");
+          toast.success(dict.common.requestApproved);
         } else {
-          toast.success(dict.common.success || "Request rejected");
+          toast.success(dict.common.requestRejected);
         }
       } else {
         const data = await res.json();
@@ -225,7 +225,7 @@ export function ProjectAccessModal({
       }
     } catch (err) {
       console.error(err);
-      toast.error(dict.common.error || "Action failed");
+      toast.error(dict.common.actionFailed);
     } finally {
       setActionId(null);
     }
@@ -275,9 +275,16 @@ export function ProjectAccessModal({
                 value={selectedRole}
                 onChange={setSelectedRole}
                 options={[
-                  ...(isCreator ? [{ value: "owner", label: "Owner" }] : []),
-                  { value: "editor", label: "Editor" },
-                  { value: "viewer", label: "Viewer" },
+                  ...(isCreator
+                    ? [
+                        {
+                          value: "owner",
+                          label: dict.project.roleOwner,
+                        },
+                      ]
+                    : []),
+                  { value: "editor", label: dict.project.roleEditor },
+                  { value: "viewer", label: dict.project.roleViewer },
                 ]}
                 className="w-32"
               />
@@ -302,7 +309,7 @@ export function ProjectAccessModal({
           </div>
 
           <div
-            className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar min-h-[100px] nopan nodrag nowheel"
+            className="flex flex-col gap-2 max-h-75flow-y-auto pr-2 custom-scrollbar min-h-25 nopan nodrag nowheel"
             onWheel={(e) => e.stopPropagation()}
           >
             {results.length > 0 ? (
@@ -311,7 +318,7 @@ export function ProjectAccessModal({
                 return (
                   <div
                     key={user.id}
-                    className="user-card flex items-center justify-between p-2 border border-white/5 bg-white/[0.02] rounded-lg"
+                    className="user-card flex items-center justify-between p-2 border border-white/5 bg-white/2 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-white/5 flex items-center justify-center overflow-hidden">
@@ -374,7 +381,7 @@ export function ProjectAccessModal({
             <div className="mb-8">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
                 <span>{dict.project.accessRequests || "Access Requests"}</span>
-                <span className="h-[1px] flex-1 bg-white/5" />
+                <span className="h-px flex-1 bg-white/5" />
                 <span>{requests.length}</span>
               </h3>
               <AccessRequestsList
@@ -388,12 +395,12 @@ export function ProjectAccessModal({
           <div>
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
               <span>{dict.project.currentCollaborators}</span>
-              <span className="h-[1px] flex-1 bg-white/5" />
+              <span className="h-px flex-1 bg-white/5" />
               <span>{collaborators.length}</span>
             </h3>
 
             <div
-              className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar nopan nodrag nowheel"
+              className="flex flex-col gap-2 max-h-75 overflow-y-auto pr-2 custom-scrollbar nopan nodrag nowheel"
               onWheel={(e) => e.stopPropagation()}
             >
               {loadingCollaborators ? (
@@ -441,12 +448,23 @@ export function ProjectAccessModal({
                             onChange={(val) => handleUpdateRole(user.id, val)}
                             options={[
                               ...(isCreator
-                                ? [{ value: "owner", label: "Owner" }]
+                                ? [
+                                    {
+                                      value: "owner",
+                                      label: dict.project.roleOwner,
+                                    },
+                                  ]
                                 : []),
-                              { value: "editor", label: "Editor" },
-                              { value: "viewer", label: "Viewer" },
+                              {
+                                value: "editor",
+                                label: dict.project.roleEditor,
+                              },
+                              {
+                                value: "viewer",
+                                label: dict.project.roleViewer,
+                              },
                             ]}
-                            className="w-[100px]"
+                            className="w-25"
                             triggerClassName="h-6 text-[10px] uppercase font-bold bg-transparent border-none hover:bg-white/5 justify-end"
                             align="right"
                           />

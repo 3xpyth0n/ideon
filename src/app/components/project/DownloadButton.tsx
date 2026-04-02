@@ -62,16 +62,13 @@ export function DownloadButton() {
         .then(downloadImage)
         .catch((err) => {
           console.error("Download failed", err);
-          toast.error("Failed to download image");
+          toast.error(dict.blocks.downloadImageFailed);
         });
     }
   }, [getNodes, theme]);
 
   return (
-    <ControlButton
-      onClick={onClick}
-      title={dict.common.export || "Download Image"}
-    >
+    <ControlButton onClick={onClick} title={dict.common.export}>
       <Download size={16} />
     </ControlButton>
   );

@@ -5,7 +5,9 @@ import { ChevronDown, Check } from "lucide-react";
 
 export interface SelectOption {
   value: string;
-  label: string;
+  label: React.ReactNode;
+  // Optional smaller node to show in the trigger (compact avatar, icon...)
+  triggerLabel?: React.ReactNode;
 }
 
 interface SelectProps {
@@ -18,6 +20,7 @@ interface SelectProps {
   optionClassName?: string;
   align?: "left" | "right";
   disabled?: boolean;
+  hideChevron?: boolean;
 }
 
 export function Select({
@@ -30,6 +33,7 @@ export function Select({
   optionClassName = "",
   align = "left",
   disabled = false,
+  hideChevron = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,8 +41,8 @@ export function Select({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
-  const selectedOption =
-    options.find((opt) => opt.value === value) || options[0];
+  const selectedOption = options.find((opt) => opt.value === value) ||
+    options[0] || { value: "", label: "" };
 
   const updateCoords = () => {
     if (triggerRef.current) {
@@ -128,15 +132,16 @@ export function Select({
           disabled ? "opacity-50 cursor-not-allowed" : ""
         }`}
       >
-        <span>{selectedOption.label}</span>
-        <ChevronDown
-          size={14}
-          className={`transition-transform duration-200 opacity-40 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
+        <span>{selectedOption.triggerLabel ?? selectedOption.label}</span>
+        {!hideChevron && (
+          <ChevronDown
+            size={14}
+            className={`transition-transform duration-200 opacity-40 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        )}
       </button>
-
       {isOpen &&
         createPortal(
           <div

@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import chroma from "chroma-js";
+import { useI18n } from "@providers/I18nProvider";
 import "./color-picker.css";
 
 interface ColorPickerProps {
@@ -18,6 +19,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   onClose,
   position,
 }) => {
+  const { dict } = useI18n();
   const pickerRef = useRef<HTMLDivElement>(null);
   const saturationRef = useRef<HTMLDivElement>(null);
   const hueRef = useRef<HTMLDivElement>(null);
@@ -226,13 +228,13 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           <div
             className="color-preview"
             style={{ backgroundColor: hsv.hex }}
-            title="Current Color"
+            title={dict.blocks.currentColor}
           />
           <div className="color-picker-field">
             <input
               value={hexInput}
               onChange={handleHexChange}
-              placeholder="HEX"
+              placeholder={dict.blocks.hexPlaceholder}
               className="hex-input"
             />
           </div>

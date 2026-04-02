@@ -477,6 +477,7 @@ export const useProjectCanvasState = (
   const [isReady, setIsReady] = useState(false);
   const lastProjectId = useRef<string | null>(null);
   const lastSnapshotHash = useRef<string | null>(null);
+  const viewerResetProjectIdRef = useRef<string | null>(null);
 
   const isReadOnly = isPreviewMode || currentUserRole === "viewer";
 
@@ -489,7 +490,7 @@ export const useProjectCanvasState = (
   );
 
   useEffect(() => {
-    if (!yBlocks || !yLinks || !yContents || isReadOnly) return;
+    if (!yBlocks || !yLinks || !yContents) return;
 
     // Drafts map (flat): keys are `${blockId}::${clientId}` -> stringified draft
     const yDrafts: Y.Map<string> | null = yDoc
@@ -775,6 +776,61 @@ export const useProjectCanvasState = (
     };
   }, [yBlocks, yLinks, yContents, isPreviewMode, applyLongestSideFit]);
 
+  useEffect(() => {
+    if (!initialProjectId || currentUserRole !== "viewer") {
+      viewerResetProjectIdRef.current = null;
+      return;
+    }
+
+    if (
+      !yBlocks ||
+      !yLinks ||
+      !yContents ||
+      !isRemoteSynced ||
+      viewerResetProjectIdRef.current === initialProjectId
+    ) {
+      return;
+    }
+
+    const resetBlocks = Array.from(yBlocks.values()).map((rn) => {
+      const yText = yContents.get(rn.id);
+      const initialContent = (rn.data as unknown as { content?: string })
+        ?.content;
+
+      return {
+        ...rn,
+        selected: false,
+        draggable: false,
+        deletable: false,
+        position:
+          rn.type === "core"
+            ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
+            : rn.position,
+        data: {
+          ...(rn.data as unknown as Record<string, unknown>),
+          yText,
+          content: yText ? yText.toString() : initialContent || "",
+        },
+      } as Node<BlockData>;
+    });
+
+    const resetLinks = Array.from(yLinks.values()).map((rl) => ({
+      ...rl,
+      selected: false,
+    }));
+
+    setBlocksState(resetBlocks);
+    setLinksState(resetLinks);
+    viewerResetProjectIdRef.current = initialProjectId;
+  }, [
+    currentUserRole,
+    initialProjectId,
+    isRemoteSynced,
+    yBlocks,
+    yLinks,
+    yContents,
+  ]);
+
   const setBlocks = useCallback(
     (
       update:
@@ -889,7 +945,7 @@ export const useProjectCanvasState = (
         return enrichedNextBlocks as unknown as Node<BlockData>[];
       });
     },
-    [yBlocks, yContents],
+    [yBlocks, yContents, currentUserRole],
   );
 
   const deleteBlocks = useCallback(
@@ -905,7 +961,7 @@ export const useProjectCanvasState = (
 
       setBlocksState((prev) => prev.filter((n) => !ids.includes(n.id)));
     },
-    [yBlocks, yContents],
+    [yBlocks, yContents, isReadOnly],
   );
 
   const setLinks = useCallback(
@@ -954,7 +1010,7 @@ export const useProjectCanvasState = (
         return nextLinks;
       });
     },
-    [yLinks],
+    [yLinks, currentUserRole],
   );
 
   const deleteLinks = useCallback(
@@ -969,7 +1025,7 @@ export const useProjectCanvasState = (
 
       setLinksState((prev) => prev.filter((l) => !ids.includes(l.id)));
     },
-    [yLinks],
+    [yLinks, isReadOnly],
   );
 
   const replaceGraph = useCallback(
@@ -1020,7 +1076,7 @@ export const useProjectCanvasState = (
 
       clear();
     },
-    [yBlocks, yLinks, yContents, clear],
+    [yBlocks, yLinks, yContents, isReadOnly, clear],
   );
 
   // Drafts API: keep drafts in separate state to avoid polluting BlockData
@@ -2088,7 +2144,7 @@ export const useProjectCanvasState = (
 
       return {
         ...block,
-        draggable: isPreviewMode ? false : isLocked ? !!isOwner : true,
+        draggable: isReadOnly ? false : isLocked ? !!isOwner : true,
         dragHandle:
           ".block-card, .block-header, .block-footer, .shell-block-header, .handle-drag-target",
         selectable: !isPreviewMode,
@@ -2127,6 +2183,7 @@ export const useProjectCanvasState = (
     rt.onCaretMove,
     currentUser,
     isPreviewMode,
+    isReadOnly,
     graph,
     yContents,
     projectOwnerId,

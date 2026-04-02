@@ -69,6 +69,11 @@ import {
   Share2,
   Loader2,
   Menu,
+  Folder,
+  Lock,
+  Unlock,
+  UserPlus,
+  Copy,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { SiFigma } from "react-icons/si";
@@ -334,7 +339,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     if (user) {
       setCurrentUser({
         id: user.id,
-        username: user.username || "Guest",
+        username: user.username || dict.common.guest,
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
         color: user.color || undefined,
@@ -349,149 +354,208 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   } | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !initialProjectId) return;
+    if (
+      typeof window === "undefined" ||
+      !initialProjectId ||
+      currentUserRole === null
+    )
+      return;
 
     let doc: Y.Doc | null = new Y.Doc();
     let wsProvider: WebsocketProvider | null = null;
     let indexeddbProvider: IndexeddbPersistence | null = null;
+    let checkInterval: number | null = null;
+    let cancelled = false;
 
-    try {
-      clientLogger.debug("yjs:init:start");
-
+    const init = async () => {
       try {
-        const update = Y.encodeStateAsUpdate(doc!);
-        const docSizeBytes = (update && (update as Uint8Array).byteLength) || 0;
-        clientLogger.debug("yjs:doc:estimated_size_bytes", { docSizeBytes });
-      } catch (e) {
-        clientLogger.debug("yjs:doc:size_estimate_failed", String(e));
-      }
+        clientLogger.debug("yjs:init:start");
 
-      wsProvider = new WebsocketProvider(
-        `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
-          window.location.host
-        }/yjs`,
-        `project-${initialProjectId}`,
-        doc,
-        { connect: true },
-      );
-
-      wsProvider.on("sync", (data: boolean) => {
-        let size = 0;
         try {
-          const u = Y.encodeStateAsUpdate(doc!);
-          size = (u && (u as Uint8Array).byteLength) || 0;
-        } catch {
-          void 0;
+          const update = Y.encodeStateAsUpdate(doc!);
+          const docSizeBytes =
+            (update && (update as Uint8Array).byteLength) || 0;
+          clientLogger.debug("yjs:doc:estimated_size_bytes", { docSizeBytes });
+        } catch (e) {
+          clientLogger.debug("yjs:doc:size_estimate_failed", String(e));
         }
-        clientLogger.debug("yjs:sync", {
-          synced: Boolean(data),
-          docSizeBytes: size,
-        });
-        setIsRemoteSynced(Boolean(data));
-      });
 
-      wsProvider.on("status", (event: { status: string }) => {
-        clientLogger.info("yjs:status", { status: event.status });
-        setIsSocketConnected(event.status === "connected");
-      });
-
-      wsProvider.on("connection-close", (event: { code?: number } | null) => {
-        clientLogger.warn("yjs:connection-close", {
-          code: event?.code ?? null,
-        });
-        if (event?.code === 4003) {
-          wsProvider?.disconnect();
-          toast.error(dictRef.current.common.accessRevoked || "Access revoked");
-          routerRef.current.push("/home");
-        }
-      });
-
-      try {
-        indexeddbProvider = new IndexeddbPersistence(
+        wsProvider = new WebsocketProvider(
+          `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
+            window.location.host
+          }/yjs`,
           `project-${initialProjectId}`,
-          doc!,
+          doc,
+          { connect: true },
         );
-        indexeddbProvider.on("synced", () => {
-          setIsLocalSynced(true);
-          clientLogger.debug("indexeddb:synced");
-        });
-      } catch (err) {
-        const classified = classifyIndexedDbError(err);
-        clientLogger.error("indexeddb:init:error", {
-          reason: classified.reason,
-          hint: classified.hint,
-          message: getMessage(err),
+
+        wsProvider.on("sync", (data: boolean) => {
+          let size = 0;
+          try {
+            const u = Y.encodeStateAsUpdate(doc!);
+            size = (u && (u as Uint8Array).byteLength) || 0;
+          } catch {
+            void 0;
+          }
+          clientLogger.debug("yjs:sync", {
+            synced: Boolean(data),
+            docSizeBytes: size,
+          });
+          setIsRemoteSynced(Boolean(data));
         });
 
+        wsProvider.on("status", (event: { status: string }) => {
+          clientLogger.info("yjs:status", { status: event.status });
+          setIsSocketConnected(event.status === "connected");
+        });
+
+        wsProvider.on("connection-close", (event: { code?: number } | null) => {
+          clientLogger.warn("yjs:connection-close", {
+            code: event?.code ?? null,
+          });
+          if (event?.code === 4003) {
+            wsProvider?.disconnect();
+            toast.error(
+              dictRef.current.common.accessRevoked || "Access revoked",
+            );
+            routerRef.current.push("/home");
+          }
+        });
+
+        // If the current user is a viewer, ensure we do not create or keep any
+        // IndexedDB persistence for this project — delete any existing client
+        // DB before proceeding. Otherwise, create the local persistence.
         try {
-          if (navigator?.storage?.estimate) {
-            navigator.storage
-              .estimate()
-              .then((estimate: { usage?: number; quota?: number }) => {
-                clientLogger.debug("indexeddb:storage:estimate", {
-                  usage: estimate?.usage ?? null,
-                  quota: estimate?.quota ?? null,
-                  usageRatio:
-                    estimate?.usage && estimate?.quota
-                      ? estimate.usage / estimate.quota
-                      : null,
+          if (currentUserRole === "viewer") {
+            try {
+              if (indexedDB && typeof indexedDB.deleteDatabase === "function") {
+                await new Promise<void>((resolve) => {
+                  const req = indexedDB.deleteDatabase(
+                    `project-${initialProjectId}`,
+                  );
+                  req.onsuccess = () => resolve();
+                  req.onerror = () => {
+                    clientLogger.warn("indexeddb:delete:error", {
+                      projectId: initialProjectId,
+                    });
+                    resolve();
+                  };
+                  req.onblocked = () => {
+                    clientLogger.warn("indexeddb:delete:blocked", {
+                      projectId: initialProjectId,
+                    });
+                    resolve();
+                  };
                 });
-              })
-              .catch((e) =>
+                clientLogger.debug("indexeddb:deleted-for-viewer", {
+                  projectId: initialProjectId,
+                });
+              }
+              setIsLocalSynced(true);
+            } catch (e) {
+              clientLogger.debug("indexeddb:delete_failed", String(e));
+              setIsLocalSynced(true);
+            }
+          } else {
+            try {
+              indexeddbProvider = new IndexeddbPersistence(
+                `project-${initialProjectId}`,
+                doc!,
+              );
+              indexeddbProvider.on("synced", () => {
+                setIsLocalSynced(true);
+                clientLogger.debug("indexeddb:synced");
+              });
+            } catch (err) {
+              const classified = classifyIndexedDbError(err);
+              clientLogger.error("indexeddb:init:error", {
+                reason: classified.reason,
+                hint: classified.hint,
+                message: getMessage(err),
+              });
+
+              try {
+                if (navigator?.storage?.estimate) {
+                  navigator.storage
+                    .estimate()
+                    .then((estimate: { usage?: number; quota?: number }) => {
+                      clientLogger.debug("indexeddb:storage:estimate", {
+                        usage: estimate?.usage ?? null,
+                        quota: estimate?.quota ?? null,
+                        usageRatio:
+                          estimate?.usage && estimate?.quota
+                            ? estimate.usage / estimate.quota
+                            : null,
+                      });
+                    })
+                    .catch((e) =>
+                      clientLogger.debug(
+                        "indexeddb:storage:estimate:error",
+                        String(e),
+                      ),
+                    );
+                }
+              } catch (e) {
                 clientLogger.debug(
                   "indexeddb:storage:estimate:error",
                   String(e),
-                ),
-              );
+                );
+              }
+            }
           }
         } catch (e) {
-          clientLogger.debug("indexeddb:storage:estimate:error", String(e));
+          clientLogger.debug("indexeddb:guard:error", String(e));
         }
-      }
 
-      setYjsData({ yDoc: doc!, provider: wsProvider });
-      clientLogger.debug("yjs:init:complete");
+        if (!cancelled) {
+          setYjsData({ yDoc: doc!, provider: wsProvider });
+          clientLogger.debug("yjs:init:complete");
+        }
 
-      const checkInterval = setInterval(() => {
-        try {
-          setIsSocketConnected(Boolean(wsProvider?.wsconnected));
-        } catch {
-          void 0;
-        }
-      }, 3000);
-
-      return () => {
-        clearInterval(checkInterval);
-        try {
-          wsProvider?.on("sync", () => {});
-          wsProvider?.on("status", () => {});
-          wsProvider?.on("connection-close", () => {});
-          wsProvider?.destroy?.();
-        } catch {
-          void 0;
-        }
-        try {
-          indexeddbProvider?.destroy?.();
-        } catch {
-          void 0;
-        }
+        checkInterval = window.setInterval(() => {
+          try {
+            setIsSocketConnected(Boolean(wsProvider?.wsconnected));
+          } catch {
+            void 0;
+          }
+        }, 3000);
+      } catch (err) {
+        clientLogger.error("yjs:init:failed", {
+          message: getMessage(err),
+        });
         try {
           doc?.destroy?.();
         } catch {
           void 0;
         }
-      };
-    } catch (err) {
-      clientLogger.error("yjs:init:failed", {
-        message: getMessage(err),
-      });
+      }
+    };
+
+    void init();
+
+    return () => {
+      cancelled = true;
+      if (checkInterval) clearInterval(checkInterval);
+      try {
+        wsProvider?.on("sync", () => {});
+        wsProvider?.on("status", () => {});
+        wsProvider?.on("connection-close", () => {});
+        wsProvider?.destroy?.();
+      } catch {
+        void 0;
+      }
+      try {
+        indexeddbProvider?.destroy?.();
+      } catch {
+        void 0;
+      }
       try {
         doc?.destroy?.();
       } catch {
         void 0;
       }
-    }
-  }, [initialProjectId]);
+    };
+  }, [initialProjectId, currentUserRole]);
 
   const { yDoc, provider } = yjsData || { yDoc: null, provider: null };
 
@@ -1542,7 +1606,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     position="bottom-center"
                     className="onboarding-panel"
                     role="status"
-                    aria-label="Magic Paste Onboarding Hint"
+                    aria-label={dict.canvas.magicPasteOnboardingHint}
                   >
                     <div className="onboarding-content">
                       <div className="onboarding-icons">
@@ -1922,7 +1986,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             }}
                             className="context-menu-item"
                           >
-                            {dict.canvas.addBlock || "Add Block"}
+                            <span className="context-menu-icon">
+                              <Plus size={14} />
+                            </span>
+                            <span className="context-menu-label">
+                              {dict.canvas.addBlock || "Add Block"}
+                            </span>
                           </button>
                           <button
                             onClick={() => {
@@ -1942,7 +2011,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             }}
                             className="context-menu-item"
                           >
-                            {dict.canvas.addFolder || "Add Folder"}
+                            <span className="context-menu-icon">
+                              <Folder size={14} />
+                            </span>
+                            <span className="context-menu-label">
+                              {dict.canvas.addFolder || "Add Folder"}
+                            </span>
                           </button>
                           <div className="context-menu-separator" />
                         </>
@@ -1968,9 +2042,18 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                 onClick={() => handleToggleLock(block.id)}
                                 className="context-menu-item"
                               >
-                                {isLocked
-                                  ? dict.blocks.unlock || "Unlock"
-                                  : dict.blocks.lock || "Lock"}
+                                <span className="context-menu-icon">
+                                  {isLocked ? (
+                                    <Unlock size={14} />
+                                  ) : (
+                                    <Lock size={14} />
+                                  )}
+                                </span>
+                                <span className="context-menu-label">
+                                  {isLocked
+                                    ? dict.blocks.unlock || "Unlock"
+                                    : dict.blocks.lock || "Lock"}
+                                </span>
                               </button>
                               <button
                                 onClick={() => {
@@ -1979,8 +2062,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                 }}
                                 className="context-menu-item"
                               >
-                                {dict.project.transferOwnership ||
-                                  "Transfer Ownership"}
+                                <span className="context-menu-icon">
+                                  <UserPlus size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {dict.project.transferOwnership ||
+                                    "Transfer Ownership"}
+                                </span>
                               </button>
                               <button
                                 onClick={() => {
@@ -2001,19 +2089,24 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                 }}
                                 className="context-menu-item"
                               >
-                                {(
-                                  dict.blocks as unknown as Record<
-                                    string,
-                                    string
-                                  >
-                                ).duplicate ||
-                                  (
-                                    dict.common as unknown as Record<
+                                <span className="context-menu-icon">
+                                  <Copy size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {(
+                                    dict.blocks as unknown as Record<
                                       string,
                                       string
                                     >
                                   ).duplicate ||
-                                  "Duplicate"}
+                                    (
+                                      dict.common as unknown as Record<
+                                        string,
+                                        string
+                                      >
+                                    ).duplicate ||
+                                    "Duplicate"}
+                                </span>
                               </button>
                               <div className="context-menu-separator" />
                               <button

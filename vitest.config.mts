@@ -8,6 +8,7 @@ export default defineConfig({
     env: {
       SQLITE_PATH: ":memory:",
       NODE_ENV: "test",
+      LOG_LEVEL: "warn",
     },
     include: ["src/**/*.test.ts"],
     exclude: ["**/.next/**", "**/node_modules/**", "**/dist/**"],

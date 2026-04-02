@@ -303,7 +303,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
                 type="text"
                 value={url}
                 onChange={handleUrlChange}
-                placeholder="Paste YouTube or Loom URL..."
+                placeholder={dict.blocks.videoUrlPlaceholder}
                 className="link-input nodrag"
                 readOnly={isReadOnly}
                 autoFocus

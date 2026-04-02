@@ -129,7 +129,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
         setError(data.message || "Failed to connect");
       }
     } catch {
-      setError("An unexpected error occurred");
+      setError(dict.common.error);
     } finally {
       setSubmittingToken(false);
     }
@@ -141,9 +141,9 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
     <Modal
       isOpen
       onClose={onClose}
-      className="w-full max-w-[480px] p-6 text-[var(--text-primary)]"
+      className="w-full max-w-120 p-6 text-(--text-primary)"
     >
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--border-color)]">
+      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-(--border-color)">
         <VercelIcon size={24} />
         <h2 className="text-lg font-semibold tracking-wide m-0">
           {integrations.vercelIntegration || "Vercel"}
@@ -158,7 +158,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
 
       {!loading && !connected && (
         <div className="flex flex-col gap-6 py-4">
-          <p className="text-sm text-[var(--text-secondary)] text-center leading-relaxed">
+          <p className="text-sm text-(--text-secondary) text-center leading-relaxed">
             {integrations.vercelIntegrationDesc ||
               "Deploy and monitor your Vercel projects from the canvas"}
           </p>
@@ -180,11 +180,11 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
 
             {authConfig?.oauthEnabled && authConfig?.patEnabled && (
               <div className="flex items-center gap-4 py-2">
-                <div className="h-px flex-1 bg-[var(--border-color)]" />
+                <div className="h-px flex-1 bg-(--border-color)" />
                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-30">
                   OR
                 </span>
-                <div className="h-px flex-1 bg-[var(--border-color)]" />
+                <div className="h-px flex-1 bg-(--border-color)" />
               </div>
             )}
 
@@ -214,7 +214,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
                     <Button
                       type="submit"
                       disabled={submittingToken || !manualToken.trim()}
-                      className="btn-primary px-6 h-auto min-w-[100px]"
+                      className="btn-primary px-6 h-auto min-w-25"
                     >
                       {submittingToken ? (
                         <Loader2 className="animate-spin" size={16} />
@@ -238,7 +238,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
 
             {!authConfig?.oauthEnabled && !authConfig?.patEnabled && (
               <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs text-center">
-                Vercel integration is not configured by the administrator.
+                {dict.integrations.vercelNotConfigured}
               </div>
             )}
           </div>
@@ -247,25 +247,25 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
 
       {!loading && connected && (
         <div className="flex flex-col gap-4 pt-2">
-          <p className="text-[13px] font-medium text-[var(--text-secondary)] uppercase tracking-wider">
+          <p className="text-[13px] font-medium text-(--text-secondary) uppercase tracking-wider">
             {integrations.vercelSelectProjects ||
               "Select projects visible in Ideon"}
           </p>
 
           {projects.length === 0 && (
-            <div className="text-sm text-[var(--text-tertiary)] italic p-6 text-center border border-dashed border-[var(--border-color)] rounded-lg">
+            <div className="text-sm text-(--text-tertiary) italic p-6 text-center border border-dashed border-(--border-color) rounded-lg">
               {integrations.vercelNoProjects || "No projects found"}
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-3 max-h-[340px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 gap-3 max-h-85 overflow-y-auto pr-2 custom-scrollbar">
             {projects.map((project) => (
               <div
                 key={project.vercelProjectId}
                 className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
                   project.enabled
-                    ? "border-[var(--text-main)] bg-[var(--text-main)]/5"
-                    : "border-[var(--border-color)] bg-[var(--bg-secondary)] opacity-60 hover:opacity-100"
+                    ? "border-(--text-main) bg-(--text-main)/5"
+                    : "border-(--border-color) bg-(--bg-secondary) opacity-60 hover:opacity-100"
                 }`}
                 onClick={() => handleToggleProject(project.vercelProjectId)}
                 role="button"
@@ -281,7 +281,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
                 </div>
                 <button
                   type="button"
-                  className={`zen-switch-small flex-shrink-0 ${
+                  className={`zen-switch-small shrink-0 ${
                     project.enabled ? "active" : ""
                   }`}
                   onClick={(e) => {
@@ -295,7 +295,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
             ))}
           </div>
 
-          <div className="flex items-center justify-end gap-3 mt-4 pt-5 border-t border-[var(--border-color)]">
+          <div className="flex items-center justify-end gap-3 mt-4 pt-5 border-t border-(--border-color)">
             <button
               type="button"
               className="btn-ghost"

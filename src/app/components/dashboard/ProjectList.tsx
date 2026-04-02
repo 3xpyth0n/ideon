@@ -682,7 +682,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     onDragLeave={handleBreadcrumbDragLeave}
                     onDrop={(e) => handleBreadcrumbDrop(e, null)}
                     onClick={() => router.push("/home")}
-                    title="Home"
+                    title={dict.dashboard.home}
                   >
                     <Home size={14} />
                   </div>
@@ -858,7 +858,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   </div>
 
                   <p className="project-card-desc mb-4">
-                    {Number(folder.projectCount || 0)} projects
+                    {dict.dashboard.projectsCount.replace(
+                      "{count}",
+                      String(Number(folder.projectCount || 0)),
+                    )}
                   </p>
                 </div>
 
@@ -882,7 +885,9 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                           : "badge-collaborator"
                       }`}
                     >
-                      {folder.ownerId === currentUser?.id ? "MINE" : "SHARED"}
+                      {folder.ownerId === currentUser?.id
+                        ? dict.dashboard.statusMine
+                        : dict.dashboard.statusShared}
                     </span>
                   </div>
 
@@ -894,11 +899,14 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                         setAccessFolder(folder);
                       }}
                       className="project-card-tag hover:bg-white/10 transition-colors cursor-pointer"
-                      title="Manage Access"
+                      title={dict.project.projectAccess}
                     >
                       <Users size={10} strokeWidth={3} />
                       <span>
-                        Users: {Number(folder.collaboratorCount || 0) + 1}
+                        {dict.common.usersCount.replace(
+                          "{count}",
+                          String(Number(folder.collaboratorCount || 0) + 1),
+                        )}
                       </span>
                     </button>
                   </div>
@@ -1122,7 +1130,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     className="transition-colors"
                   />
                   <span className="transition-colors">
-                    Users: {Number(project.collaboratorCount || 0) + 1}
+                    {dict.common.usersCount.replace(
+                      "{count}",
+                      String(Number(project.collaboratorCount || 0) + 1),
+                    )}
                   </span>
                 </button>
               </div>
@@ -1214,7 +1225,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
             }}
           >
             <Edit2 size={14} />
-            <span>Rename</span>
+            <span>{dict.common.rename}</span>
           </button>
           {(!contextMenu.project || contextMenu.project.role !== "viewer") && (
             <button
@@ -1229,7 +1240,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               }}
             >
               <Users size={14} />
-              <span>Invite Members</span>
+              <span>{dict.project.inviteMembers}</span>
             </button>
           )}
           <div className="h-px bg-white/10 my-1" />
@@ -1245,7 +1256,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
             }}
           >
             <Trash2 size={14} />
-            <span>Delete</span>
+            <span>{dict.common.delete}</span>
           </button>
         </div>
       )}
@@ -1279,13 +1290,12 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       <Modal
         isOpen={!!folderToDelete}
         onClose={() => setFolderToDelete(null)}
-        title="Delete Folder?"
+        title={dict.modals.deleteFolderTitle}
         className="max-w-md"
       >
         <div className="p-6 pt-2">
           <p className="text-sm text-muted-foreground mb-6">
-            Are you sure you want to delete this folder? Projects inside will be
-            moved to the main list.
+            {dict.modals.deleteFolderDescription}
           </p>
           <div className="flex justify-end gap-3">
             <Button

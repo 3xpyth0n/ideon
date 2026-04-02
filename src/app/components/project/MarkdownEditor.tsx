@@ -22,6 +22,7 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { toast } from "sonner";
+import { useI18n } from "@providers/I18nProvider";
 
 import "./markdown-editor.css";
 
@@ -163,6 +164,7 @@ const MarkdownEditor = ({
   onLinkShortcut,
   onPreviewShortcut,
 }: MarkdownEditorProps) => {
+  const { dict } = useI18n();
   const [, setIsFocused] = useState(false);
   const isSyncingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -266,9 +268,7 @@ const MarkdownEditor = ({
       ).markdown.getMarkdown();
 
       if (markdown.length > 1000000) {
-        toast.error(
-          "Note is too large. Truncating to 1MB to preserve performance.",
-        );
+        toast.error(dict.blocks.noteTooLarge);
         onChange?.(markdown.slice(0, 1000000));
         return;
       }

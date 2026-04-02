@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-04-XX
+
+### Added
+
+- Introduced a major Kanban block overhaul with richer task management, including assignees, custom fields/labels, and expanded board interactions.
+
+### Fixed
+
+- Completed the viewer block-move fix by preventing local drag interactions and forcing viewer canvas state to reset from synced project state on open.
+
 ## [0.7.7] - 2026-03-30
 
 ### Fixed

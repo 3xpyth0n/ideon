@@ -91,7 +91,7 @@ export type BlockData = {
       count: number;
       users: (string | { id: string; username: string })[];
     }[],
-  ) => void;
+  ) => Promise<unknown> | void;
   onFocus?: (blockId: string, index: number) => void;
   onBlur?: (blockId: string) => void;
   onCaretMove?: (blockId: string, index: number) => void;
@@ -380,8 +380,8 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       if (!validatedUrl) {
         updateMetadata({
           ...metadataRef.current,
-          title: "Invalid Link",
-          description: "The URL format is invalid",
+          title: dict.blocks.invalidLink,
+          description: dict.blocks.invalidUrlDescription,
           image: "",
           error: "invalid_format",
           metadataUrl: url,

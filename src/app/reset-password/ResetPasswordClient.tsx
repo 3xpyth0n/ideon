@@ -33,11 +33,7 @@ export function ResetPasswordClient() {
     }
 
     if (!identifier) {
-      toast.error(
-        dict.auth.identifierLabel
-          ? `${dict.auth.identifierLabel} required`
-          : "Email or Username required",
-      );
+      toast.error(dict.auth.identifierRequired);
       return;
     }
 
@@ -57,7 +53,7 @@ export function ResetPasswordClient() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to reset password");
+        throw new Error(data.error || dict.auth.failedToResetPassword);
       }
 
       if (data.error) {

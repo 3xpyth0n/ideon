@@ -46,11 +46,11 @@ export function AuditExportModal({
       } else if (format === "csv") {
         // Simple CSV generation
         const headers = [
-          "Timestamp",
-          "Action",
-          "Status",
-          "Email",
-          "IP Address",
+          dict.management.timestamp,
+          dict.management.action,
+          dict.management.status,
+          dict.auth.email,
+          dict.modals.ipAddress,
         ];
         const csvContent = [
           headers.join(","),

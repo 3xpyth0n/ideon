@@ -1,0 +1,9 @@
+.block-type-vercel,
+.block-type-vercel * {
+  text-rendering: auto !important;
+  -webkit-font-smoothing: auto !important;
+}
+
+.block-type-vercel {
+  backface-visibility: visible !important;
+}

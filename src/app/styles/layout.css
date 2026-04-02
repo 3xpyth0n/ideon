@@ -570,7 +570,8 @@
   position: fixed;
   top: var(--menu-top, 0);
   left: var(--menu-left, 0);
-  z-index: 3000;
+  /* increase above portal dropdowns (portal uses very large z-index) */
+  z-index: 110000;
   background: var(--bg-island);
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -591,8 +592,6 @@
   color: var(--text-main);
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
   cursor: pointer;
   display: flex;
   flex-direction: row;
@@ -601,6 +600,26 @@
   border-radius: 0;
   transition: all 0.2s;
   text-align: left;
+}
+
+/* Icon shown to the left of each menu item */
+.context-menu-item .context-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* Label: lowercase with only first letter uppercased */
+.context-menu-item .context-menu-label {
+  text-transform: lowercase;
+}
+.context-menu-item .context-menu-label::first-letter {
+  text-transform: uppercase;
 }
 
 .context-menu-item:hover {

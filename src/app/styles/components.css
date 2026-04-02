@@ -314,6 +314,24 @@
   color: var(--text-main);
 }
 
+/* Icon and label support for context menu items */
+.context-menu-item .context-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.context-menu-item .context-menu-label {
+  text-transform: lowercase;
+}
+.context-menu-item .context-menu-label::first-letter {
+  text-transform: uppercase;
+}
+
 .context-menu-item.danger {
   color: #ef4444;
 }

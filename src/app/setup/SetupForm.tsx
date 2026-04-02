@@ -45,7 +45,7 @@ export function SetupForm() {
     }
 
     if (!displayName.trim()) {
-      toast.error(dict.account.displayName + " required");
+      toast.error(dict.auth.displayNameRequired);
       setBusy(false);
       return;
     }

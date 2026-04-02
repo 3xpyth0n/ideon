@@ -8,6 +8,7 @@ COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
 ENV NODE_ENV=production
+ENV LOG_LEVEL=warn
 RUN IS_NEXT_BUILD=1 npm run build
 RUN rm -rf .next/cache
 

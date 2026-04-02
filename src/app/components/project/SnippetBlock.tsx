@@ -53,15 +53,6 @@ type SnippetBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
 };
 
-const LANGUAGE_OPTIONS: SelectOption[] = [
-  { value: "javascript", label: "JavaScript" },
-  { value: "typescript", label: "TypeScript" },
-  { value: "css", label: "CSS" },
-  { value: "python", label: "Python" },
-  { value: "json", label: "JSON" },
-  { value: "text", label: "Plain Text" },
-];
-
 const getLanguageExtension = (lang: string) => {
   switch (lang.toLowerCase()) {
     case "javascript":
@@ -95,6 +86,34 @@ const getLanguageExtension = (lang: string) => {
 const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getEdges } = useReactFlow();
+
+  const languageOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: "javascript",
+        label: dict.blocks.languageJavascript,
+      },
+      {
+        value: "typescript",
+        label: dict.blocks.languageTypescript,
+      },
+      { value: "css", label: dict.blocks.languageCss },
+      { value: "python", label: dict.blocks.languagePython },
+      { value: "json", label: dict.blocks.languageJson },
+      {
+        value: "text",
+        label: dict.blocks.languagePlainText,
+      },
+    ],
+    [
+      dict.blocks.languageCss,
+      dict.blocks.languageJavascript,
+      dict.blocks.languageJson,
+      dict.blocks.languagePlainText,
+      dict.blocks.languagePython,
+      dict.blocks.languageTypescript,
+    ],
+  );
 
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
@@ -464,7 +483,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               )}
               <Select
                 value={language}
-                options={LANGUAGE_OPTIONS}
+                options={languageOptions}
                 onChange={handleLanguageChange}
                 align="right"
                 triggerClassName="pr-3!"

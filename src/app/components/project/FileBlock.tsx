@@ -616,7 +616,7 @@ const FileBlock = (props: CanvasBlockProps) => {
                         <span className="block-file-size text-xs opacity-40 shrink-0 whitespace-nowrap text-right ml-2 leading-none">
                           {metadata.size
                             ? `${(metadata.size / 1024).toFixed(1)} KB`
-                            : "Unknown size"}
+                            : dict.blocks.unknownSize}
                         </span>
                       </div>
                     </div>

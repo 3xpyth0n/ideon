@@ -12,17 +12,9 @@
 
 .react-flow__viewport {
   will-change: transform !important;
-  transform-style: preserve-3d !important;
-  backface-visibility: hidden !important;
-  perspective: 1000px !important;
 }
 
-.block-card {
-  transform: translateZ(0) !important;
-  transform-style: preserve-3d !important;
-  backface-visibility: hidden !important;
-  contain: content !important;
-}
+/* removed viewport override to restore pan/zoom behavior */
 
 /* Remote Cursor Styles */
 .remote-cursor {
@@ -163,10 +155,11 @@
   background-color: #0d0d0d;
 }
 
+/* Disable global canvas blur when modal classes are present — causes unwanted blurriness */
 body.sketch-modal-open
   > :not(.sketch-modal-backdrop):not(.excalidraw-modal-container) {
-  transition: filter 0.18s ease;
-  filter: blur(8px) brightness(0.7);
+  transition: none;
+  filter: none !important;
 }
 
 .project-canvas-container input,
@@ -233,7 +226,8 @@ body.sketch-modal-open
   align-items: center;
   justify-content: center;
   background-color: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(4px);
+  /* reduce/backdrop blur to zero to avoid global blurring */
+  backdrop-filter: none !important;
 }
 
 [data-theme="dark"] .loading-overlay {
@@ -253,7 +247,7 @@ body.sketch-modal-open
 
 .drop-import-hover-overlay {
   background-color: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(6px);
+  backdrop-filter: none !important;
 }
 
 [data-theme="dark"] .drop-import-hover-overlay {
@@ -436,6 +430,17 @@ body.sketch-modal-open
 
 [data-theme="dark"] .core-block.selected {
   box-shadow: 0 0 20px 2px #ffffff26;
+}
+
+/* Aggressive override: ensure project canvas is not blurred by any global rules */
+.project-canvas,
+.project-canvas *,
+.project-canvas-container,
+.project-canvas-container * {
+  filter: none !important;
+  -webkit-filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .resizer-line-core,

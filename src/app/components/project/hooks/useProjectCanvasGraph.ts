@@ -248,6 +248,7 @@ export const useProjectCanvasGraph = ({
 
   const onBlocksChange = useCallback(
     (changes: NodeChange[]) => {
+      if (isReadOnly) return;
       const toRemove = changes
         .filter((c): c is { id: string; type: "remove" } => c.type === "remove")
         .map((c) => c.id);
@@ -352,7 +353,7 @@ export const useProjectCanvasGraph = ({
         );
       }
     },
-    [handleDeleteBlock, setBlocks, blocks, links],
+    [handleDeleteBlock, setBlocks, blocks, links, isReadOnly],
   );
 
   const onLinksChange = useCallback(

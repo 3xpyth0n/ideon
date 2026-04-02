@@ -5,11 +5,22 @@ import {
   memo,
   useEffect,
   useState,
-  useRef,
-  useLayoutEffect,
   useCallback,
+  useRef,
 } from "react";
-import { Check, GripVertical, Kanban, Plus, Trash2 } from "lucide-react";
+import {
+  Check,
+  GripVertical,
+  Kanban,
+  Plus,
+  MoreHorizontal,
+  Edit3,
+  ArrowLeft,
+  ArrowRight,
+  Copy,
+  Trash2,
+  Settings,
+} from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
 import {
@@ -25,22 +36,15 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { focusProjectCanvas } from "./utils/focusCanvas";
+import KanbanCard from "./KanbanCard";
+import TaskModal from "./TaskModal";
+import KanbanSettingsModal from "./KanbanSettingsModal";
+import FieldPickerModal from "./FieldPickerModal";
+import ColumnEditModal from "./ColumnEditModal";
+import FloatingMenu from "./FloatingMenu";
+import type { Option as SettingsOption } from "./KanbanSettingsModal";
 
-interface Task {
-  id: string;
-  text: string;
-  checked: boolean;
-}
-
-interface Column {
-  id: string;
-  title: string;
-  tasks: Task[];
-}
-
-interface KanbanMetadata {
-  columns: Column[];
-}
+// Task/Column/Field types are declared below as `type Task/Column/Field`.
 
 interface TransferTaskPayload {
   kind: "kanban-task" | "checklist-item";
@@ -59,117 +63,258 @@ interface TransferColumnPayload {
   column: Column;
 }
 
+interface UserProfile {
+  id: string;
+  email: string;
+  username: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  role?: string;
+  color?: string;
+}
+
 type KanbanBlockProps = NodeProps<Node<BlockData>>;
 
-const AutoResizeTextarea = ({
-  value,
-  onChange,
-  className,
-  placeholder,
-  readOnly,
-  onKeyDown,
-  onFocus,
-  autoFocus,
-  onBlur,
-}: {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  className?: string;
-  placeholder?: string;
-  readOnly?: boolean;
-  onKeyDown?: (e: React.KeyboardEvent) => void;
-  onFocus?: () => void;
-  autoFocus?: boolean;
-  onBlur?: () => void;
-}) => {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const adjustHeight = useCallback(() => {
-    if (ref.current) {
-      ref.current.style.height = "auto";
-      ref.current.style.height = `${ref.current.scrollHeight}px`;
-    }
-  }, []);
-
-  useLayoutEffect(() => {
-    adjustHeight();
-  }, [value, adjustHeight]);
-
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => {
-        adjustHeight();
-        onChange(e);
-      }}
-      className={className}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      rows={1}
-      onKeyDown={onKeyDown}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      autoFocus={autoFocus}
-      style={{ resize: "none", overflow: "hidden" }}
-    />
-  );
+type Task = {
+  id: string;
+  text: string;
+  checked: boolean;
+  height?: number;
+  assigneeId?: string;
+  assigneeIds?: string[];
+  assigneeName?: string | undefined;
+  fields?: Record<string, string | undefined>;
 };
 
-const parseKanbanMetadata = (metadata: unknown): KanbanMetadata => {
-  try {
-    if (typeof metadata !== "string") {
-      return { columns: [] };
-    }
-    const parsed = JSON.parse(metadata) as { columns?: unknown };
-    if (!Array.isArray(parsed.columns)) {
-      return { columns: [] };
-    }
-    const columns: Column[] = parsed.columns
-      .map((col) => {
-        if (typeof col !== "object" || col === null) return null;
-        const c = col as {
-          id?: unknown;
-          title?: unknown;
-          tasks?: unknown;
-        };
-        if (typeof c.id !== "string") return null;
-        return {
-          id: c.id,
-          title: typeof c.title === "string" ? c.title : "Column",
-          tasks: Array.isArray(c.tasks)
-            ? c.tasks
-                .map((task) => {
-                  if (typeof task !== "object" || task === null) return null;
-                  const t = task as {
-                    id?: unknown;
-                    text?: unknown;
-                    checked?: unknown;
-                  };
-                  if (typeof t.id !== "string") return null;
-                  return {
-                    id: t.id,
-                    text: typeof t.text === "string" ? t.text : "",
-                    checked: Boolean(t.checked),
-                  };
-                })
-                .filter((task): task is Task => task !== null)
-            : [],
-        };
-      })
-      .filter((col): col is Column => col !== null);
+type Column = {
+  id: string;
+  title: string;
+  tasks: Task[];
+  width?: number; // percent
+  widthPx?: number; // explicit pixel width
+  color?: string;
+  description?: string;
+};
 
-    return { columns };
+type Field = {
+  id: string;
+  name: string;
+  type: "text" | "date" | "select" | "number";
+  options?: SettingsOption[];
+  visible?: boolean;
+  defaultValue?: string | undefined;
+};
+
+const MIN_COLUMN_PX = 350;
+
+// Utility: darken a hex color by `amount` (0..1). Returns original if parsing fails.
+function darkenHex(hex: string, amount = 0.2) {
+  try {
+    if (!hex || typeof hex !== "string") return hex;
+    if (hex.startsWith("#")) {
+      let h = hex.slice(1);
+      if (h.length === 3)
+        h = h
+          .split("")
+          .map((c) => c + c)
+          .join("");
+      if (h.length !== 6) return hex;
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      const nr = Math.max(0, Math.min(255, Math.round(r * (1 - amount))));
+      const ng = Math.max(0, Math.min(255, Math.round(g * (1 - amount))));
+      const nb = Math.max(0, Math.min(255, Math.round(b * (1 - amount))));
+      return `#${nr.toString(16).padStart(2, "0")}${ng
+        .toString(16)
+        .padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
+    }
+    return hex;
   } catch {
-    return { columns: [] };
+    return hex;
+  }
+}
+
+const parseKanbanMetadata = (
+  raw: unknown,
+): { columns: Column[]; fields: Field[] } => {
+  try {
+    const parsed = (
+      typeof raw === "string" ? JSON.parse(raw || "{}") : raw
+    ) as Record<string, unknown>;
+
+    const cols = Array.isArray(parsed.columns)
+      ? (parsed.columns as unknown[])
+      : [];
+    const columns: Column[] = cols
+      .map((col: unknown) => {
+        if (typeof col !== "object" || col === null) return null;
+        const c = col as Record<string, unknown>;
+        const tasksRaw = Array.isArray(c.tasks) ? (c.tasks as unknown[]) : [];
+        const tasks: Task[] = tasksRaw
+          .map((task: unknown) => {
+            if (typeof task !== "object" || task === null) return null;
+            const t = task as Record<string, unknown>;
+            if (typeof t.id !== "string") return null;
+
+            const rawAssigneeIds = t["assigneeIds"];
+            const assigneeIds = Array.isArray(rawAssigneeIds)
+              ? (rawAssigneeIds as unknown[]).filter(
+                  (x): x is string => typeof x === "string",
+                )
+              : typeof t["assigneeId"] === "string"
+                ? [t["assigneeId"] as string]
+                : undefined;
+
+            const rawFields = t["fields"];
+            const fields =
+              typeof rawFields === "object" && rawFields !== null
+                ? Object.fromEntries(
+                    Object.entries(rawFields as Record<string, unknown>)
+                      .filter(
+                        ([, v]) => v === undefined || typeof v === "string",
+                      )
+                      .map(([k, v]) => [
+                        k,
+                        v === undefined ? undefined : String(v),
+                      ]),
+                  )
+                : undefined;
+
+            return {
+              id: String(t.id),
+              text: typeof t["text"] === "string" ? (t["text"] as string) : "",
+              checked: Boolean(t["checked"]),
+              height:
+                typeof t["height"] === "number" && Number.isFinite(t["height"])
+                  ? Math.max(64, Math.round(t["height"] as number))
+                  : undefined,
+              assigneeIds: assigneeIds as string[] | undefined,
+              assigneeId:
+                typeof t["assigneeId"] === "string"
+                  ? (t["assigneeId"] as string)
+                  : undefined,
+              assigneeName:
+                typeof t["assigneeName"] === "string"
+                  ? (t["assigneeName"] as string)
+                  : undefined,
+              fields: fields as Record<string, string | undefined> | undefined,
+            } as Task;
+          })
+          .filter((x): x is Task => x !== null);
+
+        return {
+          id:
+            typeof c.id === "string"
+              ? (c.id as string)
+              : `c-${Math.random().toString(36).slice(2, 9)}`,
+          title: typeof c.title === "string" ? (c.title as string) : "",
+          tasks,
+          width: typeof c.width === "number" ? (c.width as number) : undefined,
+          widthPx:
+            typeof c.widthPx === "number" ? (c.widthPx as number) : undefined,
+          color: typeof c.color === "string" ? (c.color as string) : undefined,
+          description:
+            typeof c.description === "string"
+              ? (c.description as string)
+              : undefined,
+        } as Column;
+      })
+      .filter((c): c is Column => c !== null);
+
+    const fieldsRaw = Array.isArray(parsed.fields)
+      ? (parsed.fields as unknown[])
+      : [];
+    const fields: Field[] = fieldsRaw
+      .map((f: unknown) => {
+        if (typeof f !== "object" || f === null) return null;
+        const ff = f as Record<string, unknown>;
+        if (typeof ff.id !== "string") return null;
+
+        let opts: SettingsOption[] | undefined = undefined;
+        if (Array.isArray(ff.options)) {
+          opts = (ff.options as unknown[])
+            .map((o) => {
+              if (typeof o === "string") {
+                const parts = o.split("|");
+                return {
+                  id: `o-${Math.random().toString(36).slice(2, 9)}`,
+                  label: parts[0] || o,
+                  color: parts[1] || undefined,
+                  description: undefined,
+                } as SettingsOption;
+              }
+              if (typeof o === "object" && o !== null) {
+                const oo = o as Record<string, unknown>;
+                return {
+                  id:
+                    typeof oo.id === "string"
+                      ? (oo.id as string)
+                      : `o-${Math.random().toString(36).slice(2, 9)}`,
+                  label:
+                    typeof oo.label === "string" ? (oo.label as string) : "",
+                  color:
+                    typeof oo.color === "string"
+                      ? (oo.color as string)
+                      : undefined,
+                  description:
+                    typeof oo.description === "string"
+                      ? (oo.description as string)
+                      : undefined,
+                } as SettingsOption;
+              }
+              return null;
+            })
+            .filter((x): x is SettingsOption => x !== null);
+        }
+
+        return {
+          id: ff.id as string,
+          name: typeof ff.name === "string" ? (ff.name as string) : "",
+          type:
+            ff.type === "date" || ff.type === "select" || ff.type === "number"
+              ? (ff.type as "date" | "select" | "number")
+              : "text",
+          options: opts,
+          color:
+            typeof ff.color === "string" ? (ff.color as string) : undefined,
+          visible:
+            typeof ff.visible === "boolean" ? (ff.visible as boolean) : true,
+          defaultValue:
+            typeof ff.defaultValue === "string"
+              ? (ff.defaultValue as string)
+              : undefined,
+        } as Field;
+      })
+      .filter((x): x is Field => x !== null);
+
+    return { columns, fields };
+  } catch {
+    return { columns: [], fields: [] };
   }
 };
 
 const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
-  const { dict } = useI18n();
+  const { dict, lang } = useI18n();
   const [columns, setColumns] = useState<Column[]>([]);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const columnsRef = useRef<Column[]>([]);
+  const resizingRef = useRef<null | {
+    index: number;
+    startLeft?: number;
+    containerWidth: number;
+    moveHandler?: (ev: PointerEvent) => void;
+    upHandler?: () => void;
+  }>(null);
+  const [fields, setFields] = useState<Field[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{
+    x: number;
+    y: number;
+    right?: number;
+  }>({ x: 0, y: 0 });
   const [title, setTitle] = useState(data.title || "");
   const [dropTargetColumn, setDropTargetColumn] = useState<string | null>(null);
   const [dropTargetTaskIndex, setDropTargetTaskIndex] = useState<number | null>(
@@ -191,6 +336,8 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
   const [dragSourceColumnIndex, setDragSourceColumnIndex] = useState<
     number | null
   >(null);
+
+  const [collaborators, setCollaborators] = useState<UserProfile[]>([]);
 
   const currentUser = data.currentUser;
   const projectOwnerId = data.projectOwnerId;
@@ -235,7 +382,263 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
   useEffect(() => {
     const meta = parseKanbanMetadata(data.metadata);
     setColumns(meta.columns);
+    setFields(meta.fields || []);
   }, [data.metadata]);
+
+  useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
+
+  const save = (cols: Column[], updatedFields?: Field[]) => {
+    const fieldsToSave = updatedFields ?? fields;
+    setColumns(cols);
+    setFields(fieldsToSave);
+    return data.onContentChange?.(
+      id,
+      data.content,
+      new Date().toISOString(),
+      getEditorName(),
+      JSON.stringify({ columns: cols, fields: fieldsToSave }),
+      title,
+      data.reactions,
+    );
+  };
+
+  const startColumnResize = useCallback(
+    (e: React.PointerEvent, idx: number) => {
+      if (isReadOnly) return;
+      const container = scrollRef.current;
+      if (!container) return;
+      const cols = columnsRef.current || [];
+      if (idx < 0 || idx >= cols.length) return;
+
+      // locate column element — prefer closest .kb-col from the event target
+      const startTarget = e.currentTarget as HTMLElement;
+      const els = container.querySelectorAll<HTMLElement>(".kb-col");
+      const colEl: HTMLElement | null =
+        startTarget.closest(".kb-col") || els[idx] || startTarget || null;
+      if (!colEl) return;
+
+      const startRect = colEl.getBoundingClientRect();
+      const startRectWidth = startRect.width;
+      const startWidthCss = Math.max(
+        32,
+        Math.round(
+          colEl.clientWidth || parseFloat(getComputedStyle(colEl).width || "0"),
+        ),
+      );
+      const scale =
+        startRectWidth && startWidthCss ? startRectWidth / startWidthCss : 1;
+      const startLeft = startRect.left;
+      const startX = (e as unknown as PointerEvent).clientX ?? e.clientX;
+      const minPx = MIN_COLUMN_PX; // in CSS px
+
+      // mark root as resizing to disable transitions via CSS
+      const rootEl = container.closest(".kb-root") as HTMLElement | null;
+      try {
+        rootEl?.classList.add("kb-resizing");
+        document.body.style.userSelect = "none";
+        // ensure box-sizing so width px matches bounding rect
+        colEl.style.boxSizing = "border-box";
+      } catch {
+        // ignore
+      }
+
+      let latestWidth = startWidthCss;
+      const pointerId =
+        (e.nativeEvent as PointerEvent)?.pointerId ??
+        (e as unknown as PointerEvent)?.pointerId ??
+        0;
+
+      const pointerCaptureTarget = startTarget;
+      try {
+        pointerCaptureTarget?.setPointerCapture?.(pointerId);
+      } catch {
+        // ignore
+      }
+
+      // Use relative delta from initial pointer and convert screen px -> CSS px using scale
+      const moveHandler = (ev: PointerEvent) => {
+        try {
+          const dxScreen = ev.clientX - startX;
+          const dxCss = dxScreen / (scale || 1);
+          const newWidthCss = Math.max(
+            minPx,
+            Math.round(startWidthCss + dxCss),
+          );
+          latestWidth = newWidthCss;
+          colEl.style.width = `${newWidthCss}px`;
+        } catch {
+          // ignore
+        }
+      };
+
+      const upHandler = () => {
+        try {
+          window.removeEventListener("pointermove", moveHandler);
+          window.removeEventListener("pointerup", upHandler);
+        } catch {
+          // ignore
+        }
+        try {
+          pointerCaptureTarget?.removeEventListener("pointermove", moveHandler);
+          pointerCaptureTarget?.removeEventListener("pointerup", upHandler);
+        } catch {
+          // ignore
+        }
+
+        const finalWidth = latestWidth;
+        const next = (columnsRef.current || []).map((c: Column, i: number) =>
+          i === idx ? { ...c, widthPx: finalWidth } : { ...c },
+        );
+        // persist the new widths
+        save(next);
+
+        try {
+          rootEl?.classList.remove("kb-resizing");
+          document.body.style.userSelect = "";
+          // restore box-sizing state
+          if (colEl) colEl.style.boxSizing = "";
+        } catch {
+          // ignore
+        }
+
+        try {
+          pointerCaptureTarget?.releasePointerCapture?.(pointerId);
+        } catch {
+          // ignore
+        }
+
+        resizingRef.current = null;
+      };
+
+      // store handlers for debugging/inspection
+      resizingRef.current = {
+        index: idx,
+        startLeft,
+        containerWidth: container.getBoundingClientRect().width || 0,
+        moveHandler,
+        upHandler,
+      };
+
+      // Attach move handler both to the capture target and window for reliability
+      try {
+        window.addEventListener("pointermove", moveHandler);
+        window.addEventListener("pointerup", upHandler);
+      } catch {
+        // ignore
+      }
+      try {
+        pointerCaptureTarget?.addEventListener("pointermove", moveHandler);
+        pointerCaptureTarget?.addEventListener("pointerup", upHandler);
+      } catch {
+        // ignore
+      }
+    },
+    [isReadOnly, save],
+  );
+
+  const getColumnPercents = (cols: Column[]) => {
+    const n = cols.length;
+    if (n === 0) return [] as number[];
+    const defined = cols.map((c: Column) =>
+      typeof c.width === "number" ? c.width : null,
+    );
+    const totalDefined = defined.reduce<number>((s, v) => s + (v ?? 0), 0);
+    const undefinedCount = defined.filter((v) => v === null).length;
+    if (totalDefined === 0) {
+      const per = 100 / n;
+      return Array(n)
+        .fill(per)
+        .map((v) => Math.round(v * 100) / 100);
+    }
+    const remaining = Math.max(0, 100 - totalDefined);
+    const share = undefinedCount > 0 ? remaining / undefinedCount : 0;
+    let result = defined.map((v) => (v !== null ? v : share));
+    const sum = result.reduce<number>((s, r) => s + r, 0);
+    if (Math.abs(sum - 100) > 0.1) {
+      result = result.map((r) => (r / sum) * 100);
+    }
+    const rounded = result.map((r) => Math.round(r * 100) / 100);
+    const diff =
+      Math.round((100 - rounded.reduce<number>((s, r) => s + r, 0)) * 100) /
+      100;
+    rounded[rounded.length - 1] =
+      Math.round((rounded[rounded.length - 1] + diff) * 100) / 100;
+    return rounded;
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const handleGlobalClick = (ev: Event) => {
+      const target = ev.target as HTMLElement | null;
+      if (!target) return;
+      // Use composedPath when available to reliably detect clicks that
+      // originate from portals/shadow DOM. If the click is outside any
+      // contextual menu or menu trigger we close the open menu.
+      const composed = (
+        ev as Event & { composedPath?: () => EventTarget[] }
+      ).composedPath?.();
+      let clickedInside = false;
+      if (Array.isArray(composed)) {
+        for (const p of composed) {
+          if (p instanceof HTMLElement) {
+            if (
+              p.closest(".context-menu") ||
+              p.classList.contains("kb-col-opts") ||
+              p.classList.contains("kb-task-opts") ||
+              p.classList.contains("kb-block-opts")
+            ) {
+              clickedInside = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!clickedInside) {
+        if (
+          target.closest(".context-menu") ||
+          target.closest(".kb-col-opts") ||
+          target.closest(".kb-task-opts") ||
+          target.closest(".kb-block-opts")
+        ) {
+          clickedInside = true;
+        }
+      }
+      if (!clickedInside) setOpenMenuKey(null);
+    };
+    const handleGlobalKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") setOpenMenuKey(null);
+    };
+    const fetchCollaborators = async () => {
+      if (!data.initialProjectId) {
+        if (mounted) setCollaborators([]);
+        return;
+      }
+      try {
+        const res = await fetch(
+          `/api/projects/${data.initialProjectId}/collaborators`,
+        );
+        if (!mounted) return;
+        if (res.ok) {
+          const json = await res.json();
+          setCollaborators(json);
+        }
+      } catch (err) {
+        console.error("Failed to fetch collaborators", err);
+      }
+    };
+    fetchCollaborators();
+    // Listen in capture phase on pointerdown to ensure we catch clicks
+    // even if other handlers call stopPropagation during the bubble phase.
+    window.addEventListener("pointerdown", handleGlobalClick, true);
+    window.addEventListener("keydown", handleGlobalKey);
+    return () => {
+      mounted = false;
+      window.removeEventListener("pointerdown", handleGlobalClick, true);
+      window.removeEventListener("keydown", handleGlobalKey);
+    };
+  }, [data.initialProjectId]);
 
   const persistBlock = (blockId: string, payload: BlockData) => {
     data.onContentChange?.(
@@ -249,18 +652,10 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     );
   };
 
-  const save = (cols: Column[]) => {
-    setColumns(cols);
-    data.onContentChange?.(
-      id,
-      data.content,
-      new Date().toISOString(),
-      getEditorName(),
-      JSON.stringify({ columns: cols }),
-      title,
-      data.reactions,
-    );
-  };
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
+  const [editColumnId, setEditColumnId] = useState<string | null>(null);
+  const [taskModalTaskId, setTaskModalTaskId] = useState<string | null>(null);
 
   const handleResize = useCallback(
     (
@@ -316,7 +711,6 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     data,
     currentUser,
     isReadOnly,
-    canReact,
   });
 
   const { getEdges, getNode } = useReactFlow();
@@ -332,6 +726,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     id: `c-${Math.random().toString(36).slice(2, 9)}`,
     title: tr("kanban.defaultColumnTitle", "Column"),
     tasks: [],
+    widthPx: MIN_COLUMN_PX,
   });
 
   const removeChecklistItemFromSource = (
@@ -393,7 +788,10 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
 
     persistBlock(sourceBlockId, {
       ...sourceData,
-      metadata: JSON.stringify({ columns: cleanedColumns }),
+      metadata: JSON.stringify({
+        columns: cleanedColumns,
+        fields: sourceMeta.fields || [],
+      }),
     });
   };
 
@@ -409,6 +807,14 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     setDragColumnPreviewTitle("");
     setDragSourceTaskInfo(null);
     setDragSourceColumnIndex(null);
+  };
+
+  const findTaskById = (taskId: string) => {
+    for (const c of columns) {
+      const t = c.tasks.find((x) => x.id === taskId);
+      if (t) return { ...t, columnId: c.id } as Task & { columnId: string };
+    }
+    return null;
   };
 
   const syncDragPreviewFromEvent = (
@@ -876,7 +1282,10 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
 
       persistBlock(parsed.sourceBlockId, {
         ...sourceData,
-        metadata: JSON.stringify({ columns: nextSourceColumns }),
+        metadata: JSON.stringify({
+          columns: nextSourceColumns,
+          fields: sourceMeta.fields || [],
+        }),
       });
 
       const nextTargetColumns = [...columns];
@@ -928,6 +1337,8 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     setDropTargetTaskIndex(null);
     e.dataTransfer.dropEffect = "move";
   };
+
+  const percents = getColumnPercents(columns);
 
   return (
     <div
@@ -983,8 +1394,12 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
         onResizeEnd={handleResizeEnd}
       />
 
-      <div className="kb-root">
-        <div className="block-header handle-drag-target flex items-center gap-2 mb-2">
+      <div
+        className={`kb-root ${
+          dragKind === "column" ? "kb-dragging-columns" : ""
+        }`}
+      >
+        <div className="flex items-center gap-2 mb-2">
           <div className="flex items-center gap-2">
             <Kanban size={14} />
             <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
@@ -1007,6 +1422,70 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
               placeholder={tr("blocks.title", "...")}
               readOnly={isReadOnly}
             />
+            {!isReadOnly && (
+              <div className="relative">
+                <button
+                  className="kb-block-opts p-1 rounded ml-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = (
+                      e.currentTarget as HTMLElement
+                    ).getBoundingClientRect();
+                    const vw =
+                      window.innerWidth ||
+                      document.documentElement.clientWidth ||
+                      1024;
+                    const vh =
+                      window.innerHeight ||
+                      document.documentElement.clientHeight ||
+                      768;
+                    const estimatedMenuWidth = 220;
+                    const estimatedMenuHeight = 220;
+                    let left = Math.round(rect.left);
+                    if (left + estimatedMenuWidth > vw - 8)
+                      left = Math.max(8, vw - estimatedMenuWidth - 8);
+                    if (left < 8) left = 8;
+                    let top = Math.round(rect.bottom + 6);
+                    if (top + estimatedMenuHeight > vh - 8) {
+                      const alt = Math.round(
+                        rect.top - estimatedMenuHeight - 6,
+                      );
+                      top = alt > 8 ? alt : Math.max(8, Math.round(rect.top));
+                    }
+                    setMenuPos({ x: left, y: top });
+                    setOpenMenuKey("block:menu");
+                  }}
+                  title={tr("kanban.blockOptions", "Block options")}
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+
+                {openMenuKey === "block:menu" && (
+                  <FloatingMenu
+                    style={
+                      { top: menuPos.y, left: menuPos.x } as React.CSSProperties
+                    }
+                    onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  >
+                    <button
+                      className="context-menu-item"
+                      onClick={() => {
+                        setOpenMenuKey(null);
+                        setSettingsOpen(true);
+                      }}
+                    >
+                      <span className="context-menu-icon">
+                        <Settings size={14} />
+                      </span>
+                      <span className="context-menu-label">
+                        {tr("kanban.manageFields", "Manage fields")}
+                      </span>
+                    </button>
+                  </FloatingMenu>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1019,7 +1498,16 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
             <div className="kb-empty">
               {!isReadOnly && (
                 <button
-                  onClick={() => save([createColumn()])}
+                  onClick={() => {
+                    const c = createColumn();
+                    const next = [c];
+                    // new columns use explicit pixel width
+                    const nextCols = next.map((col) => ({
+                      ...col,
+                      widthPx: MIN_COLUMN_PX,
+                    }));
+                    save(nextCols);
+                  }}
                   className="kb-btn-empty"
                 >
                   <Plus size={28} />
@@ -1029,42 +1517,65 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
             </div>
           ) : (
             <div
+              ref={scrollRef}
               className="kb-scroll nodrag nowheel nopan"
               onWheel={(e) => e.stopPropagation()}
             >
-              {!isReadOnly && (
-                <button
-                  className={`kb-sep nodrag ${
-                    dropTargetColumnIndex === 0 &&
-                    (dragSourceColumnIndex === null ||
-                      dragSourceColumnIndex > 0)
-                      ? "kb-sep-drop-target"
-                      : ""
-                  }`}
-                  onDragOver={(e) => handleColumnDragOver(e, 0)}
-                  onDragEnter={(e) => handleColumnDragEnter(e, 0)}
-                  onDrop={(e) => handleColumnDrop(e, 0)}
-                  onClick={() => {
-                    const c = createColumn();
-                    save([c, ...columns]);
-                  }}
-                >
-                  {dragKind === "column" &&
-                  dropTargetColumnIndex === 0 &&
-                  (dragSourceColumnIndex === null ||
-                    dragSourceColumnIndex > 0) ? (
-                    <div className="kb-sep-preview-title">
-                      {dragColumnPreviewTitle ||
-                        tr("kanban.defaultColumnTitle", "Column")}
-                    </div>
-                  ) : (
-                    <Plus size={14} />
-                  )}
-                </button>
-              )}
+              {/* Removed the leading 'add column' + button per UX request */}
               {columns.map((col, idx) => (
                 <div key={col.id} className="kb-col-wrap nodrag">
-                  <div className="kb-col nodrag">
+                  <div
+                    className="kb-col nodrag"
+                    style={{
+                      width:
+                        typeof col.widthPx === "number"
+                          ? `${col.widthPx}px`
+                          : `${
+                              typeof col.width === "number"
+                                ? col.width
+                                : percents[idx]
+                            }%`,
+                    }}
+                    onPointerMove={(e) => {
+                      try {
+                        const el = e.currentTarget as HTMLElement;
+                        const rect = el.getBoundingClientRect();
+                        const pxFromRight =
+                          rect.right - (e as React.PointerEvent).clientX;
+                        const threshold = 10;
+                        if (pxFromRight >= 0 && pxFromRight <= threshold) {
+                          el.style.cursor = "col-resize";
+                        } else {
+                          el.style.cursor = "";
+                        }
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                    onPointerLeave={(e) => {
+                      try {
+                        (e.currentTarget as HTMLElement).style.cursor = "";
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                    onPointerDown={(e) => {
+                      // allow starting a column resize by pointerdown near the right edge
+                      if (isReadOnly) return;
+                      try {
+                        const el = e.currentTarget as HTMLElement;
+                        const rect = el.getBoundingClientRect();
+                        const pxFromRight =
+                          rect.right - (e as React.PointerEvent).clientX;
+                        const threshold = 10; // px from right edge to start resize
+                        if (pxFromRight >= 0 && pxFromRight <= threshold) {
+                          startColumnResize(e as React.PointerEvent, idx);
+                        }
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                  >
                     <div className="kb-col-head">
                       <div className="kb-col-title-wrap">
                         {!isReadOnly && (
@@ -1124,28 +1635,197 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                             }}
                           />
                         ) : (
-                          <h3
-                            className="kb-title nodrag"
-                            onClick={() => {
-                              if (!isReadOnly) {
-                                setEditingId(col.id);
-                                setEditText(col.title);
-                              }
-                            }}
-                          >
-                            {col.title}
-                          </h3>
+                          <div className="flex items-center min-w-0">
+                            {col.color ? (
+                              <span
+                                className="kb-col-swatch"
+                                style={{
+                                  background: col.color,
+                                  borderColor: darkenHex(col.color, 0.22),
+                                }}
+                              />
+                            ) : null}
+                            <div className="kb-col-title-block min-w-0">
+                              <h3
+                                className="kb-title nodrag"
+                                onClick={() => {
+                                  if (!isReadOnly) {
+                                    setEditingId(col.id);
+                                    setEditText(col.title);
+                                  }
+                                }}
+                              >
+                                {col.title}
+                              </h3>
+                              {col.description && col.description.trim() ? (
+                                <>
+                                  <div className="kb-col-title-sep" />
+                                  <div className="kb-col-desc">
+                                    {col.description}
+                                  </div>
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
                         )}
                       </div>
                       {!isReadOnly && (
-                        <button
-                          className="kb-del-col"
-                          onClick={() =>
-                            save(columns.filter((c) => c.id !== col.id))
-                          }
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="relative">
+                          <button
+                            className="kb-col-opts p-1 rounded"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = (
+                                e.currentTarget as HTMLElement
+                              ).getBoundingClientRect();
+                              const vw =
+                                window.innerWidth ||
+                                document.documentElement.clientWidth ||
+                                1024;
+                              const vh =
+                                window.innerHeight ||
+                                document.documentElement.clientHeight ||
+                                768;
+                              const estimatedMenuWidth = 220;
+                              const estimatedMenuHeight = 220;
+                              let left = Math.round(rect.left);
+                              if (left + estimatedMenuWidth > vw - 8)
+                                left = Math.max(8, vw - estimatedMenuWidth - 8);
+                              if (left < 8) left = 8;
+                              let top = Math.round(rect.bottom + 6);
+                              if (top + estimatedMenuHeight > vh - 8) {
+                                const alt = Math.round(
+                                  rect.top - estimatedMenuHeight - 6,
+                                );
+                                top =
+                                  alt > 8
+                                    ? alt
+                                    : Math.max(8, Math.round(rect.top));
+                              }
+                              setMenuPos({ x: left, y: top });
+                              setOpenMenuKey(`col:${col.id}`);
+                            }}
+                            title={tr("kanban.editColumn", "Edit column")}
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
+
+                          {openMenuKey === `col:${col.id}` && (
+                            <FloatingMenu
+                              style={
+                                {
+                                  top: menuPos.y,
+                                  left: menuPos.x,
+                                } as React.CSSProperties
+                              }
+                              onMouseDown={(e: React.MouseEvent) =>
+                                e.stopPropagation()
+                              }
+                              onClick={(e: React.MouseEvent) =>
+                                e.stopPropagation()
+                              }
+                            >
+                              <button
+                                className="context-menu-item"
+                                onClick={() => {
+                                  setOpenMenuKey(null);
+                                  setEditColumnId(col.id);
+                                }}
+                              >
+                                <span className="context-menu-icon">
+                                  <Edit3 size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {tr("kanban.editDetails", "Edit details")}
+                                </span>
+                              </button>
+
+                              <button
+                                className="context-menu-item"
+                                onClick={() => {
+                                  setOpenMenuKey(null);
+                                  if (idx > 0) {
+                                    const next = [...columns];
+                                    const [c] = next.splice(idx, 1);
+                                    next.splice(idx - 1, 0, c);
+                                    save(next);
+                                  }
+                                }}
+                              >
+                                <span className="context-menu-icon">
+                                  <ArrowLeft size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {tr("kanban.moveLeft", "Move left")}
+                                </span>
+                              </button>
+
+                              <button
+                                className="context-menu-item"
+                                onClick={() => {
+                                  setOpenMenuKey(null);
+                                  if (idx < columns.length - 1) {
+                                    const next = [...columns];
+                                    const [c] = next.splice(idx, 1);
+                                    next.splice(idx + 1, 0, c);
+                                    save(next);
+                                  }
+                                }}
+                              >
+                                <span className="context-menu-icon">
+                                  <ArrowRight size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {tr("kanban.moveRight", "Move right")}
+                                </span>
+                              </button>
+
+                              <button
+                                className="context-menu-item"
+                                onClick={() => {
+                                  setOpenMenuKey(null);
+                                  const dup = {
+                                    ...col,
+                                    id: `c-${Math.random()
+                                      .toString(36)
+                                      .slice(2, 9)}`,
+                                    tasks: col.tasks.map((t) => ({
+                                      ...t,
+                                      id: `t-${Math.random()
+                                        .toString(36)
+                                        .slice(2, 9)}`,
+                                    })),
+                                  };
+                                  const next = [...columns];
+                                  next.splice(idx + 1, 0, dup);
+                                  save(next);
+                                }}
+                              >
+                                <span className="context-menu-icon">
+                                  <Copy size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {tr("kanban.duplicateColumn", "Duplicate")}
+                                </span>
+                              </button>
+
+                              <button
+                                className="context-menu-item danger"
+                                onClick={() => {
+                                  setOpenMenuKey(null);
+                                  save(columns.filter((c) => c.id !== col.id));
+                                }}
+                              >
+                                <span className="context-menu-icon">
+                                  <Trash2 size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {tr("kanban.deleteColumn", "Delete")}
+                                </span>
+                              </button>
+                            </FloatingMenu>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -1195,110 +1875,36 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                                 </div>
                               </div>
                             )}
-                          <div
-                            className="kb-task nodrag"
-                            data-task-index={taskIndex}
-                            onDragOver={(e) =>
-                              handleTaskDragOver(e, col.id, taskIndex)
+
+                          <KanbanCard
+                            task={t}
+                            taskIndex={taskIndex}
+                            column={col}
+                            columns={columns}
+                            save={save}
+                            collaborators={collaborators}
+                            currentUser={currentUser}
+                            isReadOnly={isReadOnly}
+                            tr={tr}
+                            handleTaskDragStart={handleTaskDragStart}
+                            handleTaskDragOver={handleTaskDragOver}
+                            handleTaskDragEnter={handleTaskDragEnter}
+                            handleTaskDragLeave={handleTaskDragLeave}
+                            handleTaskDropOnTask={handleTaskDropOnTask}
+                            handleDragEnd={handleDragEnd}
+                            fields={fields}
+                            onOpenFieldPicker={() => setFieldPickerOpen(true)}
+                            openMenuKey={openMenuKey}
+                            openMenuPos={menuPos}
+                            onRequestOpenMenu={(key, pos) => {
+                              if (pos) setMenuPos(pos);
+                              setOpenMenuKey(key);
+                            }}
+                            onRequestCloseMenu={() => setOpenMenuKey(null)}
+                            onRequestOpenTaskModal={(taskId) =>
+                              setTaskModalTaskId(taskId)
                             }
-                            onDragEnter={(e) =>
-                              handleTaskDragEnter(e, col.id, taskIndex)
-                            }
-                            onDragLeave={handleTaskDragLeave}
-                            onDrop={(e) =>
-                              handleTaskDropOnTask(e, col.id, taskIndex)
-                            }
-                          >
-                            {!isReadOnly && (
-                              <div
-                                className="kb-task-drag-handle nodrag"
-                                title={tr(
-                                  "common.dragToReorder",
-                                  "Drag to reorder",
-                                )}
-                                draggable={true}
-                                onDragStart={(e) => {
-                                  e.stopPropagation();
-                                  handleTaskDragStart(e, col.id, t);
-                                }}
-                                onDragEnd={handleDragEnd}
-                              >
-                                <GripVertical size={12} />
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              className={`checklist-checkbox ${
-                                t.checked ? "checked" : ""
-                              }`}
-                              aria-label={tr(
-                                "kanban.toggleTask",
-                                "Toggle task",
-                              )}
-                              disabled={isReadOnly}
-                              onClick={() =>
-                                save(
-                                  columns.map((c) =>
-                                    c.id === col.id
-                                      ? {
-                                          ...c,
-                                          tasks: c.tasks.map((x) =>
-                                            x.id === t.id
-                                              ? { ...x, checked: !x.checked }
-                                              : x,
-                                          ),
-                                        }
-                                      : c,
-                                  ),
-                                )
-                              }
-                            >
-                              {t.checked && <Check size={10} strokeWidth={4} />}
-                            </button>
-                            <AutoResizeTextarea
-                              value={t.text}
-                              onChange={(e) =>
-                                save(
-                                  columns.map((c) =>
-                                    c.id === col.id
-                                      ? {
-                                          ...c,
-                                          tasks: c.tasks.map((x) =>
-                                            x.id === t.id
-                                              ? { ...x, text: e.target.value }
-                                              : x,
-                                          ),
-                                        }
-                                      : c,
-                                  ),
-                                )
-                              }
-                              placeholder={tr("kanban.addTask", "Task...")}
-                              readOnly={isReadOnly}
-                              className="nodrag"
-                            />
-                            {!isReadOnly && (
-                              <button
-                                className="kb-del-task"
-                                onClick={() =>
-                                  save(
-                                    columns.map((c) =>
-                                      c.id === col.id
-                                        ? {
-                                            ...c,
-                                            tasks: c.tasks.filter(
-                                              (x) => x.id !== t.id,
-                                            ),
-                                          }
-                                        : c,
-                                    ),
-                                  )
-                                }
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </div>
+                          />
                         </Fragment>
                       ))}
                       {dragKind === "task" &&
@@ -1339,6 +1945,8 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                             id: `t-${Math.random().toString(36).slice(2, 9)}`,
                             text: "",
                             checked: false,
+                            assigneeIds: [],
+                            assigneeName: undefined,
                           };
                           save(
                             columns.map((c) =>
@@ -1353,7 +1961,35 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                         {tr("kanban.addTask", "Add Task")}
                       </button>
                     )}
+
+                    {/** larger invisible handle on the right edge to make resize easier */}
+                    {!isReadOnly && (
+                      <div
+                        className="kb-col-edge-handle"
+                        onPointerDown={(ev) => {
+                          ev.stopPropagation();
+                          try {
+                            startColumnResize(
+                              ev as unknown as React.PointerEvent,
+                              idx,
+                            );
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        onPointerMove={(ev) => {
+                          try {
+                            (ev.currentTarget as HTMLElement).style.cursor =
+                              "col-resize";
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                      />
+                    )}
                   </div>
+
+                  {/* column resize is now started by pointerdown near the column's right edge */}
 
                   {!isReadOnly && (
                     <button
@@ -1370,11 +2006,17 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                       onDrop={(e) => handleColumnDrop(e, idx + 1)}
                       onClick={() => {
                         const c = createColumn();
-                        save([
+                        const next = [
                           ...columns.slice(0, idx + 1),
                           c,
                           ...columns.slice(idx + 1),
-                        ]);
+                        ];
+                        // new inserted columns default to explicit pixel width
+                        const nextCols = next.map((col) => ({
+                          ...col,
+                          widthPx: MIN_COLUMN_PX,
+                        }));
+                        save(nextCols);
                       }}
                     >
                       {dragKind === "column" &&
@@ -1398,12 +2040,63 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
         </div>
       </div>
 
+      <KanbanSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        initialFields={fields}
+        initialColumns={columns}
+        onSave={(cols: Column[], f: Field[]) => save(cols, f)}
+      />
+
+      <FieldPickerModal
+        isOpen={fieldPickerOpen}
+        onClose={() => setFieldPickerOpen(false)}
+        fields={fields}
+        columns={columns}
+        projectId={data.initialProjectId}
+        blockId={id}
+        onSaved={(f) => setFields(f)}
+      />
+
+      <ColumnEditModal
+        isOpen={Boolean(editColumnId)}
+        onClose={() => setEditColumnId(null)}
+        column={columns.find((c) => c.id === editColumnId) ?? null}
+        onSave={(patch) => {
+          if (!editColumnId) return;
+          const next = columns.map((c) =>
+            c.id === editColumnId ? { ...c, ...patch } : c,
+          );
+          save(next);
+          setEditColumnId(null);
+        }}
+      />
+
+      <TaskModal
+        isOpen={Boolean(taskModalTaskId)}
+        onClose={() => setTaskModalTaskId(null)}
+        task={taskModalTaskId ? findTaskById(taskModalTaskId) : null}
+        collaborators={collaborators}
+        fields={fields}
+        tr={tr}
+        onSave={(updated) => {
+          const next = columns.map((c) => ({
+            ...c,
+            tasks: c.tasks.map((x) =>
+              x.id === updated.id ? { ...x, ...updated } : x,
+            ),
+          }));
+          save(next);
+          setTaskModalTaskId(null);
+        }}
+      />
+
       <BlockFooter
         updatedAt={data.updatedAt}
         authorName={data.authorName}
         isLocked={data.isLocked}
         dict={dict}
-        lang="en"
+        lang={lang}
       />
 
       <BlockReactions

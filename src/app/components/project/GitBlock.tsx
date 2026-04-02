@@ -305,7 +305,7 @@ const GitBlock = (props: CanvasBlockProps) => {
             },
           });
         } else {
-          setGitError(error || "Failed to fetch stats");
+          setGitError(error || dict.blocks.gitFetchError);
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === "AbortError") {
@@ -314,7 +314,7 @@ const GitBlock = (props: CanvasBlockProps) => {
           return;
         }
         console.error("Failed to fetch git stats:", error);
-        setGitError("Network error");
+        setGitError(dict.common.networkError);
       } finally {
         setIsFetchingGit(false);
       }
@@ -610,7 +610,7 @@ const GitBlock = (props: CanvasBlockProps) => {
                       value = stats.stars?.toString() || "0";
                       break;
                     case "release":
-                      value = stats.release || "None";
+                      value = stats.release || dict.blocks.releaseNone;
                       break;
                     case "commit":
                       value =

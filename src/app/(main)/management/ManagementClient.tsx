@@ -658,7 +658,7 @@ function ProviderConfigModal({
           throw new Error(data.error || "Failed to save SAML config");
         }
       } catch (err) {
-        toast.error("Failed to save SAML configuration");
+        toast.error(dict.management.samlConfigSaveError);
         console.error(err);
         return;
       }
@@ -804,7 +804,9 @@ function ProviderConfigModal({
               )}
               {provider === "vercel" && (
                 <div className="form-group">
-                  <label className="modal-label">Integration Slug</label>
+                  <label className="modal-label">
+                    {dict.providers.integrationSlug}
+                  </label>
                   <input
                     className="zen-input"
                     value={formData.integrationSlug || ""}

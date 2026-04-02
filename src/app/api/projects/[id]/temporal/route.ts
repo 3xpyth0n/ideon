@@ -103,6 +103,24 @@ export const POST = projectAction(
       isAuto,
     } = body;
 
+    // Dev-only logging to help reproduce Save requests and payloads
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        console.info(
+          `[temporal] POST received - project=${projectId} user=${auth.id} action=${action}`,
+        );
+        console.info(
+          `[temporal] payload sizes: blocks=${
+            (inputBlocks || []).length
+          } links=${
+            (inputLinks || []).length
+          } intent=${intent} isAuto=${isAuto}`,
+        );
+      } catch (err) {
+        console.info("[temporal] debug log error", err);
+      }
+    }
+
     if (action === "create") {
       const snapshotId = uuidv4();
       const uniqueBlocks = uniqueById(inputBlocks || []);
@@ -196,6 +214,16 @@ export const POST = projectAction(
         },
       ]);
 
+      if (process.env.NODE_ENV !== "production") {
+        try {
+          console.info(
+            `[temporal] prepared snapshotId=${snapshotId} diffBytes=${diff.length} blocks=${uniqueBlocks.length} links=${uniqueLinks.length}`,
+          );
+        } catch (err) {
+          console.info("[temporal] debug log error", err);
+        }
+      }
+
       // Check for duplicate snapshot (same diff as the current state)
       const lastState = await db
         .selectFrom("temporalStates")
@@ -204,11 +232,20 @@ export const POST = projectAction(
         .executeTakeFirst();
 
       if (lastState && lastState.diff === diff) {
+        if (process.env.NODE_ENV !== "production")
+          console.info(
+            "[temporal] duplicate snapshot detected, skipping insert",
+          );
+
         return {
           success: true,
           stateId: project.currentStateId,
           unchanged: true,
         };
+      }
+
+      if (process.env.NODE_ENV !== "production") {
+        console.info(`[temporal] about to write snapshot ${snapshotId}`);
       }
 
       await runTransaction(db, async (trx) => {
@@ -268,6 +305,10 @@ export const POST = projectAction(
           }
         }
       });
+
+      if (process.env.NODE_ENV !== "production") {
+        console.info(`[temporal] snapshot ${snapshotId} written successfully`);
+      }
 
       return { success: true, stateId: snapshotId };
     }

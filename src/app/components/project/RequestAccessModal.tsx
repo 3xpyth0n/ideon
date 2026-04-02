@@ -91,12 +91,12 @@ export function RequestAccessModal({
           // Generic error handling
           const errorMsg = data.error || res.statusText;
           console.error("Request access failed:", errorMsg);
-          toast.error(errorMsg || "Failed to request access");
+          toast.error(errorMsg || dict.project.failedToRequestAccess);
         }
       }
     } catch (err) {
       console.error("Failed to request access", err);
-      toast.error("Network error");
+      toast.error(dict.common.networkError);
     } finally {
       setLoading(false);
     }
@@ -114,51 +114,46 @@ export function RequestAccessModal({
           <Lock size={32} />
         </div>
 
-        <h2 className="text-xl font-bold mb-2">
-          {dict.project.accessDenied || "Access Denied"}
-        </h2>
+        <h2 className="text-xl font-bold mb-2">{dict.project.accessDenied}</h2>
 
         <p className="text-muted mb-8 max-w-[80%] mx-auto text-sm">
           {projectName
-            ? `You don't have access to "${projectName}".`
-            : "You don't have access to this project."}
+            ? dict.project.noAccessToNamedProject.replace(
+                "{projectName}",
+                projectName,
+              )
+            : dict.project.noAccessToProject}
         </p>
 
         <div className="w-full max-w-md mx-auto">
           {status === "pending" ? (
             <div className="flex flex-col gap-4">
               <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-md text-yellow-500 text-sm">
-                <p className="font-medium">
-                  {dict.project.requestPending || "Request Pending"}
-                </p>
+                <p className="font-medium">{dict.project.requestPending}</p>
                 <p className="opacity-80 mt-1 text-xs">
-                  {dict.project.requestPendingDesc ||
-                    "Your request has been sent to the project owner."}
+                  {dict.project.requestPendingDesc}
                 </p>
               </div>
               <button
                 onClick={() => router.push("/home")}
                 className="text-muted hover:text-foreground text-xs underline underline-offset-4 bg-transparent border-none cursor-pointer mx-auto"
               >
-                {dict.common.backToHome || "Back to Home"}
+                {dict.common.backToHome}
               </button>
             </div>
           ) : status === "rejected" ? (
             <div className="flex flex-col gap-4">
               <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-sm">
-                <p className="font-medium">
-                  {dict.project.requestRejected || "Request Rejected"}
-                </p>
+                <p className="font-medium">{dict.project.requestRejected}</p>
                 <p className="opacity-80 mt-1 text-xs">
-                  {dict.project.requestRejectedDesc ||
-                    "Your request has been rejected by the project owner."}
+                  {dict.project.requestRejectedDesc}
                 </p>
               </div>
               <button
                 onClick={() => router.push("/home")}
                 className="text-muted hover:text-foreground text-xs underline underline-offset-4 bg-transparent border-none cursor-pointer mx-auto"
               >
-                {dict.common.backToHome || "Back to Home"}
+                {dict.common.backToHome}
               </button>
             </div>
           ) : (
@@ -171,13 +166,13 @@ export function RequestAccessModal({
                 {loading ? (
                   <Loader2 className="animate-spin mr-2" size={16} />
                 ) : null}
-                {dict.project.requestAccess || "Request Access"}
+                {dict.project.requestAccess}
               </Button>
               <button
                 onClick={() => router.push("/home")}
                 className="text-muted hover:text-foreground text-sm font-medium hover:underline underline-offset-4 bg-transparent border-none cursor-pointer"
               >
-                {dict.common.backToHome || "Back to Home"}
+                {dict.common.backToHome}
               </button>
             </div>
           )}

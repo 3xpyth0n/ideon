@@ -49,7 +49,6 @@ export default async function MainLayout({
         userRole={user?.role}
       />
       <main className="main-island" id="app-main-container">
-        {/* Debug: Layout is rendering */}
         {children}
       </main>
     </div>

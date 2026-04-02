@@ -4,18 +4,24 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { addRecentProject } from "@lib/utils";
+import { useI18n } from "@providers/I18nProvider";
 
 const ProjectCanvas = dynamic(
   () => import("@components/project/ProjectCanvas"),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center w-full h-full bg-page">
-        <div className="text-sm opacity-60">Loading canvas...</div>
-      </div>
-    ),
+    loading: () => <ProjectLoadingFallback />,
   },
 );
+
+function ProjectLoadingFallback() {
+  const { dict } = useI18n();
+  return (
+    <div className="flex items-center justify-center w-full h-full bg-page">
+      <div className="text-sm opacity-60">{dict.canvas.loadingCanvas}</div>
+    </div>
+  );
+}
 
 interface ProjectClientProps {
   id: string;

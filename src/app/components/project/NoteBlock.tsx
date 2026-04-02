@@ -89,6 +89,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
     },
     ref,
   ) => {
+    const { dict } = useI18n();
     const iconSize = 14;
 
     const container = document.getElementById("app-main-container");
@@ -177,7 +178,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 e.preventDefault();
                 applyLink();
               }}
-              title="Apply"
+              title={dict.canvas.apply}
               className="text-green-400 hover:text-green-300"
             >
               <Check size={iconSize} />
@@ -188,7 +189,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                   e.preventDefault();
                   removeLink();
                 }}
-                title="Unlink"
+                title={dict.common.unlink}
                 className="text-red-400 hover:text-red-300"
               >
                 <Unlink size={iconSize} />
@@ -199,7 +200,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 e.preventDefault();
                 cancelLink();
               }}
-              title="Cancel"
+              title={dict.common.cancel}
             >
               <X size={iconSize} />
             </button>
@@ -209,28 +210,28 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
             <button
               onClick={() => editor.chain().focus().toggleBold().run()}
               className={editor.isActive("bold") ? "is-active" : ""}
-              title="Bold"
+              title={dict.canvas.cheatBold}
             >
               <Bold size={iconSize} />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleItalic().run()}
               className={editor.isActive("italic") ? "is-active" : ""}
-              title="Italic"
+              title={dict.canvas.cheatItalic}
             >
               <Italic size={iconSize} />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               className={editor.isActive("underline") ? "is-active" : ""}
-              title="Underline"
+              title={dict.canvas.cheatUnderline}
             >
               <Underline size={iconSize} />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleStrike().run()}
               className={editor.isActive("strike") ? "is-active" : ""}
-              title="Strikethrough"
+              title={dict.canvas.cheatStrike}
             >
               <Strikethrough size={iconSize} />
             </button>
@@ -244,7 +245,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               className={
                 editor.isActive("heading", { level: 1 }) ? "is-active" : ""
               }
-              title="Heading 1"
+              title={dict.blocks.heading1}
             >
               <Heading1 size={iconSize} />
             </button>
@@ -255,7 +256,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               className={
                 editor.isActive("heading", { level: 2 }) ? "is-active" : ""
               }
-              title="Heading 2"
+              title={dict.blocks.heading2}
             >
               <Heading2 size={iconSize} />
             </button>
@@ -266,7 +267,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
               className={
                 editor.isActive("heading", { level: 3 }) ? "is-active" : ""
               }
-              title="Heading 3"
+              title={dict.blocks.heading3}
             >
               <Heading3 size={iconSize} />
             </button>
@@ -279,7 +280,11 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 openLinkModal();
               }}
               className={editor.isActive("link") ? "is-active" : ""}
-              title={editor.isActive("link") ? "Edit Link" : "Add Link"}
+              title={
+                editor.isActive("link")
+                  ? dict.blocks.editLink
+                  : dict.blocks.addLink
+              }
             >
               <LinkIcon size={iconSize} />
             </button>
@@ -294,7 +299,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                   .insertTable({ rows: 2, cols: 2, withHeaderRow: false })
                   .run()
               }
-              title="Insert Table"
+              title={dict.blocks.insertTable}
             >
               <TableIcon size={iconSize} />
             </button>
@@ -302,7 +307,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
             <button
               onClick={() => editor.chain().focus().toggleTaskList().run()}
               className={editor.isActive("taskList") ? "is-active" : ""}
-              title="Task List"
+              title={dict.blocks.taskList}
             >
               <CheckSquare size={iconSize} />
             </button>
@@ -312,26 +317,26 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 <div className="tiptap-bubble-menu-separator" />
                 <button
                   onClick={() => editor.chain().focus().addRowAfter().run()}
-                  title="Add Row"
+                  title={dict.blocks.addRow}
                 >
                   <Rows2 size={iconSize} className="text-green-500" />
                 </button>
                 <button
                   onClick={() => editor.chain().focus().addColumnAfter().run()}
-                  title="Add Column"
+                  title={dict.kanban.addColumn}
                 >
                   <Columns2 size={iconSize} className="text-green-500" />
                 </button>
                 <button
                   onClick={handleDeleteRow}
-                  title="Delete Row"
+                  title={dict.blocks.deleteRow}
                   className="delete-button"
                 >
                   <Rows2 size={iconSize} />
                 </button>
                 <button
                   onClick={() => editor.chain().focus().deleteColumn().run()}
-                  title="Delete Column"
+                  title={dict.kanban.deleteColumn}
                   className="delete-button"
                 >
                   <Columns2 size={iconSize} />

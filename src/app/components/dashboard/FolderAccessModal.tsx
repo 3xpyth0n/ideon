@@ -127,7 +127,7 @@ export function FolderAccessModal({
       isOpen={true}
       onClose={onClose}
       title={folderName}
-      subtitle="Folder Access"
+      subtitle={dict.modals.folderAccess}
       className="max-w-lg w-full"
     >
       {/* Search / Invite Section */}
@@ -186,7 +186,7 @@ export function FolderAccessModal({
             ))
           ) : searchQuery.length >= 2 ? (
             <p className="text-[10px] uppercase font-bold opacity-20 text-center py-4">
-              No users found
+              {dict.management.noUsersFound}
             </p>
           ) : null}
         </div>
@@ -255,7 +255,7 @@ export function FolderAccessModal({
             ))
           ) : (
             <p className="text-[10px] uppercase font-bold opacity-20 text-center py-8">
-              No collaborators found
+              {dict.dashboard.noCollaboratorsFound}
             </p>
           )}
         </div>

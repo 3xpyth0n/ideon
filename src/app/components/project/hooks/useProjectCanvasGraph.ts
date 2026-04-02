@@ -40,6 +40,10 @@ import {
   computeHiddenNodeIds,
   getDescendantIds,
 } from "@components/project/utils/visibility";
+import {
+  isBlockContentLocked,
+  isBlockPositionLocked,
+} from "@components/project/utils/locks";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
@@ -873,6 +877,8 @@ export const useProjectCanvasGraph = ({
           authorColor: currentUser.color,
           blockType,
           isLocked: false,
+          isContentLocked: false,
+          isPositionLocked: false,
           updatedAt: new Date().toISOString(),
           lastEditor: currentUser.username,
           isEditingLink: false,
@@ -940,18 +946,56 @@ export const useProjectCanvasGraph = ({
     ],
   );
 
-  const handleToggleLock = useCallback(
-    (blockId: string, isLocked: boolean) => {
+  const handleToggleContentLock = useCallback(
+    (blockId: string, isContentLocked: boolean) => {
       if (isReadOnly) return;
       applyMutation({
-        intent: isLocked ? "Locked block" : "Unlocked block",
+        intent: isContentLocked
+          ? "Locked block content"
+          : "Unlocked block content",
         blocksUpdate: (blocks) =>
           blocks.map((n) =>
-            n.id === blockId ? { ...n, data: { ...n.data, isLocked } } : n,
+            n.id === blockId
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    isLocked: isContentLocked,
+                    isContentLocked,
+                    isPositionLocked: isBlockPositionLocked(n.data),
+                  },
+                }
+              : n,
           ),
       });
     },
-    [applyMutation],
+    [applyMutation, isReadOnly],
+  );
+
+  const handleTogglePositionLock = useCallback(
+    (blockId: string, isPositionLocked: boolean) => {
+      if (isReadOnly) return;
+      applyMutation({
+        intent: isPositionLocked
+          ? "Locked block position"
+          : "Unlocked block position",
+        blocksUpdate: (blocks) =>
+          blocks.map((n) =>
+            n.id === blockId
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    isLocked: isBlockContentLocked(n.data),
+                    isContentLocked: isBlockContentLocked(n.data),
+                    isPositionLocked,
+                  },
+                }
+              : n,
+          ),
+      });
+    },
+    [applyMutation, isReadOnly],
   );
 
   const handleTransferBlock = useCallback(
@@ -1003,7 +1047,8 @@ export const useProjectCanvasGraph = ({
     handleCreateBlock,
     duplicateBlock,
     handleDeleteBlock,
-    handleToggleLock,
+    handleToggleContentLock,
+    handleTogglePositionLock,
     handleToggleFolderCollapse,
     handleTransferBlock,
     handleFitView,

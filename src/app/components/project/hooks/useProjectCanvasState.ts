@@ -32,6 +32,10 @@ import {
   getReactFlowViewportSize,
 } from "@components/project/utils/fitViewport";
 import { computeHiddenNodeIds } from "@components/project/utils/visibility";
+import {
+  isBlockContentLocked,
+  isBlockPositionLocked,
+} from "@components/project/utils/locks";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 
@@ -1487,6 +1491,8 @@ export const useProjectCanvasState = (
           authorColor: currentUser?.color,
           blockType,
           isLocked: false,
+          isContentLocked: false,
+          isPositionLocked: false,
           updatedAt: new Date().toISOString(),
           lastEditor: ownerName,
           isEditingLink: false,
@@ -2149,7 +2155,8 @@ export const useProjectCanvasState = (
       const movingUser = rt.presenceUsers.find(
         (u) => u.draggingBlockId === block.id && u.id !== currentUser?.id,
       );
-      const isLocked = !!block.data?.isLocked;
+      const isContentLocked = isBlockContentLocked(block.data);
+      const isPositionLocked = isBlockPositionLocked(block.data);
       const isOwner = currentUser?.id && block.data?.ownerId === currentUser.id;
       const isProjectOwner =
         currentUser?.id && projectOwnerId === currentUser.id;
@@ -2162,13 +2169,16 @@ export const useProjectCanvasState = (
 
       return {
         ...block,
-        draggable: isReadOnly ? false : isLocked ? !!isOwner : true,
+        draggable: isReadOnly ? false : isPositionLocked ? !!isOwner : true,
         dragHandle:
           ".block-card, .block-header, .block-footer, .shell-block-header, .handle-drag-target",
         selectable: !isPreviewMode,
         deletable: isPreviewMode ? false : !!canManage,
         data: {
           ...block.data,
+          isLocked: isContentLocked,
+          isContentLocked,
+          isPositionLocked,
           isPreviewMode,
           yText,
           typingUsers: isPreviewMode ? [] : typingUsers,
@@ -2320,12 +2330,22 @@ export const useProjectCanvasState = (
     [debouncedCheckVisibleBlocks],
   );
 
-  const handleToggleLock = useCallback(
+  const handleToggleContentLock = useCallback(
     (blockId: string) => {
       const block = blocks.find((b) => b.id === blockId);
       if (!block || !currentUser) return;
-      const isLocked = !!block.data?.isLocked;
-      graph.handleToggleLock(blockId, !isLocked);
+      const isContentLocked = isBlockContentLocked(block.data);
+      graph.handleToggleContentLock(blockId, !isContentLocked);
+    },
+    [blocks, currentUser, graph],
+  );
+
+  const handleTogglePositionLock = useCallback(
+    (blockId: string) => {
+      const block = blocks.find((b) => b.id === blockId);
+      if (!block || !currentUser) return;
+      const isPositionLocked = isBlockPositionLocked(block.data);
+      graph.handleTogglePositionLock(blockId, !isPositionLocked);
     },
     [blocks, currentUser, graph],
   );
@@ -2668,7 +2688,8 @@ export const useProjectCanvasState = (
     onConnect: graph.onConnect,
     handleDeleteBlock: graph.handleDeleteBlock,
     deleteLinks,
-    handleToggleLock,
+    handleToggleContentLock,
+    handleTogglePositionLock,
     handleTransferBlock,
     confirmDelete,
     onKeyDown,

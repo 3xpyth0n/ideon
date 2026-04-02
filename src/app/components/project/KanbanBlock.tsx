@@ -2094,7 +2094,8 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
       <BlockFooter
         updatedAt={data.updatedAt}
         authorName={data.authorName}
-        isLocked={data.isLocked}
+        isContentLocked={data.isContentLocked}
+        isPositionLocked={data.isPositionLocked}
         dict={dict}
         lang={lang}
       />

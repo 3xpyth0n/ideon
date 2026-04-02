@@ -349,7 +349,8 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       <BlockFooter
         updatedAt={data.updatedAt}
         authorName={data.authorName}
-        isLocked={isLocked}
+        isContentLocked={data.isContentLocked}
+        isPositionLocked={data.isPositionLocked}
         dict={dict}
         lang={lang}
       />

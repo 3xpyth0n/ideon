@@ -5,11 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0] - 2026-04-XX
+## [0.8.0] - 2026-04-02
 
 ### Added
 
 - Introduced a major Kanban block overhaul with richer task management, including assignees, custom fields/labels, and expanded board interactions.
+- Split block locking into separate content and position controls to prevent accidental moves during collaboration while preserving edit control [#78](https://github.com/3xpyth0n/ideon/issues/78).
 
 ### Fixed
 

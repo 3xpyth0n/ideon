@@ -70,11 +70,12 @@ import {
   Loader2,
   Menu,
   Folder,
-  Lock,
   Unlock,
   UserPlus,
   Copy,
 } from "lucide-react";
+import { LuPencilOff } from "react-icons/lu";
+import { TbLocationOff } from "react-icons/tb";
 import { FaGithub } from "react-icons/fa";
 import { SiFigma } from "react-icons/si";
 import { DecisionHistory } from "./DecisionHistory";
@@ -99,6 +100,7 @@ import {
 } from "./utils/interaction";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useCanvasTouchViewport } from "./hooks/useCanvasTouchViewport";
+import { isBlockContentLocked, isBlockPositionLocked } from "./utils/locks";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
   [-5000, -4000],
   [8000, 5000],
@@ -688,7 +690,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onConnect,
     handleDeleteBlock: _handleDeleteBlock,
     deleteLinks: _deleteLinks,
-    handleToggleLock,
+    handleToggleContentLock,
+    handleTogglePositionLock,
     handleTransferBlock,
     confirmDelete,
     onKeyDown,
@@ -2092,27 +2095,56 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       const isProjectOwner =
                         currentUser.id && projectOwnerId === currentUser.id;
                       const canManage = isOwner || isProjectOwner;
-                      const isLocked = !!(block.data as BlockData).isLocked;
+                      const isContentLocked = isBlockContentLocked(
+                        block.data as BlockData,
+                      );
+                      const isPositionLocked = isBlockPositionLocked(
+                        block.data as BlockData,
+                      );
 
                       return (
                         <>
                           {canManage && (
                             <>
                               <button
-                                onClick={() => handleToggleLock(block.id)}
+                                onClick={() =>
+                                  handleToggleContentLock(block.id)
+                                }
                                 className="context-menu-item"
                               >
                                 <span className="context-menu-icon">
-                                  {isLocked ? (
+                                  {isContentLocked ? (
                                     <Unlock size={14} />
                                   ) : (
-                                    <Lock size={14} />
+                                    <LuPencilOff size={14} />
                                   )}
                                 </span>
                                 <span className="context-menu-label">
-                                  {isLocked
-                                    ? dict.blocks.unlock || "Unlock"
-                                    : dict.blocks.lock || "Lock"}
+                                  {isContentLocked
+                                    ? dict.blocks.unlockContent ||
+                                      "Unlock Content"
+                                    : dict.blocks.lockContent || "Lock Content"}
+                                </span>
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleTogglePositionLock(block.id)
+                                }
+                                className="context-menu-item"
+                              >
+                                <span className="context-menu-icon">
+                                  {isPositionLocked ? (
+                                    <Unlock size={14} />
+                                  ) : (
+                                    <TbLocationOff size={14} />
+                                  )}
+                                </span>
+                                <span className="context-menu-label">
+                                  {isPositionLocked
+                                    ? dict.blocks.unlockPosition ||
+                                      "Unlock Position"
+                                    : dict.blocks.lockPosition ||
+                                      "Lock Position"}
                                 </span>
                               </button>
                               <button

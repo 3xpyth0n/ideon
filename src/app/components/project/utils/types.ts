@@ -10,6 +10,8 @@ export interface GraphMutationPayload {
   data?: Record<string, unknown>;
   intent?: string;
   isLocked?: boolean;
+  isContentLocked?: boolean;
+  isPositionLocked?: boolean;
   ownerId?: string;
   color?: string;
   blocks?: Node[];

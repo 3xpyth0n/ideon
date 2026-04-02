@@ -548,7 +548,7 @@
 }
 
 .block-lock-icon {
-  opacity: 0.4;
+  color: red;
   margin-top: 2px;
   margin-right: 4px;
   transform: translateY(0.5px);

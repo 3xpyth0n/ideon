@@ -993,7 +993,8 @@ const VercelBlock = (props: CanvasBlockProps) => {
           authorName={
             typeof data.lastEditor === "string" ? data.lastEditor : undefined
           }
-          isLocked={isLocked}
+          isContentLocked={data.isContentLocked}
+          isPositionLocked={data.isPositionLocked}
           dict={dict}
           lang={((dict as Record<string, unknown>).lang as string) || "en"}
         />

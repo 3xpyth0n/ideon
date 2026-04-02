@@ -786,7 +786,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           <BlockFooter
             updatedAt={data.updatedAt}
             authorName={data.authorName}
-            isLocked={data.isLocked}
+            isContentLocked={data.isContentLocked}
+            isPositionLocked={data.isPositionLocked}
             dict={dict}
             lang={lang}
           >

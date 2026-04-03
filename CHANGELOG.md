@@ -10,12 +10,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Introduced a major Kanban block overhaul with richer task management, including assignees, custom fields/labels, and expanded board interactions.
+- Added support for exporting Excalidraw sketches as `.excalidraw` files.
 - Split block locking into separate content and position controls to prevent accidental moves during collaboration while preserving edit control [#78](https://github.com/3xpyth0n/ideon/issues/78).
 
 ### Fixed
 
 - Completed the viewer block-move fix by preventing local drag interactions and forcing viewer canvas state to reset from synced project state on open.
 - Fixed note content loss when previewing or applying temporal snapshots [#76](https://github.com/3xpyth0n/ideon/issues/76).
+- Fixed markdown table persistence in note blocks so tables no longer degrade to `[Table]` when toggling Preview/Edit, including Vim-mode workflows [#79](https://github.com/3xpyth0n/ideon/issues/79)
 
 ## [0.7.7] - 2026-03-30
 

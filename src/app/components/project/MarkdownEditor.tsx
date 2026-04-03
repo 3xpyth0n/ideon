@@ -8,6 +8,7 @@ import {
   wrappingInputRule,
 } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
+import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -152,6 +153,92 @@ interface MarkdownStorage {
   };
 }
 
+function escapeTableCell(text: string): string {
+  return text
+    .replace(/\n+/g, " <br> ")
+    .replace(/\|/g, "\\|")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function serializeTableNode(tableNode: ProseMirrorNode): string {
+  const rows: string[][] = [];
+  let maxColumns = 0;
+
+  tableNode.forEach((rowNode) => {
+    if (rowNode.type.name !== "tableRow") return;
+
+    const cells: string[] = [];
+    rowNode.forEach((cellNode) => {
+      if (
+        cellNode.type.name === "tableCell" ||
+        cellNode.type.name === "tableHeader"
+      ) {
+        cells.push(escapeTableCell(cellNode.textContent));
+      }
+    });
+
+    maxColumns = Math.max(maxColumns, cells.length);
+    rows.push(cells);
+  });
+
+  if (rows.length === 0 || maxColumns === 0) {
+    return "";
+  }
+
+  const normalizedRows = rows.map((row) => {
+    const padded = [...row];
+    while (padded.length < maxColumns) padded.push("");
+    return padded;
+  });
+
+  const headerRow = normalizedRows[0];
+  const separatorRow = Array.from({ length: maxColumns }, () => "---");
+  const markdownRows = [headerRow, separatorRow, ...normalizedRows.slice(1)];
+
+  return markdownRows.map((row) => `| ${row.join(" | ")} |`).join("\n");
+}
+
+function getTableMarkdownBlocks(doc: ProseMirrorNode): string[] {
+  const tables: string[] = [];
+
+  doc.descendants((node) => {
+    if (node.type.name !== "table") return true;
+
+    const tableMarkdown = serializeTableNode(node);
+    if (tableMarkdown) {
+      tables.push(tableMarkdown);
+    }
+    return true;
+  });
+
+  return tables;
+}
+
+function getStableMarkdown(editor: Editor): string {
+  const rawMarkdown = (
+    editor.storage as unknown as MarkdownStorage
+  ).markdown.getMarkdown();
+
+  const tablePlaceholderPattern = /\[\s*table\s*\]/gi;
+
+  if (!tablePlaceholderPattern.test(rawMarkdown)) {
+    return rawMarkdown;
+  }
+
+  const tableBlocks = getTableMarkdownBlocks(editor.state.doc);
+  if (tableBlocks.length === 0) {
+    return rawMarkdown;
+  }
+
+  let index = 0;
+  return rawMarkdown.replace(tablePlaceholderPattern, () => {
+    const tableMarkdown = tableBlocks[index];
+    index += 1;
+    return tableMarkdown ?? "[Table]";
+  });
+}
+
 const MarkdownEditor = ({
   content,
   onChange,
@@ -262,10 +349,8 @@ const MarkdownEditor = ({
       },
     },
     onUpdate: ({ editor }) => {
-      if (isSyncingRef.current) return;
-      const markdown = (
-        editor.storage as unknown as MarkdownStorage
-      ).markdown.getMarkdown();
+      if (isSyncingRef.current || isReadOnly) return;
+      const markdown = getStableMarkdown(editor);
 
       if (markdown.length > 1000000) {
         toast.error(dict.blocks.noteTooLarge);
@@ -318,9 +403,7 @@ const MarkdownEditor = ({
       }
 
       // Force update the parent immediately
-      const markdown = (
-        editor.storage as unknown as MarkdownStorage
-      ).markdown.getMarkdown();
+      const markdown = getStableMarkdown(editor);
       onChange?.(markdown);
     },
     [editor, onChange],
@@ -365,9 +448,7 @@ const MarkdownEditor = ({
         .replace(/^(\s*)(-?\s*)(\[ \]|\[\])(\s.+)$/gm, "$1- [ ]$4")
         .replace(/^(\s*)(-?\s*)(\[x\])(\s.+)$/gm, "$1- [x]$4");
 
-      const currentMarkdown = (
-        editor.storage as unknown as MarkdownStorage
-      ).markdown.getMarkdown();
+      const currentMarkdown = getStableMarkdown(editor);
       if (processedContent !== currentMarkdown) {
         const isRecentLocalUpdate =
           Date.now() - lastLocalUpdateRef.current < 500;

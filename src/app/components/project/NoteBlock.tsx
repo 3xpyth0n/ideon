@@ -758,7 +758,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                 />
               ) : (
                 <MarkdownEditor
-                  key={data.yText ? `collab-edit-${id}` : `local-edit-${id}`}
+                  key={data.yText ? `collab-note-${id}` : `local-note-${id}`}
                   content={data.content}
                   onChange={handleContentChange}
                   isReadOnly={false}
@@ -771,7 +771,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
               )
             ) : (
               <MarkdownEditor
-                key={data.yText ? `collab-prev-${id}` : `local-prev-${id}`}
+                key={data.yText ? `collab-note-${id}` : `local-note-${id}`}
                 content={data.content}
                 onChange={handleContentChange}
                 isReadOnly={true}

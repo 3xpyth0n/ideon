@@ -1144,6 +1144,13 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     const dataStr = e.dataTransfer.getData("application/json");
     if (!dataStr) return;
 
+    const resolvedTargetIndex =
+      targetIndex !== null
+        ? targetIndex
+        : dropTargetColumn === targetColumnId && dropTargetTaskIndex !== null
+          ? dropTargetTaskIndex
+          : null;
+
     try {
       const parsed = JSON.parse(dataStr) as Partial<TransferTaskPayload>;
       if (typeof parsed.sourceBlockId !== "string") return;
@@ -1214,31 +1221,27 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
       );
       if (targetColIndex === -1) return;
 
-      const insertionIndex =
-        targetIndex === null
+      const rawInsertionIndex =
+        resolvedTargetIndex === null
           ? nextColumns[targetColIndex].tasks.length
-          : Math.max(
-              0,
-              Math.min(targetIndex, nextColumns[targetColIndex].tasks.length),
-            );
+          : resolvedTargetIndex;
 
       const adjustedInsertionIndex =
         payload.kind === "kanban-task" &&
         payload.sourceBlockId === id &&
         sourceColIndex === targetColIndex &&
         sourceTaskIndex !== -1 &&
-        sourceTaskIndex < insertionIndex
-          ? insertionIndex - 1
-          : insertionIndex;
+        sourceTaskIndex < rawInsertionIndex
+          ? rawInsertionIndex - 1
+          : rawInsertionIndex;
+
+      const finalInsertionIndex = Math.max(
+        0,
+        Math.min(adjustedInsertionIndex, nextColumns[targetColIndex].tasks.length),
+      );
 
       nextColumns[targetColIndex].tasks.splice(
-        Math.max(
-          0,
-          Math.min(
-            adjustedInsertionIndex,
-            nextColumns[targetColIndex].tasks.length,
-          ),
-        ),
+        finalInsertionIndex,
         0,
         movedTask,
       );
@@ -1891,7 +1894,15 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                       onDragEnter={(e) =>
                         handleColumnAreaDragEnter(e, col.id, col.tasks.length)
                       }
-                      onDrop={(e) => handleTaskDrop(e, col.id, null)}
+                      onDrop={(e) =>
+                        handleTaskDrop(
+                          e,
+                          col.id,
+                          dropTargetColumn === col.id
+                            ? dropTargetTaskIndex
+                            : col.tasks.length,
+                        )
+                      }
                     >
                       {col.tasks.map((t, taskIndex) => (
                         <Fragment key={t.id}>

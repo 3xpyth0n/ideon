@@ -82,6 +82,23 @@ interface Props {
   onRequestOpenTaskModal?: (taskId: string) => void;
 }
 
+function toPlainText(markdown: string): string {
+  return markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^>\s?/gm, "")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/~~([^~]+)~~/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function KanbanCard({
   task: t,
   taskIndex,
@@ -168,6 +185,12 @@ export default function KanbanCard({
   // split text into title + description
   const lines = (t.text || "").split("\n");
   const title = lines[0] || "";
+  const description = lines.slice(1).join("\n").trim();
+  const plainDescription = toPlainText(description);
+  const descriptionSnippet =
+    plainDescription.length > 100
+      ? `${plainDescription.slice(0, 100).trimEnd()}...`
+      : plainDescription;
 
   const startResize = (e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -338,6 +361,9 @@ export default function KanbanCard({
         >
           {title || tr("kanban.addTask", "Task")}
         </div>
+        {descriptionSnippet ? (
+          <div className="kb-task-desc">{descriptionSnippet}</div>
+        ) : null}
       </div>
 
       {!isReadOnly && (

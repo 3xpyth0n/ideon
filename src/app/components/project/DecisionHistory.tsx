@@ -289,8 +289,8 @@ export function DecisionHistory({
 
   const formatDate = (isoString?: string) => {
     if (!isoString) return "";
-    const { date } = formatDateParts(isoString, lang);
-    return date;
+    const { date, time } = formatDateParts(isoString, lang);
+    return [date, time].filter(Boolean).join(" · ");
   };
 
   const handleSelectState = (stateId: string) => {

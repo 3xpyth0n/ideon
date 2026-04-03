@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Modal } from "@components/ui/Modal";
 import AssigneeCheckboxList from "./AssigneeCheckboxList";
+import MarkdownEditor from "./MarkdownEditor";
 import type { Field } from "./KanbanSettingsModal";
 
 type UserProfile = {
@@ -42,6 +43,7 @@ export default function TaskModal({
 }: Props) {
   const [localTitle, setLocalTitle] = useState("");
   const [localDesc, setLocalDesc] = useState("");
+  const [descEditing, setDescEditing] = useState(false);
   const [localAssignees, setLocalAssignees] = useState<string[]>([]);
   const [localFields, setLocalFields] = useState<
     Record<string, string | undefined>
@@ -51,6 +53,7 @@ export default function TaskModal({
   useEffect(() => {
     if (!isOpen) {
       initializedTaskIdRef.current = null;
+      setDescEditing(false);
       return;
     }
     if (!task) return;
@@ -60,6 +63,7 @@ export default function TaskModal({
     const lines = (task.text || "").split("\n");
     setLocalTitle(lines[0] || "");
     setLocalDesc(lines.slice(1).join("\n") || "");
+    setDescEditing(false);
     setLocalAssignees(
       task.assigneeIds
         ? [...task.assigneeIds]
@@ -90,7 +94,7 @@ export default function TaskModal({
       title={tr("kanban.editTaskTitle", "Edit task")}
       showCloseButton
     >
-      <div className="flex gap-4">
+      <div className="flex gap-4 text-left">
         <div className="w-64">
           <div className="text-2xs opacity-60 mb-2">
             {tr("kanban.assignees", "Assignees")}
@@ -179,15 +183,47 @@ export default function TaskModal({
             />
           </div>
           <div>
-            <textarea
-              value={localDesc}
-              onChange={(e) => setLocalDesc(e.target.value)}
-              placeholder={tr(
-                "kanban.descriptionPlaceholder",
-                "Description (supports markdown)",
+            <div
+              className={`relative w-full min-h-50 rounded p-3 text-sm ${
+                descEditing
+                  ? "bg-transparent border border-white/6"
+                  : "bg-transparent"
+              }`}
+            >
+              {!descEditing ? (
+                <div className="pr-16 min-h-44">
+                  <MarkdownEditor
+                    content={localDesc}
+                    isReadOnly
+                    placeholder={tr(
+                      "kanban.descriptionPlaceholder",
+                      "Description (supports markdown)",
+                    )}
+                  />
+                </div>
+              ) : (
+                <div className="pr-16 min-h-44">
+                  <textarea
+                    value={localDesc}
+                    onChange={(e) => setLocalDesc(e.target.value)}
+                    onBlur={() => setDescEditing(false)}
+                    placeholder={tr(
+                      "kanban.descriptionPlaceholder",
+                      "Description (supports markdown)",
+                    )}
+                    className="w-full min-h-44 bg-transparent text-sm outline-none resize-y"
+                  />
+                </div>
               )}
-              className="w-full min-h-50 p-3 rounded bg-transparent border border-white/6 text-sm"
-            />
+              <button
+                onClick={() => setDescEditing((v) => !v)}
+                className="absolute top-3 right-3 px-2 py-1 rounded text-2xs border border-white/10 hover:bg-white/5"
+              >
+                {descEditing
+                  ? tr("common.done", "Done")
+                  : tr("common.edit", "Edit")}
+              </button>
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <button onClick={onClose} className="px-3 py-1 rounded">

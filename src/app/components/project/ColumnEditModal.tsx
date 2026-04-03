@@ -18,6 +18,7 @@ export default function ColumnEditModal({
   onSave,
 }: Props) {
   const { dict } = useI18n();
+  const [title, setTitle] = useState<string>(column?.title || "");
   const [color, setColor] = useState<string>(column?.color || "#000000");
   const [description, setDescription] = useState<string>(
     column?.description || "",
@@ -25,6 +26,7 @@ export default function ColumnEditModal({
 
   useEffect(() => {
     if (isOpen) {
+      setTitle(column?.title || "");
       setColor(column?.color || "#000000");
       setDescription(column?.description || "");
     }
@@ -37,9 +39,8 @@ export default function ColumnEditModal({
       title={dict.kanban.editColumn}
       showCloseButton
     >
-      <div className="space-y-4">
-        <div className="p-2 bg-white/2 rounded flex items-center gap-2">
-          <div className="text-2xs opacity-60">{dict.common.preview}</div>
+      <div className="space-y-4 text-left">
+        <div className="p-2 bg-white/2 rounded-2xl flex items-center justify-center gap-2">
           <div
             style={{
               width: 12,
@@ -48,7 +49,18 @@ export default function ColumnEditModal({
               background: color,
             }}
           />
-          <div className="text-sm font-semibold">{column?.title || ""}</div>
+          <div className="text-sm font-semibold">{title || ""}</div>
+        </div>
+
+        <div>
+          <div className="text-2xs opacity-60 mb-1">{dict.blocks.title}</div>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={dict.kanban.defaultColumnTitle}
+            className="w-full px-2 py-1 rounded bg-transparent border border-white/6 text-sm"
+          />
         </div>
 
         <div>
@@ -107,7 +119,8 @@ export default function ColumnEditModal({
           </button>
           <button
             onClick={() => {
-              onSave({ color, description });
+              const nextTitle = title.trim() || column?.title || "";
+              onSave({ title: nextTitle, color, description });
               onClose();
             }}
             className="px-3 py-1 rounded bg-accent text-white ring-1 ring-white/10"

@@ -145,6 +145,7 @@
     "nanoid": "^5.1.6",
     "@react-email/body": "0.2.1",
     "mermaid": "^11.13.0",
+    "lodash-es": "^4.18.1",
     "nodemailer": "$nodemailer",
     "@types/nodemailer": "$@types/nodemailer",
     "file-type": "^21.3.1",

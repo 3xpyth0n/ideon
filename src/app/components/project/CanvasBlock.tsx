@@ -120,6 +120,8 @@ export type BlockData = {
     blockId: string,
     handler: NoteModeShortcutHandler | null,
   ) => void;
+  onRequestUndo?: () => void;
+  onRequestRedo?: () => void;
   typingUsers?: UserPresence[];
   movingUserColor?: string;
   projectOwnerId?: string | null;

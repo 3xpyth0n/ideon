@@ -9,7 +9,11 @@ import type { Awareness } from "y-protocols/awareness";
 import { useProjectCanvasGraph } from "./useProjectCanvasGraph";
 import { useProjectCanvasRealtime } from "./useProjectCanvasRealtime";
 import { focusProjectCanvas } from "../utils/focusCanvas";
-import { useUndoRedo } from "./useUndoRedo";
+import {
+  CANVAS_HISTORY_ORIGIN,
+  CANVAS_TRANSIENT_ORIGIN,
+  useUndoRedo,
+} from "./useUndoRedo";
 import { useProjectData } from "./useProjectData";
 import { BlockData } from "@components/project/CanvasBlock";
 import type { DraftsMap } from "@components/project/DraftsContext";
@@ -338,6 +342,8 @@ const cleanBlockDataForSync = (
   delete rest.onCaretMove;
   delete rest.onResize;
   delete rest.onResizeEnd;
+  delete rest.onRequestUndo;
+  delete rest.onRequestRedo;
   delete rest.currentUser;
   delete rest.initialProjectId;
   delete rest.projectOwnerId;
@@ -355,6 +361,10 @@ const resolveBlockContent = (
   if (!yText) return fallbackContent;
   const live = yText.toString();
   return live.length > 0 ? live : fallbackContent;
+};
+
+type CanvasStateUpdateOptions = {
+  recordInUndo?: boolean;
 };
 
 export interface UserPresence {
@@ -494,13 +504,17 @@ export const useProjectCanvasState = (
 
   const isReadOnly = isPreviewMode || currentUserRole === "viewer";
 
-  const { undo, redo, canUndo, canRedo, clear } = useUndoRedo(
+  const { undo, redo, canUndo, canRedo, clear, stopCapturing } = useUndoRedo(
     yBlocks?.doc || null,
     yBlocks,
     yLinks,
     yContents,
     isReadOnly,
   );
+
+  const markUndoBoundary = useCallback(() => {
+    stopCapturing();
+  }, [stopCapturing]);
 
   useEffect(() => {
     if (!yBlocks || !yLinks || !yContents) return;
@@ -514,13 +528,9 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Node<BlockData>>,
       transaction: Y.Transaction,
     ) => {
-      if (
-        (transaction.local &&
-          !(transaction.origin instanceof Y.UndoManager) &&
-          transaction.origin !== "local-react-update") ||
-        transaction.origin === "local-react-update"
-      )
+      if (transaction.local && !(transaction.origin instanceof Y.UndoManager)) {
         return;
+      }
 
       const changes: Array<{
         key: string;
@@ -591,13 +601,9 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Edge>,
       transaction: Y.Transaction,
     ) => {
-      if (
-        (transaction.local &&
-          !(transaction.origin instanceof Y.UndoManager) &&
-          transaction.origin !== "local-react-update") ||
-        transaction.origin === "local-react-update"
-      )
+      if (transaction.local && !(transaction.origin instanceof Y.UndoManager)) {
         return;
+      }
 
       const changes: Array<{
         key: string;
@@ -652,13 +658,9 @@ export const useProjectCanvasState = (
       event: Y.YMapEvent<Y.Text>,
       transaction: Y.Transaction,
     ) => {
-      if (
-        (transaction.local &&
-          !(transaction.origin instanceof Y.UndoManager) &&
-          transaction.origin !== "local-react-update") ||
-        transaction.origin === "local-react-update"
-      )
+      if (transaction.local && !(transaction.origin instanceof Y.UndoManager)) {
         return;
+      }
 
       const keys = Array.from(event.keysChanged);
 
@@ -850,8 +852,13 @@ export const useProjectCanvasState = (
       update:
         | Node<BlockData>[]
         | ((nds: Node<BlockData>[]) => Node<BlockData>[]),
+      options?: CanvasStateUpdateOptions,
     ) => {
       if (!yBlocks || !yContents) return;
+
+      const transactionOrigin = options?.recordInUndo
+        ? CANVAS_HISTORY_ORIGIN
+        : CANVAS_TRANSIENT_ORIGIN;
 
       setBlocksState((prev) => {
         const nextBlocks = (
@@ -952,7 +959,7 @@ export const useProjectCanvasState = (
                 yBlocks.set(block.id, cleanBlockToSync as Node<BlockData>);
               }
             });
-          }, "local-react-update");
+          }, transactionOrigin);
         }
 
         // Return blocks
@@ -971,7 +978,7 @@ export const useProjectCanvasState = (
           yBlocks.delete(id);
           yContents.delete(id);
         });
-      }, yBlocks.doc.clientID);
+      }, CANVAS_HISTORY_ORIGIN);
 
       setBlocksState((prev) => prev.filter((n) => !ids.includes(n.id)));
     },
@@ -979,8 +986,15 @@ export const useProjectCanvasState = (
   );
 
   const setLinks = useCallback(
-    (update: Edge[] | ((lks: Edge[]) => Edge[])) => {
+    (
+      update: Edge[] | ((lks: Edge[]) => Edge[]),
+      options?: CanvasStateUpdateOptions,
+    ) => {
       if (!yLinks) return;
+
+      const transactionOrigin = options?.recordInUndo
+        ? CANVAS_HISTORY_ORIGIN
+        : CANVAS_TRANSIENT_ORIGIN;
 
       setLinksState((prev) => {
         const nextLinks = typeof update === "function" ? update(prev) : update;
@@ -1018,7 +1032,7 @@ export const useProjectCanvasState = (
                 yLinks.set(link.id, linkToSync as Edge);
               }
             });
-          }, "local-react-update");
+          }, transactionOrigin);
         }
 
         return nextLinks;
@@ -1035,7 +1049,7 @@ export const useProjectCanvasState = (
         ids.forEach((id) => {
           yLinks.delete(id);
         });
-      }, yLinks.doc.clientID);
+      }, CANVAS_HISTORY_ORIGIN);
 
       setLinksState((prev) => prev.filter((l) => !ids.includes(l.id)));
     },
@@ -1424,6 +1438,7 @@ export const useProjectCanvasState = (
     setContextMenu,
     contextMenu,
     isReadOnly: isPreviewMode || currentUserRole === "viewer",
+    markUndoBoundary,
   });
 
   const handleCreateBlockWrapper = useCallback(
@@ -1776,8 +1791,8 @@ export const useProjectCanvasState = (
           return;
         }
 
-        setBlocks((prev) => [...prev, ...newNodes]);
-        setLinks((prev) => [...prev, ...newLinks]);
+        setBlocks((prev) => [...prev, ...newNodes], { recordInUndo: true });
+        setLinks((prev) => [...prev, ...newLinks], { recordInUndo: true });
 
         if (!hasSeenOnboarding) {
           markOnboardingSeen();
@@ -2374,21 +2389,30 @@ export const useProjectCanvasState = (
         ["INPUT", "TEXTAREA"].includes(target.tagName) ||
         target.isContentEditable;
 
-      // Undo/Redo
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !isEditing) {
+      const shortcutKey = e.key.toLowerCase();
+      const isModifierPressed = e.ctrlKey || e.metaKey;
+      const isUndoShortcut =
+        isModifierPressed && !e.shiftKey && shortcutKey === "z";
+      const isRedoShortcut =
+        isModifierPressed &&
+        (shortcutKey === "y" || (e.shiftKey && shortcutKey === "z"));
+
+      if (isUndoShortcut && !isEditing) {
         e.preventDefault();
+        e.stopPropagation();
         undo();
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "y" && !isEditing) {
+      if (isRedoShortcut && !isEditing) {
         e.preventDefault();
+        e.stopPropagation();
         redo();
         return;
       }
 
       // Fit View
-      if ((e.ctrlKey || e.metaKey) && e.key === "0" && !isEditing) {
+      if (isModifierPressed && shortcutKey === "0" && !isEditing) {
         e.preventDefault();
         handleFitView();
         return;
@@ -2619,11 +2643,15 @@ export const useProjectCanvasState = (
       blocks,
       links,
       currentUser,
-      dict.common,
+      dict.blocks,
       graph,
       projectOwnerId,
       handleFitView,
+      redo,
       revealBlocksAtCurrentZoom,
+      setBlocks,
+      setLinks,
+      undo,
     ],
   );
 
@@ -2743,7 +2771,18 @@ export const useProjectCanvasState = (
     onBlockContextMenu: graph.onBlockContextMenu,
     onEdgeContextMenu: graph.onEdgeContextMenu,
     onPaneContextMenu: graph.onPaneContextMenu,
-    onPaneClick: () => setContextMenu(null),
+    onPaneClick: () => {
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (
+        activeElement &&
+        (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+          activeElement.isContentEditable)
+      ) {
+        activeElement.blur();
+        focusProjectCanvas();
+      }
+      setContextMenu(null);
+    },
     onBlockClick: () => setContextMenu(null),
     onLinkClick: () => setContextMenu(null),
     handleCreateBlock: handleCreateBlockWrapper,

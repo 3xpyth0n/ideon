@@ -1237,7 +1237,10 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
 
       const finalInsertionIndex = Math.max(
         0,
-        Math.min(adjustedInsertionIndex, nextColumns[targetColIndex].tasks.length),
+        Math.min(
+          adjustedInsertionIndex,
+          nextColumns[targetColIndex].tasks.length,
+        ),
       );
 
       nextColumns[targetColIndex].tasks.splice(

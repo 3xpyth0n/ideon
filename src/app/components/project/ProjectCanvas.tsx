@@ -854,6 +854,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             activeElement.isContentEditable);
 
         if (!isEditing) {
+          if (shortcutKey === "z" && !e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            undo();
+            return;
+          }
+
+          if (shortcutKey === "y" || (shortcutKey === "z" && e.shiftKey)) {
+            e.preventDefault();
+            e.stopPropagation();
+            redo();
+            return;
+          }
+
           if (shortcutKey === "p" || shortcutKey === "e") {
             const noteBlockId = getSelectedNoteBlockIdForShortcut({
               blocks,
@@ -890,7 +904,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [blocks, pendingConnection]);
+  }, [blocks, pendingConnection, redo, undo]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -1064,6 +1078,29 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     (event: React.MouseEvent | React.TouchEvent) => {
       // button 2 is right click
       if ("button" in event && event.button === 2) return;
+
+      const activeElement = document.activeElement as HTMLElement | null;
+      const focusedEditors = Array.from(
+        document.querySelectorAll(
+          ".ProseMirror, .cm-content, [contenteditable='true']",
+        ),
+      ) as HTMLElement[];
+
+      focusedEditors.forEach((element) => {
+        if (typeof element.blur === "function") {
+          element.blur();
+        }
+      });
+
+      if (
+        activeElement &&
+        (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+          activeElement.isContentEditable)
+      ) {
+        activeElement.blur();
+      }
+
+      focusProjectCanvas();
 
       originalOnPaneClick();
 
@@ -1434,6 +1471,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           isPreviewMode,
           currentUser: currentUser || undefined,
           registerNoteModeShortcutHandler,
+          onRequestUndo: undo,
+          onRequestRedo: redo,
           userRole: currentUserRole || undefined,
         },
       }));
@@ -1454,16 +1493,30 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
     const timer = setTimeout(() => {
       try {
-        // Ensure the node is present in the DOM, then place keyboard focus
-        // back on the canvas container so the block is selected.
+        const createdBlock = blocks.find((block) => block.id === id);
         const blockEl = document.querySelector(
           `[data-id="${id}"]`,
         ) as HTMLElement | null;
+
         if (blockEl) {
           try {
             blockEl.scrollIntoView({ block: "center", inline: "center" });
           } catch {
             // ignore
+          }
+        }
+
+        const isFreshNoteBlock =
+          createdBlock?.type === "text" && !(createdBlock.data?.content || "");
+
+        if (isFreshNoteBlock && blockEl) {
+          const editorEl = blockEl.querySelector(
+            ".ProseMirror, .cm-content, [contenteditable='true']",
+          ) as HTMLElement | null;
+
+          if (editorEl && typeof editorEl.focus === "function") {
+            editorEl.focus();
+            return;
           }
         }
 
@@ -2400,6 +2453,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               }
               setIsAddBlockOpen(false);
               setPendingConnection(null);
+              if (blockType !== "text") {
+                requestAnimationFrame(() => focusProjectCanvas());
+              }
             }}
           />
         </div>

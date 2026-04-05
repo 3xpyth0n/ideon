@@ -62,8 +62,12 @@ interface UseProjectCanvasGraphProps {
     blocks:
       | Node<BlockData>[]
       | ((blocks: Node<BlockData>[]) => Node<BlockData>[]),
+    options?: { recordInUndo?: boolean },
   ) => void;
-  setLinks: (links: Edge[] | ((lks: Edge[]) => Edge[])) => void;
+  setLinks: (
+    links: Edge[] | ((lks: Edge[]) => Edge[]),
+    options?: { recordInUndo?: boolean },
+  ) => void;
   deleteBlocks: (ids: string[]) => void;
   deleteLinks: (ids: string[]) => void;
   updateMyPresence: (presence: Partial<UserPresence>) => void;
@@ -82,6 +86,7 @@ interface UseProjectCanvasGraphProps {
     left: number;
   } | null;
   isReadOnly?: boolean;
+  markUndoBoundary: () => void;
 }
 
 export const useProjectCanvasGraph = ({
@@ -96,6 +101,7 @@ export const useProjectCanvasGraph = ({
   setContextMenu,
   contextMenu,
   isReadOnly = false,
+  markUndoBoundary,
 }: UseProjectCanvasGraphProps) => {
   const { dict } = useI18n();
   const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
@@ -190,6 +196,15 @@ export const useProjectCanvasGraph = ({
     [setContextMenu, setLinks, isReadOnly],
   );
 
+  const applyWithUndoBoundary = useCallback(
+    (operation: () => void) => {
+      markUndoBoundary();
+      operation();
+      markUndoBoundary();
+    },
+    [markUndoBoundary],
+  );
+
   const applyMutation = useCallback(
     ({
       blocksUpdate,
@@ -199,14 +214,20 @@ export const useProjectCanvasGraph = ({
       blocksUpdate?: (blocks: Node<BlockData>[]) => Node<BlockData>[];
       linksUpdate?: (lks: Edge[]) => Edge[];
     }) => {
-      if (blocksUpdate) {
-        setBlocks(blocksUpdate);
+      if (!blocksUpdate && !linksUpdate) {
+        return;
       }
-      if (linksUpdate) {
-        setLinks(linksUpdate);
-      }
+
+      applyWithUndoBoundary(() => {
+        if (blocksUpdate) {
+          setBlocks(blocksUpdate, { recordInUndo: true });
+        }
+        if (linksUpdate) {
+          setLinks(linksUpdate, { recordInUndo: true });
+        }
+      });
     },
-    [setBlocks, setLinks],
+    [applyWithUndoBoundary, setBlocks, setLinks],
   );
 
   useEffect(() => {
@@ -238,16 +259,25 @@ export const useProjectCanvasGraph = ({
 
       const idSet = new Set(deletableIds);
 
-      deleteBlocks(deletableIds);
+      applyWithUndoBoundary(() => {
+        deleteBlocks(deletableIds);
 
-      const linksToRemove = links
-        .filter((l) => idSet.has(l.source) || idSet.has(l.target))
-        .map((l) => l.id);
-      if (linksToRemove.length > 0) {
-        deleteLinks(linksToRemove);
-      }
+        const linksToRemove = links
+          .filter((l) => idSet.has(l.source) || idSet.has(l.target))
+          .map((l) => l.id);
+        if (linksToRemove.length > 0) {
+          deleteLinks(linksToRemove);
+        }
+      });
     },
-    [deleteBlocks, deleteLinks, blocks, links, isReadOnly],
+    [
+      deleteBlocks,
+      deleteLinks,
+      blocks,
+      links,
+      isReadOnly,
+      applyWithUndoBoundary,
+    ],
   );
 
   const onBlocksChange = useCallback(
@@ -368,12 +398,29 @@ export const useProjectCanvasGraph = ({
         .map((c) => c.id);
 
       if (toRemove.length > 0) {
-        deleteLinks(toRemove);
-      } else {
-        setLinks((lks) => applyEdgeChanges(changes, lks || []));
+        applyWithUndoBoundary(() => {
+          deleteLinks(toRemove);
+        });
+        return;
       }
+
+      const hasUndoableChanges = changes.some(
+        (change) => change.type !== "select",
+      );
+      if (!hasUndoableChanges) {
+        setLinks((lks) => applyEdgeChanges(changes, lks || []), {
+          recordInUndo: false,
+        });
+        return;
+      }
+
+      applyWithUndoBoundary(() => {
+        setLinks((lks) => applyEdgeChanges(changes, lks || []), {
+          recordInUndo: true,
+        });
+      });
     },
-    [deleteLinks, setLinks, isReadOnly],
+    [deleteLinks, isReadOnly, applyWithUndoBoundary, setLinks],
   );
 
   const onConnect = useCallback(
@@ -429,9 +476,11 @@ export const useProjectCanvasGraph = ({
         return;
       }
 
-      setLinks((lks) => addEdge(link, lks || []));
+      applyWithUndoBoundary(() => {
+        setLinks((lks) => addEdge(link, lks || []), { recordInUndo: true });
+      });
     },
-    [setLinks, blocks, links, isReadOnly, dict.blocks],
+    [setLinks, blocks, links, isReadOnly, dict.blocks, applyWithUndoBoundary],
   );
 
   const applyFolderVisibility = useCallback(
@@ -456,27 +505,38 @@ export const useProjectCanvasGraph = ({
     (folderId: string, isCollapsed: boolean) => {
       if (isReadOnly) return;
 
-      setBlocks((currentNodes) => {
-        const updatedNodes = currentNodes.map((node) => {
-          if (node.id !== folderId) {
-            return node;
-          }
+      applyWithUndoBoundary(() => {
+        setBlocks(
+          (currentNodes) => {
+            const updatedNodes = currentNodes.map((node) => {
+              if (node.id !== folderId) {
+                return node;
+              }
 
-          const metadata = parseFolderMetadata(node.data?.metadata);
+              const metadata = parseFolderMetadata(node.data?.metadata);
 
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              metadata: JSON.stringify({ ...metadata, isCollapsed }),
-            },
-          };
-        });
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  metadata: JSON.stringify({ ...metadata, isCollapsed }),
+                },
+              };
+            });
 
-        return applyFolderVisibility(updatedNodes, links);
+            return applyFolderVisibility(updatedNodes, links);
+          },
+          { recordInUndo: true },
+        );
       });
     },
-    [isReadOnly, setBlocks, applyFolderVisibility, links],
+    [
+      applyFolderVisibility,
+      isReadOnly,
+      links,
+      applyWithUndoBoundary,
+      setBlocks,
+    ],
   );
 
   const duplicateBlock = useCallback(

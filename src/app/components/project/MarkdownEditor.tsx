@@ -33,6 +33,8 @@ const KeyboardShortcuts = Extension.create({
   addOptions() {
     return {
       onLinkShortcut: () => {},
+      onUndoShortcut: (): boolean => false,
+      onRedoShortcut: (): boolean => false,
     };
   },
 
@@ -43,9 +45,27 @@ const KeyboardShortcuts = Extension.create({
       "Mod-u": () => this.editor.commands.toggleUnderline(),
       "Mod-Shift-x": () => this.editor.commands.toggleStrike(),
       "Mod-e": () => this.editor.commands.toggleCode(),
-      "Mod-z": () => this.editor.commands.undo(),
-      "Mod-y": () => this.editor.commands.redo(),
-      "Mod-Shift-z": () => this.editor.commands.redo(),
+      "Mod-z": () => {
+        const canUndo = this.editor.can().chain().focus().undo().run();
+        if (!canUndo) {
+          return this.options.onUndoShortcut();
+        }
+        return this.editor.chain().focus().undo().run();
+      },
+      "Mod-y": () => {
+        const canRedo = this.editor.can().chain().focus().redo().run();
+        if (!canRedo) {
+          return this.options.onRedoShortcut();
+        }
+        return this.editor.chain().focus().redo().run();
+      },
+      "Mod-Shift-z": () => {
+        const canRedo = this.editor.can().chain().focus().redo().run();
+        if (!canRedo) {
+          return this.options.onRedoShortcut();
+        }
+        return this.editor.chain().focus().redo().run();
+      },
       "Mod-k": () => {
         this.options.onLinkShortcut();
         return true;
@@ -144,6 +164,8 @@ interface MarkdownEditorProps {
   onBlur?: () => void;
   onEditorReady?: (editor: Editor) => void;
   onLinkShortcut?: () => void;
+  onUndoShortcut?: () => void;
+  onRedoShortcut?: () => void;
   onPreviewShortcut?: () => void;
 }
 
@@ -249,6 +271,8 @@ const MarkdownEditor = ({
   onBlur,
   onEditorReady,
   onLinkShortcut,
+  onUndoShortcut,
+  onRedoShortcut,
   onPreviewShortcut,
 }: MarkdownEditorProps) => {
   const { dict } = useI18n();
@@ -259,10 +283,20 @@ const MarkdownEditor = ({
   const lastLocalUpdateRef = useRef(0);
 
   const onLinkShortcutRef = useRef(onLinkShortcut);
+  const onUndoShortcutRef = useRef(onUndoShortcut);
+  const onRedoShortcutRef = useRef(onRedoShortcut);
 
   useEffect(() => {
     onLinkShortcutRef.current = onLinkShortcut;
   }, [onLinkShortcut]);
+
+  useEffect(() => {
+    onUndoShortcutRef.current = onUndoShortcut;
+  }, [onUndoShortcut]);
+
+  useEffect(() => {
+    onRedoShortcutRef.current = onRedoShortcut;
+  }, [onRedoShortcut]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -307,6 +341,20 @@ const MarkdownEditor = ({
             onLinkShortcutRef.current();
           }
         },
+        onUndoShortcut: () => {
+          if (isReadOnly || !onUndoShortcutRef.current) {
+            return false;
+          }
+          onUndoShortcutRef.current();
+          return true;
+        },
+        onRedoShortcut: () => {
+          if (isReadOnly || !onRedoShortcutRef.current) {
+            return false;
+          }
+          onRedoShortcutRef.current();
+          return true;
+        },
       }),
       SmartCode,
       SmartTasks,
@@ -330,6 +378,7 @@ const MarkdownEditor = ({
           }
 
           wasFocusedBeforeClickRef.current = view.hasFocus();
+          event.stopPropagation();
           return false;
         },
         click: (_view, event) => {

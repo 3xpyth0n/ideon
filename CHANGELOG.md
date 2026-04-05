@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Improved canvas undo/redo behavior to make action history more precise and more reliable during everyday editing.
 - Fixed Kanban task descriptions not rendering on cards by adding snippet display. Task description field now supports view/edit toggle with markdown rendering [#80](https://github.com/3xpyth0n/ideon/issues/80).
 
 ## [0.8.0] - 2026-04-03

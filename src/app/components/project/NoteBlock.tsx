@@ -383,6 +383,16 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const [isEditing, setIsEditing] = useState(() =>
     shouldStartNoteInEditMode(data.content, isReadOnly),
   );
+
+  const focusEditor = useCallback(() => {
+    if (!editor || isReadOnly || !isEditing) return;
+
+    requestAnimationFrame(() => {
+      if (!editor.isDestroyed) {
+        editor.commands.focus("end");
+      }
+    });
+  }, [editor, isEditing, isReadOnly]);
   const [showBubbleMenu, setShowBubbleMenu] = useState(false);
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isEditingLink, setIsEditingLink] = useState(false);
@@ -400,6 +410,14 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       setShowBubbleMenu(true);
     }
   }, [currentUser?.vimMode, isEditing, isReadOnly]);
+
+  useEffect(() => {
+    if (!shouldStartNoteInEditMode(data.content, isReadOnly)) {
+      return;
+    }
+
+    focusEditor();
+  }, [data.content, focusEditor, isReadOnly]);
 
   useEffect(() => {
     const isNonVimEdit = !currentUser?.vimMode && isEditing && !isReadOnly;
@@ -527,6 +545,11 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   const handleContentChange = useCallback(
     (newContent: string) => {
+      const currentContent = data.yText?.toString() ?? data.content ?? "";
+      if (newContent === currentContent) {
+        return;
+      }
+
       syncToYjs(newContent);
       data.onContentChange?.(
         id,
@@ -540,9 +563,12 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     },
     [
       id,
+      data.content,
       data.onContentChange,
       data.lastEditor,
       data.metadata,
+      data.reactions,
+      data.yText,
       title,
       syncToYjs,
     ],
@@ -550,6 +576,11 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   const handleVimChange = useCallback(
     (value: string) => {
+      const currentContent = data.yText?.toString() ?? data.content ?? "";
+      if (value === currentContent) {
+        return;
+      }
+
       syncToYjs(value);
       data.onContentChange?.(
         id,
@@ -563,9 +594,12 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     },
     [
       id,
+      data.content,
       data.onContentChange,
       data.lastEditor,
       data.metadata,
+      data.reactions,
+      data.yText,
       title,
       syncToYjs,
     ],
@@ -667,6 +701,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           return "handled";
         case "switchToEdit":
           setIsEditing(true);
+          focusEditor();
           return "handled";
         case "toggleInlineCode":
           editor?.chain().focus().toggleCode().run();
@@ -709,6 +744,20 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         className={`block-card block-type-note ${selected ? "selected" : ""} ${
           isReadOnly ? "read-only" : ""
         } flex flex-col p-0!`}
+        onMouseDown={(event) => {
+          if (isReadOnly || !isEditing) return;
+
+          const target = event.target as HTMLElement;
+          if (
+            target.closest(
+              "button, input, textarea, select, a, [contenteditable='true']",
+            )
+          ) {
+            return;
+          }
+
+          focusEditor();
+        }}
       >
         <div className="w-full h-full flex flex-col rounded-[inherit]">
           <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
@@ -743,6 +792,17 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             className="flex-1 min-h-0 px-4 overflow-y-auto nodrag nopan nowheel"
             onContextMenu={(e) => e.preventDefault()}
             onWheel={(e) => e.stopPropagation()}
+            onMouseDown={(event) => {
+              const target = event.target as HTMLElement;
+              if (
+                target.closest(
+                  "button, input, textarea, a, [contenteditable='true']",
+                )
+              ) {
+                return;
+              }
+              focusEditor();
+            }}
           >
             {isEditing && !isReadOnly ? (
               currentUser?.vimMode ? (
@@ -766,6 +826,14 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                   className="text-base prosemirror-full-height"
                   onEditorReady={setEditor}
                   onLinkShortcut={openLinkModal}
+                  onUndoShortcut={() => {
+                    focusProjectCanvas();
+                    data.onRequestUndo?.();
+                  }}
+                  onRedoShortcut={() => {
+                    focusProjectCanvas();
+                    data.onRequestRedo?.();
+                  }}
                   onPreviewShortcut={handleEditorPreviewShortcut}
                 />
               )
@@ -794,7 +862,10 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             {!isReadOnly && (
               <div className="zen-mode-switch">
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => {
+                    setIsEditing(true);
+                    focusEditor();
+                  }}
                   className={`zen-mode-switch-btn ${isEditing ? "active" : ""}`}
                 >
                   {dict.common.edit}

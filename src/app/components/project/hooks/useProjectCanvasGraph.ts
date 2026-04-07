@@ -37,6 +37,7 @@ import {
 } from "@components/project/utils/alignment";
 import * as Y from "yjs";
 import { parseFolderMetadata } from "@lib/metadata-parsers";
+import { safeReadYText } from "@lib/projectContentSafety";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import {
   computeHiddenNodeIds,
@@ -550,7 +551,7 @@ export const useProjectCanvasGraph = ({
       const offset = 20;
 
       const srcContent = src.data?.yText
-        ? (src.data.yText as Y.Text).toString()
+        ? safeReadYText(src.data.yText as Y.Text, src.data?.content as string)
         : (src.data?.content as string) || "";
 
       const newData = {

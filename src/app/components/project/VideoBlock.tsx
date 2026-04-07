@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useEffect } from "react";
 import * as Y from "yjs";
 import { Video } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { BlockFooter } from "./BlockFooter";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import {
@@ -60,14 +61,11 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
   const syncToYjs = useCallback(
     (text: string) => {
       if (!data.yText) return;
-      if (data.yText.toString() === text) return;
+      if (safeReadYText(data.yText, data.content ?? url) === text) return;
 
-      data.yText.doc?.transact(() => {
-        data.yText?.delete(0, data.yText.length);
-        data.yText?.insert(0, text);
-      }, data.yText.doc.clientID);
+      syncYTextValue(data.yText, text);
     },
-    [data.yText],
+    [data.content, data.yText, url],
   );
 
   // Sync content from data if it changes externally
@@ -91,7 +89,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     // We don't want to overwrite local state if we're currently editing or read-only
     if (isEditing || isReadOnly) return;
 
-    const currentYText = yText.toString();
+    const currentYText = safeReadYText(yText, data.content ?? url);
     if (url !== currentYText) {
       setUrl(currentYText);
     }
@@ -99,7 +97,7 @@ const VideoBlock = memo(({ id, data, selected }: VideoBlockProps) => {
     const observer = (event: Y.YTextEvent) => {
       if (event.transaction.local) return;
       if (isEditing) return;
-      setUrl(yText.toString());
+      setUrl(safeReadYText(yText, data.content ?? url));
     };
 
     yText.observe(observer);

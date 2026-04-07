@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { clientLogger } from "../../../lib/clientLogger";
 import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
@@ -165,15 +166,12 @@ const FileBlock = (props: CanvasBlockProps) => {
       const yText = data.yText;
       if (!yText) return;
 
-      const currentYText = yText.toString();
+      const currentYText = safeReadYText(yText, data.content ?? content);
       if (newContent === currentYText) return;
 
-      yText.doc?.transact(() => {
-        yText.delete(0, yText.length);
-        yText.insert(0, newContent);
-      }, yText.doc.clientID);
+      syncYTextValue(yText, newContent);
     },
-    [data.yText],
+    [content, data.content, data.yText],
   );
 
   const updateMetadata = useCallback(

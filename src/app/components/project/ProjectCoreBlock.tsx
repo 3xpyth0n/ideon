@@ -11,6 +11,7 @@ import {
   useStore,
 } from "@xyflow/react";
 import { useI18n } from "@providers/I18nProvider";
+import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
 import { CORE_BLOCK_WIDTH, CORE_BLOCK_HEIGHT } from "./utils/constants";
@@ -83,14 +84,11 @@ const ProjectCoreBlock = memo(
     const syncToYjs = useCallback(
       (text: string) => {
         if (!data.yText) return;
-        if (data.yText.toString() === text) return;
+        if (safeReadYText(data.yText, data.content ?? title) === text) return;
 
-        data.yText.doc?.transact(() => {
-          data.yText?.delete(0, data.yText.length);
-          data.yText?.insert(0, text);
-        }, data.yText.doc.clientID);
+        syncYTextValue(data.yText, text);
       },
-      [data.yText],
+      [data.content, data.yText, title],
     );
 
     const handleTitleChange = useCallback(

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { Node, Edge, useReactFlow } from "@xyflow/react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
+import { clampBlockContent, safeReadYText } from "@lib/projectContentSafety";
 import { uniqueById } from "@lib/utils";
 import * as Y from "yjs";
 import { v4 as uuidv4 } from "uuid";
@@ -359,7 +360,7 @@ const resolveBlockContent = (
 ): string => {
   const fallbackContent = typeof fallback === "string" ? fallback : "";
   if (!yText) return fallbackContent;
-  const live = yText.toString();
+  const live = safeReadYText(yText, fallbackContent);
   return live.length > 0 ? live : fallbackContent;
 };
 
@@ -825,7 +826,7 @@ export const useProjectCanvasState = (
         data: {
           ...(rn.data as unknown as Record<string, unknown>),
           yText,
-          content: yText ? yText.toString() : initialContent || "",
+          content: resolveBlockContent(yText, initialContent),
         },
       } as Node<BlockData>;
     });
@@ -908,7 +909,9 @@ export const useProjectCanvasState = (
 
               if (!yContents.has(block.id)) {
                 const yText = new Y.Text();
-                const initialContent = (block.data?.content as string) || "";
+                const initialContent = clampBlockContent(
+                  (block.data?.content as string) || "",
+                );
                 if (initialContent) {
                   yText.insert(0, initialContent);
                 }
@@ -937,7 +940,7 @@ export const useProjectCanvasState = (
                 const newContent = (block.data?.content as string) || "";
                 if (
                   currentYText &&
-                  currentYText.toString() === "" &&
+                  safeReadYText(currentYText) === "" &&
                   newContent !== ""
                 ) {
                   currentYText.delete(0, currentYText.length);
@@ -2737,7 +2740,7 @@ export const useProjectCanvasState = (
             ...b,
             data: {
               ...b.data,
-              content: yText ? yText.toString() : b.data.content || "",
+              content: safeReadYText(yText, b.data.content || ""),
             },
           } as Node<BlockData>;
         });

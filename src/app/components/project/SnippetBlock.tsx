@@ -31,6 +31,7 @@ import "prismjs/components/prism-json";
 import "prismjs/themes/prism-tomorrow.css"; // Dark theme
 
 import { BlockData } from "./CanvasBlock";
+import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { Select, SelectOption } from "@components/ui/Select";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
@@ -166,14 +167,11 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const syncToYjs = useCallback(
     (text: string) => {
       if (!data.yText) return;
-      if (data.yText.toString() === text) return;
+      if (safeReadYText(data.yText, data.content ?? code) === text) return;
 
-      data.yText.doc?.transact(() => {
-        data.yText?.delete(0, data.yText.length);
-        data.yText?.insert(0, text);
-      }, data.yText.doc.clientID);
+      syncYTextValue(data.yText, text);
     },
-    [data.yText],
+    [code, data.content, data.yText],
   );
 
   // Sync content
@@ -195,14 +193,14 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
     if (!yText) return;
     if (isReadOnly) return;
 
-    const currentYText = yText.toString();
+    const currentYText = safeReadYText(yText, data.content ?? code);
     if (code !== currentYText) {
       setCode(currentYText);
     }
 
     const observer = (event: Y.YTextEvent) => {
       if (event.transaction.local) return;
-      setCode(yText.toString());
+      setCode(safeReadYText(yText, data.content ?? code));
     };
 
     yText.observe(observer);

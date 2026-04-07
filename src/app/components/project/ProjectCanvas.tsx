@@ -47,6 +47,7 @@ import { toast } from "sonner";
 import { clientLogger } from "../../../lib/clientLogger";
 import { getMessage } from "../../../lib/getMessage";
 import { classifyIndexedDbError } from "../../../lib/classifyIndexedDbError";
+import { estimateProjectTextLength } from "@lib/projectContentSafety";
 import {
   useState,
   useEffect,
@@ -375,12 +376,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         clientLogger.debug("yjs:init:start");
 
         try {
-          const update = Y.encodeStateAsUpdate(doc!);
-          const docSizeBytes =
-            (update && (update as Uint8Array).byteLength) || 0;
-          clientLogger.debug("yjs:doc:estimated_size_bytes", { docSizeBytes });
+          const docTextLength = estimateProjectTextLength(doc!);
+          clientLogger.debug("yjs:doc:estimated_text_length", {
+            docTextLength,
+          });
         } catch (e) {
-          clientLogger.debug("yjs:doc:size_estimate_failed", String(e));
+          clientLogger.debug("yjs:doc:text_length_estimate_failed", String(e));
         }
 
         wsProvider = new WebsocketProvider(
@@ -393,16 +394,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         );
 
         wsProvider.on("sync", (data: boolean) => {
-          let size = 0;
+          let docTextLength = 0;
           try {
-            const u = Y.encodeStateAsUpdate(doc!);
-            size = (u && (u as Uint8Array).byteLength) || 0;
+            docTextLength = estimateProjectTextLength(doc!);
           } catch {
             void 0;
           }
           clientLogger.debug("yjs:sync", {
             synced: Boolean(data),
-            docSizeBytes: size,
+            docTextLength,
           });
           setIsRemoteSynced(Boolean(data));
         });

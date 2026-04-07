@@ -24,8 +24,15 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
+import {
+  MAX_BLOCK_CONTENT_LENGTH,
+  clampBlockContent,
+} from "@lib/projectContentSafety";
 
 import "./markdown-editor.css";
+
+// Caps inline code match processing to avoid expensive scans on large content; once exceeded, further inline code matches are skipped to keep the editor responsive.
+const MAX_INLINE_CODE_MATCHES = 5000;
 
 const KeyboardShortcuts = Extension.create({
   name: "keyboardShortcuts",
@@ -95,14 +102,18 @@ const SmartCode = Extension.create({
           if (!node.isTextblock) return;
 
           const text = node.textContent;
-          const startPos = $from.start();
+          if (text.length > MAX_BLOCK_CONTENT_LENGTH) return;
 
+          const startPos = $from.start();
           const regex = /(?:^|[^`])(`([^`]+)`)(?:[^`]|$)/g;
           let match;
           const matches: RegExpExecArray[] = [];
 
           while ((match = regex.exec(text)) !== null) {
             matches.push(match);
+            if (matches.length >= MAX_INLINE_CODE_MATCHES) {
+              return null;
+            }
           }
 
           for (let i = matches.length - 1; i >= 0; i--) {
@@ -401,9 +412,9 @@ const MarkdownEditor = ({
       if (isSyncingRef.current || isReadOnly) return;
       const markdown = getStableMarkdown(editor);
 
-      if (markdown.length > 1000000) {
+      if (markdown.length > MAX_BLOCK_CONTENT_LENGTH) {
         toast.error(dict.blocks.noteTooLarge);
-        onChange?.(markdown.slice(0, 1000000));
+        onChange?.(clampBlockContent(markdown, MAX_BLOCK_CONTENT_LENGTH));
         return;
       }
 

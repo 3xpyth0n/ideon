@@ -2,6 +2,12 @@ import { classifyError, Pattern } from "./classifyError";
 
 const PATTERNS: Pattern[] = [
   {
+    regex:
+      /allocation size overflow|invalid string length|err_string_too_long|rangeerror/gi,
+    reason: "allocation_size_overflow",
+    hint: "Project content exceeded the safe in-memory size and had to be repaired or trimmed.",
+  },
+  {
     regex: /timeout|abort|failed to fetch|network|econnreset/gi,
     reason: "network_error",
     hint: "Request timed out or failed due to network issues.",

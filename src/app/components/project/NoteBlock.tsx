@@ -40,6 +40,11 @@ import {
 import type { Editor } from "@tiptap/react";
 import { Node as PMNode } from "@tiptap/pm/model";
 import { useI18n } from "@providers/I18nProvider";
+import {
+  clampBlockContent,
+  safeReadYText,
+  syncYTextValue,
+} from "@lib/projectContentSafety";
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
 import { BlockFooter } from "./BlockFooter";
@@ -480,11 +485,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     (text: string) => {
       if (!data.yText) return;
 
-      if (text.length > 1000000) {
-        text = text.slice(0, 1000000) + "\n\n[Truncated for performance]";
-      }
-
-      if (lastSyncedTextRef.current === text) return;
+      const nextText = clampBlockContent(text);
+      if (lastSyncedTextRef.current === nextText) return;
 
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
@@ -494,20 +496,17 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         syncTimeoutRef.current = null;
         if (!data.yText) return;
 
-        const currentText = data.yText.toString();
-        if (currentText === text) {
-          lastSyncedTextRef.current = text;
+        const currentText = safeReadYText(data.yText, data.content ?? "");
+        if (currentText === nextText) {
+          lastSyncedTextRef.current = nextText;
           return;
         }
 
-        data.yText.doc?.transact(() => {
-          data.yText?.delete(0, data.yText.length);
-          data.yText?.insert(0, text);
-        });
-        lastSyncedTextRef.current = text;
-      }, 500); // 500ms debounce
+        syncYTextValue(data.yText, nextText);
+        lastSyncedTextRef.current = nextText;
+      }, 500);
     },
-    [data.yText],
+    [data.content, data.yText],
   );
 
   useEffect(() => {
@@ -545,15 +544,16 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   const handleContentChange = useCallback(
     (newContent: string) => {
-      const currentContent = data.yText?.toString() ?? data.content ?? "";
-      if (newContent === currentContent) {
+      const safeContent = clampBlockContent(newContent);
+      const currentContent = safeReadYText(data.yText, data.content ?? "");
+      if (safeContent === currentContent) {
         return;
       }
 
-      syncToYjs(newContent);
+      syncToYjs(safeContent);
       data.onContentChange?.(
         id,
-        newContent,
+        safeContent,
         new Date().toISOString(),
         data.lastEditor,
         data.metadata ? JSON.stringify(data.metadata) : undefined,
@@ -576,15 +576,16 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   const handleVimChange = useCallback(
     (value: string) => {
-      const currentContent = data.yText?.toString() ?? data.content ?? "";
-      if (value === currentContent) {
+      const safeContent = clampBlockContent(value);
+      const currentContent = safeReadYText(data.yText, data.content ?? "");
+      if (safeContent === currentContent) {
         return;
       }
 
-      syncToYjs(value);
+      syncToYjs(safeContent);
       data.onContentChange?.(
         id,
-        value,
+        safeContent,
         new Date().toISOString(),
         data.lastEditor,
         data.metadata ? JSON.stringify(data.metadata) : undefined,

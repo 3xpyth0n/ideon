@@ -24,6 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
+import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { DEFAULT_BLOCK_WIDTH } from "./utils/constants";
 import * as Y from "yjs";
@@ -312,15 +313,12 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
       const yText = data.yText;
       if (!yText) return;
 
-      const currentYText = yText.toString();
+      const currentYText = safeReadYText(yText, data.content ?? content);
       if (newContent === currentYText) return;
 
-      yText.doc?.transact(() => {
-        yText.delete(0, yText.length);
-        yText.insert(0, newContent);
-      }, yText.doc.clientID);
+      syncYTextValue(yText, newContent);
     },
-    [data.yText],
+    [content, data.content, data.yText],
   );
 
   const updateMetadata = useCallback(
@@ -626,7 +624,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
     if (isEditingLink) return;
 
-    const currentYText = yText.toString();
+    const currentYText = safeReadYText(yText, data.content ?? content);
     if (content !== currentYText) {
       setContent(currentYText);
     }
@@ -634,7 +632,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
     const observer = (event: Y.YTextEvent) => {
       if (event.transaction.local) return;
       if (isEditingLink) return;
-      setContent(yText.toString());
+      setContent(safeReadYText(yText, data.content ?? content));
     };
 
     yText.observe(observer);

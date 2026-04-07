@@ -141,7 +141,7 @@ export function FolderAccessModal({
           />
         </div>
 
-        <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
           {loadingSearch ? (
             <div className="py-4 flex items-center justify-center opacity-20">
               <Loader2 className="animate-spin" size={20} />
@@ -150,7 +150,7 @@ export function FolderAccessModal({
             searchResults.map((user) => (
               <div
                 key={user.id}
-                className="user-card flex items-center justify-between p-2 border border-white/5 bg-white/[0.02]"
+                className="user-card flex items-center justify-between p-2 border border-white/5 bg-white/2"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-white/5 flex items-center justify-center overflow-hidden">
@@ -196,11 +196,11 @@ export function FolderAccessModal({
       <div>
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4 flex items-center gap-2">
           <span>{dict.project.currentCollaborators || "Collaborators"}</span>
-          <span className="h-[1px] flex-1 bg-white/5"></span>
+          <span className="h-px flex-1 bg-white/5"></span>
           <span>{collaborators.length}</span>
         </h3>
 
-        <div className="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
           {loadingCollaborators ? (
             <div className="py-12 flex items-center justify-center opacity-20">
               <Loader2 className="animate-spin" size={24} />

@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import * as Y from "yjs";
 import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
+import { sanitizeProjectDocument } from "./app/lib/projectContentSafety";
 import { initDb, getDb, getPool } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
 import {
@@ -359,69 +360,65 @@ setPersistence({
   bindState: async (docName: string, ydoc: Doc) => {
     const persistedYdoc = await ldb.getYDoc(docName);
 
-    // Prevent project poisoning by clearing massive text content
-    // on the server before syncing to clients. This fixes sync crashes (ERR_STRING_TOO_LONG).
     if (docName.startsWith("project-")) {
       try {
-        const contents = persistedYdoc.getMap("contents");
-        let hasChanges = false;
-
-        contents.forEach((v, k) => {
-          if (v instanceof Y.Text && v.length > 5 * 1024 * 1024) {
-            logger.warn(
-              { docName, key: k, length: v.length },
-              "[YJS] Truncating massive note content on server",
-            );
-            v.delete(1 * 1024 * 1024, v.length - 1 * 1024 * 1024);
-            v.insert(
-              v.length,
-              "\n\n[... Truncated by server due to excessive size ...]",
-            );
-            hasChanges = true;
-          }
-        });
-
-        const blocks = persistedYdoc.getMap("blocks");
-        blocks.forEach((v, k) => {
-          if (v && typeof v === "object") {
-            const data = (v as { data?: { content?: unknown } }).data;
-            if (
-              data &&
-              data.content &&
-              typeof data.content === "string" &&
-              data.content.length > 5 * 1024 * 1024
-            ) {
-              logger.warn(
-                { docName, key: k, length: data.content.length },
-                "[YJS] Truncating massive block data.content on server",
-              );
-              data.content =
-                data.content.slice(0, 1 * 1024 * 1024) + "\n\n[Truncated]";
-              hasChanges = true;
-            }
-          }
-        });
-
-        if (hasChanges) {
+        if (sanitizeProjectDocument(persistedYdoc)) {
+          logger.warn(
+            { docName },
+            "[YJS] Repaired oversized project content before client sync",
+          );
           await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(persistedYdoc));
         }
       } catch (e) {
         logger.error(
           { err: e, docName },
-          "[YJS] Failed to apply emergency cleanup",
+          "[YJS] Failed to repair persisted project content",
         );
       }
     }
 
     const newUpdates = Y.encodeStateAsUpdate(ydoc);
-    ldb.storeUpdate(docName, newUpdates);
+    await ldb.storeUpdate(docName, newUpdates);
     Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYdoc));
+
+    if (docName.startsWith("project-")) {
+      try {
+        if (sanitizeProjectDocument(ydoc)) {
+          logger.warn(
+            { docName },
+            "[YJS] Repaired oversized in-memory project content after bind",
+          );
+          await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
+        }
+      } catch (e) {
+        logger.error(
+          { err: e, docName },
+          "[YJS] Failed to repair in-memory project content after bind",
+        );
+      }
+    }
 
     ydoc.on("update", (update: Uint8Array) => {
       ldb.storeUpdate(docName, update);
     });
   },
   writeState: async (docName: string, ydoc: Doc) => {
+    if (docName.startsWith("project-")) {
+      try {
+        if (sanitizeProjectDocument(ydoc)) {
+          logger.warn(
+            { docName },
+            "[YJS] Repaired oversized project content before persistence",
+          );
+        }
+      } catch (e) {
+        logger.error(
+          { err: e, docName },
+          "[YJS] Failed to repair project content before persistence",
+        );
+      }
+    }
+
     await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
   },
 });

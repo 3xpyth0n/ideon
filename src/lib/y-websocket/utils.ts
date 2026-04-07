@@ -6,6 +6,7 @@ import * as decoding from "lib0/decoding";
 import * as map from "lib0/map";
 import debounce from "lodash.debounce";
 import { callbackHandler, isCallbackSet } from "./callback";
+import { MAX_BLOCK_CONTENT_LENGTH } from "../../app/lib/projectContentSafety";
 import { IncomingMessage } from "http";
 import { WebSocket } from "ws";
 import { LeveldbPersistence } from "y-leveldb";
@@ -20,6 +21,8 @@ const CALLBACK_DEBOUNCE_MAXWAIT = process.env.CALLBACK_DEBOUNCE_MAXWAIT
 
 const wsReadyStateConnecting = 0;
 const wsReadyStateOpen = 1;
+// Use a conservative 2x upper bound relative to block content size.
+const MAX_WS_MESSAGE_BYTES = 2 * MAX_BLOCK_CONTENT_LENGTH;
 
 // disable gc when using snapshots!
 const gcEnabled = process.env.GC !== "false" && process.env.GC !== "0";
@@ -159,6 +162,22 @@ const messageListener = (
   message: Uint8Array,
 ) => {
   try {
+    if (
+      doc.name.startsWith("project-") &&
+      message.byteLength > MAX_WS_MESSAGE_BYTES
+    ) {
+      logger.warn(
+        { doc: doc.name, messageBytes: message.byteLength },
+        "[YJS] Rejecting oversized sync message",
+      );
+      try {
+        conn.close(1009, "Sync message too large");
+      } catch {
+        closeConn(doc, conn);
+      }
+      return;
+    }
+
     const encoder = encoding.createEncoder();
     const decoder = decoding.createDecoder(message);
     const messageType = decoding.readVarUint(decoder);
@@ -241,6 +260,14 @@ const closeConn = (doc: WSSharedDoc, conn: WebSocket) => {
 };
 
 const send = (doc: WSSharedDoc, conn: WebSocket, m: Uint8Array) => {
+  if (doc.name.startsWith("project-") && m.byteLength > MAX_WS_MESSAGE_BYTES) {
+    logger.warn(
+      { doc: doc.name, messageBytes: m.byteLength },
+      "[YJS] Skipping oversized sync payload",
+    );
+    return;
+  }
+
   if (
     conn.readyState !== wsReadyStateConnecting &&
     conn.readyState !== wsReadyStateOpen

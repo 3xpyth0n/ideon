@@ -56,19 +56,55 @@ export function syncYTextValue(
     return nextValue;
   }
 
-  if (yText.length <= maxLength) {
-    try {
-      if (yText.toString() === nextValue) {
-        return nextValue;
-      }
-    } catch (error) {
-      console.warn(error);
+  let current: string;
+  try {
+    current = yText.toString();
+  } catch (error) {
+    console.warn(error);
+    const apply = () => {
+      yText.delete(0, yText.length);
+      yText.insert(0, nextValue);
+    };
+    if (yText.doc) {
+      yText.doc.transact(apply, yText.doc.clientID);
+    } else {
+      apply();
     }
+    return nextValue;
   }
 
+  if (current === nextValue) {
+    return nextValue;
+  }
+
+  // Compute minimal changed range to avoid creating tombstones for unchanged characters
+  let start = 0;
+  const minLen = Math.min(current.length, nextValue.length);
+  while (start < minLen && current[start] === nextValue[start]) {
+    start++;
+  }
+
+  let endCurrent = current.length;
+  let endNext = nextValue.length;
+  while (
+    endCurrent > start &&
+    endNext > start &&
+    current[endCurrent - 1] === nextValue[endNext - 1]
+  ) {
+    endCurrent--;
+    endNext--;
+  }
+
+  const deleteCount = endCurrent - start;
+  const insertText = nextValue.slice(start, endNext);
+
   const apply = () => {
-    yText.delete(0, yText.length);
-    yText.insert(0, nextValue);
+    if (deleteCount > 0) {
+      yText.delete(start, deleteCount);
+    }
+    if (insertText.length > 0) {
+      yText.insert(start, insertText);
+    }
   };
 
   if (yText.doc) {

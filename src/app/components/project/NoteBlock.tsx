@@ -487,6 +487,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
       const nextText = clampBlockContent(text);
       if (lastSyncedTextRef.current === nextText) return;
+      lastSyncedTextRef.current = nextText;
 
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
@@ -498,12 +499,10 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
         const currentText = safeReadYText(data.yText, data.content ?? "");
         if (currentText === nextText) {
-          lastSyncedTextRef.current = nextText;
           return;
         }
 
         syncYTextValue(data.yText, nextText);
-        lastSyncedTextRef.current = nextText;
       }, 500);
     },
     [data.content, data.yText],
@@ -545,8 +544,15 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const handleContentChange = useCallback(
     (newContent: string) => {
       const safeContent = clampBlockContent(newContent);
-      const currentContent = safeReadYText(data.yText, data.content ?? "");
-      if (safeContent === currentContent) {
+      const currentBlockContent = data.content ?? "";
+
+      if (safeContent === currentBlockContent) {
+        return;
+      }
+
+      const currentYContent = safeReadYText(data.yText, currentBlockContent);
+      if (safeContent === currentYContent) {
+        lastSyncedTextRef.current = safeContent;
         return;
       }
 
@@ -577,8 +583,15 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const handleVimChange = useCallback(
     (value: string) => {
       const safeContent = clampBlockContent(value);
-      const currentContent = safeReadYText(data.yText, data.content ?? "");
-      if (safeContent === currentContent) {
+      const currentBlockContent = data.content ?? "";
+
+      if (safeContent === currentBlockContent) {
+        return;
+      }
+
+      const currentYContent = safeReadYText(data.yText, currentBlockContent);
+      if (safeContent === currentYContent) {
+        lastSyncedTextRef.current = safeContent;
         return;
       }
 
@@ -772,6 +785,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
               <input
                 value={title}
                 onChange={handleTitleChange}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
                 onFocus={() => setIsTitleEditing(true)}
                 onBlur={() => setIsTitleEditing(false)}
                 onKeyDown={(e) => {
@@ -794,6 +809,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             onContextMenu={(e) => e.preventDefault()}
             onWheel={(e) => e.stopPropagation()}
             onMouseDown={(event) => {
+              if (isEditing && !isReadOnly) event.stopPropagation();
               const target = event.target as HTMLElement;
               if (
                 target.closest(
@@ -803,6 +819,9 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                 return;
               }
               focusEditor();
+            }}
+            onClick={(e) => {
+              if (isEditing) e.stopPropagation();
             }}
           >
             {isEditing && !isReadOnly ? (

@@ -11,7 +11,7 @@ import { Extension } from "@tiptap/core";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Markdown } from "tiptap-markdown";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
@@ -29,6 +29,13 @@ import {
   clampBlockContent,
 } from "@lib/projectContentSafety";
 
+import {
+  getTaskItemCheckedStates,
+  normalizeMarkdownTaskList,
+  syncMarkdownTaskStates,
+  stripMarkdownTaskPlaceholder,
+  toggleReadonlyTaskItem,
+} from "./markdownTaskList";
 import "./markdown-editor.css";
 
 // Caps inline code match processing to avoid expensive scans on large content; once exceeded, further inline code matches are skipped to keep the editor responsive.
@@ -249,23 +256,31 @@ function getTableMarkdownBlocks(doc: ProseMirrorNode): string[] {
 }
 
 function getStableMarkdown(editor: Editor): string {
-  const rawMarkdown = (
-    editor.storage as unknown as MarkdownStorage
-  ).markdown.getMarkdown();
+  const rawMarkdown = stripMarkdownTaskPlaceholder(
+    (editor.storage as unknown as MarkdownStorage).markdown.getMarkdown(),
+  );
+  const taskItemCheckedStates = getTaskItemCheckedStates(editor);
+  const markdownWithSyncedTaskStates = syncMarkdownTaskStates(
+    rawMarkdown,
+    taskItemCheckedStates,
+  );
+  const normalizedTaskMarkdown = stripMarkdownTaskPlaceholder(
+    markdownWithSyncedTaskStates,
+  );
 
   const tablePlaceholderPattern = /\[\s*table\s*\]/gi;
 
-  if (!tablePlaceholderPattern.test(rawMarkdown)) {
-    return rawMarkdown;
+  if (!tablePlaceholderPattern.test(normalizedTaskMarkdown)) {
+    return normalizedTaskMarkdown;
   }
 
   const tableBlocks = getTableMarkdownBlocks(editor.state.doc);
   if (tableBlocks.length === 0) {
-    return rawMarkdown;
+    return normalizedTaskMarkdown;
   }
 
   let index = 0;
-  return rawMarkdown.replace(tablePlaceholderPattern, () => {
+  return normalizedTaskMarkdown.replace(tablePlaceholderPattern, () => {
     const tableMarkdown = tableBlocks[index];
     index += 1;
     return tableMarkdown ?? "[Table]";
@@ -292,6 +307,12 @@ const MarkdownEditor = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const wasFocusedBeforeClickRef = useRef(false);
   const lastLocalUpdateRef = useRef(0);
+  const editorRef = useRef<Editor | null>(null);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const onLinkShortcutRef = useRef(onLinkShortcut);
   const onUndoShortcutRef = useRef(onUndoShortcut);
@@ -309,9 +330,14 @@ const MarkdownEditor = ({
     onRedoShortcutRef.current = onRedoShortcut;
   }, [onRedoShortcut]);
 
+  const editorContent =
+    content === undefined
+      ? undefined
+      : normalizeMarkdownTaskList(content);
+
   const editor = useEditor({
     immediatelyRender: false,
-    content: content,
+    content: editorContent,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -329,6 +355,7 @@ const MarkdownEditor = ({
       TaskList,
       TaskItem.configure({
         nested: true,
+        onReadOnlyChecked: () => true,
       }),
       Table.configure({
         resizable: true,
@@ -430,66 +457,43 @@ const MarkdownEditor = ({
     },
   });
 
-  const toggleCheckbox = useCallback(
-    (li: HTMLElement) => {
-      if (!editor) return;
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
-      const view = editor.view;
-      const nodePos = view.posAtDOM(li, 0);
-      if (nodePos < 0) return;
+  const toggleCheckbox = (taskItemElement: HTMLElement) => {
+    if (!editorRef.current) {
+      return;
+    }
 
-      const { state } = view;
-      const node = state.doc.nodeAt(nodePos);
-      if (!node || node.type.name !== "taskItem") return;
+    lastLocalUpdateRef.current = Date.now();
+    if (toggleReadonlyTaskItem(editorRef.current, taskItemElement)) {
+      onChangeRef.current?.(getStableMarkdown(editorRef.current));
+    }
+  };
 
-      const checked = !node.attrs.checked;
-      lastLocalUpdateRef.current = Date.now();
+  const handleContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isReadOnly) {
+      return;
+    }
 
-      // Temporarily enable editing to allow the transaction to be dispatched
-      const wasEditable = editor.isEditable;
-      if (!wasEditable) {
-        editor.setEditable(true, false); // false to avoid focusing
-      }
+    const target = event.target as HTMLElement;
+    const checkbox = target.closest('input[type="checkbox"]');
+    const label = target.closest("label");
 
-      editor.view.dispatch(
-        editor.view.state.tr.setNodeMarkup(nodePos, undefined, {
-          ...node.attrs,
-          checked,
-        }),
-      );
+    if (!checkbox && !label) {
+      return;
+    }
 
-      if (!wasEditable) {
-        editor.setEditable(false, false);
-      }
+    const taskItemElement = target.closest("li") as HTMLElement | null;
+    if (!taskItemElement) {
+      return;
+    }
 
-      // Force update the parent immediately
-      const markdown = getStableMarkdown(editor);
-      onChange?.(markdown);
-    },
-    [editor, onChange],
-  );
-
-  const handleContainerClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isReadOnly || !editor) return;
-
-      const target = e.target as HTMLElement;
-      const checkbox = target.closest('input[type="checkbox"]');
-      const label = target.closest("label");
-
-      if (checkbox || (label && label.closest('li[data-type="taskItem"]'))) {
-        const li = target.closest(
-          'li[data-type="taskItem"]',
-        ) as HTMLElement | null;
-        if (li) {
-          toggleCheckbox(li);
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }
-    },
-    [isReadOnly, editor, toggleCheckbox],
-  );
+    event.preventDefault();
+    event.stopPropagation();
+    toggleCheckbox(taskItemElement);
+  };
 
   useEffect(() => {
     if (editor && onEditorReady) {
@@ -502,13 +506,11 @@ const MarkdownEditor = ({
 
   useEffect(() => {
     if (editor && content !== undefined) {
-      const processedContent = content
-        .replace(/^(\s*)(-?\s*)(\[ \]|\[\])(\s*)$/gm, "$1- [ ] ")
-        .replace(/^(\s*)(-?\s*)(\[x\])(\s*)$/gm, "$1- [x] ")
-        .replace(/^(\s*)(-?\s*)(\[ \]|\[\])(\s.+)$/gm, "$1- [ ]$4")
-        .replace(/^(\s*)(-?\s*)(\[x\])(\s.+)$/gm, "$1- [x]$4");
+      const processedContent = normalizeMarkdownTaskList(content);
+      const currentMarkdown = normalizeMarkdownTaskList(
+        getStableMarkdown(editor),
+      );
 
-      const currentMarkdown = getStableMarkdown(editor);
       if (processedContent !== currentMarkdown) {
         const isRecentLocalUpdate =
           Date.now() - lastLocalUpdateRef.current < 500;

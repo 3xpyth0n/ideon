@@ -349,6 +349,7 @@ function handleShellConnection(
 const dev = process.env.NODE_ENV === "development";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = parseInt(process.env.PORT || process.env.APP_PORT || "3000", 10);
+const WS_MAX_PAYLOAD_BYTES = 8 * 1024 * 1024;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
@@ -367,12 +368,19 @@ setPersistence({
             { docName },
             "[YJS] Repaired oversized project content before client sync",
           );
-          await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(persistedYdoc));
         }
+        // Enable GC to remove accumulated tombstones from prior full-replace syncs,
+        // then compact LevelDB to a single clean state so sync messages stay small.
+        persistedYdoc.gc = true;
+        persistedYdoc.transact(() => {}, "compaction");
+        const compactUpdate = Y.encodeStateAsUpdate(persistedYdoc);
+        await ldb.clearDocument(docName);
+        await ldb.storeUpdate(docName, compactUpdate);
+        logger.info({ docName }, "[YJS] Compacted document on load");
       } catch (e) {
         logger.error(
           { err: e, docName },
-          "[YJS] Failed to repair persisted project content",
+          "[YJS] Failed to compact persisted project document",
         );
       }
     }
@@ -519,7 +527,7 @@ initDb()
 
     const wss = new WebSocketServer({
       noServer: true,
-      maxPayload: 1024 * 1024 * 1024, // 1GB
+      maxPayload: WS_MAX_PAYLOAD_BYTES,
       perMessageDeflate: {
         zlibDeflateOptions: {
           chunkSize: 1024,
@@ -538,7 +546,7 @@ initDb()
     });
     const shellWss = new WebSocketServer({
       noServer: true,
-      maxPayload: 1024 * 1024 * 1024, // 1GB
+      maxPayload: WS_MAX_PAYLOAD_BYTES,
       perMessageDeflate: false,
     });
     const nextUpgradeHandler = app.getUpgradeHandler();

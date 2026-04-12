@@ -375,6 +375,19 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       try {
         clientLogger.debug("yjs:init:start");
 
+        const purgeProjectIndexedDb = async () => {
+          if (typeof indexedDB === "undefined") {
+            return;
+          }
+
+          await new Promise<void>((resolve) => {
+            const req = indexedDB.deleteDatabase(`project-${initialProjectId}`);
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            req.onblocked = () => resolve();
+          });
+        };
+
         try {
           const docTextLength = estimateProjectTextLength(doc!);
           clientLogger.debug("yjs:doc:estimated_text_length", {
@@ -416,6 +429,38 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           clientLogger.warn("yjs:connection-close", {
             code: event?.code ?? null,
           });
+
+          if (event?.code === 1009) {
+            const recoveryKey = `ideon:yjs:recovery:1009:${initialProjectId}`;
+            const hasRecovered =
+              typeof sessionStorage !== "undefined" &&
+              sessionStorage.getItem(recoveryKey) === "1";
+
+            if (hasRecovered) {
+              return;
+            }
+
+            try {
+              sessionStorage.setItem(recoveryKey, "1");
+            } catch {
+              void 0;
+            }
+
+            void (async () => {
+              await purgeProjectIndexedDb();
+              try {
+                localStorage.removeItem(
+                  `ideon:yjs:lastServerState:${initialProjectId}`,
+                );
+              } catch {
+                void 0;
+              }
+              window.location.reload();
+            })();
+
+            return;
+          }
+
           if (event?.code === 4003) {
             wsProvider?.disconnect();
             toast.error(
@@ -502,14 +547,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               }
 
               if (shouldResetIndexedDb) {
-                await new Promise<void>((resolve) => {
-                  const req = indexedDB.deleteDatabase(
-                    `project-${initialProjectId}`,
-                  );
-                  req.onsuccess = () => resolve();
-                  req.onerror = () => resolve();
-                  req.onblocked = () => resolve();
-                });
+                await purgeProjectIndexedDb();
                 clientLogger.warn("indexeddb:purged-on-state-mismatch", {
                   projectId: initialProjectId,
                 });

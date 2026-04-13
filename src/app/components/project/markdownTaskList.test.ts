@@ -127,7 +127,10 @@ describe("markdownTaskList", () => {
     expect(editor.state.doc.firstChild?.child(2).attrs.checked).toBe(false);
 
     const persistedMarkdown = stripMarkdownTaskPlaceholder(
-      syncMarkdownTaskStates(getMarkdown(editor), getTaskItemCheckedStates(editor)),
+      syncMarkdownTaskStates(
+        getMarkdown(editor),
+        getTaskItemCheckedStates(editor),
+      ),
     );
 
     expect(persistedMarkdown).toBe("- [ ] first\n- [x] second\n- [ ] third");

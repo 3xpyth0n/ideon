@@ -1,25 +1,24 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@components/ui/Modal";
 import AssigneeCheckboxList from "./AssigneeCheckboxList";
 import MarkdownEditor from "./MarkdownEditor";
-import type { Field } from "./KanbanSettingsModal";
+import TaskDependencyPanel from "./TaskDependencyPanel";
+import TaskStatusBadge from "./TaskStatusBadge";
+import {
+  formatTaskNumber,
+  getTaskDependencyState,
+  type Field,
+  type KanbanTaskRecord,
+  type LinkedTaskReference,
+  type Task,
+} from "./kanbanModel";
 
 type UserProfile = {
   id: string;
   username?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
-};
-
-type Task = {
-  id: string;
-  text: string;
-  checked: boolean;
-  assigneeIds?: string[];
-  assigneeId?: string;
-  assigneeName?: string;
-  fields?: Record<string, string | undefined>;
 };
 
 interface Props {
@@ -30,6 +29,10 @@ interface Props {
   fields: Field[];
   tr: (path: string, fallback: string) => string;
   onSave: (task: Task) => void;
+  onNavigateToTask?: (target: { blockId: string; taskId: string }) => void;
+  currentBlockId: string;
+  taskRecords: KanbanTaskRecord[];
+  backlinks: KanbanTaskRecord[];
 }
 
 export default function TaskModal({
@@ -40,6 +43,10 @@ export default function TaskModal({
   fields,
   tr,
   onSave,
+  onNavigateToTask,
+  currentBlockId,
+  taskRecords,
+  backlinks,
 }: Props) {
   const [localTitle, setLocalTitle] = useState("");
   const [localDesc, setLocalDesc] = useState("");
@@ -48,6 +55,9 @@ export default function TaskModal({
   const [localFields, setLocalFields] = useState<
     Record<string, string | undefined>
   >({});
+  const [localLinkedTasks, setLocalLinkedTasks] = useState<
+    LinkedTaskReference[]
+  >([]);
   const initializedTaskIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -72,9 +82,34 @@ export default function TaskModal({
           : [],
     );
     setLocalFields(task.fields ? { ...task.fields } : {});
+    setLocalLinkedTasks(task.linkedTasks ? [...task.linkedTasks] : []);
   }, [isOpen, task]);
 
-  if (!task) return null;
+  const draftTask = useMemo(
+    () =>
+      task
+        ? {
+            ...task,
+            linkedTasks: localLinkedTasks,
+          }
+        : null,
+    [localLinkedTasks, task],
+  );
+
+  const dependencyState = useMemo(
+    () =>
+      draftTask
+        ? getTaskDependencyState(
+            draftTask,
+            taskRecords,
+            backlinks,
+            currentBlockId,
+          )
+        : null,
+    [backlinks, draftTask, taskRecords],
+  );
+
+  if (!task || !draftTask || !dependencyState) return null;
 
   const handleSave = () => {
     const merged: Task = {
@@ -82,6 +117,7 @@ export default function TaskModal({
       text: [localTitle, localDesc].filter((s) => s !== "").join("\n"),
       assigneeIds: localAssignees,
       fields: localFields,
+      linkedTasks: localLinkedTasks.length > 0 ? localLinkedTasks : undefined,
     };
     onSave(merged);
     onClose();
@@ -92,150 +128,247 @@ export default function TaskModal({
       isOpen={isOpen}
       onClose={onClose}
       title={tr("kanban.editTaskTitle", "Edit task")}
+      className="task-modal-dashboard-modal"
       showCloseButton
     >
-      <div className="flex gap-4 text-left">
-        <div className="w-64">
-          <div className="text-2xs opacity-60 mb-2">
-            {tr("kanban.assignees", "Assignees")}
+      <div className="task-modal-dashboard">
+        <div className="task-modal-hero">
+          <div className="task-modal-hero-copy">
+            <div className="task-modal-panel-title">
+              {typeof task.taskNumber === "number"
+                ? `${tr("kanban.taskNumber", "Task number")} ${formatTaskNumber(
+                    task.taskNumber,
+                  )}`
+                : tr("kanban.workflowStatus", "Workflow")}
+            </div>
+            <div className="task-modal-hero-head">
+              <div className="task-modal-hero-title-wrap">
+                <div className="task-modal-hero-title">
+                  {localTitle || tr("kanban.addTask", "Task")}
+                </div>
+                <TaskStatusBadge status={dependencyState.status} tr={tr} />
+              </div>
+            </div>
           </div>
-          <AssigneeCheckboxList
-            collaborators={collaborators}
-            value={localAssignees}
-            onChange={setLocalAssignees}
-          />
 
-          <div className="mt-4 text-2xs opacity-60 mb-2">
-            {tr("kanban.fields", "Fields")}
+          <div className="task-modal-stats-grid">
+            <div className="task-modal-stat-card">
+              <span className="task-modal-stat-value">
+                {dependencyState.activeBlockers.length}
+              </span>
+              <span className="task-modal-stat-label">
+                {tr("kanban.activeBlockers", "Active blockers")}
+              </span>
+            </div>
+            <div className="task-modal-stat-card">
+              <span className="task-modal-stat-value">
+                {localLinkedTasks.length}
+              </span>
+              <span className="task-modal-stat-label">
+                {tr("kanban.linkedTasks", "Linked tasks")}
+              </span>
+            </div>
+            <div className="task-modal-stat-card">
+              <span className="task-modal-stat-value">{backlinks.length}</span>
+              <span className="task-modal-stat-label">
+                {tr("kanban.referencedBy", "Referenced by")}
+              </span>
+            </div>
           </div>
-          <div className="space-y-2">
-            {fields.map((f) => (
-              <div key={f.id} className="flex items-center gap-2">
-                <div className="flex-1 text-2xs">{f.name}</div>
-                <div className="flex-1">
-                  {f.type === "number" ? (
-                    <input
-                      type="number"
-                      value={localFields[f.id] ?? ""}
-                      onChange={(e) =>
-                        setLocalFields((s) => ({
-                          ...s,
-                          [f.id]: e.target.value,
-                        }))
-                      }
-                      className="w-full px-2 py-1 rounded bg-transparent border border-white/6 text-2xs"
-                    />
-                  ) : f.type === "select" ? (
-                    <select
-                      value={localFields[f.id] ?? ""}
-                      onChange={(e) =>
-                        setLocalFields((s) => ({
-                          ...s,
-                          [f.id]: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded px-2 py-1 bg-white/5 text-2xs"
-                    >
-                      <option value="">—</option>
-                      {(f.options || []).map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : f.type === "date" ? (
-                    <input
-                      type="date"
-                      value={localFields[f.id] ?? ""}
-                      onChange={(e) =>
-                        setLocalFields((s) => ({
-                          ...s,
-                          [f.id]: e.target.value,
-                        }))
-                      }
-                      className="px-2 py-1 rounded bg-transparent border border-white/6 text-2xs"
+        </div>
+
+        <div className="task-modal-layout">
+          <div className="task-modal-main">
+            <section className="task-modal-panel">
+              <div className="task-modal-panel-head">
+                <div>
+                  <div className="task-modal-panel-title">
+                    {tr("kanban.taskDetails", "Task details")}
+                  </div>
+                </div>
+              </div>
+
+              <div className="task-modal-field">
+                <label className="task-modal-label">
+                  {tr("blocks.title", "Title")}
+                </label>
+                <input
+                  value={localTitle}
+                  onChange={(e) => setLocalTitle(e.target.value)}
+                  className="task-modal-input task-modal-title-input"
+                  placeholder={tr("blocks.title", "Title")}
+                />
+              </div>
+
+              <div className="task-modal-field">
+                <div className="task-modal-field-head">
+                  <label className="task-modal-label">
+                    {tr("kanban.descriptionLabel", "Description")}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setDescEditing((value) => !value)}
+                    className="task-modal-secondary-btn"
+                  >
+                    {descEditing
+                      ? tr("common.done", "Done")
+                      : tr("common.edit", "Edit")}
+                  </button>
+                </div>
+                <div
+                  className={`task-modal-editor ${
+                    descEditing ? "is-editing" : ""
+                  }`}
+                >
+                  {!descEditing ? (
+                    <MarkdownEditor
+                      content={localDesc}
+                      isReadOnly
+                      placeholder={tr(
+                        "kanban.descriptionPlaceholder",
+                        "Description (supports markdown)",
+                      )}
                     />
                   ) : (
-                    <input
-                      className="w-full px-2 py-1 rounded bg-transparent border border-white/6 text-2xs"
-                      value={localFields[f.id] ?? ""}
-                      onChange={(e) =>
-                        setLocalFields((s) => ({
-                          ...s,
-                          [f.id]: e.target.value,
-                        }))
-                      }
+                    <textarea
+                      value={localDesc}
+                      onChange={(e) => setLocalDesc(e.target.value)}
+                      onBlur={() => setDescEditing(false)}
+                      placeholder={tr(
+                        "kanban.descriptionPlaceholder",
+                        "Description (supports markdown)",
+                      )}
+                      className="task-modal-textarea"
                     />
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </section>
 
-        <div className="flex-1">
-          <div className="mb-2">
-            <input
-              value={localTitle}
-              onChange={(e) => setLocalTitle(e.target.value)}
-              className="w-full px-3 py-2 rounded bg-transparent border border-white/6 text-sm font-semibold"
-              placeholder={tr("blocks.title", "Title")}
+            <TaskDependencyPanel
+              task={draftTask}
+              currentBlockId={currentBlockId}
+              taskRecords={taskRecords}
+              backlinks={backlinks}
+              value={localLinkedTasks}
+              onChange={setLocalLinkedTasks}
+              onNavigateToTask={onNavigateToTask}
+              tr={tr}
             />
           </div>
-          <div>
-            <div
-              className={`relative w-full min-h-50 rounded p-3 text-sm ${
-                descEditing
-                  ? "bg-transparent border border-white/6"
-                  : "bg-transparent"
-              }`}
-            >
-              {!descEditing ? (
-                <div className="pr-16 min-h-44">
-                  <MarkdownEditor
-                    content={localDesc}
-                    isReadOnly
-                    placeholder={tr(
-                      "kanban.descriptionPlaceholder",
-                      "Description (supports markdown)",
-                    )}
-                  />
+
+          <aside className="task-modal-sidebar">
+            <section className="task-modal-panel">
+              <div className="task-modal-panel-head">
+                <div>
+                  <div className="task-modal-panel-title">
+                    {tr("kanban.assignees", "Assignees")}
+                  </div>
                 </div>
-              ) : (
-                <div className="pr-16 min-h-44">
-                  <textarea
-                    value={localDesc}
-                    onChange={(e) => setLocalDesc(e.target.value)}
-                    onBlur={() => setDescEditing(false)}
-                    placeholder={tr(
-                      "kanban.descriptionPlaceholder",
-                      "Description (supports markdown)",
-                    )}
-                    className="w-full min-h-44 bg-transparent text-sm outline-none resize-y"
-                  />
+              </div>
+              <AssigneeCheckboxList
+                collaborators={collaborators}
+                value={localAssignees}
+                onChange={setLocalAssignees}
+              />
+            </section>
+
+            <section className="task-modal-panel">
+              <div className="task-modal-panel-head">
+                <div>
+                  <div className="task-modal-panel-title">
+                    {tr("kanban.fields", "Fields")}
+                  </div>
                 </div>
-              )}
-              <button
-                onClick={() => setDescEditing((v) => !v)}
-                className="absolute top-3 right-3 px-2 py-1 rounded text-2xs border border-white/10 hover:bg-white/5"
-              >
-                {descEditing
-                  ? tr("common.done", "Done")
-                  : tr("common.edit", "Edit")}
-              </button>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <button onClick={onClose} className="px-3 py-1 rounded">
-              {tr("common.cancel", "Cancel")}
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-3 py-1 rounded bg-accent text-white ring-1 ring-white/10"
-            >
-              {tr("common.save", "Save")}
-            </button>
-          </div>
+              </div>
+              <div className="task-modal-field-list">
+                {fields.length > 0 ? (
+                  fields.map((f) => (
+                    <label key={f.id} className="task-modal-field-row">
+                      <span className="task-modal-field-name">{f.name}</span>
+                      {f.type === "number" ? (
+                        <input
+                          type="number"
+                          value={localFields[f.id] ?? ""}
+                          onChange={(e) =>
+                            setLocalFields((state) => ({
+                              ...state,
+                              [f.id]: e.target.value,
+                            }))
+                          }
+                          className="task-modal-input"
+                        />
+                      ) : f.type === "select" ? (
+                        <div className="task-modal-select-wrap">
+                          <select
+                            value={localFields[f.id] ?? ""}
+                            onChange={(e) =>
+                              setLocalFields((state) => ({
+                                ...state,
+                                [f.id]: e.target.value,
+                              }))
+                            }
+                            className="task-modal-select"
+                          >
+                            <option value="">—</option>
+                            {(f.options || []).map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : f.type === "date" ? (
+                        <input
+                          type="date"
+                          value={localFields[f.id] ?? ""}
+                          onChange={(e) =>
+                            setLocalFields((state) => ({
+                              ...state,
+                              [f.id]: e.target.value,
+                            }))
+                          }
+                          className="task-modal-input"
+                        />
+                      ) : (
+                        <input
+                          value={localFields[f.id] ?? ""}
+                          onChange={(e) =>
+                            setLocalFields((state) => ({
+                              ...state,
+                              [f.id]: e.target.value,
+                            }))
+                          }
+                          className="task-modal-input"
+                        />
+                      )}
+                    </label>
+                  ))
+                ) : (
+                  <div className="task-modal-empty">
+                    {tr("kanban.noFieldsConfigured", "No fields configured.")}
+                  </div>
+                )}
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <div className="task-modal-actions-row">
+          <button
+            type="button"
+            onClick={onClose}
+            className="task-modal-ghost-btn"
+          >
+            {tr("common.cancel", "Cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="task-modal-primary-btn"
+          >
+            {tr("common.save", "Save")}
+          </button>
         </div>
       </div>
     </Modal>

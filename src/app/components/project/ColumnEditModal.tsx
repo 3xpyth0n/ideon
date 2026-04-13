@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal } from "@components/ui/Modal";
 import { useI18n } from "@providers/I18nProvider";
+import type { WorkflowState } from "./kanbanModel";
 import type { ColumnDef } from "./KanbanSettingsModal";
 
 interface Props {
@@ -23,12 +24,16 @@ export default function ColumnEditModal({
   const [description, setDescription] = useState<string>(
     column?.description || "",
   );
+  const [workflowState, setWorkflowState] = useState<WorkflowState | "">(
+    column?.workflowState || "",
+  );
 
   useEffect(() => {
     if (isOpen) {
       setTitle(column?.title || "");
       setColor(column?.color || "#000000");
       setDescription(column?.description || "");
+      setWorkflowState(column?.workflowState || "");
     }
   }, [isOpen, column]);
 
@@ -108,6 +113,26 @@ export default function ColumnEditModal({
           />
         </div>
 
+        <div>
+          <div className="text-2xs opacity-60 mb-1">
+            {dict.kanban.workflowState}
+          </div>
+          <select
+            value={workflowState}
+            onChange={(e) =>
+              setWorkflowState((e.target.value as WorkflowState | "") || "")
+            }
+            className="w-full px-2 py-1 rounded bg-transparent border border-white/6 text-sm"
+          >
+            <option value="">{dict.kanban.workflowStateNone}</option>
+            <option value="todo">{dict.kanban.workflowStateTodo}</option>
+            <option value="in-progress">
+              {dict.kanban.workflowStateInProgress}
+            </option>
+            <option value="done">{dict.kanban.workflowStateDone}</option>
+          </select>
+        </div>
+
         <div className="flex justify-end gap-2">
           <button
             onClick={() => {
@@ -120,7 +145,12 @@ export default function ColumnEditModal({
           <button
             onClick={() => {
               const nextTitle = title.trim() || column?.title || "";
-              onSave({ title: nextTitle, color, description });
+              onSave({
+                title: nextTitle,
+                color,
+                description,
+                workflowState: workflowState || undefined,
+              });
               onClose();
             }}
             className="px-3 py-1 rounded bg-accent text-white ring-1 ring-white/10"

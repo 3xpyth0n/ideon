@@ -7,6 +7,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.8.2] - 2026-04-XX
 
+### Added
+
+- Added task relationships across Kanban boards so you can link work between tasks anywhere in the same project [#71](https://github.com/3xpyth0n/ideon/issues/71).
+
 ### Fixed
 
 - Fixed note blocks losing focus immediately on click, requiring users to hold LMB to type [#84](https://github.com/3xpyth0n/ideon/issues/84).

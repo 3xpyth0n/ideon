@@ -9,24 +9,18 @@ import {
 } from "lucide-react";
 import CardAssigneeView from "./CardAssigneeView";
 import FloatingMenu from "./FloatingMenu";
-import type { Field, Option } from "./KanbanSettingsModal";
-
-type Task = {
-  id: string;
-  text: string;
-  checked: boolean;
-  height?: number;
-  assigneeId?: string;
-  assigneeIds?: string[];
-  assigneeName?: string;
-  fields?: Record<string, string | undefined>;
-};
-
-type Column = {
-  id: string;
-  title: string;
-  tasks: Task[];
-};
+import {
+  buildTaskLinkKey,
+  formatTaskNumber,
+  getNextTaskNumberFromRecords,
+  getTaskDependencyState,
+  type Column,
+  type Field,
+  type KanbanTaskRecord,
+  type Option,
+  type Task,
+} from "./kanbanModel";
+import TaskStatusBadge from "./TaskStatusBadge";
 
 type UserProfile = {
   id: string;
@@ -44,6 +38,7 @@ interface Props {
   column: Column;
   columns: Column[];
   save: (cols: Column[]) => void;
+  isHighlighted?: boolean;
   fields: Field[];
   collaborators: UserProfile[];
   currentUser?: UserProfile | undefined;
@@ -80,6 +75,9 @@ interface Props {
   ) => void;
   onRequestCloseMenu?: () => void;
   onRequestOpenTaskModal?: (taskId: string) => void;
+  onNavigateToTask?: (target: { blockId: string; taskId: string }) => void;
+  taskRecords?: KanbanTaskRecord[];
+  currentBlockId: string;
 }
 
 function toPlainText(markdown: string): string {
@@ -105,6 +103,7 @@ export default function KanbanCard({
   column: col,
   columns,
   save,
+  isHighlighted = false,
   fields,
   collaborators,
   isReadOnly,
@@ -120,6 +119,9 @@ export default function KanbanCard({
   onRequestOpenMenu,
   onRequestCloseMenu,
   onRequestOpenTaskModal,
+  onNavigateToTask,
+  taskRecords = [],
+  currentBlockId,
 }: Props) {
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -191,6 +193,45 @@ export default function KanbanCard({
     plainDescription.length > 100
       ? `${plainDescription.slice(0, 100).trimEnd()}...`
       : plainDescription;
+  const taskRecordMap = new Map(
+    taskRecords.map((record) => [
+      buildTaskLinkKey(record.blockId, record.taskId),
+      record,
+    ]),
+  );
+  const resolvedLinkedTasks = (t.linkedTasks ?? [])
+    .map((link) => {
+      const record = taskRecordMap.get(
+        buildTaskLinkKey(link.blockId, link.taskId),
+      );
+      return {
+        ...link,
+        taskNumber: record?.taskNumber ?? link.taskNumber,
+        title: record?.title ?? link.title,
+        blockTitle: record?.blockTitle ?? link.blockTitle,
+      };
+    })
+    .filter(
+      (link) => Boolean(link.title) || typeof link.taskNumber === "number",
+    );
+  const visibleLinkedTasks = resolvedLinkedTasks.slice(0, 2);
+  const extraLinkedTaskCount = Math.max(
+    0,
+    resolvedLinkedTasks.length - visibleLinkedTasks.length,
+  );
+  const backlinks = taskRecords.filter((record) =>
+    record.linkedTasks.some(
+      (link) =>
+        buildTaskLinkKey(link.blockId, link.taskId) ===
+        buildTaskLinkKey(currentBlockId, t.id),
+    ),
+  );
+  const dependencyState = getTaskDependencyState(
+    t,
+    taskRecords,
+    backlinks,
+    currentBlockId,
+  );
 
   const startResize = (e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -321,13 +362,16 @@ export default function KanbanCard({
   return (
     <div
       ref={cardRef}
-      className="kb-task nodrag relative"
+      className={`kb-task nodrag relative ${
+        isHighlighted ? "kb-task-highlighted" : ""
+      }`}
       style={
         typeof t.height === "number" && Number.isFinite(t.height)
           ? { height: `${Math.max(64, Math.round(t.height))}px` }
           : undefined
       }
       data-task-index={taskIndex}
+      data-task-id={t.id}
       onDragOver={(e) => handleTaskDragOver(e, col.id, taskIndex)}
       onDragEnter={(e) => handleTaskDragEnter(e, col.id, taskIndex)}
       onDragLeave={handleTaskDragLeave}
@@ -349,20 +393,61 @@ export default function KanbanCard({
       )}
 
       <div className="flex-1 min-w-0">
-        <div
-          className="kb-task-title w-full text-sm font-semibold mb-1 cursor-pointer"
-          onClick={() => {
-            if (!isReadOnly) {
-              // request parent to open the task modal
-              onRequestOpenTaskModal?.(t.id);
-            }
-          }}
-          role="button"
-        >
-          {title || tr("kanban.addTask", "Task")}
+        <div className="kb-task-heading">
+          {typeof t.taskNumber === "number" ? (
+            <span
+              className="kb-task-number"
+              title={tr("kanban.taskNumber", "Task number")}
+            >
+              {formatTaskNumber(t.taskNumber)}
+            </span>
+          ) : null}
+          <div className="flex-1 min-w-0">
+            <div
+              className="kb-task-title w-full text-sm font-semibold mb-1 cursor-pointer"
+              onClick={() => {
+                if (!isReadOnly) {
+                  onRequestOpenTaskModal?.(t.id);
+                }
+              }}
+              role="button"
+            >
+              {title || tr("kanban.addTask", "Task")}
+            </div>
+            <TaskStatusBadge status={dependencyState.status} tr={tr} />
+          </div>
         </div>
         {descriptionSnippet ? (
           <div className="kb-task-desc">{descriptionSnippet}</div>
+        ) : null}
+        {resolvedLinkedTasks.length > 0 ? (
+          <div
+            className="kb-task-links"
+            title={tr("kanban.linkedTasks", "Linked tasks")}
+          >
+            {visibleLinkedTasks.map((link) => (
+              <button
+                key={buildTaskLinkKey(link.blockId, link.taskId)}
+                type="button"
+                onClick={() =>
+                  onNavigateToTask?.({
+                    blockId: link.blockId,
+                    taskId: link.taskId,
+                  })
+                }
+                title={link.title || undefined}
+                aria-label={tr("kanban.linkedTasks", "Linked tasks")}
+                className="kb-task-link-chip kb-task-link-chip-btn"
+              >
+                {formatTaskNumber(link.taskNumber) ||
+                  link.title ||
+                  tr("kanban.linkedTaskFallback", "Linked task")}
+              </button>
+            ))}
+            {extraLinkedTaskCount > 0 ? (
+              <span className="kb-task-link-chip">+{extraLinkedTaskCount}</span>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -477,6 +562,8 @@ export default function KanbanCard({
                       const newTask = {
                         ...t,
                         id: `t-${Math.random().toString(36).slice(2, 9)}`,
+                        taskNumber: getNextTaskNumberFromRecords(taskRecords),
+                        linkedTasks: undefined,
                       } as Task;
                       save(
                         columns.map((c) =>

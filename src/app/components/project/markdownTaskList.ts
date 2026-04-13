@@ -68,7 +68,12 @@ export function syncMarkdownTaskStates(
 
   return content.replace(
     TASK_MARKER_LINE_PATTERN,
-    (_match, indentation: string, bullet: string | undefined, trailing: string) => {
+    (
+      _match,
+      indentation: string,
+      bullet: string | undefined,
+      trailing: string,
+    ) => {
       const checked = checkedStates[stateIndex] ?? false;
       stateIndex += 1;
       const listMarker = bullet ? `${bullet} ` : "- ";

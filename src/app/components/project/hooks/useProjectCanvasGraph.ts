@@ -47,6 +47,7 @@ import {
   isBlockContentLocked,
   isBlockPositionLocked,
 } from "@components/project/utils/locks";
+import { cloneKanbanMetadataForDuplicate } from "@components/project/kanbanModel";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
@@ -560,6 +561,18 @@ export const useProjectCanvasGraph = ({
         updatedAt: new Date().toISOString(),
         lastEditor: currentUser?.username || src.data?.lastEditor,
       } as Partial<BlockData>;
+
+      if (src.data?.blockType === "kanban") {
+        const clonedMetadata = cloneKanbanMetadataForDuplicate({
+          raw: src.data?.metadata,
+          sourceBlockId: blockId,
+          targetBlockId: newId,
+        });
+
+        if (clonedMetadata !== undefined) {
+          newData.metadata = clonedMetadata;
+        }
+      }
 
       // Remove runtime-only props
       delete newData.yText;

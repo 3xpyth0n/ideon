@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import {
@@ -28,6 +29,7 @@ import {
   Position,
   type Node,
   type NodeProps,
+  useNodes,
   useReactFlow,
 } from "@xyflow/react";
 import { BlockData } from "./CanvasBlock";
@@ -36,15 +38,29 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { focusProjectCanvas } from "./utils/focusCanvas";
+import {
+  computeLongestSideViewport,
+  getNodesBoundsWithFallback,
+  getReactFlowViewportSize,
+} from "./utils/fitViewport";
 import KanbanCard from "./KanbanCard";
 import TaskModal from "./TaskModal";
 import KanbanSettingsModal from "./KanbanSettingsModal";
 import FieldPickerModal from "./FieldPickerModal";
 import ColumnEditModal from "./ColumnEditModal";
 import FloatingMenu from "./FloatingMenu";
-import type { Option as SettingsOption } from "./KanbanSettingsModal";
-
-// Task/Column/Field types are declared below as `type Task/Column/Field`.
+import {
+  assignDefaultColumnWorkflowStates,
+  assignMissingTaskNumbers,
+  buildProjectTaskRecords,
+  ensureUniqueKanbanTaskIds,
+  getNextTaskNumberFromRecords,
+  parseKanbanMetadata,
+  syncLinkedTaskReferences,
+  type Column,
+  type Field,
+  type Task,
+} from "./kanbanModel";
 
 interface TransferTaskPayload {
   kind: "kanban-task" | "checklist-item";
@@ -54,6 +70,7 @@ interface TransferTaskPayload {
   text: string;
   checked: boolean;
   depth?: number;
+  task?: Task;
 }
 
 interface TransferColumnPayload {
@@ -75,37 +92,11 @@ interface UserProfile {
 
 type KanbanBlockProps = NodeProps<Node<BlockData>>;
 
-type Task = {
-  id: string;
-  text: string;
-  checked: boolean;
-  height?: number;
-  assigneeId?: string;
-  assigneeIds?: string[];
-  assigneeName?: string | undefined;
-  fields?: Record<string, string | undefined>;
-};
-
-type Column = {
-  id: string;
-  title: string;
-  tasks: Task[];
-  width?: number; // percent
-  widthPx?: number; // explicit pixel width
-  color?: string;
-  description?: string;
-};
-
-type Field = {
-  id: string;
-  name: string;
-  type: "text" | "date" | "select" | "number";
-  options?: SettingsOption[];
-  visible?: boolean;
-  defaultValue?: string | undefined;
-};
-
 const MIN_COLUMN_PX = 350;
+const TASK_NAV_FIT_DURATION = 800;
+const TASK_NAV_FIT_PADDING = 0.12;
+const TASK_NAV_FIT_MIN_ZOOM = 0.1;
+const TASK_NAV_FIT_MAX_ZOOM_SELECTED = 2;
 
 // Utility: darken a hex color by `amount` (0..1). Returns original if parsing fails.
 function darkenHex(hex: string, amount = 0.2) {
@@ -135,165 +126,6 @@ function darkenHex(hex: string, amount = 0.2) {
   }
 }
 
-const parseKanbanMetadata = (
-  raw: unknown,
-): { columns: Column[]; fields: Field[] } => {
-  try {
-    const parsed = (
-      typeof raw === "string" ? JSON.parse(raw || "{}") : raw
-    ) as Record<string, unknown>;
-
-    const cols = Array.isArray(parsed.columns)
-      ? (parsed.columns as unknown[])
-      : [];
-    const columns: Column[] = cols
-      .map((col: unknown) => {
-        if (typeof col !== "object" || col === null) return null;
-        const c = col as Record<string, unknown>;
-        const tasksRaw = Array.isArray(c.tasks) ? (c.tasks as unknown[]) : [];
-        const tasks: Task[] = tasksRaw
-          .map((task: unknown) => {
-            if (typeof task !== "object" || task === null) return null;
-            const t = task as Record<string, unknown>;
-            if (typeof t.id !== "string") return null;
-
-            const rawAssigneeIds = t["assigneeIds"];
-            const assigneeIds = Array.isArray(rawAssigneeIds)
-              ? (rawAssigneeIds as unknown[]).filter(
-                  (x): x is string => typeof x === "string",
-                )
-              : typeof t["assigneeId"] === "string"
-                ? [t["assigneeId"] as string]
-                : undefined;
-
-            const rawFields = t["fields"];
-            const fields =
-              typeof rawFields === "object" && rawFields !== null
-                ? Object.fromEntries(
-                    Object.entries(rawFields as Record<string, unknown>)
-                      .filter(
-                        ([, v]) => v === undefined || typeof v === "string",
-                      )
-                      .map(([k, v]) => [
-                        k,
-                        v === undefined ? undefined : String(v),
-                      ]),
-                  )
-                : undefined;
-
-            return {
-              id: String(t.id),
-              text: typeof t["text"] === "string" ? (t["text"] as string) : "",
-              checked: Boolean(t["checked"]),
-              height:
-                typeof t["height"] === "number" && Number.isFinite(t["height"])
-                  ? Math.max(64, Math.round(t["height"] as number))
-                  : undefined,
-              assigneeIds: assigneeIds as string[] | undefined,
-              assigneeId:
-                typeof t["assigneeId"] === "string"
-                  ? (t["assigneeId"] as string)
-                  : undefined,
-              assigneeName:
-                typeof t["assigneeName"] === "string"
-                  ? (t["assigneeName"] as string)
-                  : undefined,
-              fields: fields as Record<string, string | undefined> | undefined,
-            } as Task;
-          })
-          .filter((x): x is Task => x !== null);
-
-        return {
-          id:
-            typeof c.id === "string"
-              ? (c.id as string)
-              : `c-${Math.random().toString(36).slice(2, 9)}`,
-          title: typeof c.title === "string" ? (c.title as string) : "",
-          tasks,
-          width: typeof c.width === "number" ? (c.width as number) : undefined,
-          widthPx:
-            typeof c.widthPx === "number" ? (c.widthPx as number) : undefined,
-          color: typeof c.color === "string" ? (c.color as string) : undefined,
-          description:
-            typeof c.description === "string"
-              ? (c.description as string)
-              : undefined,
-        } as Column;
-      })
-      .filter((c): c is Column => c !== null);
-
-    const fieldsRaw = Array.isArray(parsed.fields)
-      ? (parsed.fields as unknown[])
-      : [];
-    const fields: Field[] = fieldsRaw
-      .map((f: unknown) => {
-        if (typeof f !== "object" || f === null) return null;
-        const ff = f as Record<string, unknown>;
-        if (typeof ff.id !== "string") return null;
-
-        let opts: SettingsOption[] | undefined = undefined;
-        if (Array.isArray(ff.options)) {
-          opts = (ff.options as unknown[])
-            .map((o) => {
-              if (typeof o === "string") {
-                const parts = o.split("|");
-                return {
-                  id: `o-${Math.random().toString(36).slice(2, 9)}`,
-                  label: parts[0] || o,
-                  color: parts[1] || undefined,
-                  description: undefined,
-                } as SettingsOption;
-              }
-              if (typeof o === "object" && o !== null) {
-                const oo = o as Record<string, unknown>;
-                return {
-                  id:
-                    typeof oo.id === "string"
-                      ? (oo.id as string)
-                      : `o-${Math.random().toString(36).slice(2, 9)}`,
-                  label:
-                    typeof oo.label === "string" ? (oo.label as string) : "",
-                  color:
-                    typeof oo.color === "string"
-                      ? (oo.color as string)
-                      : undefined,
-                  description:
-                    typeof oo.description === "string"
-                      ? (oo.description as string)
-                      : undefined,
-                } as SettingsOption;
-              }
-              return null;
-            })
-            .filter((x): x is SettingsOption => x !== null);
-        }
-
-        return {
-          id: ff.id as string,
-          name: typeof ff.name === "string" ? (ff.name as string) : "",
-          type:
-            ff.type === "date" || ff.type === "select" || ff.type === "number"
-              ? (ff.type as "date" | "select" | "number")
-              : "text",
-          options: opts,
-          color:
-            typeof ff.color === "string" ? (ff.color as string) : undefined,
-          visible:
-            typeof ff.visible === "boolean" ? (ff.visible as boolean) : true,
-          defaultValue:
-            typeof ff.defaultValue === "string"
-              ? (ff.defaultValue as string)
-              : undefined,
-        } as Field;
-      })
-      .filter((x): x is Field => x !== null);
-
-    return { columns, fields };
-  } catch {
-    return { columns: [], fields: [] };
-  }
-};
-
 const getDefaultPlaceholderTask = (
   tr: (path: string, fallback: string) => string,
 ): Task => ({
@@ -315,6 +147,7 @@ const getDefaultKanbanColumns = (
     description: tr("kanban.defaultColumn.todoDesc", "Tasks to be done"),
     tasks: [getDefaultPlaceholderTask(tr)],
     widthPx: MIN_COLUMN_PX,
+    workflowState: "todo",
   },
   {
     id: `c-${Math.random().toString(36).slice(2, 9)}`,
@@ -326,6 +159,7 @@ const getDefaultKanbanColumns = (
     ),
     tasks: [getDefaultPlaceholderTask(tr)],
     widthPx: MIN_COLUMN_PX,
+    workflowState: "in-progress",
   },
   {
     id: `c-${Math.random().toString(36).slice(2, 9)}`,
@@ -334,6 +168,7 @@ const getDefaultKanbanColumns = (
     description: tr("kanban.defaultColumn.doneDesc", "Completed tasks"),
     tasks: [getDefaultPlaceholderTask(tr)],
     widthPx: MIN_COLUMN_PX,
+    workflowState: "done",
   },
 ];
 
@@ -350,6 +185,10 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     upHandler?: () => void;
   }>(null);
   const [fields, setFields] = useState<Field[]>([]);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(
+    null,
+  );
+  const highlightTimeoutRef = useRef<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
@@ -417,6 +256,12 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     currentUser?.username ||
     dict.project?.anonymous ||
     "unknown";
+  const hasUnsavedNormalizationRef = useRef(false);
+  const lastNormalizedColumnsRef = useRef("");
+  const allNodes = useNodes() as Array<Node<BlockData>>;
+  const allNodesRef = useRef(allNodes);
+  allNodesRef.current = allNodes;
+  const { fitView, getEdges, getNode, setNodes, setViewport } = useReactFlow();
 
   useEffect(() => {
     if (data.title !== undefined && data.title !== title) {
@@ -424,30 +269,316 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     }
   }, [data.title, title]);
 
+  const buildTaskRecords = useCallback(
+    (nextColumns: Column[]) =>
+      buildProjectTaskRecords({
+        nodes: allNodesRef.current,
+        currentBlockId: id,
+        currentBlockTitle: title,
+        currentColumns: nextColumns,
+      }),
+    [id, title],
+  );
+
+  const normalizeColumnsForSave = useCallback(
+    (nextColumns: Column[]) => {
+      const workflowColumns = assignDefaultColumnWorkflowStates(nextColumns);
+      const currentUpdatedAt = Date.parse(data.updatedAt || "");
+      const currentTimestamp = Number.isFinite(currentUpdatedAt)
+        ? currentUpdatedAt
+        : Number.MAX_SAFE_INTEGER;
+      const reservedTaskIds = new Set<string>();
+      const reservedTaskNumbers = new Set<number>();
+
+      for (const node of allNodesRef.current) {
+        if (!node.data || node.data.blockType !== "kanban" || node.id === id) {
+          continue;
+        }
+
+        const otherUpdatedAt = Date.parse(node.data.updatedAt || "");
+        const otherTimestamp = Number.isFinite(otherUpdatedAt)
+          ? otherUpdatedAt
+          : Number.MAX_SAFE_INTEGER;
+        const otherHasPriority =
+          otherTimestamp < currentTimestamp ||
+          (otherTimestamp === currentTimestamp && node.id < id);
+
+        if (!otherHasPriority) continue;
+
+        const parsed = parseKanbanMetadata(node.data.metadata);
+        for (const column of parsed.columns) {
+          for (const task of column.tasks) {
+            reservedTaskIds.add(task.id);
+            if (
+              typeof task.taskNumber === "number" &&
+              Number.isInteger(task.taskNumber) &&
+              task.taskNumber > 0
+            ) {
+              reservedTaskNumbers.add(task.taskNumber);
+            }
+          }
+        }
+      }
+
+      const uniqueIds = ensureUniqueKanbanTaskIds(workflowColumns.columns, {
+        currentBlockId: id,
+        reservedTaskIds,
+      });
+      const initialRecords = buildTaskRecords(uniqueIds.columns);
+      const numbered = assignMissingTaskNumbers(
+        uniqueIds.columns,
+        getNextTaskNumberFromRecords(initialRecords),
+        { reservedTaskNumbers },
+      );
+      const records = buildTaskRecords(numbered.columns);
+      const synced = syncLinkedTaskReferences(numbered.columns, records);
+
+      return {
+        columns: synced.columns,
+        changed:
+          workflowColumns.changed ||
+          uniqueIds.changed ||
+          numbered.changed ||
+          synced.changed,
+      };
+    },
+    [buildTaskRecords, data.updatedAt, id],
+  );
+
   useEffect(() => {
     const meta = parseKanbanMetadata(data.metadata);
-    if (meta.columns.length === 0 && !data.metadata) {
-      setColumns(getDefaultKanbanColumns(trRef.current));
-    } else {
-      setColumns(meta.columns);
-    }
+    const nextColumns =
+      meta.columns.length === 0
+        ? getDefaultKanbanColumns(trRef.current)
+        : meta.columns;
+    const normalized = normalizeColumnsForSave(nextColumns);
+
+    lastNormalizedColumnsRef.current = JSON.stringify(normalized.columns);
+    hasUnsavedNormalizationRef.current = normalized.changed;
+    setColumns(normalized.columns);
     setFields(meta.fields || []);
-  }, [data.metadata]);
+  }, [data.metadata, normalizeColumnsForSave]);
 
   useEffect(() => {
     columnsRef.current = columns;
   }, [columns]);
 
+  useEffect(() => {
+    if (columns.length === 0) return;
+
+    const normalized = normalizeColumnsForSave(columns);
+    if (!normalized.changed) {
+      lastNormalizedColumnsRef.current = JSON.stringify(columns);
+      return;
+    }
+
+    const nextSerialized = JSON.stringify(normalized.columns);
+    if (nextSerialized === lastNormalizedColumnsRef.current) {
+      return;
+    }
+
+    lastNormalizedColumnsRef.current = nextSerialized;
+    hasUnsavedNormalizationRef.current = true;
+    setColumns(normalized.columns);
+  }, [columns, normalizeColumnsForSave]);
+
+  useEffect(() => {
+    const animateTaskScroll = (taskEl: HTMLElement) => {
+      const listEl = taskEl.closest(".kb-tasks") as HTMLElement | null;
+      if (!listEl) {
+        taskEl.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        });
+        return;
+      }
+
+      const listRect = listEl.getBoundingClientRect();
+      const taskRect = taskEl.getBoundingClientRect();
+      const startTop = listEl.scrollTop;
+      const targetTop = Math.max(
+        0,
+        startTop +
+          (taskRect.top - listRect.top) -
+          listRect.height / 2 +
+          taskRect.height / 2,
+      );
+      const distance = targetTop - startTop;
+
+      if (Math.abs(distance) < 4) return;
+
+      const duration = 520;
+      const easeInOutCubic = (progress: number) =>
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      const startTime = performance.now();
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        listEl.scrollTop = startTop + distance * easeInOutCubic(progress);
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+
+      window.requestAnimationFrame(step);
+    };
+
+    const isHighlightKanbanTaskEvent = (
+      event: Event,
+    ): event is CustomEvent<{ blockId?: string; taskId?: string }> => {
+      if (!(event instanceof CustomEvent)) return false;
+      if (typeof event.detail !== "object" || event.detail === null) {
+        return false;
+      }
+
+      const detail = event.detail as Record<string, unknown>;
+      if (detail.blockId !== undefined && typeof detail.blockId !== "string") {
+        return false;
+      }
+      if (detail.taskId !== undefined && typeof detail.taskId !== "string") {
+        return false;
+      }
+
+      return true;
+    };
+
+    const handleTaskHighlight = (event: Event) => {
+      if (!isHighlightKanbanTaskEvent(event)) return;
+
+      const { detail } = event;
+      if (detail?.blockId !== id || typeof detail.taskId !== "string") return;
+
+      setHighlightedTaskId(detail.taskId);
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+
+      window.requestAnimationFrame(() => {
+        const taskEl = Array.from(
+          scrollRef.current?.querySelectorAll<HTMLElement>(
+            ".kb-task[data-task-id]",
+          ) || [],
+        ).find((el) => el.dataset.taskId === detail.taskId);
+
+        if (taskEl) {
+          animateTaskScroll(taskEl);
+        }
+      });
+
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedTaskId((current) =>
+          current === detail.taskId ? null : current,
+        );
+        highlightTimeoutRef.current = null;
+      }, 2000);
+    };
+
+    window.addEventListener(
+      "ideon:highlight-kanban-task",
+      handleTaskHighlight as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "ideon:highlight-kanban-task",
+        handleTaskHighlight as EventListener,
+      );
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!hasUnsavedNormalizationRef.current) return;
+    hasUnsavedNormalizationRef.current = false;
+
+    void data.onContentChange?.(
+      id,
+      data.content,
+      new Date().toISOString(),
+      getEditorName(),
+      JSON.stringify({ columns, fields }),
+      title,
+      data.reactions,
+    );
+  }, [columns, data, fields, id, title]);
+
+  const taskRecords = useMemo(
+    () => buildTaskRecords(columns),
+    [buildTaskRecords, columns],
+  );
+
+  const handleNavigateToTask = useCallback(
+    (target: { blockId: string; taskId: string }) => {
+      setTaskModalTaskId(null);
+      setOpenMenuKey(null);
+
+      const revealTask = () => {
+        window.dispatchEvent(
+          new CustomEvent("ideon:highlight-kanban-task", {
+            detail: target,
+          }),
+        );
+        focusProjectCanvas();
+      };
+
+      const targetNode = getNode(target.blockId);
+      if (!targetNode) {
+        revealTask();
+        return;
+      }
+
+      setNodes((nodes) =>
+        nodes.map((node) => ({
+          ...node,
+          selected: node.id === target.blockId,
+        })),
+      );
+
+      const bounds = getNodesBoundsWithFallback([targetNode]);
+      const viewportSize = getReactFlowViewportSize();
+
+      if (!bounds || !viewportSize) {
+        void fitView({
+          nodes: [targetNode],
+          duration: TASK_NAV_FIT_DURATION,
+          maxZoom: TASK_NAV_FIT_MAX_ZOOM_SELECTED,
+          padding: TASK_NAV_FIT_PADDING,
+        });
+      } else {
+        const nextViewport = computeLongestSideViewport(bounds, viewportSize, {
+          padding: TASK_NAV_FIT_PADDING,
+          minZoom: TASK_NAV_FIT_MIN_ZOOM,
+          maxZoom: TASK_NAV_FIT_MAX_ZOOM_SELECTED,
+        });
+
+        void setViewport(nextViewport, { duration: TASK_NAV_FIT_DURATION });
+      }
+
+      window.setTimeout(revealTask, TASK_NAV_FIT_DURATION - 120);
+    },
+    [fitView, getNode, setNodes, setViewport],
+  );
+
   const save = (cols: Column[], updatedFields?: Field[]) => {
+    const normalized = normalizeColumnsForSave(cols);
     const fieldsToSave = updatedFields ?? fields;
-    setColumns(cols);
+
+    hasUnsavedNormalizationRef.current = false;
+    lastNormalizedColumnsRef.current = JSON.stringify(normalized.columns);
+    setColumns(normalized.columns);
     setFields(fieldsToSave);
     return data.onContentChange?.(
       id,
       data.content,
       new Date().toISOString(),
       getEditorName(),
-      JSON.stringify({ columns: cols, fields: fieldsToSave }),
+      JSON.stringify({ columns: normalized.columns, fields: fieldsToSave }),
       title,
       data.reactions,
     );
@@ -706,6 +837,18 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
   const [editColumnId, setEditColumnId] = useState<string | null>(null);
   const [taskModalTaskId, setTaskModalTaskId] = useState<string | null>(null);
 
+  const taskModalBacklinks = useMemo(
+    () =>
+      taskModalTaskId
+        ? taskRecords.filter((record) =>
+            record.linkedTasks.some(
+              (link) => link.blockId === id && link.taskId === taskModalTaskId,
+            ),
+          )
+        : [],
+    [taskRecords, taskModalTaskId, id],
+  );
+
   const handleResize = useCallback(
     (
       _evt: unknown,
@@ -762,7 +905,6 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     isReadOnly,
   });
 
-  const { getEdges, getNode } = useReactFlow();
   const edges = getEdges();
   const connected = (h: string) =>
     edges.some(
@@ -968,6 +1110,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
       itemId: task.id,
       text: task.text,
       checked: task.checked,
+      task,
     };
     e.dataTransfer.setData("application/json", JSON.stringify(payload));
     e.dataTransfer.effectAllowed = "move";
@@ -1171,13 +1314,19 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
         text: parsed.text,
         checked: Boolean(parsed.checked),
         depth: typeof parsed.depth === "number" ? parsed.depth : 0,
+        task:
+          typeof parsed.task === "object" && parsed.task !== null
+            ? (parsed.task as Task)
+            : undefined,
       };
 
-      let movedTask: Task = {
-        id: payload.itemId,
-        text: payload.text,
-        checked: payload.checked,
-      };
+      let movedTask: Task = payload.task
+        ? { ...payload.task }
+        : {
+            id: payload.itemId,
+            text: payload.text,
+            checked: payload.checked,
+          };
 
       let sourceColIndex = -1;
       let sourceTaskIndex = -1;
@@ -1844,11 +1993,13 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                                     id: `c-${Math.random()
                                       .toString(36)
                                       .slice(2, 9)}`,
-                                    tasks: col.tasks.map((t) => ({
-                                      ...t,
+                                    tasks: col.tasks.map((task) => ({
+                                      ...task,
                                       id: `t-${Math.random()
                                         .toString(36)
                                         .slice(2, 9)}`,
+                                      taskNumber: undefined,
+                                      linkedTasks: undefined,
                                     })),
                                   };
                                   const next = [...columns];
@@ -1945,6 +2096,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                             column={col}
                             columns={columns}
                             save={save}
+                            isHighlighted={highlightedTaskId === t.id}
                             collaborators={collaborators}
                             currentUser={currentUser}
                             isReadOnly={isReadOnly}
@@ -1967,6 +2119,9 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                             onRequestOpenTaskModal={(taskId) =>
                               setTaskModalTaskId(taskId)
                             }
+                            onNavigateToTask={handleNavigateToTask}
+                            taskRecords={taskRecords}
+                            currentBlockId={id}
                           />
                         </Fragment>
                       ))}
@@ -2010,6 +2165,9 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                             checked: false,
                             assigneeIds: [],
                             assigneeName: undefined,
+                            taskNumber:
+                              getNextTaskNumberFromRecords(taskRecords),
+                            linkedTasks: undefined,
                           };
                           save(
                             columns.map((c) =>
@@ -2142,6 +2300,10 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
         collaborators={collaborators}
         fields={fields}
         tr={tr}
+        onNavigateToTask={handleNavigateToTask}
+        currentBlockId={id}
+        taskRecords={taskRecords}
+        backlinks={taskModalBacklinks}
         onSave={(updated) => {
           const next = columns.map((c) => ({
             ...c,

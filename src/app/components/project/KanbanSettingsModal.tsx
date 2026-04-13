@@ -8,41 +8,15 @@ import { GoSingleSelect } from "react-icons/go";
 import { BsCalendar2Date } from "react-icons/bs";
 import { TbNumber } from "react-icons/tb";
 
-type FieldType = "text" | "date" | "select" | "number";
+import type {
+  Column as ColumnDef,
+  Field,
+  FieldType,
+  Option,
+  Task,
+} from "./kanbanModel";
 
-export type Option = {
-  id: string;
-  label: string;
-  color?: string;
-  description?: string;
-};
-
-export type Field = {
-  id: string;
-  name: string;
-  type: FieldType;
-  color?: string;
-  visible?: boolean;
-  defaultValue?: string | undefined;
-  options?: Option[];
-};
-
-export type Task = {
-  id: string;
-  text: string;
-  checked: boolean;
-  assigneeId?: string;
-  assigneeName?: string;
-};
-
-export type ColumnDef = {
-  id: string;
-  title: string;
-  width?: number;
-  color?: string;
-  description?: string;
-  tasks: Task[];
-};
+export type { ColumnDef, Field, FieldType, Option, Task };
 
 interface Props {
   isOpen: boolean;

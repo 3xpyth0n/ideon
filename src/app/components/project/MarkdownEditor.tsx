@@ -331,9 +331,7 @@ const MarkdownEditor = ({
   }, [onRedoShortcut]);
 
   const editorContent =
-    content === undefined
-      ? undefined
-      : normalizeMarkdownTaskList(content);
+    content === undefined ? undefined : normalizeMarkdownTaskList(content);
 
   const editor = useEditor({
     immediatelyRender: false,

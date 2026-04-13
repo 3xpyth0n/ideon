@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Added task relationships across Kanban boards so you can link work between tasks anywhere in the same project [#71](https://github.com/3xpyth0n/ideon/issues/71).
+- Added canvas search to quickly find and focus blocks and Kanban tasks from the top bar or advanced modal [#83](https://github.com/3xpyth0n/ideon/issues/83).
 
 ### Fixed
 

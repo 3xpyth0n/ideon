@@ -33,6 +33,8 @@ import ShellBlock from "./ShellBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import CommandPalette from "./CommandPalette";
+import CanvasSearch from "./CanvasSearch";
+import CanvasSearchBar from "./CanvasSearchBar";
 import AddBlockModal from "./AddBlockModal";
 import { TransferBlockModal } from "./TransferBlockModal";
 import { ProjectCanvasErrorBoundary } from "./ProjectCanvasErrorBoundary";
@@ -795,6 +797,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   }, [isPreviewMode]);
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isCanvasSearchOpen, setIsCanvasSearchOpen] = useState(false);
+  const [canvasSearchQuery, setCanvasSearchQuery] = useState("");
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isMobileTopbar, setIsMobileTopbar] = useState(false);
@@ -879,6 +883,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         return;
       }
 
+      if (e.key === "Escape" && isCanvasSearchOpen) {
+        setIsCanvasSearchOpen(false);
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey) {
         if (document.body.classList.contains("sketch-modal-open")) {
           return;
@@ -932,6 +941,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             e.preventDefault();
             e.stopPropagation();
             setIsPaletteOpen((v) => !v);
+          } else if (shortcutKey === "k") {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsCanvasSearchOpen((v) => !v);
           } else if (shortcutKey === "a") {
             e.preventDefault();
             e.stopPropagation();
@@ -946,7 +959,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [blocks, pendingConnection, redo, undo]);
+  }, [blocks, isCanvasSearchOpen, pendingConnection, redo, undo]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -1792,33 +1805,42 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   style={{ zIndex: 2000 }}
                 >
                   {!isPreviewMode && !isMobileTopbar && (
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-sm font-bold opacity-40 select-none">
-                        {dict.project.shareCursor}
-                      </span>
-                      <input
-                        type="checkbox"
-                        className="theme-checkbox"
-                        checked={shareCursor}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          setShareCursor(e.target.checked);
-                        }}
-                      />
-                      <button
-                        className="command-palette-hint"
-                        onClick={() => setIsAddBlockOpen(true)}
-                      >
-                        <kbd>Ctrl + A</kbd>
-                        <span>{dict.canvas.addBlock}</span>
-                      </button>
-                      <button
-                        className="command-palette-hint"
-                        onClick={() => setIsPaletteOpen(true)}
-                      >
-                        <kbd>Ctrl + P</kbd>
-                        <span>{dict.canvas.commandPalette}</span>
-                      </button>
+                    <div className="project-canvas-topbar-left">
+                      <div className="project-canvas-topbar-left-controls">
+                        <span className="text-sm font-bold opacity-40 select-none">
+                          {dict.project.shareCursor}
+                        </span>
+                        <input
+                          type="checkbox"
+                          className="theme-checkbox"
+                          checked={shareCursor}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setShareCursor(e.target.checked);
+                          }}
+                        />
+                        <button
+                          className="command-palette-hint"
+                          onClick={() => setIsAddBlockOpen(true)}
+                        >
+                          <kbd>Ctrl + A</kbd>
+                          <span>{dict.canvas.addBlock}</span>
+                        </button>
+                        <button
+                          className="command-palette-hint"
+                          onClick={() => setIsPaletteOpen(true)}
+                        >
+                          <kbd>Ctrl + P</kbd>
+                          <span>{dict.canvas.commandPalette}</span>
+                        </button>
+                      </div>
+                      <div className="project-canvas-topbar-left-search">
+                        <CanvasSearchBar
+                          query={canvasSearchQuery}
+                          onQueryChange={setCanvasSearchQuery}
+                          onOpenAdvanced={() => setIsCanvasSearchOpen(true)}
+                        />
+                      </div>
                     </div>
                   )}
                 </Panel>
@@ -1964,6 +1986,18 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                 }}
                               >
                                 {dict.canvas.commandPalette}
+                              </button>
+                            )}
+
+                            {!isPreviewMode && (
+                              <button
+                                className="project-mobile-actions-item"
+                                onClick={() => {
+                                  setIsCanvasSearchOpen(true);
+                                  setIsMobileActionsOpen(false);
+                                }}
+                              >
+                                <span>{dict.canvas.canvasSearchLabel}</span>
                               </button>
                             )}
 
@@ -2461,6 +2495,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           <CommandPalette
             isOpen={isPaletteOpen}
             onClose={() => setIsPaletteOpen(false)}
+          />
+
+          <CanvasSearch
+            isOpen={isCanvasSearchOpen}
+            onClose={() => setIsCanvasSearchOpen(false)}
+            query={canvasSearchQuery}
+            onQueryChange={setCanvasSearchQuery}
           />
 
           <AddBlockModal

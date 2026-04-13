@@ -38,6 +38,7 @@ export default function CommandPalette({
       { label: dict.canvas.undo, keys: ["Ctrl", "Z"] },
       { label: dict.canvas.redo, keys: ["Ctrl", "Y"] },
       { label: dict.canvas.cheatsheet, keys: ["Ctrl", "P"] },
+      { label: dict.canvas.canvasSearchShortcut, keys: ["Ctrl", "K"] },
       { label: dict.canvas.temporalHistory, keys: ["Ctrl", "H"] },
       { label: dict.canvas.cheatUnfocus, keys: ["Esc"] },
     ],

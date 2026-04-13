@@ -6,9 +6,8 @@ import * as decoding from "lib0/decoding";
 import * as map from "lib0/map";
 import debounce from "lodash.debounce";
 import { callbackHandler, isCallbackSet } from "./callback";
-import { MAX_BLOCK_CONTENT_LENGTH } from "../../app/lib/projectContentSafety";
 import { IncomingMessage } from "http";
-import { WebSocket } from "ws";
+import { RawData, WebSocket } from "ws";
 import { LeveldbPersistence } from "y-leveldb";
 import { logger } from "../../app/lib/logger";
 
@@ -21,8 +20,224 @@ const CALLBACK_DEBOUNCE_MAXWAIT = process.env.CALLBACK_DEBOUNCE_MAXWAIT
 
 const wsReadyStateConnecting = 0;
 const wsReadyStateOpen = 1;
-// Use a conservative 2x upper bound relative to block content size.
-const MAX_WS_MESSAGE_BYTES = 2 * MAX_BLOCK_CONTENT_LENGTH;
+
+const getPositiveIntEnv = (name: string, fallback: number) => {
+  const value = process.env[name];
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const DEFAULT_PROJECT_WS_MESSAGE_BYTES = 16 * 1024 * 1024;
+const MAX_WS_MESSAGE_BYTES = getPositiveIntEnv(
+  "YJS_MAX_SYNC_MESSAGE_BYTES",
+  DEFAULT_PROJECT_WS_MESSAGE_BYTES,
+);
+export const CHUNK_PROTOCOL_MAGIC = [0x49, 0x44, 0x43, 0x48] as const;
+export const CHUNK_PROTOCOL_HEADER_BYTES =
+  CHUNK_PROTOCOL_MAGIC.length + 2 + 4 + 2 + 2;
+const CHUNK_MAGIC = CHUNK_PROTOCOL_MAGIC;
+const CHUNK_HEADER_BYTES = CHUNK_PROTOCOL_HEADER_BYTES;
+const CHUNK_PAYLOAD_BYTES = getPositiveIntEnv(
+  "YJS_WS_CHUNK_PAYLOAD_BYTES",
+  512 * 1024,
+);
+const CHUNK_THRESHOLD_BYTES = getPositiveIntEnv(
+  "YJS_WS_CHUNK_THRESHOLD_BYTES",
+  2 * 1024 * 1024,
+);
+const CHUNK_TTL_MS = getPositiveIntEnv("YJS_WS_CHUNK_TTL_MS", 15000);
+
+type ChunkAssembly = {
+  createdAt: number;
+  chunkCount: number;
+  parts: Map<number, Uint8Array>;
+  totalBytes: number;
+};
+
+const inboundChunkAssemblies = new WeakMap<
+  WebSocket,
+  Map<number, ChunkAssembly>
+>();
+let chunkMessageId = 1;
+
+const nextChunkMessageId = () => {
+  const id = chunkMessageId;
+  chunkMessageId = (chunkMessageId + 1) >>> 0;
+  if (chunkMessageId === 0) {
+    chunkMessageId = 1;
+  }
+  return id;
+};
+
+const asUint8Array = (raw: RawData): Uint8Array => {
+  if (raw instanceof Uint8Array) {
+    return raw;
+  }
+  if (raw instanceof ArrayBuffer) {
+    return new Uint8Array(raw);
+  }
+  if (Array.isArray(raw)) {
+    const total = raw.reduce((sum, part) => sum + part.byteLength, 0);
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const part of raw) {
+      const view = new Uint8Array(
+        part.buffer,
+        part.byteOffset,
+        part.byteLength,
+      );
+      merged.set(view, offset);
+      offset += view.byteLength;
+    }
+    return merged;
+  }
+  return new Uint8Array(0);
+};
+
+const isChunkFrame = (data: Uint8Array) =>
+  data.byteLength >= CHUNK_HEADER_BYTES &&
+  data[0] === CHUNK_MAGIC[0] &&
+  data[1] === CHUNK_MAGIC[1] &&
+  data[2] === CHUNK_MAGIC[2] &&
+  data[3] === CHUNK_MAGIC[3];
+
+const encodeChunkFrame = (
+  messageId: number,
+  chunkIndex: number,
+  chunkCount: number,
+  payload: Uint8Array,
+) => {
+  const frame = new Uint8Array(CHUNK_HEADER_BYTES + payload.byteLength);
+  frame[0] = CHUNK_MAGIC[0];
+  frame[1] = CHUNK_MAGIC[1];
+  frame[2] = CHUNK_MAGIC[2];
+  frame[3] = CHUNK_MAGIC[3];
+  // Header bytes 4 and 5 store the protocol version and a reserved byte.
+  frame[4] = 1;
+  frame[5] = 0;
+  frame[6] = (messageId >>> 24) & 0xff;
+  frame[7] = (messageId >>> 16) & 0xff;
+  frame[8] = (messageId >>> 8) & 0xff;
+  frame[9] = messageId & 0xff;
+  frame[10] = (chunkIndex >>> 8) & 0xff;
+  frame[11] = chunkIndex & 0xff;
+  frame[12] = (chunkCount >>> 8) & 0xff;
+  frame[13] = chunkCount & 0xff;
+  frame.set(payload, CHUNK_HEADER_BYTES);
+  return frame;
+};
+
+const decodeChunkFrame = (frame: Uint8Array) => {
+  const version = frame[4];
+  if (version !== 1) {
+    return null;
+  }
+  const messageId =
+    (frame[6] << 24) | (frame[7] << 16) | (frame[8] << 8) | frame[9];
+  const chunkIndex = (frame[10] << 8) | frame[11];
+  const chunkCount = (frame[12] << 8) | frame[13];
+  if (chunkCount <= 0 || chunkIndex >= chunkCount) {
+    return null;
+  }
+  const payload = frame.subarray(CHUNK_HEADER_BYTES);
+  return { messageId: messageId >>> 0, chunkIndex, chunkCount, payload };
+};
+
+const splitMessageIntoFrames = (message: Uint8Array): Uint8Array[] => {
+  if (message.byteLength <= CHUNK_THRESHOLD_BYTES) {
+    return [message];
+  }
+
+  const messageId = nextChunkMessageId();
+  const chunkCount = Math.ceil(message.byteLength / CHUNK_PAYLOAD_BYTES);
+  const frames: Uint8Array[] = [];
+  for (let index = 0; index < chunkCount; index += 1) {
+    const start = index * CHUNK_PAYLOAD_BYTES;
+    const end = Math.min(start + CHUNK_PAYLOAD_BYTES, message.byteLength);
+    frames.push(
+      encodeChunkFrame(
+        messageId,
+        index,
+        chunkCount,
+        message.subarray(start, end),
+      ),
+    );
+  }
+  return frames;
+};
+
+const readChunkedMessages = (
+  conn: WebSocket,
+  frame: Uint8Array,
+): Uint8Array[] => {
+  if (!isChunkFrame(frame)) {
+    return [frame];
+  }
+
+  const decoded = decodeChunkFrame(frame);
+  if (!decoded) {
+    return [];
+  }
+
+  let assemblies = inboundChunkAssemblies.get(conn);
+  if (!assemblies) {
+    assemblies = new Map<number, ChunkAssembly>();
+    inboundChunkAssemblies.set(conn, assemblies);
+  }
+
+  const now = Date.now();
+  for (const [messageId, assembly] of assemblies.entries()) {
+    if (now - assembly.createdAt > CHUNK_TTL_MS) {
+      assemblies.delete(messageId);
+    }
+  }
+
+  let assembly = assemblies.get(decoded.messageId);
+  if (!assembly) {
+    assembly = {
+      createdAt: now,
+      chunkCount: decoded.chunkCount,
+      parts: new Map<number, Uint8Array>(),
+      totalBytes: 0,
+    };
+    assemblies.set(decoded.messageId, assembly);
+  }
+
+  if (assembly.chunkCount !== decoded.chunkCount) {
+    assemblies.delete(decoded.messageId);
+    return [];
+  }
+
+  if (!assembly.parts.has(decoded.chunkIndex)) {
+    assembly.parts.set(decoded.chunkIndex, decoded.payload);
+    assembly.totalBytes += decoded.payload.byteLength;
+  }
+
+  if (assembly.totalBytes > MAX_WS_MESSAGE_BYTES) {
+    assemblies.delete(decoded.messageId);
+    return [];
+  }
+
+  if (assembly.parts.size !== assembly.chunkCount) {
+    return [];
+  }
+
+  const message = new Uint8Array(assembly.totalBytes);
+  let offset = 0;
+  for (let index = 0; index < assembly.chunkCount; index += 1) {
+    const part = assembly.parts.get(index);
+    if (!part) {
+      assemblies.delete(decoded.messageId);
+      return [];
+    }
+    message.set(part, offset);
+    offset += part.byteLength;
+  }
+
+  assemblies.delete(decoded.messageId);
+  return [message];
+};
 
 // disable gc when using snapshots!
 const gcEnabled = process.env.GC !== "false" && process.env.GC !== "0";
@@ -256,6 +471,7 @@ const closeConn = (doc: WSSharedDoc, conn: WebSocket) => {
       docs.delete(doc.name);
     }
   }
+  inboundChunkAssemblies.delete(conn);
   conn.close();
 };
 
@@ -275,9 +491,12 @@ const send = (doc: WSSharedDoc, conn: WebSocket, m: Uint8Array) => {
     closeConn(doc, conn);
   }
   try {
-    conn.send(m, (err) => {
-      if (err) closeConn(doc, conn);
-    });
+    const frames = splitMessageIntoFrames(m);
+    for (const frame of frames) {
+      conn.send(frame, (err) => {
+        if (err) closeConn(doc, conn);
+      });
+    }
   } catch {
     closeConn(doc, conn);
   }
@@ -321,9 +540,13 @@ export const setupWSConnection = (
     return;
   }
 
-  conn.on("message", (message: ArrayBuffer) =>
-    messageListener(conn, doc, new Uint8Array(message)),
-  );
+  conn.on("message", (message: RawData) => {
+    const rawFrame = asUint8Array(message);
+    const completeMessages = readChunkedMessages(conn, rawFrame);
+    for (const completeMessage of completeMessages) {
+      messageListener(conn, doc, completeMessage);
+    }
+  });
 
   let pongReceived = true;
   const pingInterval = setInterval(() => {
@@ -343,6 +566,11 @@ export const setupWSConnection = (
     }
   }, pingTimeout);
   conn.on("close", () => {
+    closeConn(doc, conn);
+    clearInterval(pingInterval);
+  });
+  conn.on("error", (err) => {
+    logger.warn({ err, docName }, "[YJS] WS connection error");
     closeConn(doc, conn);
     clearInterval(pingInterval);
   });

@@ -349,7 +349,41 @@ function handleShellConnection(
 const dev = process.env.NODE_ENV === "development";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = parseInt(process.env.PORT || process.env.APP_PORT || "3000", 10);
-const WS_MAX_PAYLOAD_BYTES = 8 * 1024 * 1024;
+
+const parsePositiveInt = (value: string | undefined, fallback: number) => {
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const WS_MAX_PAYLOAD_BYTES = parsePositiveInt(
+  process.env.YJS_WS_MAX_PAYLOAD_BYTES,
+  64 * 1024 * 1024,
+);
+
+const isUnsupportedWsPayloadError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  const code = (error as Error & { code?: string }).code;
+  return code === "WS_ERR_UNSUPPORTED_MESSAGE_LENGTH";
+};
+
+process.on("uncaughtException", (err) => {
+  if (isUnsupportedWsPayloadError(err)) {
+    logger.error(
+      { err },
+      "[WS] Ignored unsupported websocket message length exception",
+    );
+    return;
+  }
+
+  logger.error({ err }, "Uncaught exception");
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled promise rejection");
+});
+
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
@@ -549,6 +583,26 @@ initDb()
       maxPayload: WS_MAX_PAYLOAD_BYTES,
       perMessageDeflate: false,
     });
+
+    wss.on("error", (err) => {
+      logger.error({ err }, "[WS] Yjs server error");
+    });
+
+    shellWss.on("error", (err) => {
+      logger.error({ err }, "[WS] Shell server error");
+    });
+
+    server.on("error", (err) => {
+      logger.error({ err }, "[HTTP] Server error");
+    });
+
+    server.on("clientError", (err, socket) => {
+      logger.warn({ err }, "[HTTP] Client error");
+      if (socket.writable) {
+        socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+      }
+    });
+
     const nextUpgradeHandler = app.getUpgradeHandler();
 
     server.on("upgrade", async (request, socket, head) => {
@@ -682,6 +736,10 @@ initDb()
         req as IncomingMessage & { userRole?: string }
       ).userRole;
 
+      ws.on("error", (err) => {
+        logger.warn({ err, docName }, "[WS] Yjs connection error");
+      });
+
       setupWSConnection(ws, req, {
         docName,
         gc: true,
@@ -693,6 +751,9 @@ initDb()
         userId: string;
         shellProjectId: string;
       };
+      ws.on("error", (err) => {
+        logger.warn({ err }, "[WS] Shell connection error");
+      });
       handleShellConnection(ws, typedReq.userId, typedReq.shellProjectId);
     });
 

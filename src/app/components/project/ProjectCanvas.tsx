@@ -48,6 +48,7 @@ import { clientLogger } from "../../../lib/clientLogger";
 import { getMessage } from "../../../lib/getMessage";
 import { classifyIndexedDbError } from "../../../lib/classifyIndexedDbError";
 import { estimateProjectTextLength } from "@lib/projectContentSafety";
+import { ChunkedWebSocket } from "@lib/chunkedWebSocket";
 import {
   useState,
   useEffect,
@@ -403,7 +404,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           }/yjs`,
           `project-${initialProjectId}`,
           doc,
-          { connect: true },
+          {
+            connect: true,
+            WebSocketPolyfill: ChunkedWebSocket as unknown as typeof WebSocket,
+          },
         );
 
         wsProvider.on("sync", (data: boolean) => {

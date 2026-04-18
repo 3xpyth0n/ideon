@@ -47,7 +47,7 @@ export default function ProjectClient({ id }: ProjectClientProps) {
   }
 
   return (
-    <main className="relative w-full h-screen overflow-hidden">
+    <main className="absolute inset-0 overflow-hidden">
       <ProjectCanvas initialProjectId={id} />
     </main>
   );

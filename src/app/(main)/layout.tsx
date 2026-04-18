@@ -1,8 +1,10 @@
 import { Sidebar } from "@components/Sidebar";
+import { TabBarWrapper } from "@components/TabBarWrapper";
 import { promises as fs } from "fs";
 import path from "path";
 import { cookies } from "next/headers";
 import { getAuthUser } from "@auth";
+import { Suspense } from "react";
 
 async function getVersion() {
   try {
@@ -48,9 +50,14 @@ export default async function MainLayout({
         initialCollapsed={sidebarCollapsed}
         userRole={user?.role}
       />
-      <main className="main-island" id="app-main-container">
-        {children}
-      </main>
+      <div className="main-column" id="main-column-container">
+        <Suspense fallback={null}>
+          <TabBarWrapper />
+        </Suspense>
+        <main className="main-island" id="app-main-container">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

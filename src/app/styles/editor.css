@@ -111,7 +111,7 @@
 /* Project Canvas Styles */
 .project-canvas-container {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   position: relative;
   background-color: white;
   user-select: none;
@@ -474,7 +474,7 @@ body.sketch-modal-open
   border: 1px solid var(--border) !important ;
   border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 38px !important ;
+  margin-bottom: 16px !important ;
   margin-right: 12px;
 }
 
@@ -502,7 +502,7 @@ body.sketch-modal-open
 
 .zoom-indicator {
   position: absolute;
-  bottom: 38px;
+  bottom: 18px;
   right: 235px;
   height: 36px;
   padding: 0 12px;

@@ -465,6 +465,7 @@
     "emptyMyProjects": "You haven't created any projects yet",
     "emptyRecent": "You haven't opened any projects recently",
     "emptyShared": "No projects have been shared with you",
+    "emptyFolder": "This folder is empty",
     "emptyStarred": "You haven't starred any projects yet",
     "emptyTrash": "Trash is empty",
     "emptyTrashButton": "Empty Trash",
@@ -488,7 +489,9 @@
     "statusMine": "Mine",
     "statusShared": "Shared",
     "team": "Team",
-    "trash": "Trash"
+    "trash": "Trash",
+    "projectsManagement": "Projects Management",
+    "teamManagement": "Team Management"
   },
   "gitTokens": {
     "add": "Add Token",

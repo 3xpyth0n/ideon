@@ -56,6 +56,11 @@ interface ProjectListProps {
   folderId?: string;
 }
 
+type SidebarSyncDetail = {
+  refreshAll?: boolean;
+  folderIds?: string[];
+};
+
 export function ProjectList({ view, folderId }: ProjectListProps) {
   const { dict } = useI18n();
   const { user: currentUser } = useUser();
@@ -265,11 +270,67 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     fetchData();
   }, [fetchData]);
 
+  const dispatchFavoriteChanged = useCallback(
+    (
+      detail:
+        | {
+            item: {
+              id: string;
+              name: string;
+              updatedAt?: string;
+              type: "project";
+              folderId?: string | null;
+            };
+            isStarred: boolean;
+          }
+        | {
+            item: {
+              id: string;
+              name: string;
+              updatedAt?: string;
+              type: "folder";
+            };
+            isStarred: boolean;
+          },
+    ) => {
+      window.dispatchEvent(
+        new CustomEvent("ideon:favorite-changed", { detail }),
+      );
+    },
+    [],
+  );
+
+  const dispatchSidebarSync = useCallback((detail?: SidebarSyncDetail) => {
+    window.dispatchEvent(new CustomEvent("ideon:sidebar-sync", { detail }));
+  }, []);
+
+  const syncSidebar = useCallback(
+    (folderIds?: Array<string | null | undefined>) => {
+      dispatchSidebarSync({
+        refreshAll: true,
+        folderIds: (folderIds ?? []).filter(
+          (folderId): folderId is string => typeof folderId === "string",
+        ),
+      });
+    },
+    [dispatchSidebarSync],
+  );
+
   const toggleStar = async (e: React.MouseEvent, project: Project) => {
     e.preventDefault();
     e.stopPropagation();
 
     const newIsStarred = !project.isStarred;
+    const favoriteDetail = {
+      item: {
+        id: project.id,
+        name: project.name,
+        updatedAt: project.updatedAt,
+        type: "project" as const,
+        folderId: project.folderId ?? null,
+      },
+      isStarred: newIsStarred,
+    };
 
     setProjects((prev) => {
       if (view === "starred" && !newIsStarred) {
@@ -280,6 +341,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       );
     });
 
+    dispatchFavoriteChanged(favoriteDetail);
+
     try {
       await fetch(`/api/projects/${project.id}`, {
         method: "PATCH",
@@ -287,6 +350,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         headers: { "Content-Type": "application/json" },
       });
     } catch {
+      dispatchFavoriteChanged({
+        ...favoriteDetail,
+        isStarred: !newIsStarred,
+      });
       fetchData();
     }
   };
@@ -296,6 +363,15 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     e.stopPropagation();
 
     const newIsStarred = !folder.isStarred;
+    const favoriteDetail = {
+      item: {
+        id: folder.id,
+        name: folder.name,
+        updatedAt: folder.updatedAt,
+        type: "folder" as const,
+      },
+      isStarred: newIsStarred,
+    };
 
     setFolders((prev) => {
       if (view === "starred" && !newIsStarred) {
@@ -306,6 +382,8 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       );
     });
 
+    dispatchFavoriteChanged(favoriteDetail);
+
     try {
       await fetch(`/api/folders/${folder.id}`, {
         method: "PATCH",
@@ -313,6 +391,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         headers: { "Content-Type": "application/json" },
       });
     } catch {
+      dispatchFavoriteChanged({
+        ...favoriteDetail,
+        isStarred: !newIsStarred,
+      });
       fetchData();
     }
   };
@@ -327,6 +409,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         headers: { "Content-Type": "application/json" },
       });
       fetchData();
+      syncSidebar([project.folderId]);
     } catch (e) {
       console.error(e);
     }
@@ -348,6 +431,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         headers: { "Content-Type": "application/json" },
       });
       fetchData();
+      syncSidebar([folder.id]);
     } catch (e) {
       console.error(e);
     }
@@ -362,9 +446,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   const confirmDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
+      const deletedProject = projectToDelete;
       const isTrashView = view === "trash";
       await fetch(
-        `/api/projects/${projectToDelete.id}${
+        `/api/projects/${deletedProject.id}${
           isTrashView ? "?permanent=true" : ""
         }`,
         {
@@ -372,6 +457,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         },
       );
       fetchData();
+      syncSidebar([deletedProject.folderId]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -382,9 +468,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   const confirmDeleteFolder = async () => {
     if (!folderToDelete) return;
     try {
+      const deletedFolder = folderToDelete;
       const isTrashView = view === "trash";
       await fetch(
-        `/api/folders/${folderToDelete.id}${
+        `/api/folders/${deletedFolder.id}${
           isTrashView ? "?permanent=true" : ""
         }`,
         {
@@ -392,6 +479,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         },
       );
       fetchData();
+      syncSidebar([deletedFolder.id]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -407,6 +495,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       if (response.ok) {
         toast.success(dict.common.success || "Trash emptied successfully");
         fetchData();
+        syncSidebar();
         setShowEmptyTrashModal(false);
       } else {
         toast.error(dict.common.error || "Failed to empty trash");
@@ -429,6 +518,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         setFolders((prev) => [newFolder, ...prev]);
         setRenamingFolderId(newFolder.id);
         setRenamingName(newFolder.name);
+        syncSidebar([newFolder.id]);
       }
     } catch (e) {
       console.error(e);
@@ -452,6 +542,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         setFolders((prev) =>
           prev.map((f) => (f.id === folder.id ? { ...f, name: newName } : f)),
         );
+        syncSidebar([folder.id]);
       }
     } catch (e) {
       console.error(e);
@@ -487,6 +578,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
             : p,
         ),
       );
+      syncSidebar([project.folderId]);
     } catch (e) {
       console.error(e);
       fetchData();
@@ -569,6 +661,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to move project");
+      syncSidebar([folderId]);
     } catch (err) {
       console.error(err);
       fetchData();
@@ -606,6 +699,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         body: JSON.stringify({ folderId: targetFolderId }),
         headers: { "Content-Type": "application/json" },
       });
+      syncSidebar([targetFolderId, folderId]);
     } catch (err) {
       console.error(err);
       fetchData();
@@ -982,7 +1076,11 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               onClick={() => {
                 if (isTrash) return;
                 if (renamingProjectId !== project.id) {
-                  router.push(`/project/${project.id}`);
+                  router.push(
+                    folderId
+                      ? `/project/${project.id}?folderId=${folderId}`
+                      : `/project/${project.id}`,
+                  );
                 }
               }}
               draggable={!isTrash}
@@ -1174,7 +1272,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         <ProjectModal
           folderId={folderId}
           onClose={() => setShowCreate(false)}
-          onSuccess={fetchData}
+          onSuccess={() => {
+            fetchData();
+            syncSidebar([folderId]);
+          }}
         />
       )}
 
@@ -1184,7 +1285,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
           projectId={accessProject.id}
           projectName={accessProject.name}
           onClose={() => setAccessProject(null)}
-          onUpdate={fetchData}
+          onUpdate={() => {
+            fetchData();
+            syncSidebar([accessProject.folderId]);
+          }}
         />
       )}
 
@@ -1193,7 +1297,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
           folderId={accessFolder.id}
           folderName={accessFolder.name}
           onClose={() => setAccessFolder(null)}
-          onUpdate={fetchData}
+          onUpdate={() => {
+            fetchData();
+            syncSidebar([accessFolder.id]);
+          }}
         />
       )}
 

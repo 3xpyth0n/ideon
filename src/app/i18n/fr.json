@@ -465,6 +465,7 @@
     "emptyMyProjects": "Vous n'avez pas encore créé de projet",
     "emptyRecent": "Vous n'avez ouvert aucun projet récemment",
     "emptyShared": "Aucun projet partagé avec vous",
+    "emptyFolder": "Ce dossier est vide",
     "emptyStarred": "Vous n'avez pas encore de favoris",
     "emptyTrash": "La corbeille est vide",
     "emptyTrashButton": "Vider la corbeille",
@@ -488,7 +489,9 @@
     "statusMine": "Moi",
     "statusShared": "Partagé",
     "team": "Équipe",
-    "trash": "Corbeille"
+    "trash": "Corbeille",
+    "projectsManagement": "Gestion des projets",
+    "teamManagement": "Gestion d'équipe"
   },
   "gitTokens": {
     "add": "Ajouter un jeton",

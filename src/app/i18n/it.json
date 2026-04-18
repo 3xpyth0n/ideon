@@ -465,6 +465,7 @@
     "emptyMyProjects": "Non hai ancora creato nessun progetto",
     "emptyRecent": "Non hai aperto nessun progetto di recente",
     "emptyShared": "Nessun progetto condiviso con te",
+    "emptyFolder": "Questa cartella e vuota",
     "emptyStarred": "Non hai ancora preferiti",
     "emptyTrash": "Il cestino è vuoto",
     "emptyTrashButton": "Svuota cestino",
@@ -488,7 +489,9 @@
     "statusMine": "Miei",
     "statusShared": "Condivisi",
     "team": "Team",
-    "trash": "Cestino"
+    "trash": "Cestino",
+    "projectsManagement": "Gestione progetti",
+    "teamManagement": "Gestione team"
   },
   "gitTokens": {
     "add": "Aggiungi Token",

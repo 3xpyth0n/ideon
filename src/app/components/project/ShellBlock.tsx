@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import {
   Handle,
@@ -421,7 +422,7 @@ const ShellBlock = memo(({ id, data, selected }: ShellBlockProps) => {
             <span>{dict.blocks.blockTypeShell || "Shell"}</span>
           </div>
           <div className="shell-block-header-right">
-            <input
+            <BlockTitleInput
               value={title}
               onChange={handleTitleChange}
               onKeyDown={(e) => {
@@ -432,7 +433,6 @@ const ShellBlock = memo(({ id, data, selected }: ShellBlockProps) => {
                   focusProjectCanvas();
                 }
               }}
-              className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />

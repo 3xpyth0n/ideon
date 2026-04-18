@@ -21,6 +21,7 @@ import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { focusProjectCanvas } from "./utils/focusCanvas";
 
@@ -399,7 +400,7 @@ const FileBlock = (props: CanvasBlockProps) => {
             </span>
           </div>
           <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-            <input
+            <BlockTitleInput
               value={title}
               onChange={handleTitleChange}
               onKeyDown={(e) => {
@@ -410,7 +411,6 @@ const FileBlock = (props: CanvasBlockProps) => {
                   focusProjectCanvas();
                 }
               }}
-              className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />

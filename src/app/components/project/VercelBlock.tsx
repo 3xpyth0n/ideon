@@ -28,6 +28,7 @@ import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { focusProjectCanvas } from "./utils/focusCanvas";
 import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
@@ -485,7 +486,7 @@ const VercelBlock = (props: CanvasBlockProps) => {
                 ) : null}
               </div>
             )}
-            <input
+            <BlockTitleInput
               value={title}
               onChange={handleTitleChange}
               onKeyDown={(e) => {
@@ -496,7 +497,6 @@ const VercelBlock = (props: CanvasBlockProps) => {
                   focusProjectCanvas();
                 }
               }}
-              className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />

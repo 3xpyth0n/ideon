@@ -13,6 +13,7 @@ import {
 import { useI18n } from "@providers/I18nProvider";
 import { BlockData } from "./CanvasBlock";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
@@ -197,7 +198,7 @@ const FolderBlock = memo(({ id, data, selected }: FolderBlockProps) => {
           </div>
 
           <div className="folder-block-body">
-            <input
+            <BlockTitleInput
               value={title}
               onChange={handleTitleChange}
               className="folder-block-name"

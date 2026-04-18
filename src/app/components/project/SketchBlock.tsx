@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useRef, useEffect } from "react";
 import { PenTool } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import {
   Handle,
   Position,
@@ -258,7 +259,7 @@ const SketchBlock = memo((props: SketchBlockProps) => {
               </span>
             </div>
             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-              <input
+              <BlockTitleInput
                 value={title}
                 onChange={handleTitleChange}
                 onKeyDown={(e) => {
@@ -269,7 +270,6 @@ const SketchBlock = memo((props: SketchBlockProps) => {
                     focusProjectCanvas();
                   }
                 }}
-                className="block-title nodrag"
                 placeholder={dict.blocks.title || "..."}
                 readOnly={isReadOnly}
               />

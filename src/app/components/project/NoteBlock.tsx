@@ -48,6 +48,7 @@ import {
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
@@ -782,11 +783,9 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
               </span>
             </div>
             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-              <input
+              <BlockTitleInput
                 value={title}
                 onChange={handleTitleChange}
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
                 onFocus={() => setIsTitleEditing(true)}
                 onBlur={() => setIsTitleEditing(false)}
                 onKeyDown={(e) => {
@@ -797,7 +796,6 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                     focusProjectCanvas();
                   }
                 }}
-                className="block-title nodrag"
                 placeholder={dict.blocks.title || "..."}
                 disabled={isReadOnly}
               />

@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { User } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import {
   Handle,
@@ -275,10 +276,9 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
           </span>
         </div>
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-          <input
+          <BlockTitleInput
             value={title}
             onChange={handleTitleChange}
-            className="block-title nodrag"
             placeholder={dict.blocks.title || "..."}
             readOnly={isReadOnly}
           />

@@ -5,6 +5,7 @@ import * as Y from "yjs";
 import { Code, Brush, Copy } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { format } from "prettier/standalone";
 import type { Plugin } from "prettier";
@@ -447,7 +448,7 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
             </span>
           </div>
           <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-            <input
+            <BlockTitleInput
               value={title}
               onChange={handleTitleChange}
               onKeyDown={(e) => {

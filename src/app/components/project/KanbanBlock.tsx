@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import {
   Handle,
   Position,
@@ -1611,7 +1612,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
             </span>
           </div>
           <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-            <input
+            <BlockTitleInput
               value={title}
               onChange={handleTitleChange}
               onKeyDown={(e) => {
@@ -1622,7 +1623,6 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                   focusProjectCanvas();
                 }
               }}
-              className="block-title nodrag"
               placeholder={tr("blocks.title", "...")}
               readOnly={isReadOnly}
             />

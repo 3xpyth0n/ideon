@@ -5,6 +5,7 @@ import { Plus, Trash2, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import {
   Handle,
@@ -280,7 +281,7 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
           </span>
         </div>
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-          <input
+          <BlockTitleInput
             value={title}
             onChange={handleTitleChange}
             onKeyDown={(e) => {
@@ -291,7 +292,6 @@ const PaletteBlock = memo(({ id, data, selected }: PaletteBlockProps) => {
                 focusProjectCanvas();
               }
             }}
-            className="block-title nodrag"
             placeholder={dict.blocks.title || "..."}
             readOnly={isReadOnly}
           />

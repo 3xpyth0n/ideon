@@ -12,6 +12,7 @@ import {
 import { Check, Plus, Trash2, GripVertical } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { BlockFooter } from "./BlockFooter";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import {
   Handle,
@@ -836,7 +837,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
             )}
           </div>
           <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-            <input
+            <BlockTitleInput
               value={title}
               onChange={handleTitleChange}
               onKeyDown={(e) => {
@@ -847,7 +848,6 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                   focusProjectCanvas();
                 }
               }}
-              className="block-title nodrag"
               placeholder={dict.blocks.title || "..."}
               readOnly={isReadOnly}
             />

@@ -31,6 +31,7 @@ import * as Y from "yjs";
 import { UserPresence } from "./hooks/useProjectCanvasState";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 import CustomNodeResizer from "./CustomNodeResizer";
+import { BlockTitleInput } from "./BlockTitleInput";
 
 import NoteBlock from "./NoteBlock";
 import { BlockReactions } from "./BlockReactions";
@@ -1091,7 +1092,7 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
               <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-                <input
+                <BlockTitleInput
                   value={title}
                   onChange={handleTitleChange}
                   onKeyDown={(e) => {
@@ -1102,7 +1103,6 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
                       focusProjectCanvas();
                     }
                   }}
-                  className="block-title nodrag"
                   placeholder={dict.blocks.title || "..."}
                   readOnly={isReadOnly}
                 />

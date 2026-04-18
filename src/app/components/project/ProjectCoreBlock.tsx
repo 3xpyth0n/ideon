@@ -14,6 +14,7 @@ import { useI18n } from "@providers/I18nProvider";
 import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
+import { BlockTitleInput } from "./BlockTitleInput";
 import { CORE_BLOCK_WIDTH, CORE_BLOCK_HEIGHT } from "./utils/constants";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
@@ -201,7 +202,7 @@ const ProjectCoreBlock = memo(
               <div className="text-tiny uppercase tracking-[0.3em] opacity-30 font-bold mb-4">
                 {dict.blocks.blockTypeCore || "Project Core"}
               </div>
-              <input
+              <BlockTitleInput
                 value={title}
                 onChange={handleTitleChange}
                 onKeyDown={(e) => {
@@ -222,6 +223,7 @@ const ProjectCoreBlock = memo(
 
             <div
               className="relative w-full flex-1 min-h-0 overflow-hidden flex flex-col justify-center nodrag"
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={() =>
                 document
                   .querySelector(".core-block .ProseMirror")

@@ -20,6 +20,7 @@ export default function CanvasSearchBar({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [hasInlineInteraction, setHasInlineInteraction] = useState(false);
   const {
     blockGroups,
     filteredBlocks,
@@ -38,6 +39,7 @@ export default function CanvasSearchBar({
       if (!(target instanceof globalThis.Node)) return;
       if (rootRef.current?.contains(target)) return;
       setIsDropdownOpen(false);
+      setHasInlineInteraction(false);
     };
 
     document.addEventListener("mousedown", handlePointerDown, true);
@@ -50,10 +52,17 @@ export default function CanvasSearchBar({
   }, [isDropdownOpen]);
 
   useEffect(() => {
+    if (!hasInlineInteraction) return;
+
     if (normalizedQuery ? hasResults : filteredBlocks.length > 0) {
       setIsDropdownOpen(true);
     }
-  }, [filteredBlocks.length, hasResults, normalizedQuery]);
+  }, [
+    filteredBlocks.length,
+    hasInlineInteraction,
+    hasResults,
+    normalizedQuery,
+  ]);
 
   const showDropdown =
     isDropdownOpen &&
@@ -75,8 +84,12 @@ export default function CanvasSearchBar({
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
+          onChange={(event) => {
+            setHasInlineInteraction(true);
+            onQueryChange(event.target.value);
+          }}
           onFocus={() => {
+            setHasInlineInteraction(true);
             if (normalizedQuery ? hasResults : filteredBlocks.length > 0) {
               setIsDropdownOpen(true);
             }
@@ -84,6 +97,7 @@ export default function CanvasSearchBar({
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               setIsDropdownOpen(false);
+              setHasInlineInteraction(false);
               inputRef.current?.blur();
             }
           }}
@@ -96,6 +110,7 @@ export default function CanvasSearchBar({
           className="canvas-search-bar-advanced"
           onClick={() => {
             setIsDropdownOpen(false);
+            setHasInlineInteraction(false);
             onOpenAdvanced();
           }}
           title={dict.canvas.canvasSearchAdvanced}
@@ -123,9 +138,10 @@ export default function CanvasSearchBar({
                       key={`inline-block-${entry.id}`}
                       type="button"
                       className="canvas-search-dropdown-item"
-                      onClick={() =>
-                        selectBlock(entry.id, () => setIsDropdownOpen(false))
-                      }
+                      onClick={() => {
+                        selectBlock(entry.id, () => setIsDropdownOpen(false));
+                        setHasInlineInteraction(false);
+                      }}
                     >
                       <entry.icon
                         size={14}
@@ -160,11 +176,12 @@ export default function CanvasSearchBar({
                           key={`inline-block-${entry.id}`}
                           type="button"
                           className="canvas-search-dropdown-item"
-                          onClick={() =>
+                          onClick={() => {
                             selectBlock(entry.id, () =>
                               setIsDropdownOpen(false),
-                            )
-                          }
+                            );
+                            setHasInlineInteraction(false);
+                          }}
                         >
                           <entry.icon
                             size={14}
@@ -201,9 +218,10 @@ export default function CanvasSearchBar({
                   key={`inline-task-${entry.id}`}
                   type="button"
                   className="canvas-search-dropdown-item"
-                  onClick={() =>
-                    selectTask(entry, () => setIsDropdownOpen(false))
-                  }
+                  onClick={() => {
+                    selectTask(entry, () => setIsDropdownOpen(false));
+                    setHasInlineInteraction(false);
+                  }}
                 >
                   <span className="canvas-search-task-id">
                     {entry.taskIdLabel}

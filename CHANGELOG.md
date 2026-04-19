@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.3] - 2026-04-XX
+## [0.8.3] - 2026-04-19
 
 ### Added
 
@@ -14,6 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a project tab bar at the top of the workspace showing all projects in the selected folder, making it easy to switch between projects without navigating back to the dashboard.
 - Added a collapsible folder tree in the sidebar under "My Projects", listing your folders for quick one-click navigation.
 - Added multi-selection in the dashboard: Ctrl+Click or checkbox to select multiple projects and folders, then press Delete/Suppr or use the floating bar to delete them in bulk.
+- Added the ability to choose where a new project should be created, so you can place it in the right folder.
 
 ## [0.8.2] - 2026-04-15
 

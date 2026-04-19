@@ -196,6 +196,15 @@ const ProjectCoreBlock = memo(
           className={`core-block relative w-full h-full transition-colors ${
             selected ? "selected" : ""
           } ${isReadOnly ? "read-only" : ""} flex flex-col p-12`}
+          onMouseDown={(e) => {
+            const t = e.target as HTMLElement;
+            if (
+              t.tagName === "INPUT" ||
+              t.tagName === "TEXTAREA" ||
+              t.isContentEditable
+            )
+              e.stopPropagation();
+          }}
         >
           <div className="flex-1 flex flex-col gap-6 justify-center items-center text-center max-w-2xl mx-auto w-full h-full overflow-hidden">
             <div className="space-y-2 w-full shrink-0">

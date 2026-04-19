@@ -1,20 +1,20 @@
 import { getDb, runTransaction } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
-import { headers } from "next/headers";
+import { loadDictionaries } from "@i18n/loader";
+import { cookies, headers } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
 
 import { z } from "zod";
-import { Insertable } from "kysely";
-import { blocksTable } from "@lib/types/db";
 
 const createProjectSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  folderId: z.string().uuid().optional(),
+  folderId: z.string().uuid().nullable().optional(),
 });
 
 import { getProjectsQuery } from "@lib/queries";
+import { buildStarterProjectGraph } from "./starterProjectGraph";
 
 export const GET = authenticatedAction(
   async (req, { user }) => {
@@ -36,6 +36,10 @@ export const POST = authenticatedAction(
   async (_req, { user, body }) => {
     if (!user) throw new Error("Unauthorized");
     const db = getDb();
+    const cookieStore = await cookies();
+    const lang = cookieStore.get("ideonLang")?.value || "en";
+    const dictionaries = await loadDictionaries();
+    const dict = dictionaries[lang] || dictionaries["en"];
 
     const { name, description, folderId } = body;
 
@@ -62,6 +66,14 @@ export const POST = authenticatedAction(
 
     const projectId = uuidv4();
     const now = new Date().toISOString();
+    const starterGraph = buildStarterProjectGraph({
+      dict,
+      now,
+      ownerId: user.id,
+      projectDescription: description,
+      projectId,
+      projectName: name,
+    });
 
     await runTransaction(db, async (trx) => {
       await trx
@@ -77,31 +89,8 @@ export const POST = authenticatedAction(
         })
         .execute();
 
-      const blockId = uuidv4();
-      await trx
-        .insertInto("blocks")
-        .values({
-          id: blockId,
-          projectId,
-          blockType: "core",
-          positionX: 0,
-          positionY: 0,
-          width: 640,
-          height: 480,
-          ownerId: user.id,
-          content: name,
-          metadata: JSON.stringify({
-            description: description || "",
-          }),
-          data: JSON.stringify({
-            blockType: "core",
-            isLocked: false,
-          }),
-          createdAt: now,
-          updatedAt: now,
-          selected: 0,
-        } as Insertable<blocksTable>)
-        .execute();
+      await trx.insertInto("blocks").values(starterGraph.blocks).execute();
+      await trx.insertInto("links").values(starterGraph.links).execute();
     });
 
     const headersList = await headers();

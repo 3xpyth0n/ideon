@@ -2775,15 +2775,6 @@ export const useProjectCanvasState = (
     onEdgeContextMenu: graph.onEdgeContextMenu,
     onPaneContextMenu: graph.onPaneContextMenu,
     onPaneClick: () => {
-      const activeElement = document.activeElement as HTMLElement | null;
-      if (
-        activeElement &&
-        (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
-          activeElement.isContentEditable)
-      ) {
-        activeElement.blur();
-        focusProjectCanvas();
-      }
       setContextMenu(null);
     },
     onBlockClick: () => setContextMenu(null),

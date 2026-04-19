@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
-import { FileText, FolderOpen, Loader2, Search as SearchIcon } from "lucide-react";
+import {
+  FileText,
+  FolderOpen,
+  Loader2,
+  Search as SearchIcon,
+} from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import type {
   HomeSearchItem,

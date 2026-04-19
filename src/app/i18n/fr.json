@@ -509,6 +509,12 @@
     "welcomeSubtitle": "Créez votre premier projet pour commencer.",
     "createFirstProject": "Créer un projet"
   },
+  "starterProject": {
+    "checklistItemOne": "Définir l'objectif",
+    "checklistItemTwo": "Rassembler les références utiles",
+    "checklistItemThree": "Planifier les premières tâches",
+    "noteContent": "Utilisez cette note pour garder :\n- le contexte\n- les décisions\n- les prochaines étapes"
+  },
   "gitTokens": {
     "add": "Ajouter un jeton",
     "addTitle": "Ajouter un nouveau jeton Git",
@@ -720,8 +726,10 @@
     "projectDescription": "Décrivez l'objectif de ce projet...",
     "projectDescriptionOptional": "Description (optionnel)",
     "projectName": "Titre du projet",
-      "projectPlaceholder": "Refonte du site, Feuille de route produit...",
+    "projectPlaceholder": "Refonte du site, Feuille de route produit...",
     "projectRestored": "Projet restauré",
+    "rootFolder": "Accueil",
+    "targetFolder": "Emplacement",
     "projectStarred": "Projet ajouté aux favoris",
     "projectUnstarred": "Projet retiré des favoris",
     "publicLinkActive": "Toute personne disposant du lien peut voir",

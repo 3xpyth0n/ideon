@@ -286,7 +286,12 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
       </div>
 
       <div className="block-content flex-1 flex flex-col min-h-0">
-        <div className="contact-block-container nowheel nodrag h-full">
+        <div
+          className="contact-block-container nowheel nodrag h-full"
+          onFocus={() => {
+            if (!isReadOnly) setIsEditing(true);
+          }}
+        >
           <div className="contact-field">
             <label className="contact-field-label">
               {dict.blocks.contactName || "Name"}

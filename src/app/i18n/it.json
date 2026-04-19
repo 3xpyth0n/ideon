@@ -509,6 +509,12 @@
     "welcomeSubtitle": "Crea il tuo primo progetto per iniziare.",
     "createFirstProject": "Crea un progetto"
   },
+  "starterProject": {
+    "checklistItemOne": "Definisci l'obiettivo",
+    "checklistItemTwo": "Raccogli riferimenti utili",
+    "checklistItemThree": "Pianifica le prime attività",
+    "noteContent": "Usa questa nota per raccogliere:\n- contesto\n- decisioni\n- prossimi passi"
+  },
   "gitTokens": {
     "add": "Aggiungi Token",
     "addTitle": "Aggiungi Nuovo Token Git",
@@ -720,8 +726,10 @@
     "projectDescription": "Descrivi l'obiettivo di questo progetto...",
     "projectDescriptionOptional": "Descrizione (opzionale)",
     "projectName": "Titolo del Progetto",
-      "projectPlaceholder": "Restyling sito, Roadmap prodotto...",
+    "projectPlaceholder": "Restyling sito, Roadmap prodotto...",
     "projectRestored": "Progetto ripristinato",
+    "rootFolder": "Home",
+    "targetFolder": "Posizione",
     "projectStarred": "Progetto aggiunto ai preferiti",
     "projectUnstarred": "Progetto rimosso dai preferiti",
     "publicLinkActive": "Chiunque abbia il link può visualizzare",

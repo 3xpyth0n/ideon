@@ -1,4 +1,5 @@
 import { getDb } from "@lib/db";
+import { buildRecursiveProjectCounts } from "@lib/folder-project-counts";
 import { authenticatedAction } from "@lib/server-utils";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
@@ -31,13 +32,6 @@ export const GET = authenticatedAction(
         "folders.updatedAt",
         "folders.isStarred",
         "folders.deletedAt",
-        (eb) =>
-          eb
-            .selectFrom("projects")
-            .select(eb.fn.countAll<string>().as("count"))
-            .whereRef("projects.folderId", "=", "folders.id")
-            .where("projects.deletedAt", "is", null)
-            .as("projectCount"),
         (eb) =>
           eb
             .selectFrom("folderCollaborators")
@@ -85,7 +79,61 @@ export const GET = authenticatedAction(
 
     const folders = await query.orderBy("createdAt", "desc").execute();
 
-    return folders;
+    if (folders.length === 0) {
+      return folders;
+    }
+
+    const accessibleFolders = await db
+      .selectFrom("folders")
+      .select(["id", "parentFolderId"])
+      .where((eb) =>
+        eb.or([
+          eb("ownerId", "=", user.id),
+          eb(
+            "id",
+            "in",
+            eb
+              .selectFrom("folderCollaborators")
+              .select("folderId")
+              .where("userId", "=", user.id),
+          ),
+        ]),
+      )
+      .execute();
+
+    const accessibleFolderIds = accessibleFolders.map((folder) => folder.id);
+    const directProjectCounts = new Map<string, number>();
+
+    if (accessibleFolderIds.length > 0) {
+      const projectCountRows = await db
+        .selectFrom("projects")
+        .select(["folderId", (eb) => eb.fn.countAll<number>().as("count")])
+        .where("deletedAt", "is", null)
+        .where("folderId", "in", accessibleFolderIds)
+        .groupBy("folderId")
+        .execute();
+
+      for (const row of projectCountRows) {
+        if (!row.folderId) {
+          continue;
+        }
+
+        directProjectCounts.set(row.folderId, Number(row.count));
+      }
+    }
+
+    const recursiveProjectCounts = buildRecursiveProjectCounts(
+      accessibleFolders.map((folder) => ({
+        id: folder.id,
+        parentFolderId: folder.parentFolderId,
+      })),
+      directProjectCounts,
+    );
+
+    return folders.map((folder) => ({
+      ...folder,
+      projectCount: recursiveProjectCounts.get(folder.id) ?? 0,
+    }));
   },
   { requireUser: true },
 );

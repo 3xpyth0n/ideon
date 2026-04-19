@@ -1070,7 +1070,18 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
           onResizeEnd={handleResizeEnd}
         />
 
-        <div className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] px-2">
+        <div
+          className="w-full h-full flex flex-col overflow-hidden rounded-[inherit] px-2"
+          onMouseDown={(e) => {
+            const t = e.target as HTMLElement;
+            if (
+              t.tagName === "INPUT" ||
+              t.tagName === "TEXTAREA" ||
+              t.isContentEditable
+            )
+              e.stopPropagation();
+          }}
+        >
           <div className="block-header flex items-center justify-between pt-4 px-4 mb-2">
             <div className="flex items-center gap-2">
               <Icon

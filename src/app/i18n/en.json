@@ -509,6 +509,12 @@
     "welcomeSubtitle": "Create your first project to get started.",
     "createFirstProject": "Create a Project"
   },
+  "starterProject": {
+    "checklistItemOne": "Define the goal",
+    "checklistItemTwo": "Collect useful references",
+    "checklistItemThree": "Plan the first tasks",
+    "noteContent": "Use this note to capture:\n- context\n- decisions\n- next steps"
+  },
   "gitTokens": {
     "add": "Add Token",
     "addTitle": "Add New Git Token",
@@ -720,8 +726,10 @@
     "projectDescription": "Describe the objective of this project...",
     "projectDescriptionOptional": "Description (optional)",
     "projectName": "Project Title",
-      "projectPlaceholder": "Website redesign, Product roadmap...",
+    "projectPlaceholder": "Website redesign, Product roadmap...",
     "projectRestored": "Project restored successfully",
+    "rootFolder": "Home",
+    "targetFolder": "Location",
     "projectStarred": "Project starred",
     "projectUnstarred": "Project removed from starred",
     "publicLinkActive": "Anyone with the link can view",

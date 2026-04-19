@@ -1195,7 +1195,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
 
                 <div className="flex justify-self-center">
                   <span
-                    className={`text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border ${
+                    className={`project-card-tag ${
                       folder.ownerId === currentUser?.id
                         ? "badge-owner"
                         : "badge-collaborator"
@@ -1451,7 +1451,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
 
                 <div className="flex justify-self-center">
                   <span
-                    className={`text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border ${
+                    className={`project-card-tag ${
                       project.ownerId === currentUser?.id
                         ? "badge-owner"
                         : "badge-collaborator"

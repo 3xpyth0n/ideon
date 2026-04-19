@@ -1,4 +1,5 @@
 import { ProjectList } from "@components/dashboard/ProjectList";
+import { HomeDashboard } from "@components/dashboard/HomeDashboard";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { loadDictionaries } from "@i18n/loader";
@@ -46,6 +47,15 @@ export default async function HomePage({
   searchParams: Promise<{ view?: string; folderId?: string }>;
 }) {
   const { view, folderId } = await searchParams;
+
+  if (!view && !folderId) {
+    return (
+      <div className="island-content">
+        <HomeDashboard />
+      </div>
+    );
+  }
+
   return (
     <div className="island-content">
       <ProjectList

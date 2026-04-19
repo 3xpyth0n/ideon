@@ -43,6 +43,7 @@ interface Folder {
   id: string;
   name: string;
   ownerId: string;
+  parentFolderId?: string | null;
   createdAt: string;
   updatedAt: string;
   projectCount?: number | string;
@@ -68,6 +69,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
+  const [folderPath, setFolderPath] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showCreate, setShowCreate] = useState(false);
@@ -88,6 +90,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
+
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [dragOverBreadcrumb, setDragOverBreadcrumb] = useState<string | null>(
@@ -197,6 +203,30 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     }
   }, [contextMenu, adjustedMenuPos]);
 
+  const fetchFolderPath = useCallback(async (initialFolder: Folder | null) => {
+    if (!initialFolder?.parentFolderId) {
+      return [] as Folder[];
+    }
+
+    const ancestors: Folder[] = [];
+    let parentId: string | null = initialFolder.parentFolderId || null;
+
+    while (parentId) {
+      const parentFolder = await fetch(`/api/folders/${parentId}`, {
+        cache: "no-store",
+      }).then((res) => (res.ok ? (res.json() as Promise<Folder>) : null));
+
+      if (!parentFolder) {
+        break;
+      }
+
+      ancestors.unshift(parentFolder);
+      parentId = parentFolder.parentFolderId || null;
+    }
+
+    return ancestors;
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -204,6 +234,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       setProjects([]);
       setFolders([]);
       setCurrentFolder(null);
+      setFolderPath([]);
 
       let projectUrl = `/api/projects?view=${view || "all"}`;
       if (folderId) {
@@ -220,16 +251,20 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       );
 
       const foldersPromise =
-        !folderId &&
-        (!view ||
-          view === "all" ||
-          view === "my-projects" ||
-          view === "starred" ||
-          view === "trash" ||
-          view === "shared")
-          ? fetch(`/api/folders?view=${view || "all"}`, {
-              cache: "no-store",
-            }).then((res) => (res.ok ? res.json() : []))
+        !view ||
+        view === "all" ||
+        view === "my-projects" ||
+        view === "starred" ||
+        view === "trash" ||
+        view === "shared"
+          ? fetch(
+              folderId
+                ? `/api/folders?parentFolderId=${encodeURIComponent(folderId)}`
+                : `/api/folders?view=${view || "all"}`,
+              {
+                cache: "no-store",
+              },
+            ).then((res) => (res.ok ? res.json() : []))
           : Promise.resolve([]);
 
       const currentFolderPromise = folderId
@@ -244,6 +279,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         currentFolderPromise,
       ]);
 
+      const nextFolderPath = folderId
+        ? await fetchFolderPath(currentFolderData)
+        : [];
+
       if (view === "recent") {
         const ids = getRecentProjects();
         const orderMap = new Map(ids.map((id, index) => [id, index]));
@@ -256,19 +295,40 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       setProjects(projectsData);
       setFolders(foldersData);
       setCurrentFolder(currentFolderData);
+      setFolderPath(nextFolderPath);
     } catch {
       // Handle error
       setProjects([]);
       setFolders([]);
       setCurrentFolder(null);
+      setFolderPath([]);
     } finally {
       setLoading(false);
     }
-  }, [view, folderId]);
+  }, [fetchFolderPath, view, folderId]);
 
   useEffect(() => {
     fetchData();
+    setSelectedItems(new Set());
   }, [fetchData]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        selectedItems.size > 0
+      ) {
+        const tag = (document.activeElement as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        setShowBulkDeleteModal(true);
+      }
+      if (e.key === "Escape" && selectedItems.size > 0) {
+        setSelectedItems(new Set());
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedItems]);
 
   const dispatchFavoriteChanged = useCallback(
     (
@@ -443,6 +503,15 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     setFolderToDelete(folder);
   };
 
+  const toggleItemSelection = (key: string) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const confirmDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
@@ -510,7 +579,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     try {
       const res = await fetch("/api/folders", {
         method: "POST",
-        body: JSON.stringify({ name: dict.dashboard.createFolder }),
+        body: JSON.stringify({
+          name: dict.dashboard.createFolder,
+          parentFolderId: folderId || null,
+        }),
         headers: { "Content-Type": "application/json" },
       });
       if (res.ok) {
@@ -518,7 +590,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
         setFolders((prev) => [newFolder, ...prev]);
         setRenamingFolderId(newFolder.id);
         setRenamingName(newFolder.name);
-        syncSidebar([newFolder.id]);
+        syncSidebar([newFolder.id, folderId]);
       }
     } catch (e) {
       console.error(e);
@@ -601,8 +673,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     handleRenameProject();
   };
 
-  const handleDragStart = (e: React.DragEvent, projectId: string) => {
-    e.dataTransfer.setData("projectId", projectId);
+  const setDragPreview = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
 
     const target = e.currentTarget as HTMLElement;
@@ -627,6 +698,46 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     }, 0);
   };
 
+  const handleDragStart = (e: React.DragEvent, projectId: string) => {
+    e.dataTransfer.setData("projectId", projectId);
+    setDragPreview(e);
+  };
+
+  const handleFolderDragStart = (
+    e: React.DragEvent,
+    draggedFolderId: string,
+  ) => {
+    e.dataTransfer.setData("folderId", draggedFolderId);
+    setDragPreview(e);
+  };
+
+  const moveFolder = useCallback(
+    async (draggedFolderId: string, targetParentFolderId: string | null) => {
+      if (draggedFolderId === targetParentFolderId) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/folders/${draggedFolderId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ parentFolderId: targetParentFolderId }),
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to move folder");
+        }
+
+        syncSidebar([draggedFolderId, targetParentFolderId, folderId]);
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        fetchData();
+      }
+    },
+    [fetchData, folderId, syncSidebar],
+  );
+
   const handleDragOver = (e: React.DragEvent, folderId: string) => {
     e.preventDefault();
     if (dragOverFolderId !== folderId) {
@@ -639,16 +750,22 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     setDragOverFolderId(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, folderId: string) => {
+  const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
     e.preventDefault();
     setDragOverFolderId(null);
+    const draggedFolderId = e.dataTransfer.getData("folderId");
+    if (draggedFolderId) {
+      await moveFolder(draggedFolderId, targetFolderId);
+      return;
+    }
+
     const projectId = e.dataTransfer.getData("projectId");
     if (!projectId) return;
 
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
     setFolders((prev) =>
       prev.map((f) =>
-        f.id === folderId
+        f.id === targetFolderId
           ? { ...f, projectCount: Number(f.projectCount || 0) + 1 }
           : f,
       ),
@@ -657,11 +774,11 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
-        body: JSON.stringify({ folderId }),
+        body: JSON.stringify({ folderId: targetFolderId }),
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to move project");
-      syncSidebar([folderId]);
+      syncSidebar([targetFolderId]);
     } catch (err) {
       console.error(err);
       fetchData();
@@ -686,6 +803,13 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   ) => {
     e.preventDefault();
     setDragOverBreadcrumb(null);
+
+    const draggedFolderId = e.dataTransfer.getData("folderId");
+    if (draggedFolderId) {
+      await moveFolder(draggedFolderId, targetFolderId);
+      return;
+    }
+
     const projectId = e.dataTransfer.getData("projectId");
     if (!projectId) return;
 
@@ -703,6 +827,37 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     } catch (err) {
       console.error(err);
       fetchData();
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    const affectedFolderIds: Array<string | null | undefined> = [];
+    try {
+      await Promise.all(
+        [...selectedItems].map(async (key) => {
+          const colonIdx = key.indexOf(":");
+          const type = key.slice(0, colonIdx) as "project" | "folder";
+          const id = key.slice(colonIdx + 1);
+          const suffix = isTrash ? "?permanent=true" : "";
+          if (type === "project") {
+            await fetch(`/api/projects/${id}${suffix}`, { method: "DELETE" });
+            affectedFolderIds.push(projects.find((x) => x.id === id)?.folderId);
+          } else {
+            await fetch(`/api/folders/${id}${suffix}`, { method: "DELETE" });
+            affectedFolderIds.push(id);
+          }
+        }),
+      );
+      setSelectedItems(new Set());
+      setShowBulkDeleteModal(false);
+      fetchData();
+      syncSidebar(affectedFolderIds);
+    } catch (e) {
+      console.error(e);
+      toast.error(dict.common?.error ?? "An error occurred");
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -756,7 +911,11 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
   }
 
   const isReadOnlyView = ["trash", "recent", "starred"].includes(view || "");
-  const canCreate = !view;
+  const canCreateProject = !isReadOnlyView && (!view || view === "my-projects");
+  const canCreateFolder =
+    !isReadOnlyView &&
+    ((!folderId && (!view || view === "my-projects")) ||
+      (folderId && currentFolder?.ownerId === currentUser?.id));
 
   return (
     <>
@@ -781,29 +940,39 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     <Home size={14} />
                   </div>
 
-                  <ChevronRight size={12} className="opacity-40" />
-
-                  <div
-                    className={`flex items-center px-1.5 py-0.5 rounded transition-colors ${
-                      currentFolder && dragOverBreadcrumb === currentFolder.id
-                        ? "bg-accent/20 text-accent"
-                        : ""
-                    }`}
-                    onDragOver={(e) =>
-                      currentFolder &&
-                      handleBreadcrumbDragOver(e, currentFolder.id)
-                    }
-                    onDragLeave={handleBreadcrumbDragLeave}
-                    onDrop={(e) =>
-                      currentFolder && handleBreadcrumbDrop(e, currentFolder.id)
-                    }
-                  >
-                    {currentFolder ? (
-                      <span className="font-medium">{currentFolder.name}</span>
-                    ) : (
-                      <div className="h-4 w-20 bg-white/5 animate-pulse rounded" />
-                    )}
-                  </div>
+                  {[
+                    ...folderPath,
+                    ...(currentFolder ? [currentFolder] : []),
+                  ].map((folder, index, allFolders) => (
+                    <div key={folder.id} className="flex items-center gap-2">
+                      <ChevronRight size={12} className="opacity-40" />
+                      <div
+                        className={`flex items-center px-1.5 py-0.5 rounded transition-colors ${
+                          dragOverBreadcrumb === folder.id
+                            ? "bg-accent/20 text-accent"
+                            : ""
+                        }`}
+                        onDragOver={(e) =>
+                          handleBreadcrumbDragOver(e, folder.id)
+                        }
+                        onDragLeave={handleBreadcrumbDragLeave}
+                        onDrop={(e) => handleBreadcrumbDrop(e, folder.id)}
+                      >
+                        {index === allFolders.length - 1 ? (
+                          <span className="font-medium">{folder.name}</span>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              router.push(`/home?folderId=${folder.id}`)
+                            }
+                            className="font-medium hover:underline"
+                          >
+                            {folder.name}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <h1 className="zen-title text-2xl mb-0 leading-none">
@@ -824,9 +993,9 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
             </p>
           </div>
 
-          {canCreate && (
+          {(canCreateProject || canCreateFolder) && (
             <div className="flex w-full flex-col gap-2 sm:w-auto md:w-auto md:flex-row md:items-center">
-              {!folderId && (
+              {canCreateFolder && (
                 <Button
                   onClick={handleCreateFolder}
                   className="btn-primary gap-2 w-full sm:w-auto"
@@ -835,13 +1004,15 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   <span>{dict.dashboard.createFolder}</span>
                 </Button>
               )}
-              <Button
-                onClick={() => setShowCreate(true)}
-                className="btn-primary gap-2 w-full sm:w-auto"
-              >
-                <Plus size={14} />
-                <span>{dict.dashboard.newProject}</span>
-              </Button>
+              {canCreateProject && (
+                <Button
+                  onClick={() => setShowCreate(true)}
+                  className="btn-primary gap-2 w-full sm:w-auto"
+                >
+                  <Plus size={14} />
+                  <span>{dict.dashboard.newProject}</span>
+                </Button>
+              )}
             </div>
           )}
 
@@ -856,191 +1027,242 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
           )}
         </header>
 
+        {selectedItems.size > 0 && (
+          <div className="bulk-action-bar">
+            <span className="text-sm text-white/60">
+              {selectedItems.size} {selectedItems.size === 1 ? "item" : "items"}{" "}
+              selected
+            </span>
+            <button
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="bulk-action-bar__delete"
+            >
+              <Trash2 size={13} />
+              Delete
+            </button>
+            <button
+              onClick={() => setSelectedItems(new Set())}
+              className="rounded-lg px-3 py-1.5 text-sm text-white/40 hover:text-white/80 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         <div className="project-grid">
-          {!folderId &&
-            (!isReadOnlyView || view === "starred" || view === "trash") &&
-            folders.map((folder) => (
-              <div
-                key={folder.id}
-                onClick={() => {
-                  if (isTrash) return;
-                  if (renamingFolderId !== folder.id) {
-                    router.push(`/home?folderId=${folder.id}`);
-                  }
-                }}
-                onContextMenu={(e) => {
+          {folders.map((folder) => (
+            <div
+              key={folder.id}
+              onClick={(e) => {
+                if (isTrash) return;
+                if (e.ctrlKey || e.metaKey) {
                   e.preventDefault();
-                  if (!isTrash && folder.ownerId === currentUser?.id) {
-                    setContextMenu({ x: e.clientX, y: e.clientY, folder });
-                  }
-                }}
-                onDragOver={(e) => !isTrash && handleDragOver(e, folder.id)}
-                onDragLeave={!isTrash ? handleDragLeave : undefined}
-                onDrop={(e) => !isTrash && handleDrop(e, folder.id)}
-                data-folder-id={folder.id}
-                {...touchHandlers}
-                className={`project-card folder-card-style group relative flex flex-col justify-between cursor-pointer transition-colors ${
-                  isTrash ? "cursor-default opacity-75" : ""
-                } ${dragOverFolderId === folder.id ? "drag-over" : ""}`}
-              >
-                <div>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3 w-full">
-                      <FolderIcon
-                        className="text-blue-400 shrink-0"
-                        size={24}
-                        fill="currentColor"
-                        fillOpacity={0.2}
+                  toggleItemSelection(`folder:${folder.id}`);
+                  return;
+                }
+                if (renamingFolderId !== folder.id) {
+                  router.push(`/home?folderId=${folder.id}`);
+                }
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (!isTrash && folder.ownerId === currentUser?.id) {
+                  setContextMenu({ x: e.clientX, y: e.clientY, folder });
+                }
+              }}
+              onDragOver={(e) => !isTrash && handleDragOver(e, folder.id)}
+              onDragLeave={!isTrash ? handleDragLeave : undefined}
+              onDrop={(e) => !isTrash && handleDrop(e, folder.id)}
+              draggable={!isTrash && folder.ownerId === currentUser?.id}
+              onDragStart={(e) => handleFolderDragStart(e, folder.id)}
+              data-folder-id={folder.id}
+              {...touchHandlers}
+              className={`project-card folder-card-style group relative flex flex-col justify-between cursor-pointer transition-colors ${
+                isTrash ? "cursor-default opacity-75" : ""
+              } ${dragOverFolderId === folder.id ? "drag-over" : ""} ${
+                selectedItems.has(`folder:${folder.id}`)
+                  ? "ring-2 ring-blue-400/60"
+                  : ""
+              }`}
+            >
+              {!isTrash && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleItemSelection(`folder:${folder.id}`);
+                  }}
+                  className={`absolute top-2 left-2 z-10 transition-opacity ${
+                    selectedItems.has(`folder:${folder.id}`)
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    readOnly
+                    checked={selectedItems.has(`folder:${folder.id}`)}
+                    className="w-4 h-4 accent-blue-400 cursor-pointer"
+                  />
+                </div>
+              )}
+              <div>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-3 w-full">
+                    <FolderIcon
+                      className="text-blue-400 shrink-0"
+                      size={24}
+                      fill="currentColor"
+                      fillOpacity={0.2}
+                    />
+
+                    {renamingFolderId === folder.id ? (
+                      <input
+                        type="text"
+                        value={renamingName}
+                        onChange={(e) => setRenamingName(e.target.value)}
+                        onBlur={handleRenameFolder}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleRenameFolder();
+                          }
+                          if (e.key === "Escape") {
+                            setRenamingFolderId(null);
+                            setRenamingName("");
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="zen-textarea w-full text-blue-100 font-bold px-0 py-0 h-auto focus:border-white/20"
+                        autoFocus
                       />
-
-                      {renamingFolderId === folder.id ? (
-                        <input
-                          type="text"
-                          value={renamingName}
-                          onChange={(e) => setRenamingName(e.target.value)}
-                          onBlur={handleRenameFolder}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleRenameFolder();
-                            }
-                            if (e.key === "Escape") {
-                              setRenamingFolderId(null);
-                              setRenamingName("");
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="zen-textarea w-full text-blue-100 font-bold px-0 py-0 h-auto focus:border-white/20"
-                          autoFocus
-                        />
-                      ) : (
-                        <h3 className="project-card-title mb-0 text-blue-100 truncate leading-none mt-1">
-                          {folder.name}
-                        </h3>
-                      )}
-                    </div>
-                    {!isTrash && (
-                      <div className="flex items-center gap-2">
-                        {folder.ownerId === currentUser?.id &&
-                          renamingFolderId !== folder.id && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setRenamingFolderId(folder.id);
-                                setRenamingName(folder.name);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                          )}
-                        <button
-                          onClick={(e) => toggleFolderStar(e, folder)}
-                          className={`transition-opacity hover:scale-110 ${
-                            folder.isStarred
-                              ? "opacity-100 text-yellow-400"
-                              : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
-                          }`}
-                        >
-                          <Star
-                            size={16}
-                            fill={folder.isStarred ? "currentColor" : "none"}
-                          />
-                        </button>
-                      </div>
+                    ) : (
+                      <h3 className="project-card-title mb-0 text-blue-100 truncate leading-none mt-1">
+                        {folder.name}
+                      </h3>
                     )}
                   </div>
-
-                  <p className="project-card-desc mb-4">
-                    {dict.dashboard.projectsCount.replace(
-                      "{count}",
-                      String(Number(folder.projectCount || 0)),
-                    )}
-                  </p>
-                </div>
-
-                <div className="project-card-footer grid! grid-cols-3 w-full items-center mt-auto">
-                  <div className="project-card-tag justify-self-start">
-                    <Calendar size={10} strokeWidth={3} />
-                    <span>
-                      {new Date(folder.updatedAt).toLocaleDateString("fr-FR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-self-center">
-                    <span
-                      className={`text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border ${
-                        folder.ownerId === currentUser?.id
-                          ? "badge-owner"
-                          : "badge-collaborator"
-                      }`}
-                    >
-                      {folder.ownerId === currentUser?.id
-                        ? dict.dashboard.statusMine
-                        : dict.dashboard.statusShared}
-                    </span>
-                  </div>
-
-                  <div className="justify-self-end">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setAccessFolder(folder);
-                      }}
-                      className="project-card-tag hover:bg-white/10 transition-colors cursor-pointer"
-                      title={dict.project.projectAccess}
-                    >
-                      <Users size={10} strokeWidth={3} />
-                      <span>
-                        {dict.common.usersCount.replace(
-                          "{count}",
-                          String(Number(folder.collaboratorCount || 0) + 1),
+                  {!isTrash && (
+                    <div className="flex items-center gap-2">
+                      {folder.ownerId === currentUser?.id &&
+                        renamingFolderId !== folder.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenamingFolderId(folder.id);
+                              setRenamingName(folder.name);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+                          >
+                            <Edit2 size={14} />
+                          </button>
                         )}
-                      </span>
-                    </button>
-                  </div>
+                      <button
+                        onClick={(e) => toggleFolderStar(e, folder)}
+                        className={`transition-opacity hover:scale-110 ${
+                          folder.isStarred
+                            ? "opacity-100 text-yellow-400"
+                            : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
+                        }`}
+                      >
+                        <Star
+                          size={16}
+                          fill={folder.isStarred ? "currentColor" : "none"}
+                        />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {isTrash && (
-                  <div
-                    className="absolute inset-0 backdrop-blur-xl flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--bg-page) 85%, transparent)",
-                    }}
-                  >
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => restoreFolder(e, folder)}
-                      className="h-8 px-3"
-                    >
-                      <RotateCcw size={12} className="mr-2" />
-                      {dict.common.restore || "Restore"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={(e) => deleteFolderPermanently(e, folder)}
-                      className="h-8 px-3"
-                    >
-                      <Trash2 size={12} className="mr-2" />
-                      {dict.common.delete || "Delete"}
-                    </Button>
-                  </div>
-                )}
+                <p className="project-card-desc mb-4">
+                  {dict.dashboard.projectsCount.replace(
+                    "{count}",
+                    String(Number(folder.projectCount || 0)),
+                  )}
+                </p>
               </div>
-            ))}
+
+              <div className="project-card-footer grid! grid-cols-3 w-full items-center mt-auto">
+                <div className="project-card-tag justify-self-start">
+                  <Calendar size={10} strokeWidth={3} />
+                  <span>
+                    {new Date(folder.updatedAt).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex justify-self-center">
+                  <span
+                    className={`text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border ${
+                      folder.ownerId === currentUser?.id
+                        ? "badge-owner"
+                        : "badge-collaborator"
+                    }`}
+                  >
+                    {folder.ownerId === currentUser?.id
+                      ? dict.dashboard.statusMine
+                      : dict.dashboard.statusShared}
+                  </span>
+                </div>
+
+                <div className="justify-self-end">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setAccessFolder(folder);
+                    }}
+                    className="project-card-tag hover:bg-white/10 transition-colors cursor-pointer"
+                    title={dict.project.projectAccess}
+                  >
+                    <Users size={10} strokeWidth={3} />
+                    <span>
+                      {dict.common.usersCount.replace(
+                        "{count}",
+                        String(Number(folder.collaboratorCount || 0) + 1),
+                      )}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {isTrash && (
+                <div
+                  className="absolute inset-0 backdrop-blur-xl flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--bg-page) 85%, transparent)",
+                  }}
+                >
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => restoreFolder(e, folder)}
+                    className="h-8 px-3"
+                  >
+                    <RotateCcw size={12} className="mr-2" />
+                    {dict.common.restore || "Restore"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={(e) => deleteFolderPermanently(e, folder)}
+                    className="h-8 px-3"
+                  >
+                    <Trash2 size={12} className="mr-2" />
+                    {dict.common.delete || "Delete"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
 
           {projects.length === 0 && folders.length === 0 && (
             <div
-              onClick={() => canCreate && setShowCreate(true)}
+              onClick={() => canCreateProject && setShowCreate(true)}
               className={`project-card flex items-center justify-center cursor-pointer border-dashed border-border/60 hover:border-foreground/40 group ${
-                !canCreate ? "cursor-default hover:border-border/60" : ""
+                !canCreateProject ? "cursor-default hover:border-border/60" : ""
               }`}
             >
               <div className="flex flex-col items-center gap-3 opacity-40 group-hover:opacity-80 transition-opacity">
@@ -1073,8 +1295,13 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
           {projects.map((project) => (
             <div
               key={project.id}
-              onClick={() => {
+              onClick={(e) => {
                 if (isTrash) return;
+                if (e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  toggleItemSelection(`project:${project.id}`);
+                  return;
+                }
                 if (renamingProjectId !== project.id) {
                   router.push(
                     folderId
@@ -1089,6 +1316,10 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               {...touchHandlers}
               className={`project-card group relative overflow-hidden ${
                 isTrash ? "cursor-default opacity-75" : ""
+              } ${
+                selectedItems.has(`project:${project.id}`)
+                  ? "ring-2 ring-blue-400/60"
+                  : ""
               }`}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -1097,6 +1328,26 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 }
               }}
             >
+              {!isTrash && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleItemSelection(`project:${project.id}`);
+                  }}
+                  className={`absolute top-2 left-2 z-10 transition-opacity ${
+                    selectedItems.has(`project:${project.id}`)
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    readOnly
+                    checked={selectedItems.has(`project:${project.id}`)}
+                    className="w-4 h-4 accent-blue-400 cursor-pointer"
+                  />
+                </div>
+              )}
               <div className="flex justify-between items-start mb-2">
                 {renamingProjectId === project.id ? (
                   <input
@@ -1439,6 +1690,46 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
             </Button>
             <Button variant="danger" onClick={confirmEmptyTrash}>
               {dict.common.delete || "Delete"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showBulkDeleteModal}
+        onClose={() => {
+          if (!isBulkDeleting) setShowBulkDeleteModal(false);
+        }}
+        title={`Delete ${selectedItems.size} ${
+          selectedItems.size === 1 ? "item" : "items"
+        }?`}
+        subtitle={
+          isTrash
+            ? "These items will be permanently deleted and cannot be recovered."
+            : "These items will be moved to the trash."
+        }
+        className="max-w-md"
+      >
+        <div className="p-6 pt-2">
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteModal(false)}
+              disabled={isBulkDeleting}
+              className="hover:underline"
+            >
+              {dict.common.cancel || "Cancel"}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={confirmBulkDelete}
+              disabled={isBulkDeleting}
+            >
+              {isBulkDeleting
+                ? "Deleting…"
+                : isTrash
+                  ? dict.common.delete || "Delete permanently"
+                  : "Move to trash"}
             </Button>
           </div>
         </div>

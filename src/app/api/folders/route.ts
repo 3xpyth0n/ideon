@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 
 const createFolderSchema = z.object({
   name: z.string().min(1),
+  parentFolderId: z.string().uuid().nullable().optional(),
 });
 
 export const GET = authenticatedAction(
@@ -15,6 +16,8 @@ export const GET = authenticatedAction(
     const db = getDb();
     const url = new URL(req.url);
     const view = url.searchParams.get("view");
+    const parentFolderId = url.searchParams.get("parentFolderId");
+    const includeNested = url.searchParams.get("includeNested") === "true";
 
     // Get folders where user is owner OR collaborator
     let query = db
@@ -23,6 +26,7 @@ export const GET = authenticatedAction(
         "folders.id",
         "folders.name",
         "folders.ownerId",
+        "folders.parentFolderId",
         "folders.createdAt",
         "folders.updatedAt",
         "folders.isStarred",
@@ -71,6 +75,14 @@ export const GET = authenticatedAction(
       query = query.where("deletedAt", "is", null);
     }
 
+    if (!includeNested) {
+      if (parentFolderId) {
+        query = query.where("parentFolderId", "=", parentFolderId);
+      } else if (!["starred", "trash"].includes(view || "")) {
+        query = query.where("parentFolderId", "is", null);
+      }
+    }
+
     const folders = await query.orderBy("createdAt", "desc").execute();
 
     return folders;
@@ -82,7 +94,26 @@ export const POST = authenticatedAction(
   async (req, { user, body }) => {
     if (!user) throw new Error("Unauthorized");
     const db = getDb();
-    const { name } = body;
+    const { name, parentFolderId } = body;
+
+    if (parentFolderId) {
+      const parentFolder = await db
+        .selectFrom("folders")
+        .select(["id", "ownerId", "deletedAt"])
+        .where("id", "=", parentFolderId)
+        .executeTakeFirst();
+
+      if (!parentFolder || parentFolder.deletedAt) {
+        throw { status: 404, message: "Parent folder not found" };
+      }
+
+      if (parentFolder.ownerId !== user.id) {
+        throw {
+          status: 403,
+          message: "Forbidden: Only the folder owner can create subfolders",
+        };
+      }
+    }
 
     const folderId = uuidv4();
     const now = new Date().toISOString();
@@ -93,6 +124,7 @@ export const POST = authenticatedAction(
         id: folderId,
         name,
         ownerId: user.id,
+        parentFolderId: parentFolderId || null,
         createdAt: now,
         updatedAt: now,
       })
@@ -109,6 +141,7 @@ export const POST = authenticatedAction(
       id: folderId,
       name,
       ownerId: user.id,
+      parentFolderId: parentFolderId || null,
       createdAt: now,
       updatedAt: now,
     };

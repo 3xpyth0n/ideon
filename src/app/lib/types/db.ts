@@ -63,6 +63,7 @@ export interface foldersTable {
   id: Generated<string>;
   name: string;
   ownerId: string;
+  parentFolderId: string | null;
   isStarred: ColumnType<number, number | undefined, number>;
   deletedAt: ColumnType<
     Date | null,

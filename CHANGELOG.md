@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added a project tab bar at the top of the workspace showing all projects in the selected folder, making it easy to switch between projects without navigating back to the dashboard.
 - Added a collapsible folder tree in the sidebar under "My Projects", listing your folders for quick one-click navigation.
+- Added multi-selection in the dashboard: Ctrl+Click or checkbox to select multiple projects and folders, then press Delete/Suppr or use the floating bar to delete them in bulk.
 
 ## [0.8.2] - 2026-04-15
 

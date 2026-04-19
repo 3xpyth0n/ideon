@@ -39,7 +39,12 @@ interface SidebarProps {
 }
 
 type SidebarProject = { id: string; name: string };
-type SidebarFolder = { id: string; name: string; updatedAt?: string };
+type SidebarFolder = {
+  id: string;
+  name: string;
+  updatedAt?: string;
+  parentFolderId?: string | null;
+};
 type SidebarProjectRecord = SidebarProject & {
   updatedAt?: string;
   folderId?: string | null;
@@ -60,6 +65,8 @@ type SidebarSyncDetail = {
   refreshAll?: boolean;
   folderIds?: string[];
 };
+
+const ROOT_FOLDER_KEY = "__root__";
 
 export function Sidebar({
   currentVersion = "0.0.0",
@@ -134,7 +141,9 @@ export function Sidebar({
 
   const loadMyProjects = useCallback(async () => {
     const [foldersResponse, projectsResponse] = await Promise.all([
-      fetch("/api/folders?view=my-projects", { cache: "no-store" }),
+      fetch("/api/folders?view=my-projects&includeNested=true", {
+        cache: "no-store",
+      }),
       fetch("/api/projects?view=my-projects", { cache: "no-store" }),
     ]);
 
@@ -166,7 +175,9 @@ export function Sidebar({
 
   const loadShared = useCallback(async () => {
     const [foldersResponse, projectsResponse] = await Promise.all([
-      fetch("/api/folders?view=shared", { cache: "no-store" }),
+      fetch("/api/folders?view=shared&includeNested=true", {
+        cache: "no-store",
+      }),
       fetch("/api/projects?view=shared", { cache: "no-store" }),
     ]);
 
@@ -251,7 +262,11 @@ export function Sidebar({
     async (detail?: SidebarSyncDetail) => {
       const loaders: Promise<unknown>[] = [];
 
-      if (detail?.refreshAll || myProjectsFetchedRef.current || myProjectsExpanded) {
+      if (
+        detail?.refreshAll ||
+        myProjectsFetchedRef.current ||
+        myProjectsExpanded
+      ) {
         loaders.push(loadMyProjects().catch(() => {}));
       }
 
@@ -427,10 +442,7 @@ export function Sidebar({
         handleSidebarSync as EventListener,
       );
       window.removeEventListener("focus", handleSidebarSync);
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange,
-      );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [refreshSidebarData]);
 
@@ -483,6 +495,88 @@ export function Sidebar({
     sidebarRootProjects.length > 0 || sidebarFolders.length > 0;
   const hasSharedContent =
     sidebarSharedFolders.length > 0 || sidebarShared.length > 0;
+
+  const groupFoldersByParent = (items: SidebarFolder[]) => {
+    return items.reduce<Record<string, SidebarFolder[]>>((acc, folder) => {
+      const key = folder.parentFolderId || ROOT_FOLDER_KEY;
+      acc[key] = acc[key] ? [...acc[key], folder] : [folder];
+      return acc;
+    }, {});
+  };
+
+  const myProjectsFoldersByParent = groupFoldersByParent(sidebarFolders);
+  const sharedFoldersByParent = groupFoldersByParent(sidebarSharedFolders);
+
+  const renderSidebarFolderTree = (
+    section: SidebarFolderSection,
+    foldersByParent: Record<string, SidebarFolder[]>,
+    parentFolderId?: string,
+  ) => {
+    const foldersForParent =
+      foldersByParent[parentFolderId || ROOT_FOLDER_KEY] || [];
+
+    return foldersForParent.map((folder) => {
+      const childFolders = foldersByParent[folder.id] || [];
+      const childProjects = folderProjects[folder.id];
+      const isExpanded = isFolderExpanded(section, folder.id);
+      const showEmptyState =
+        isExpanded && childFolders.length === 0 && childProjects?.length === 0;
+
+      return (
+        <div key={folder.id}>
+          <div
+            className={`nav-sub-item nav-sub-folder-row ${
+              currentFolderId === folder.id ? "active" : ""
+            }`}
+          >
+            <Link
+              href={`/home?folderId=${folder.id}`}
+              className="nav-sub-folder-link"
+            >
+              <Folder size={14} />
+              <span>{folder.name}</span>
+            </Link>
+            <button
+              onClick={(e) => handleFolderToggle(section, e, folder.id)}
+              className="nav-sub-folder-button"
+            >
+              <ChevronDown
+                size={12}
+                className={`transition-transform duration-200 ${
+                  isExpanded ? "" : "-rotate-90"
+                }`}
+              />
+            </button>
+          </div>
+          {isExpanded && (
+            <div className="sidebar-folder-tree">
+              {renderSidebarFolderTree(section, foldersByParent, folder.id)}
+              {(childProjects || []).map((project) => (
+                <Link
+                  key={project.id}
+                  href={`/project/${project.id}?folderId=${folder.id}`}
+                  className={`nav-sub-item ${
+                    pathname === `/project/${project.id}` &&
+                    currentFolderId === folder.id
+                      ? "active"
+                      : ""
+                  }`}
+                >
+                  <FileText size={12} />
+                  <span>{project.name}</span>
+                </Link>
+              ))}
+              {showEmptyState && (
+                <div className="nav-sub-empty">
+                  {dict.dashboard.emptyFolder}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
 
   return (
     <>
@@ -594,65 +688,10 @@ export function Sidebar({
                       <span>{project.name}</span>
                     </Link>
                   ))}
-                  {sidebarFolders.map((folder) => (
-                    <div key={folder.id}>
-                      <div
-                        className={`nav-sub-item nav-sub-folder-row ${
-                          currentFolderId === folder.id ? "active" : ""
-                        }`}
-                      >
-                        <Link
-                          href={`/home?folderId=${folder.id}`}
-                          className="nav-sub-folder-link"
-                        >
-                          <Folder size={14} />
-                          <span>{folder.name}</span>
-                        </Link>
-                        <button
-                          onClick={(e) =>
-                            handleFolderToggle("my-projects", e, folder.id)
-                          }
-                          className="nav-sub-folder-button"
-                        >
-                          <ChevronDown
-                            size={12}
-                            className={`transition-transform duration-200 ${
-                              isFolderExpanded("my-projects", folder.id)
-                                ? ""
-                                : "-rotate-90"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      {isFolderExpanded("my-projects", folder.id) &&
-                        folderProjects[folder.id] &&
-                        (folderProjects[folder.id].length > 0 ? (
-                          <div className="sidebar-folder-tree">
-                            {folderProjects[folder.id].map((project) => (
-                              <Link
-                                key={project.id}
-                                href={`/project/${project.id}?folderId=${folder.id}`}
-                                className={`nav-sub-item ${
-                                  pathname === `/project/${project.id}` &&
-                                  currentFolderId === folder.id
-                                    ? "active"
-                                    : ""
-                                }`}
-                              >
-                                <FileText size={12} />
-                                <span>{project.name}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="sidebar-folder-tree">
-                            <div className="nav-sub-empty">
-                              {dict.dashboard.emptyFolder}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ))}
+                  {renderSidebarFolderTree(
+                    "my-projects",
+                    myProjectsFoldersByParent,
+                  )}
                 </div>
               )}
             </div>
@@ -701,65 +740,7 @@ export function Sidebar({
                       {dict.dashboard.emptyShared}
                     </div>
                   )}
-                  {sidebarSharedFolders.map((folder) => (
-                    <div key={folder.id}>
-                      <div
-                        className={`nav-sub-item nav-sub-folder-row ${
-                          currentFolderId === folder.id ? "active" : ""
-                        }`}
-                      >
-                        <Link
-                          href={`/home?folderId=${folder.id}`}
-                          className="nav-sub-folder-link"
-                        >
-                          <Folder size={14} />
-                          <span>{folder.name}</span>
-                        </Link>
-                        <button
-                          onClick={(e) =>
-                            handleFolderToggle("shared", e, folder.id)
-                          }
-                          className="nav-sub-folder-button"
-                        >
-                          <ChevronDown
-                            size={12}
-                            className={`transition-transform duration-200 ${
-                              isFolderExpanded("shared", folder.id)
-                                ? ""
-                                : "-rotate-90"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      {isFolderExpanded("shared", folder.id) &&
-                        folderProjects[folder.id] &&
-                        (folderProjects[folder.id].length > 0 ? (
-                          <div className="sidebar-folder-tree">
-                            {folderProjects[folder.id].map((project) => (
-                              <Link
-                                key={project.id}
-                                href={`/project/${project.id}?folderId=${folder.id}`}
-                                className={`nav-sub-item ${
-                                  pathname === `/project/${project.id}` &&
-                                  currentFolderId === folder.id
-                                    ? "active"
-                                    : ""
-                                }`}
-                              >
-                                <FileText size={12} />
-                                <span>{project.name}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="sidebar-folder-tree">
-                            <div className="nav-sub-empty">
-                              {dict.dashboard.emptyFolder}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ))}
+                  {renderSidebarFolderTree("shared", sharedFoldersByParent)}
                   {sidebarShared.map((project) => (
                     <Link
                       key={project.id}

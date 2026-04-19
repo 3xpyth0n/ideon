@@ -262,9 +262,9 @@
 
 .kb-task {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 6px;
-  padding: 12px 12px 56px;
+  padding: 12px 12px 16px;
   background: var(--bg-island);
   border: 1px solid transparent;
   border-radius: 6px;
@@ -272,6 +272,32 @@
   cursor: default;
   min-height: 64px;
   position: relative;
+  overflow: hidden;
+}
+
+.kb-task-body {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main meta"
+    "footer footer";
+  align-items: start;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.kb-task-main {
+  grid-area: main;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
 }
 
 .kb-task-placeholder {
@@ -474,21 +500,123 @@
 .kb-task-desc {
   font-size: 12px;
   color: var(--text-muted);
-  margin-top: 2px;
+  position: relative;
+  min-height: 0;
   overflow: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  flex: 1;
+  padding-bottom: 18px;
+}
+
+.kb-task:not(.kb-task-fixed-height) .kb-task-desc,
+.kb-task[data-measure-min-content="true"] .kb-task-desc {
+  max-height: 72px;
+}
+
+.kb-task-desc-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding-bottom: 6px;
+}
+
+.kb-task-md > p,
+.kb-task-md > blockquote,
+.kb-task-md > [data-md-image-placeholder="true"] {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kb-task-md > [data-md-heading="true"] {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.kb-task-md > [data-md-heading="true"][data-md-heading-level="2"] {
+  font-size: 12px;
+}
+
+.kb-task-md > [data-md-heading="true"][data-md-heading-level="3"] {
+  font-size: 11px;
+  letter-spacing: 0.01em;
+}
+
+.kb-task-md > blockquote {
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid
+    color-mix(in srgb, var(--border) 80%, transparent);
+  color: var(--text-secondary);
+}
+
+.kb-task-md > ul,
+.kb-task-md > ol {
+  margin: 0;
+  padding-inline-start: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kb-task-md > ul li,
+.kb-task-md > ol li {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.kb-task-md > ol[data-md-list="ordered"] {
+  list-style: decimal;
+}
+
+.kb-task-md > ul[data-md-list="task"] {
+  list-style: none;
+  padding-inline-start: 0;
+}
+
+.kb-task-md > ul[data-md-list="task"] [data-md-task-item="true"] {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.kb-task-md > ul[data-md-list="task"] input {
+  margin: 1px 0 0;
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+}
+
+.kb-task-md a {
+  color: var(--brand-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.kb-task-md code {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--border) 65%, transparent);
+  color: var(--text-main);
+}
+
+.kb-task-md strong {
+  color: var(--text-main);
+}
+
+.kb-task-md [data-md-image-inline="true"],
+.kb-task-md > [data-md-image-placeholder="true"] {
+  color: var(--text-tertiary);
+  font-style: italic;
 }
 
 .kb-task-links {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-top: 6px;
 }
 
 .kb-task-link-chip {
@@ -517,11 +645,18 @@
 }
 
 .kb-task-assignee {
-  /* Place assignee inline within the meta and avoid overlapping menus */
   position: relative;
   top: auto;
   right: auto;
   z-index: 0;
+}
+
+.kb-task-meta {
+  grid-area: meta;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .kb-card-resize-handle {
@@ -550,17 +685,13 @@
   color: var(--text-muted);
 }
 
-/* Footer line inside each task for field badges */
 .kb-task-footer {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 18px; /* sits above the resize handle */
+  grid-area: footer;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   align-items: center;
-  z-index: 10;
+  min-width: 0;
 }
 
 /* Field chip styling: smaller, circular corners and border using field color */

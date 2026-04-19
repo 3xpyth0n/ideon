@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import CardAssigneeView from "./CardAssigneeView";
 import FloatingMenu from "./FloatingMenu";
+import KanbanCardMarkdownPreview from "./KanbanCardMarkdownPreview";
 import {
   buildTaskLinkKey,
   formatTaskNumber,
@@ -80,21 +81,23 @@ interface Props {
   currentBlockId: string;
 }
 
-function toPlainText(markdown: string): string {
-  return markdown
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^>\s?/gm, "")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/~~([^~]+)~~/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/_([^_]+)_/g, "$1")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function measureMinimumCardHeight(el: HTMLDivElement): number {
+  const previousHeight = el.style.height;
+  const previousMeasureFlag = el.dataset.measureMinContent;
+
+  el.dataset.measureMinContent = "true";
+  el.style.height = "auto";
+
+  const minContentHeight = Math.max(64, Math.ceil(el.scrollHeight));
+
+  el.style.height = previousHeight;
+  if (previousMeasureFlag === undefined) {
+    delete el.dataset.measureMinContent;
+  } else {
+    el.dataset.measureMinContent = previousMeasureFlag;
+  }
+
+  return minContentHeight;
 }
 
 export default function KanbanCard({
@@ -124,14 +127,17 @@ export default function KanbanCard({
   currentBlockId,
 }: Props) {
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const hasCustomHeight =
+    typeof t.height === "number" && Number.isFinite(t.height);
+  const persistedHeight = hasCustomHeight ? t.height : undefined;
 
   useLayoutEffect(() => {
     const el = cardRef.current;
     if (!el) return;
-    if (typeof t.height !== "number" || !Number.isFinite(t.height)) return;
+    if (persistedHeight === undefined) return;
 
-    const minContentHeight = Math.max(64, Math.ceil(el.scrollHeight));
-    if (t.height >= minContentHeight) return;
+    const minContentHeight = measureMinimumCardHeight(el);
+    if (persistedHeight >= minContentHeight) return;
 
     save(
       columns.map((c) =>
@@ -145,7 +151,7 @@ export default function KanbanCard({
           : c,
       ),
     );
-  }, [col.id, columns, save, t.height, t.id, t.text]);
+  }, [col.id, columns, persistedHeight, save, t.id, t.text]);
 
   const computeChipColors = (color?: string) => {
     let bg = "var(--bg-island)";
@@ -188,11 +194,6 @@ export default function KanbanCard({
   const lines = (t.text || "").split("\n");
   const title = lines[0] || "";
   const description = lines.slice(1).join("\n").trim();
-  const plainDescription = toPlainText(description);
-  const descriptionSnippet =
-    plainDescription.length > 100
-      ? `${plainDescription.slice(0, 100).trimEnd()}...`
-      : plainDescription;
   const taskRecordMap = new Map(
     taskRecords.map((record) => [
       buildTaskLinkKey(record.blockId, record.taskId),
@@ -232,6 +233,108 @@ export default function KanbanCard({
     backlinks,
     currentBlockId,
   );
+  const fieldChips = fields
+    .map((f) => {
+      const v = t.fields?.[f.id];
+      if (!v) return null;
+      const raw = String(v);
+      const labelAndColor = (() => {
+        let label = raw;
+        let color: string | undefined = undefined;
+        if (f.type === "select") {
+          if (Array.isArray(f.options) && f.options.length > 0) {
+            const opt = (f.options as Option[]).find(
+              (o) => String(o.id) === raw,
+            );
+            if (opt) {
+              label = opt.label || raw;
+              color = opt.color as string | undefined;
+            } else if (raw.includes("|")) {
+              const parts = raw.split("|");
+              label = parts[0] || raw;
+              color = parts[1] || undefined;
+            }
+          } else if (raw.includes("|")) {
+            const parts = raw.split("|");
+            label = parts[0] || raw;
+            color = parts[1] || undefined;
+          }
+        }
+        return { label, color };
+      })();
+
+      const chipStyle = computeChipColors(
+        f.type === "select"
+          ? labelAndColor.color
+          : (f as unknown as { color?: string }).color,
+      );
+
+      if (f.type === "number") {
+        return (
+          <div
+            key={f.id}
+            className="kb-field-chip"
+            style={chipStyle}
+            title={`${f.name}: ${String(v)}`}
+          >
+            <span>{String(v)}</span>
+          </div>
+        );
+      }
+
+      if (f.type === "date") {
+        try {
+          const d = new Date(String(v));
+          const formattedDate = d.toLocaleDateString();
+          return (
+            <div
+              key={f.id}
+              className="kb-field-chip"
+              style={chipStyle}
+              title={`${f.name}: ${formattedDate}`}
+            >
+              <span>{formattedDate}</span>
+            </div>
+          );
+        } catch {
+          return null;
+        }
+      }
+
+      if (f.type === "select") {
+        return (
+          <div
+            key={f.id}
+            className="kb-field-chip flex items-center"
+            style={chipStyle}
+            title={`${f.name}: ${labelAndColor.label}`}
+          >
+            {labelAndColor.color && (
+              <span
+                className="kb-field-swatch"
+                style={{
+                  background: labelAndColor.color,
+                  borderColor: chipStyle.borderColor as string,
+                }}
+              />
+            )}
+            <span className="kb-field-label">{labelAndColor.label}</span>
+          </div>
+        );
+      }
+
+      return (
+        <div
+          key={f.id}
+          className="kb-field-chip"
+          style={chipStyle}
+          title={`${f.name}: ${String(v)}`}
+        >
+          <span>{String(v)}</span>
+        </div>
+      );
+    })
+    .filter((chip): chip is React.ReactElement => chip !== null);
 
   const startResize = (e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -247,10 +350,7 @@ export default function KanbanCard({
         el.clientHeight || parseFloat(getComputedStyle(el).height || "0"),
       ),
     );
-    const prevInlineHeight = el.style.height;
-    el.style.height = "auto";
-    const minContentHeight = Math.max(64, Math.ceil(el.scrollHeight));
-    el.style.height = prevInlineHeight;
+    const minContentHeight = measureMinimumCardHeight(el);
     // scale to convert screen px -> CSS px
     const scale =
       startRectHeight && startHeightCss ? startRectHeight / startHeightCss : 1;
@@ -363,11 +463,11 @@ export default function KanbanCard({
     <div
       ref={cardRef}
       className={`kb-task nodrag relative ${
-        isHighlighted ? "kb-task-highlighted" : ""
-      }`}
+        hasCustomHeight ? "kb-task-fixed-height " : ""
+      }${isHighlighted ? "kb-task-highlighted" : ""}`}
       style={
-        typeof t.height === "number" && Number.isFinite(t.height)
-          ? { height: `${Math.max(64, Math.round(t.height))}px` }
+        persistedHeight !== undefined
+          ? { height: `${Math.max(64, Math.round(persistedHeight))}px` }
           : undefined
       }
       data-task-index={taskIndex}
@@ -392,334 +492,241 @@ export default function KanbanCard({
         </div>
       )}
 
-      <div className="flex-1 min-w-0">
-        <div className="kb-task-heading">
-          {typeof t.taskNumber === "number" ? (
-            <span
-              className="kb-task-number"
-              title={tr("kanban.taskNumber", "Task number")}
-            >
-              {formatTaskNumber(t.taskNumber)}
-            </span>
-          ) : null}
-          <div className="flex-1 min-w-0">
-            <div
-              className="kb-task-title w-full text-sm font-semibold mb-1 cursor-pointer"
-              onClick={() => {
-                if (!isReadOnly) {
-                  onRequestOpenTaskModal?.(t.id);
-                }
-              }}
-              role="button"
-            >
-              {title || tr("kanban.addTask", "Task")}
-            </div>
-            <TaskStatusBadge status={dependencyState.status} tr={tr} />
-          </div>
-        </div>
-        {descriptionSnippet ? (
-          <div className="kb-task-desc">{descriptionSnippet}</div>
-        ) : null}
-        {resolvedLinkedTasks.length > 0 ? (
-          <div
-            className="kb-task-links"
-            title={tr("kanban.linkedTasks", "Linked tasks")}
-          >
-            {visibleLinkedTasks.map((link) => (
-              <button
-                key={buildTaskLinkKey(link.blockId, link.taskId)}
-                type="button"
-                onClick={() =>
-                  onNavigateToTask?.({
-                    blockId: link.blockId,
-                    taskId: link.taskId,
-                  })
-                }
-                title={link.title || undefined}
-                aria-label={tr("kanban.linkedTasks", "Linked tasks")}
-                className="kb-task-link-chip kb-task-link-chip-btn"
+      <div className="kb-task-body">
+        <div className="kb-task-main">
+          <div className="kb-task-heading">
+            {typeof t.taskNumber === "number" ? (
+              <span
+                className="kb-task-number"
+                title={tr("kanban.taskNumber", "Task number")}
               >
-                {formatTaskNumber(link.taskNumber) ||
-                  link.title ||
-                  tr("kanban.linkedTaskFallback", "Linked task")}
-              </button>
-            ))}
-            {extraLinkedTaskCount > 0 ? (
-              <span className="kb-task-link-chip">+{extraLinkedTaskCount}</span>
+                {formatTaskNumber(t.taskNumber)}
+              </span>
             ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      {!isReadOnly && (
-        <div className="kb-task-meta flex items-center gap-2 ml-2">
-          <div className="flex items-center gap-2">
-            <div className="kb-task-assignee order-first shrink-0">
-              <CardAssigneeView
-                collaborators={collaborators}
-                value={
-                  Array.isArray(t.assigneeIds)
-                    ? t.assigneeIds
-                    : t.assigneeId
-                      ? [t.assigneeId]
-                      : []
-                }
-                isOpen={openMenuKey === `assignee:${t.id}`}
-                onOpen={(pos) => onRequestOpenMenu?.(`assignee:${t.id}`, pos)}
-                onClose={() => onRequestCloseMenu?.()}
-                onChange={(ids) => {
-                  save(
-                    columns.map((c) =>
-                      c.id === col.id
-                        ? {
-                            ...c,
-                            tasks: c.tasks.map((x) =>
-                              x.id === t.id
-                                ? {
-                                    ...x,
-                                    assigneeIds: ids,
-                                    assigneeId: ids[0] ?? undefined,
-                                  }
-                                : x,
-                            ),
-                          }
-                        : c,
-                    ),
-                  );
-                }}
-              />
-            </div>
-            {/* assignee + menu stay inline; field chips moved to footer below */}
-
-            {/* three-dot menu trigger */}
-            <div className="relative order-last">
-              <button
-                type="button"
-                className="kb-task-opts p-1 rounded"
-                aria-label={tr("kanban.taskOptions", "Task options")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const rect = (
-                    e.currentTarget as HTMLElement
-                  ).getBoundingClientRect();
-                  const vw =
-                    window.innerWidth ||
-                    document.documentElement.clientWidth ||
-                    1024;
-                  const vh =
-                    window.innerHeight ||
-                    document.documentElement.clientHeight ||
-                    768;
-                  const estimatedMenuWidth = 220;
-                  const estimatedMenuHeight = 220;
-                  // compute left clamped to viewport
-                  let left = Math.round(rect.left);
-                  if (left + estimatedMenuWidth > vw - 8)
-                    left = Math.max(8, vw - estimatedMenuWidth - 8);
-                  if (left < 8) left = 8;
-                  // compute top; prefer below button, but if not enough space open above
-                  let top = Math.round(rect.bottom + 6);
-                  if (top + estimatedMenuHeight > vh - 8) {
-                    const alt = Math.round(rect.top - estimatedMenuHeight - 6);
-                    top = alt > 8 ? alt : Math.max(8, Math.round(rect.top));
+            <div className="flex-1 min-w-0">
+              <div
+                className="kb-task-title w-full text-sm font-semibold mb-1 cursor-pointer"
+                onClick={() => {
+                  if (!isReadOnly) {
+                    onRequestOpenTaskModal?.(t.id);
                   }
-                  onRequestOpenMenu?.(`task:${t.id}`, { x: left, y: top });
                 }}
+                role="button"
               >
-                <MoreHorizontal size={14} />
-              </button>
-
-              {openMenuKey === `task:${t.id}` && (
-                <FloatingMenu
-                  style={
-                    {
-                      top: openMenuPos?.y ?? 0,
-                      left: openMenuPos?.x ?? 0,
-                    } as React.CSSProperties
-                  }
-                  onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
-                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                >
-                  <button
-                    className="context-menu-item"
-                    onClick={() => {
-                      onRequestCloseMenu?.();
-                      onRequestOpenTaskModal?.(t.id);
-                    }}
-                  >
-                    <span className="context-menu-icon">
-                      <Edit3 size={14} />
-                    </span>
-                    <span className="context-menu-label">
-                      {tr("kanban.editTask", "Edit")}
-                    </span>
-                  </button>
-
-                  <button
-                    className="context-menu-item"
-                    onClick={() => {
-                      onRequestCloseMenu?.();
-                      const newTask = {
-                        ...t,
-                        id: `t-${Math.random().toString(36).slice(2, 9)}`,
-                        taskNumber: getNextTaskNumberFromRecords(taskRecords),
-                        linkedTasks: undefined,
-                      } as Task;
-                      save(
-                        columns.map((c) =>
-                          c.id === col.id
-                            ? {
-                                ...c,
-                                tasks: [
-                                  ...c.tasks.slice(0, taskIndex + 1),
-                                  newTask,
-                                  ...c.tasks.slice(taskIndex + 1),
-                                ],
-                              }
-                            : c,
-                        ),
-                      );
-                    }}
-                  >
-                    <span className="context-menu-icon">
-                      <Copy size={14} />
-                    </span>
-                    <span className="context-menu-label">
-                      {tr("kanban.duplicateTask", "Duplicate")}
-                    </span>
-                  </button>
-
-                  <button
-                    className="context-menu-item danger"
-                    onClick={() => {
-                      onRequestCloseMenu?.();
-                      save(
-                        columns.map((c) =>
-                          c.id === col.id
-                            ? {
-                                ...c,
-                                tasks: c.tasks.filter((x) => x.id !== t.id),
-                              }
-                            : c,
-                        ),
-                      );
-                    }}
-                  >
-                    <span className="context-menu-icon">
-                      <Trash2 size={14} />
-                    </span>
-                    <span className="context-menu-label">
-                      {tr("kanban.deleteTask", "Delete")}
-                    </span>
-                  </button>
-                </FloatingMenu>
-              )}
+                {title || tr("kanban.addTask", "Task")}
+              </div>
+              <TaskStatusBadge status={dependencyState.status} tr={tr} />
             </div>
           </div>
-        </div>
-      )}
-      {/* footer line for field badges */}
-      <div className="kb-task-footer">
-        {fields.map((f) => {
-          const v = t.fields?.[f.id];
-          if (!v) return null;
-          const raw = String(v);
-          const labelAndColor = (() => {
-            let label = raw;
-            let color: string | undefined = undefined;
-            if (f.type === "select") {
-              if (Array.isArray(f.options) && f.options.length > 0) {
-                const opt = (f.options as Option[]).find(
-                  (o) => String(o.id) === raw,
-                );
-                if (opt) {
-                  label = opt.label || raw;
-                  color = opt.color as string | undefined;
-                } else if (raw.includes("|")) {
-                  const parts = raw.split("|");
-                  label = parts[0] || raw;
-                  color = parts[1] || undefined;
-                }
-              } else if (raw.includes("|")) {
-                const parts = raw.split("|");
-                label = parts[0] || raw;
-                color = parts[1] || undefined;
-              }
-            }
-            return { label, color };
-          })();
 
-          const chipStyle = computeChipColors(
-            f.type === "select"
-              ? labelAndColor.color
-              : (f as unknown as { color?: string }).color,
-          );
+          {description ? (
+            <div className="kb-task-desc">
+              <KanbanCardMarkdownPreview markdown={description} />
+            </div>
+          ) : null}
 
-          if (f.type === "number") {
-            return (
-              <div
-                key={f.id}
-                className="kb-field-chip"
-                style={chipStyle}
-                title={`${f.name}: ${String(v)}`}
-              >
-                <span>{String(v)}</span>
-              </div>
-            );
-          }
-
-          if (f.type === "date") {
-            try {
-              const d = new Date(String(v));
-              const formattedDate = d.toLocaleDateString();
-              return (
-                <div
-                  key={f.id}
-                  className="kb-field-chip"
-                  style={chipStyle}
-                  title={`${f.name}: ${formattedDate}`}
-                >
-                  <span>{formattedDate}</span>
-                </div>
-              );
-            } catch {
-              return null;
-            }
-          }
-
-          if (f.type === "select") {
-            return (
-              <div
-                key={f.id}
-                className="kb-field-chip flex items-center"
-                style={chipStyle}
-                title={`${f.name}: ${labelAndColor.label}`}
-              >
-                {labelAndColor.color && (
-                  <span
-                    className="kb-field-swatch"
-                    style={{
-                      background: labelAndColor.color,
-                      borderColor: chipStyle.borderColor as string,
-                    }}
-                  />
-                )}
-                <span className="kb-field-label">{labelAndColor.label}</span>
-              </div>
-            );
-          }
-
-          return (
+          {resolvedLinkedTasks.length > 0 ? (
             <div
-              key={f.id}
-              className="kb-field-chip"
-              style={chipStyle}
-              title={`${f.name}: ${String(v)}`}
+              className="kb-task-links"
+              title={tr("kanban.linkedTasks", "Linked tasks")}
             >
-              <span>{String(v)}</span>
+              {visibleLinkedTasks.map((link) => (
+                <button
+                  key={buildTaskLinkKey(link.blockId, link.taskId)}
+                  type="button"
+                  onClick={() =>
+                    onNavigateToTask?.({
+                      blockId: link.blockId,
+                      taskId: link.taskId,
+                    })
+                  }
+                  title={link.title || undefined}
+                  aria-label={tr("kanban.linkedTasks", "Linked tasks")}
+                  className="kb-task-link-chip kb-task-link-chip-btn"
+                >
+                  {formatTaskNumber(link.taskNumber) ||
+                    link.title ||
+                    tr("kanban.linkedTaskFallback", "Linked task")}
+                </button>
+              ))}
+              {extraLinkedTaskCount > 0 ? (
+                <span className="kb-task-link-chip">
+                  +{extraLinkedTaskCount}
+                </span>
+              ) : null}
             </div>
-          );
-        })}
+          ) : null}
+        </div>
+
+        {!isReadOnly && (
+          <div className="kb-task-meta">
+            <div className="flex items-center gap-2">
+              <div className="kb-task-assignee order-first shrink-0">
+                <CardAssigneeView
+                  collaborators={collaborators}
+                  value={
+                    Array.isArray(t.assigneeIds)
+                      ? t.assigneeIds
+                      : t.assigneeId
+                        ? [t.assigneeId]
+                        : []
+                  }
+                  isOpen={openMenuKey === `assignee:${t.id}`}
+                  onOpen={(pos) => onRequestOpenMenu?.(`assignee:${t.id}`, pos)}
+                  onClose={() => onRequestCloseMenu?.()}
+                  onChange={(ids) => {
+                    save(
+                      columns.map((c) =>
+                        c.id === col.id
+                          ? {
+                              ...c,
+                              tasks: c.tasks.map((x) =>
+                                x.id === t.id
+                                  ? {
+                                      ...x,
+                                      assigneeIds: ids,
+                                      assigneeId: ids[0] ?? undefined,
+                                    }
+                                  : x,
+                              ),
+                            }
+                          : c,
+                      ),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="relative order-last">
+                <button
+                  type="button"
+                  className="kb-task-opts p-1 rounded"
+                  aria-label={tr("kanban.taskOptions", "Task options")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = (
+                      e.currentTarget as HTMLElement
+                    ).getBoundingClientRect();
+                    const vw =
+                      window.innerWidth ||
+                      document.documentElement.clientWidth ||
+                      1024;
+                    const vh =
+                      window.innerHeight ||
+                      document.documentElement.clientHeight ||
+                      768;
+                    const estimatedMenuWidth = 220;
+                    const estimatedMenuHeight = 220;
+                    let left = Math.round(rect.left);
+                    if (left + estimatedMenuWidth > vw - 8)
+                      left = Math.max(8, vw - estimatedMenuWidth - 8);
+                    if (left < 8) left = 8;
+                    let top = Math.round(rect.bottom + 6);
+                    if (top + estimatedMenuHeight > vh - 8) {
+                      const alt = Math.round(
+                        rect.top - estimatedMenuHeight - 6,
+                      );
+                      top = alt > 8 ? alt : Math.max(8, Math.round(rect.top));
+                    }
+                    onRequestOpenMenu?.(`task:${t.id}`, { x: left, y: top });
+                  }}
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+
+                {openMenuKey === `task:${t.id}` && (
+                  <FloatingMenu
+                    style={
+                      {
+                        top: openMenuPos?.y ?? 0,
+                        left: openMenuPos?.x ?? 0,
+                      } as React.CSSProperties
+                    }
+                    onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  >
+                    <button
+                      className="context-menu-item"
+                      onClick={() => {
+                        onRequestCloseMenu?.();
+                        onRequestOpenTaskModal?.(t.id);
+                      }}
+                    >
+                      <span className="context-menu-icon">
+                        <Edit3 size={14} />
+                      </span>
+                      <span className="context-menu-label">
+                        {tr("kanban.editTask", "Edit")}
+                      </span>
+                    </button>
+
+                    <button
+                      className="context-menu-item"
+                      onClick={() => {
+                        onRequestCloseMenu?.();
+                        const newTask = {
+                          ...t,
+                          id: `t-${Math.random().toString(36).slice(2, 9)}`,
+                          taskNumber: getNextTaskNumberFromRecords(taskRecords),
+                          linkedTasks: undefined,
+                        } as Task;
+                        save(
+                          columns.map((c) =>
+                            c.id === col.id
+                              ? {
+                                  ...c,
+                                  tasks: [
+                                    ...c.tasks.slice(0, taskIndex + 1),
+                                    newTask,
+                                    ...c.tasks.slice(taskIndex + 1),
+                                  ],
+                                }
+                              : c,
+                          ),
+                        );
+                      }}
+                    >
+                      <span className="context-menu-icon">
+                        <Copy size={14} />
+                      </span>
+                      <span className="context-menu-label">
+                        {tr("kanban.duplicateTask", "Duplicate")}
+                      </span>
+                    </button>
+
+                    <button
+                      className="context-menu-item danger"
+                      onClick={() => {
+                        onRequestCloseMenu?.();
+                        save(
+                          columns.map((c) =>
+                            c.id === col.id
+                              ? {
+                                  ...c,
+                                  tasks: c.tasks.filter((x) => x.id !== t.id),
+                                }
+                              : c,
+                          ),
+                        );
+                      }}
+                    >
+                      <span className="context-menu-icon">
+                        <Trash2 size={14} />
+                      </span>
+                      <span className="context-menu-label">
+                        {tr("kanban.deleteTask", "Delete")}
+                      </span>
+                    </button>
+                  </FloatingMenu>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {fieldChips.length > 0 ? (
+          <div className="kb-task-footer">{fieldChips}</div>
+        ) : null}
       </div>
 
       <div

@@ -37,18 +37,13 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
-  build-and-push:
+  build-amd64:
     needs: check-tag
     if: needs.check-tag.outputs.skip == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -60,11 +55,85 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push multi-arch image (latest)
+      - name: Build and push linux/amd64
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64
+          cache-from: type=gha,scope=linux-amd64
+          cache-to: type=gha,mode=max,scope=linux-amd64
+
+  build-arm64:
+    needs: check-tag
+    if: needs.check-tag.outputs.skip == 'false'
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push linux/arm64
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
+          cache-from: type=gha,scope=linux-arm64
+          cache-to: type=gha,mode=max,scope=linux-arm64
+
+  merge-manifest:
+    needs: [build-amd64, build-arm64]
+    if: needs.build-amd64.result == 'success' && needs.build-arm64.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
+
+      - name: Delete intermediate arch-specific images
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pkg = context.repo.repo;
+            const tagsToDelete = ['latest-amd64', 'latest-arm64'];
+            const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
+              username: context.repo.owner,
+              package_type: 'container',
+              package_name: pkg,
+            });
+            for (const version of versions) {
+              const tags = version.metadata?.container?.tags ?? [];
+              if (tags.some(t => tagsToDelete.includes(t))) {
+                await github.rest.packages.deletePackageVersionForUser({
+                  username: context.repo.owner,
+                  package_type: 'container',
+                  package_name: pkg,
+                  version_id: version.id,
+                });
+              }
+            }

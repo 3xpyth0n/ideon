@@ -286,7 +286,8 @@ const linkTypes = {
 function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const { dict } = useI18n();
   const { user } = useUser();
-  const { getViewport, setViewport, screenToFlowPosition } = useReactFlowHook();
+  const { getViewport, setViewport, screenToFlowPosition, setNodes } =
+    useReactFlowHook();
   const router = useRouter();
   const flowContainerRef = useRef<HTMLDivElement>(null);
   const lastClickRef = useRef<{ time: number; x: number; y: number } | null>(
@@ -744,6 +745,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     onKeyDown,
     onPointerMove,
     onPointerLeave,
+    mousePosRef,
     handlePreview,
     handleApplyState,
     onBlockContextMenu,
@@ -806,6 +808,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const [isMobileTopbar, setIsMobileTopbar] = useState(false);
   const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
   const [newBlockId, setNewBlockId] = useState<string | null>(null);
+  const [pendingBlockPosition, setPendingBlockPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{
     sourceNodeId: string;
     handleId: string | null;
@@ -950,6 +956,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           } else if (shortcutKey === "a") {
             e.preventDefault();
             e.stopPropagation();
+            setPendingBlockPosition(screenToFlowPosition(mousePosRef.current));
             setIsAddBlockOpen((v) => !v);
           } else if (shortcutKey === "h") {
             e.preventDefault();
@@ -961,7 +968,16 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [blocks, isCanvasSearchOpen, pendingConnection, redo, undo]);
+  }, [
+    blocks,
+    isCanvasSearchOpen,
+    mousePosRef,
+    pendingConnection,
+    redo,
+    screenToFlowPosition,
+    setPendingBlockPosition,
+    undo,
+  ]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -1551,6 +1567,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
     const timer = setTimeout(() => {
       try {
+        setNodes((nodes) =>
+          nodes.map((n) => ({ ...n, selected: n.id === id })),
+        );
+
         const createdBlock = blocks.find((block) => block.id === id);
         const blockEl = document.querySelector(
           `[data-id="${id}"]`,
@@ -1585,7 +1605,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [newBlockId, blocks]);
+  }, [newBlockId, blocks, setNodes]);
 
   if (!isAccessValidated) {
     return (
@@ -2181,6 +2201,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         <>
                           <button
                             onClick={() => {
+                              setPendingBlockPosition(
+                                screenToFlowPosition({
+                                  x: contextMenu.left,
+                                  y: contextMenu.top,
+                                }),
+                              );
                               setIsAddBlockOpen(true);
                               setContextMenu(null);
                             }}
@@ -2512,10 +2538,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             onClose={() => {
               setIsAddBlockOpen(false);
               setPendingConnection(null);
+              setPendingBlockPosition(null);
             }}
             onAddBlock={(blockType) => {
               const id = handleCreateBlock(
-                pendingConnection?.position || undefined,
+                pendingConnection?.position ||
+                  pendingBlockPosition ||
+                  undefined,
                 pendingConnection?.sourceNodeId || undefined,
                 blockType as
                   | "text"
@@ -2539,6 +2568,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               }
               setIsAddBlockOpen(false);
               setPendingConnection(null);
+              setPendingBlockPosition(null);
               if (blockType !== "text") {
                 requestAnimationFrame(() => focusProjectCanvas());
               }

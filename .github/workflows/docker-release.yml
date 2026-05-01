@@ -17,21 +17,26 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  release:
+  prepare-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.vars.outputs.tag_name }}
+      major_minor: ${{ steps.vars.outputs.major_minor }}
+    steps:
+      - name: Set tag variables
+        id: vars
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/v}
+          MAJOR_MINOR=$(echo "$TAG_NAME" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "major_minor=$MAJOR_MINOR" >> $GITHUB_OUTPUT
+
+  build-amd64:
+    needs: prepare-tags
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set tag variables
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/v}
-          MAJOR_MINOR=$(echo "$TAG_NAME" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo "MAJOR_MINOR_TAG=$MAJOR_MINOR" >> $GITHUB_ENV
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -43,13 +48,65 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push multi-arch image (latest + semver)
+      - name: Build and push linux/amd64
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG_NAME }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.MAJOR_MINOR_TAG }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare-tags.outputs.tag_name }}-amd64
+          cache-from: type=gha,scope=linux-amd64
+          cache-to: type=gha,mode=max,scope=linux-amd64
+
+  build-arm64:
+    needs: prepare-tags
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push linux/arm64
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare-tags.outputs.tag_name }}-arm64
+          cache-from: type=gha,scope=linux-arm64
+          cache-to: type=gha,mode=max,scope=linux-arm64
+
+  merge-manifest:
+    needs: [prepare-tags, build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifests
+        env:
+          TAG_NAME: ${{ needs.prepare-tags.outputs.tag_name }}
+          MAJOR_MINOR: ${{ needs.prepare-tags.outputs.major_minor }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG_NAME} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${MAJOR_MINOR} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG_NAME}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG_NAME}-arm64

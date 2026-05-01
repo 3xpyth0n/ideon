@@ -11,6 +11,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added Frames, a new block type that lets you group blocks into named, colored zones on the canvas.
 
+### Fixed
+
+- Fixed a canvas crash that occurred when holding Backspace in a note block [#87](https://github.com/3xpyth0n/ideon/issues/87).
+
 ## [0.8.3] - 2026-04-19
 
 ### Added

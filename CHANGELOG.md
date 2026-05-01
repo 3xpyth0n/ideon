@@ -11,6 +11,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added Frames, a new block type that lets you group blocks into named, colored zones on the canvas. Moving a frame moves all blocks inside it. Hold Shift while dragging to reposition the frame independently of its contents. Click the color swatch in the frame header to pick any color.
 
+### Fixed
+
+- Fixed a canvas crash that occurred when holding Backspace in a note block [#87](https://github.com/3xpyth0n/ideon/issues/87).
+
 ## [0.8.3] - 2026-04-19
 
 ### Added

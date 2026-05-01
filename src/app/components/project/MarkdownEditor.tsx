@@ -92,24 +92,31 @@ const SmartCode = Extension.create({
   name: "smartCode",
 
   addProseMirrorPlugins() {
+    let lastRunTime = 0;
+
     return [
       new Plugin({
         key: new PluginKey("smartCode"),
-        appendTransaction: (transactions, oldState, newState) => {
+        appendTransaction: (transactions, _oldState, newState) => {
           const tr = newState.tr;
           let modified = false;
 
           const hasInput = transactions.some((t) => t.docChanged);
-          if (!hasInput) return;
+          if (!hasInput) return null;
+
+          const now = performance.now();
+          if (now - lastRunTime < 50) return null;
+          lastRunTime = now;
 
           const { selection } = newState;
           const { $from } = selection;
           const node = $from.parent;
 
-          if (!node.isTextblock) return;
+          if (!node.isTextblock) return null;
 
           const text = node.textContent;
-          if (text.length > MAX_BLOCK_CONTENT_LENGTH) return;
+          if (text.length > MAX_BLOCK_CONTENT_LENGTH) return null;
+          if (!text.includes("`")) return null;
 
           const startPos = $from.start();
           const regex = /(?:^|[^`])(`([^`]+)`)(?:[^`]|$)/g;

@@ -55,6 +55,7 @@ const BlockDataSchema = z
         "shell",
         "folder",
         "vercel",
+        "frame",
       ])
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -81,6 +82,7 @@ export function transformBlock(block: DbBlock): Node {
   );
 
   const isCore = block.blockType === "core";
+  const isFrame = block.blockType === "frame";
 
   return {
     id: block.id,
@@ -93,6 +95,7 @@ export function transformBlock(block: DbBlock): Node {
     selected: Boolean(block.selected),
     draggable: !isCore,
     deletable: !isCore,
+    zIndex: isFrame ? 0 : 1,
     data: {
       ...data,
       blockType: block.blockType,
@@ -133,7 +136,8 @@ export function prepareBlockForDb(
       | "sketch"
       | "shell"
       | "folder"
-      | "vercel") ||
+      | "vercel"
+      | "frame") ||
     "text";
 
   return {

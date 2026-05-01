@@ -1,0 +1,44 @@
+.frame-block {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  border: 2px solid var(--frame-border, rgba(59, 130, 246, 0.3));
+  background: var(--frame-bg, rgba(59, 130, 246, 0.06));
+  position: relative;
+  box-sizing: border-box;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.frame-block-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.frame-block.selected {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .frame-block.selected {
+  box-shadow: 0 0 20px 2px rgba(255, 255, 255, 0.15);
+}
+
+.frame-block-color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.frame-block-color-swatch:hover {
+  transform: scale(1.2);
+}

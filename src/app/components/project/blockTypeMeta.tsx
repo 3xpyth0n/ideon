@@ -13,6 +13,7 @@ import {
   Kanban,
   Folder,
   Square,
+  Frame,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -31,7 +32,8 @@ export type AddableBlockType =
   | "sketch"
   | "shell"
   | "folder"
-  | "vercel";
+  | "vercel"
+  | "frame";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
@@ -50,6 +52,7 @@ export type BlockTypeLabelKey =
   | "blockTypeShell"
   | "blockTypeFolder"
   | "blockTypeVercel"
+  | "blockTypeFrame"
   | "blockTypeCore";
 
 export type BlockTypeIconComponent = ComponentType<{
@@ -61,7 +64,7 @@ type AddBlockEntry = {
   type: AddableBlockType;
   icon: BlockTypeIconComponent;
   labelKey: BlockTypeLabelKey;
-  section: "folder" | "block";
+  section: "organize" | "block";
 };
 
 const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
@@ -69,7 +72,7 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     type: "folder",
     icon: Folder,
     labelKey: "blockTypeFolder",
-    section: "folder",
+    section: "organize",
   },
   { type: "text", icon: FileText, labelKey: "blockTypeText", section: "block" },
   { type: "link", icon: Link, labelKey: "blockTypeLink", section: "block" },
@@ -129,6 +132,12 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     labelKey: "blockTypeVercel",
     section: "block",
   },
+  {
+    type: "frame",
+    icon: Frame,
+    labelKey: "blockTypeFrame",
+    section: "organize",
+  },
 ];
 
 const SEARCH_BLOCK_OVERRIDES: Record<
@@ -142,8 +151,8 @@ const ADD_BLOCK_MAP = new Map<AddableBlockType, AddBlockEntry>(
   ADD_BLOCK_ENTRIES.map((entry) => [entry.type, entry]),
 );
 
-export const FOLDER_BLOCK_TYPES = ADD_BLOCK_ENTRIES.filter(
-  (entry) => entry.section === "folder",
+export const ORGANIZE_BLOCK_TYPES = ADD_BLOCK_ENTRIES.filter(
+  (entry) => entry.section === "organize",
 );
 
 export const CANVAS_BLOCK_TYPES = ADD_BLOCK_ENTRIES.filter(

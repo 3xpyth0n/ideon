@@ -40,6 +40,7 @@ describe("graph library", () => {
         selected: false,
         draggable: true,
         deletable: true,
+        zIndex: 1,
         data: {
           custom: "value",
           blockType: "text",

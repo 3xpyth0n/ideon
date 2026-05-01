@@ -36,7 +36,7 @@ import {
   HelperLine,
 } from "@components/project/utils/alignment";
 import * as Y from "yjs";
-import { parseFolderMetadata } from "@lib/metadata-parsers";
+import { parseFolderMetadata, parseFrameMetadata } from "@lib/metadata-parsers";
 import { safeReadYText } from "@lib/projectContentSafety";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import {
@@ -687,12 +687,24 @@ export const useProjectCanvasGraph = ({
           }
         }
 
+        let frameChildIds = new Set<string>();
+        if (block.type === "frame" && !isShiftPressed) {
+          const metadata = parseFrameMetadata(block.data?.metadata);
+          frameChildIds = new Set(metadata.childBlockIds);
+        }
+
         setBlocks((blocks) =>
           blocks.map((b) => {
             if (b.id === block.id) {
               return { ...b, position: adjustedPos } as Node<BlockData>;
             }
             if (descendantIds.has(b.id)) {
+              return {
+                ...b,
+                position: { x: b.position.x + dx, y: b.position.y + dy },
+              } as Node<BlockData>;
+            }
+            if (frameChildIds.has(b.id)) {
               return {
                 ...b,
                 position: { x: b.position.x + dx, y: b.position.y + dy },
@@ -721,17 +733,101 @@ export const useProjectCanvasGraph = ({
 
       lastDragPositionRef.current = null;
 
+      if (block.type === "frame" && !isShiftPressed) {
+        const metadata = parseFrameMetadata(block.data?.metadata);
+        const childIds = new Set(metadata.childBlockIds);
+        applyMutation({
+          intent: "Moved frame",
+          blocksUpdate: (currentBlocks) =>
+            currentBlocks.map((b) => {
+              if (b.id === block.id) {
+                return { ...block, position: finalPosition } as Node<BlockData>;
+              }
+              if (childIds.has(b.id)) {
+                return { ...b } as Node<BlockData>;
+              }
+              return b;
+            }),
+        });
+        return;
+      }
+
       applyMutation({
         intent: "Moved block",
-        blocksUpdate: (blocks) =>
-          blocks.map((b) =>
+        blocksUpdate: (currentBlocks) =>
+          currentBlocks.map((b) =>
             b.id === block.id
               ? ({ ...block, position: finalPosition } as Node<BlockData>)
               : b,
           ),
       });
+
+      if (block.type === "frame") return;
+
+      const blockWidth =
+        block.measured?.width || block.width || DEFAULT_BLOCK_WIDTH;
+      const blockHeight =
+        block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT;
+      const blockCenterX = finalPosition.x + blockWidth / 2;
+      const blockCenterY = finalPosition.y + blockHeight / 2;
+
+      const overlappingFrame = blocks.find(
+        (b) =>
+          b.type === "frame" &&
+          b.id !== block.id &&
+          blockCenterX >= b.position.x &&
+          blockCenterX <= b.position.x + (b.width || 600) &&
+          blockCenterY >= b.position.y &&
+          blockCenterY <= b.position.y + (b.height || 400),
+      );
+
+      const previousFrame = blocks.find(
+        (b) =>
+          b.type === "frame" &&
+          parseFrameMetadata(b.data?.metadata).childBlockIds.includes(block.id),
+      );
+
+      if (
+        overlappingFrame?.id === previousFrame?.id &&
+        !overlappingFrame &&
+        !previousFrame
+      ) {
+        return;
+      }
+
+      applyMutation({
+        intent: "Updated frame children",
+        blocksUpdate: (currentBlocks) =>
+          currentBlocks.map((b) => {
+            if (b.type !== "frame") return b;
+            const meta = parseFrameMetadata(b.data?.metadata);
+            let childBlockIds = meta.childBlockIds;
+
+            if (
+              b.id === overlappingFrame?.id &&
+              !childBlockIds.includes(block.id)
+            ) {
+              childBlockIds = [...childBlockIds, block.id];
+            } else if (
+              b.id === previousFrame?.id &&
+              b.id !== overlappingFrame?.id
+            ) {
+              childBlockIds = childBlockIds.filter((id) => id !== block.id);
+            } else {
+              return b;
+            }
+
+            return {
+              ...b,
+              data: {
+                ...b.data,
+                metadata: JSON.stringify({ ...meta, childBlockIds }),
+              },
+            } as Node<BlockData>;
+          }),
+      });
     },
-    [applyMutation, updateMyPresence, isReadOnly],
+    [applyMutation, updateMyPresence, isReadOnly, blocks, isShiftPressed],
   );
 
   const onContentChange = useCallback(
@@ -885,7 +981,8 @@ export const useProjectCanvasGraph = ({
         | "kanban"
         | "sketch"
         | "shell"
-        | "folder" = "text",
+        | "folder"
+        | "frame" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
@@ -894,16 +991,21 @@ export const useProjectCanvasGraph = ({
 
       const isSketch = blockType === "sketch";
       const isKanban = blockType === "kanban";
+      const isFrame = blockType === "frame";
       const blockWidth = isSketch
         ? 600
         : isKanban
           ? DEFAULT_KANBAN_BLOCK_WIDTH
-          : DEFAULT_BLOCK_WIDTH;
+          : isFrame
+            ? 600
+            : DEFAULT_BLOCK_WIDTH;
       const blockHeight = isSketch
         ? 450
         : isKanban
           ? DEFAULT_KANBAN_BLOCK_HEIGHT
-          : DEFAULT_BLOCK_HEIGHT;
+          : isFrame
+            ? 400
+            : DEFAULT_BLOCK_HEIGHT;
 
       const screenPos = pos
         ? null
@@ -934,6 +1036,7 @@ export const useProjectCanvasGraph = ({
         palette: { colors: [] },
         checklist: { items: [] },
         folder: { isCollapsed: false },
+        frame: { color: "#3b82f6", childBlockIds: [] },
       };
       const resolvedMetadata =
         initialMetadata || defaultMetadataByType[blockType];
@@ -945,6 +1048,7 @@ export const useProjectCanvasGraph = ({
         width: blockWidth,
         height: blockHeight,
         style: { width: blockWidth, height: blockHeight },
+        zIndex: isFrame ? 0 : 1,
         data: {
           title: "",
           content: initialContent,

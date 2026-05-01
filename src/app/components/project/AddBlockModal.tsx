@@ -5,7 +5,7 @@ import { Modal } from "@components/ui/Modal";
 import { useI18n } from "@providers/I18nProvider";
 import {
   CANVAS_BLOCK_TYPES,
-  FOLDER_BLOCK_TYPES,
+  ORGANIZE_BLOCK_TYPES,
   type AddableBlockType,
 } from "./blockTypeMeta";
 
@@ -36,8 +36,8 @@ export default function AddBlockModal({
         />
         <Command.List>
           <Command.Empty>{dict.canvas.noBlocksFound}</Command.Empty>
-          <Command.Group heading={dict.canvas.folderSection || "Folder"}>
-            {FOLDER_BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
+          <Command.Group heading={dict.canvas.organizeSection || "Organize"}>
+            {ORGANIZE_BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
               <Command.Item
                 key={type}
                 value={
@@ -52,7 +52,7 @@ export default function AddBlockModal({
               </Command.Item>
             ))}
           </Command.Group>
-          <Command.Group heading={dict.canvas.addBlock}>
+          <Command.Group heading={dict.canvas.blocksSection || "Blocks"}>
             {CANVAS_BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
               <Command.Item
                 key={type}

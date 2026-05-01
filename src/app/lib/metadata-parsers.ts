@@ -18,6 +18,11 @@ export interface FolderMetadataShape {
   isCollapsed: boolean;
 }
 
+export interface FrameMetadataShape {
+  color: string;
+  childBlockIds: string[];
+}
+
 const isJsonRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -142,6 +147,18 @@ export const parseFolderMetadata = (
   };
 };
 
+export const parseFrameMetadata = (
+  raw: unknown,
+): JsonRecord & FrameMetadataShape => {
+  const parsed = parseJsonRecord(raw);
+
+  return {
+    ...parsed,
+    color: typeof parsed.color === "string" ? parsed.color : "#3b82f6",
+    childBlockIds: parseStringArray(parsed.childBlockIds),
+  };
+};
+
 export const normalizeMetadataForBlockType = (
   blockType: string,
   raw: unknown,
@@ -156,6 +173,10 @@ export const normalizeMetadataForBlockType = (
 
   if (blockType === "folder") {
     return parseFolderMetadata(raw);
+  }
+
+  if (blockType === "frame") {
+    return parseFrameMetadata(raw);
   }
 
   return parseJsonRecord(raw);

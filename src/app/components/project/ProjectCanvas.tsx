@@ -30,6 +30,7 @@ import KanbanBlock from "./KanbanBlock";
 import FolderBlock from "./FolderBlock";
 import VercelBlock from "./VercelBlock";
 import ShellBlock from "./ShellBlock";
+import FrameBlock from "./FrameBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import CommandPalette from "./CommandPalette";
@@ -274,6 +275,7 @@ const blockTypes = {
   folder: FolderBlock,
   vercel: VercelBlock,
   shell: ShellBlock,
+  frame: FrameBlock,
   core: ProjectCoreBlock,
 };
 
@@ -1517,6 +1519,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       .filter((block) => !block.hidden && visibleBlockIds.has(block.id))
       .map((block) => ({
         ...block,
+        zIndex: block.type === "frame" ? 0 : 1,
         className:
           block.id === newBlockId
             ? "block-just-created"

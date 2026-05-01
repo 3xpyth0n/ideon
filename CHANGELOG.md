@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-04-XX
+
+### Added
+
+- Added Frames, a new block type that lets you group blocks into named, colored zones on the canvas.
+
 ## [0.8.3] - 2026-04-19
 
 ### Added

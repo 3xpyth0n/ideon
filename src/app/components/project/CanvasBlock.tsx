@@ -64,7 +64,9 @@ export type BlockData = {
     | "kanban"
     | "sketch"
     | "shell"
-    | "folder";
+    | "folder"
+    | "vercel"
+    | "frame";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;

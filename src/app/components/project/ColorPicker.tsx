@@ -48,6 +48,10 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const [hsv, setHsv] = useState(() => parseColor(initialColor));
   const [hexInput, setHexInput] = useState(initialColor);
+  const [adjustedPos, setAdjustedPos] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
 
   useEffect(() => {
     setHsv(parseColor(initialColor));
@@ -133,53 +137,68 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
     }
   }, [hexInput, onSelect, onClose]);
 
-  // Click outside to save
+  const handleSaveAndCloseRef = useRef(handleSaveAndClose);
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // If we're dragging, don't close
-      if (document.body.style.cursor === "grabbing") return;
-
-      if (
-        pickerRef.current &&
-        !pickerRef.current.contains(event.target as Node)
-      ) {
-        handleSaveAndClose();
-      }
-    };
-
-    // Use setTimeout to avoid immediate close if the click that opened it bubbles up
-    const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 100); // Increased delay to ensure event propagation is complete
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    handleSaveAndCloseRef.current = handleSaveAndClose;
   }, [handleSaveAndClose]);
 
-  // Keyboard
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Enter") handleSaveAndClose();
-      if (event.key === "Escape") onClose?.();
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Click outside to save — capture phase bypasses React Flow's stopPropagation
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!pickerRef.current) return;
+      if (document.body.style.cursor === "grabbing") return;
+      if (!pickerRef.current.contains(e.target as Node)) {
+        handleSaveAndCloseRef.current();
+      }
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleSaveAndClose, onClose]);
+    document.addEventListener("mousedown", handler, true);
+    return () => document.removeEventListener("mousedown", handler, true);
+  }, []);
+
+  // Keyboard — refs keep callbacks fresh without re-registering
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter") handleSaveAndCloseRef.current();
+      if (e.key === "Escape") onCloseRef.current?.();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
+  // Compute viewport-safe position after first paint
+  useEffect(() => {
+    if (!position || !pickerRef.current) return;
+    const rect = pickerRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const MARGIN = 8;
+
+    let left = position.x - rect.width / 2;
+    let top = position.y - rect.height - 10;
+
+    left = Math.max(MARGIN, Math.min(left, vw - rect.width - MARGIN));
+    if (top < MARGIN) top = position.y + 10;
+    top = Math.max(MARGIN, Math.min(top, vh - rect.height - MARGIN));
+
+    setAdjustedPos({ left, top });
+  }, [position, mounted]);
 
   if (!mounted) return null;
 
   const style: React.CSSProperties = position
     ? {
-        left: position.x,
-        top: position.y - 10, // Slight offset
+        left: adjustedPos?.left ?? position.x,
+        top: adjustedPos?.top ?? position.y - 10,
+        opacity: adjustedPos ? 1 : 0,
       }
     : {};
 
-  const positionClasses = position
-    ? "fixed z-[9999] mt-0 -translate-x-1/2 -translate-y-full"
-    : "";
+  const positionClasses = position ? "fixed z-9999 mt-0" : "";
 
   const pickerContent = (
     <div

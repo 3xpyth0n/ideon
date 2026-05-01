@@ -137,7 +137,8 @@ export interface blocksTable {
     | "sketch"
     | "shell"
     | "folder"
-    | "vercel";
+    | "vercel"
+    | "frame";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;

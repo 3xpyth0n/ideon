@@ -481,6 +481,12 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   const lastSyncedTextRef = useRef<string | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onContentChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const pendingContentRef = useRef<string | null>(null);
+  const dataRef = useRef(data);
+  const titleRef = useRef(title);
 
   const syncToYjs = useCallback(
     (text: string) => {
@@ -510,8 +516,18 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   );
 
   useEffect(() => {
+    dataRef.current = data;
+  });
+
+  useEffect(() => {
+    titleRef.current = title;
+  }, [title]);
+
+  useEffect(() => {
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      if (onContentChangeTimerRef.current)
+        clearTimeout(onContentChangeTimerRef.current);
     };
   }, []);
 
@@ -558,27 +574,28 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       }
 
       syncToYjs(safeContent);
-      data.onContentChange?.(
-        id,
-        safeContent,
-        new Date().toISOString(),
-        data.lastEditor,
-        data.metadata ? JSON.stringify(data.metadata) : undefined,
-        title,
-        data.reactions,
-      );
+
+      pendingContentRef.current = safeContent;
+      if (onContentChangeTimerRef.current)
+        clearTimeout(onContentChangeTimerRef.current);
+      onContentChangeTimerRef.current = setTimeout(() => {
+        onContentChangeTimerRef.current = null;
+        const latestContent = pendingContentRef.current;
+        if (latestContent === null) return;
+        pendingContentRef.current = null;
+        const d = dataRef.current;
+        d.onContentChange?.(
+          id,
+          latestContent,
+          new Date().toISOString(),
+          d.lastEditor,
+          d.metadata ? JSON.stringify(d.metadata) : undefined,
+          titleRef.current,
+          d.reactions,
+        );
+      }, 150);
     },
-    [
-      id,
-      data.content,
-      data.onContentChange,
-      data.lastEditor,
-      data.metadata,
-      data.reactions,
-      data.yText,
-      title,
-      syncToYjs,
-    ],
+    [id, data.content, data.yText, syncToYjs],
   );
 
   const handleVimChange = useCallback(
@@ -597,27 +614,28 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       }
 
       syncToYjs(safeContent);
-      data.onContentChange?.(
-        id,
-        safeContent,
-        new Date().toISOString(),
-        data.lastEditor,
-        data.metadata ? JSON.stringify(data.metadata) : undefined,
-        title,
-        data.reactions,
-      );
+
+      pendingContentRef.current = safeContent;
+      if (onContentChangeTimerRef.current)
+        clearTimeout(onContentChangeTimerRef.current);
+      onContentChangeTimerRef.current = setTimeout(() => {
+        onContentChangeTimerRef.current = null;
+        const latestContent = pendingContentRef.current;
+        if (latestContent === null) return;
+        pendingContentRef.current = null;
+        const d = dataRef.current;
+        d.onContentChange?.(
+          id,
+          latestContent,
+          new Date().toISOString(),
+          d.lastEditor,
+          d.metadata ? JSON.stringify(d.metadata) : undefined,
+          titleRef.current,
+          d.reactions,
+        );
+      }, 150);
     },
-    [
-      id,
-      data.content,
-      data.onContentChange,
-      data.lastEditor,
-      data.metadata,
-      data.reactions,
-      data.yText,
-      title,
-      syncToYjs,
-    ],
+    [id, data.content, data.yText, syncToYjs],
   );
 
   const openLinkModal = useCallback(() => {

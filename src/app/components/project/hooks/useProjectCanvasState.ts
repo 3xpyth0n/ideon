@@ -2804,5 +2804,6 @@ export const useProjectCanvasState = (
     markOnboardingSeen,
     updateMyPresence: rt.updateMyPresence,
     isReady,
+    mousePosRef,
   };
 };

@@ -376,7 +376,9 @@ const resolveBlockContent = (
   yText: Y.Text | undefined,
   fallback: unknown,
 ): string => {
-  const fallbackContent = typeof fallback === "string" ? fallback : "";
+  const fallbackContent = clampBlockContent(
+    typeof fallback === "string" ? fallback : "",
+  );
   if (!yText) return fallbackContent;
   const live = safeReadYText(yText, fallbackContent);
   return live.length > 0 ? live : fallbackContent;
@@ -1307,10 +1309,19 @@ export const useProjectCanvasState = (
             yContents?.get(n.id) || n.data.yText,
             n.data.content,
           );
+          const serializableData = { ...n.data };
+          delete serializableData.yText;
+          delete serializableData.onContentChange;
+          // internals.userNode carries yText back — only spread the DB-relevant fields
           return {
-            ...n,
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            width: n.width,
+            height: n.height,
+            selected: n.selected,
             data: {
-              ...n.data,
+              ...serializableData,
               content: clampBlockContent(resolvedContent),
               ...(typeof n.data.title === "string" && {
                 title: n.data.title.slice(0, MAX_BLOCK_TITLE_LENGTH),

@@ -35,7 +35,7 @@ export function safeReadYText(
     return fallbackText;
   }
 
-  if (yText.length > maxLength) {
+  if (yText.length < 0 || yText.length > maxLength) {
     return fallbackText;
   }
 

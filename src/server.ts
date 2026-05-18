@@ -5,7 +5,12 @@ import { WebSocketServer, WebSocket } from "ws";
 import * as Y from "yjs";
 import type { Doc } from "yjs";
 import { logger } from "./app/lib/logger";
-import { sanitizeProjectDocument } from "./app/lib/projectContentSafety";
+import {
+  sanitizeProjectDocument,
+  MAX_BLOCK_CONTENT_LENGTH,
+  SERVER_REPAIR_CONTENT_SUFFIX,
+  clampBlockContent,
+} from "./app/lib/projectContentSafety";
 import { initDb, getDb, getPool } from "./app/lib/db";
 import { runMigrations } from "@/lib/migrations";
 import {
@@ -390,10 +395,77 @@ const handle = app.getRequestHandler();
 const persistenceDir = "./storage/yjs";
 const ldb = new LeveldbPersistence(persistenceDir);
 
+function buildCleanDocFromCorrupted(corruptedDoc: Y.Doc): Y.Doc {
+  const cleanDoc = new Y.Doc({ gc: true });
+  const srcBlocks = corruptedDoc.getMap<unknown>("blocks");
+  const dstBlocks = cleanDoc.getMap<unknown>("blocks");
+  srcBlocks.forEach((value, key) => {
+    if (!value || typeof value !== "object") {
+      dstBlocks.set(key, value);
+      return;
+    }
+    const block = value as {
+      data?: { content?: unknown; [k: string]: unknown };
+      [k: string]: unknown;
+    };
+    const content = block.data?.content;
+    if (
+      typeof content === "string" &&
+      content.length > MAX_BLOCK_CONTENT_LENGTH
+    ) {
+      dstBlocks.set(key, {
+        ...block,
+        data: {
+          ...block.data,
+          content: clampBlockContent(
+            content,
+            MAX_BLOCK_CONTENT_LENGTH,
+            SERVER_REPAIR_CONTENT_SUFFIX,
+          ),
+        },
+      });
+    } else {
+      dstBlocks.set(key, value);
+    }
+  });
+  const srcContents = corruptedDoc.getMap<unknown>("contents");
+  const dstContents = cleanDoc.getMap<unknown>("contents");
+  srcContents.forEach((value, key) => {
+    if (!(value instanceof Y.Text)) {
+      dstContents.set(key, value);
+      return;
+    }
+    const fresh = new Y.Text();
+    const useFallback = () => {
+      const blockEntry = srcBlocks.get(key) as
+        | { data?: { content?: string } }
+        | undefined;
+      const safe = clampBlockContent(
+        blockEntry?.data?.content ?? "",
+        MAX_BLOCK_CONTENT_LENGTH,
+        SERVER_REPAIR_CONTENT_SUFFIX,
+      );
+      if (safe) fresh.insert(0, safe);
+    };
+    if (value.length >= 0 && value.length <= MAX_BLOCK_CONTENT_LENGTH) {
+      try {
+        fresh.insert(0, value.toString());
+      } catch {
+        useFallback();
+      }
+    } else {
+      useFallback();
+    }
+    dstContents.set(key, fresh);
+  });
+  return cleanDoc;
+}
+
 // Configure Persistence correctly for y-websocket
 setPersistence({
   bindState: async (docName: string, ydoc: Doc) => {
     const persistedYdoc = await ldb.getYDoc(docName);
+    let workingDoc = persistedYdoc;
 
     if (docName.startsWith("project-")) {
       try {
@@ -414,14 +486,39 @@ setPersistence({
       } catch (e) {
         logger.error(
           { err: e, docName },
-          "[YJS] Failed to compact persisted project document",
+          "[YJS] Failed to compact persisted project document — attempting full rebuild",
         );
+        // sanitize or encode failed (e.g. billions of tombstones from 0.8.3 bug)
+        // rebuild from scratch: copy maps without ever touching oversized Y.Text
+        try {
+          const cleanDoc = buildCleanDocFromCorrupted(persistedYdoc);
+          const cleanUpdate = Y.encodeStateAsUpdate(cleanDoc);
+          await ldb.clearDocument(docName);
+          await ldb.storeUpdate(docName, cleanUpdate);
+          workingDoc = cleanDoc;
+          logger.warn(
+            { docName },
+            "[YJS] Rebuilt corrupted document — oversized Y.Text purged from y-leveldb",
+          );
+        } catch (rebuildErr) {
+          logger.error(
+            { err: rebuildErr, docName },
+            "[YJS] Failed to rebuild corrupted document",
+          );
+        }
       }
     }
 
     const newUpdates = Y.encodeStateAsUpdate(ydoc);
     await ldb.storeUpdate(docName, newUpdates);
-    Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYdoc));
+    try {
+      Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(workingDoc));
+    } catch (applyErr) {
+      logger.error(
+        { err: applyErr, docName },
+        "[YJS] Failed to apply persisted state — ydoc will start empty",
+      );
+    }
 
     if (docName.startsWith("project-")) {
       try {

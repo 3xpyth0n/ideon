@@ -10,6 +10,7 @@ import {
   normalizeMetadataForBlockType,
   parseJsonRecord,
 } from "@lib/metadata-parsers";
+import { clampBlockContent } from "@lib/projectContentSafety";
 
 export interface GraphState {
   blocks: Node[];
@@ -99,7 +100,7 @@ export function transformBlock(block: DbBlock): Node {
     data: {
       ...data,
       blockType: block.blockType,
-      content: block.content,
+      content: clampBlockContent(block.content || ""),
       ownerId: block.ownerId,
       authorName: block.authorName,
       authorColor: block.authorColor,

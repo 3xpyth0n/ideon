@@ -30,7 +30,10 @@ assignees: ""
 
 <!-- Please complete the following information -->
 
+> These details are important for diagnosing platform-specific issues. Please provide them when possible.
+
 - **OS**: [e.g. Windows 10, macOS Sonoma, Ubuntu 22.04]
+- **Architecture**: [e.g. x86_64 / AMD64, arm64 / Apple Silicon]
 - **Browser**: [e.g. Chrome 120, Firefox 121, Safari]
 - **Deployment Method**: [e.g. Docker, npm/yarn on host]
 

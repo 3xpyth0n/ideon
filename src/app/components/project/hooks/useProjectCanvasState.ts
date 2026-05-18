@@ -2,7 +2,11 @@ import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { Node, Edge, useReactFlow } from "@xyflow/react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
-import { clampBlockContent, safeReadYText } from "@lib/projectContentSafety";
+import {
+  clampBlockContent,
+  safeReadYText,
+  MAX_BLOCK_TITLE_LENGTH,
+} from "@lib/projectContentSafety";
 import { uniqueById } from "@lib/utils";
 import * as Y from "yjs";
 import { v4 as uuidv4 } from "uuid";
@@ -47,6 +51,20 @@ import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 const FIT_PADDING = 0.12;
 const FIT_DURATION = 800;
 const FIT_MIN_ZOOM = 0.1;
+
+function safePosition(pos: unknown): { x: number; y: number } {
+  const p = pos as { x?: unknown; y?: unknown } | undefined;
+  if (
+    p &&
+    typeof p.x === "number" &&
+    Number.isFinite(p.x) &&
+    typeof p.y === "number" &&
+    Number.isFinite(p.y)
+  ) {
+    return p as { x: number; y: number };
+  }
+  return { x: 0, y: 0 };
+}
 const FIT_MAX_ZOOM_SELECTED = 2;
 const FIT_MAX_ZOOM_ALL = 1;
 const SKETCH_BLOCK_WIDTH = 600;
@@ -562,7 +580,7 @@ export const useProjectCanvasState = (
                 position:
                   rn.type === "core"
                     ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
-                    : rn.position,
+                    : safePosition(rn.position),
                 data: {
                   ...(rn.data as unknown as Record<string, unknown>),
                   yText,
@@ -741,7 +759,7 @@ export const useProjectCanvasState = (
           position:
             rn.type === "core"
               ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
-              : rn.position,
+              : safePosition(rn.position),
           data: {
             ...(rn.data as unknown as Record<string, unknown>),
             yText,
@@ -822,7 +840,7 @@ export const useProjectCanvasState = (
         position:
           rn.type === "core"
             ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
-            : rn.position,
+            : safePosition(rn.position),
         data: {
           ...(rn.data as unknown as Record<string, unknown>),
           yText,
@@ -1258,7 +1276,7 @@ export const useProjectCanvasState = (
             position:
               rn.type === "core"
                 ? { x: CORE_BLOCK_X, y: CORE_BLOCK_Y }
-                : rn.position,
+                : safePosition(rn.position),
             data: {
               ...rn.data,
               yText,
@@ -1284,16 +1302,22 @@ export const useProjectCanvasState = (
       if (!initialProjectId || isReadOnly) return { success: false };
       const isAuto = options?.isAuto ?? false;
       try {
-        const blocksToSave = (overrideBlocks || blocks).map((n) => ({
-          ...n,
-          data: {
-            ...n.data,
-            content: resolveBlockContent(
-              yContents?.get(n.id) || n.data.yText,
-              n.data.content,
-            ),
-          },
-        }));
+        const blocksToSave = (overrideBlocks || blocks).map((n) => {
+          const resolvedContent = resolveBlockContent(
+            yContents?.get(n.id) || n.data.yText,
+            n.data.content,
+          );
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              content: clampBlockContent(resolvedContent),
+              ...(typeof n.data.title === "string" && {
+                title: n.data.title.slice(0, MAX_BLOCK_TITLE_LENGTH),
+              }),
+            },
+          };
+        });
 
         const currentHash = await generateStateHash(
           blocksToSave,

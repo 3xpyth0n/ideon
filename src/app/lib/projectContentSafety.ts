@@ -1,6 +1,7 @@
 import * as Y from "yjs";
 
 export const MAX_BLOCK_CONTENT_LENGTH = 1_000_000;
+export const MAX_BLOCK_TITLE_LENGTH = 10_000;
 export const CLIENT_TRUNCATION_SUFFIX = "\n\n[Truncated for performance]";
 export const SERVER_REPAIR_CONTENT_SUFFIX =
   "\n\n[... Truncated by server due to excessive size ...]";
@@ -144,6 +145,11 @@ export function sanitizeProjectDocument(
       }
     });
 
+    const isFiniteNumber = (v: unknown): v is number =>
+      typeof v === "number" && Number.isFinite(v);
+    const isPositiveFinite = (v: unknown): v is number =>
+      isFiniteNumber(v) && (v as number) > 0;
+
     const blocks = doc.getMap<unknown>("blocks");
     blocks.forEach((value, key) => {
       if (!value || typeof value !== "object") {
@@ -151,28 +157,61 @@ export function sanitizeProjectDocument(
       }
 
       const block = value as {
-        data?: {
-          content?: unknown;
-          [key: string]: unknown;
-        };
+        data?: { content?: unknown; title?: unknown; [key: string]: unknown };
+        position?: { x?: unknown; y?: unknown };
+        width?: unknown;
+        height?: unknown;
         [key: string]: unknown;
       };
 
       const content = block.data?.content;
-      if (typeof content !== "string" || content.length <= maxLength) {
+      const contentCorrupted =
+        typeof content === "string" && content.length > maxLength;
+
+      const title = block.data?.title;
+      const titleCorrupted =
+        typeof title === "string" && title.length > MAX_BLOCK_TITLE_LENGTH;
+
+      const pos = block.position;
+      const posCorrupted =
+        !pos || !isFiniteNumber(pos.x) || !isFiniteNumber(pos.y);
+      const wCorrupted =
+        block.width !== undefined && !isPositiveFinite(block.width);
+      const hCorrupted =
+        block.height !== undefined && !isPositiveFinite(block.height);
+
+      if (
+        !contentCorrupted &&
+        !titleCorrupted &&
+        !posCorrupted &&
+        !wCorrupted &&
+        !hCorrupted
+      ) {
         return;
       }
 
+      const dataCorrupted = contentCorrupted || titleCorrupted;
+
       blocks.set(key, {
         ...block,
-        data: {
-          ...block.data,
-          content: clampBlockContent(
-            content,
-            maxLength,
-            SERVER_REPAIR_CONTENT_SUFFIX,
-          ),
-        },
+        ...(dataCorrupted && {
+          data: {
+            ...block.data,
+            ...(contentCorrupted && {
+              content: clampBlockContent(
+                content as string,
+                maxLength,
+                SERVER_REPAIR_CONTENT_SUFFIX,
+              ),
+            }),
+            ...(titleCorrupted && {
+              title: (title as string).slice(0, MAX_BLOCK_TITLE_LENGTH),
+            }),
+          },
+        }),
+        ...(posCorrupted && { position: { x: 0, y: 0 } }),
+        ...(wCorrupted && { width: 320 }), // DEFAULT_BLOCK_WIDTH
+        ...(hCorrupted && { height: 240 }), // DEFAULT_BLOCK_HEIGHT
       });
       hasChanges = true;
     });

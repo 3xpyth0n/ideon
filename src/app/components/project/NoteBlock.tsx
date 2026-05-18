@@ -485,6 +485,10 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     null,
   );
   const pendingContentRef = useRef<string | null>(null);
+  const pendingTitleRef = useRef<string | null>(null);
+  const onTitleChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const dataRef = useRef(data);
   const titleRef = useRef(title);
 
@@ -528,6 +532,8 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
       if (onContentChangeTimerRef.current)
         clearTimeout(onContentChangeTimerRef.current);
+      if (onTitleChangeTimerRef.current)
+        clearTimeout(onTitleChangeTimerRef.current);
     };
   }, []);
 
@@ -539,23 +545,30 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newTitle = e.target.value;
       setTitle(newTitle);
-      const now = new Date().toISOString();
-      const editor =
-        currentUser?.displayName ||
-        currentUser?.username ||
-        dict.project.anonymous;
 
-      data.onContentChange?.(
-        id,
-        data.content || "",
-        now,
-        editor,
-        data.metadata ? JSON.stringify(data.metadata) : undefined,
-        newTitle,
-        data.reactions,
-      );
+      pendingTitleRef.current = newTitle;
+      if (onTitleChangeTimerRef.current)
+        clearTimeout(onTitleChangeTimerRef.current);
+      onTitleChangeTimerRef.current = setTimeout(() => {
+        onTitleChangeTimerRef.current = null;
+        const latestTitle = pendingTitleRef.current;
+        if (latestTitle === null) return;
+        pendingTitleRef.current = null;
+        const d = dataRef.current;
+        d.onContentChange?.(
+          id,
+          clampBlockContent(d.content || ""),
+          new Date().toISOString(),
+          currentUser?.displayName ||
+            currentUser?.username ||
+            dict.project.anonymous,
+          d.metadata ? JSON.stringify(d.metadata) : undefined,
+          latestTitle,
+          d.reactions,
+        );
+      }, 150);
     },
-    [id, data, currentUser, dict],
+    [id, currentUser, dict],
   );
 
   const handleContentChange = useCallback(

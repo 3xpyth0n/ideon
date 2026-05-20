@@ -50,10 +50,7 @@ import { toast } from "sonner";
 import { clientLogger } from "../../../lib/clientLogger";
 import { getMessage } from "../../../lib/getMessage";
 import { classifyIndexedDbError } from "../../../lib/classifyIndexedDbError";
-import {
-  estimateProjectTextLength,
-  MAX_BLOCK_CONTENT_LENGTH,
-} from "@lib/projectContentSafety";
+import { estimateProjectTextLength } from "@lib/projectContentSafety";
 import { ChunkedWebSocket } from "@lib/chunkedWebSocket";
 import {
   useState,
@@ -413,7 +410,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           `project-${initialProjectId}`,
           doc,
           {
-            connect: true,
+            connect: false,
             WebSocketPolyfill: ChunkedWebSocket as unknown as typeof WebSocket,
           },
         );
@@ -512,9 +509,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 });
               }
               setIsLocalSynced(true);
+              wsProvider?.connect();
             } catch (e) {
               clientLogger.debug("indexeddb:delete_failed", String(e));
               setIsLocalSynced(true);
+              wsProvider?.connect();
             }
           } else {
             try {
@@ -565,84 +564,46 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                 });
               }
 
-              // Pre-load size check: detect IDB corrupted by the 0.8.3 rapid-input
-              // bug before loading it into doc. If oversized, purge now — if we wait
-              // until after load, y-websocket overflows trying to encode the state.
-              if (!shouldResetIndexedDb) {
-                try {
-                  const idbSize = await new Promise<number>((resolve) => {
-                    if (typeof indexedDB === "undefined") {
-                      resolve(0);
-                      return;
-                    }
-                    const req = indexedDB.open(`project-${initialProjectId}`);
-                    req.onerror = () => resolve(0);
-                    req.onsuccess = () => {
-                      const db = req.result;
-                      if (!db.objectStoreNames.contains("updates")) {
-                        db.close();
-                        resolve(0);
-                        return;
-                      }
-                      try {
-                        const tx = db.transaction("updates", "readonly");
-                        const store = tx.objectStore("updates");
-                        let total = 0;
-                        const LIMIT = MAX_BLOCK_CONTENT_LENGTH * 5;
-                        const cursorReq = store.openCursor();
-                        cursorReq.onsuccess = (e) => {
-                          const cursor = (
-                            e.target as IDBRequest<IDBCursorWithValue | null>
-                          ).result;
-                          if (!cursor) {
-                            db.close();
-                            resolve(total);
-                            return;
-                          }
-                          if (cursor.value instanceof Uint8Array)
-                            total += cursor.value.byteLength;
-                          if (total > LIMIT) {
-                            db.close();
-                            resolve(total);
-                            return;
-                          }
-                          cursor.continue();
-                        };
-                        cursorReq.onerror = () => {
-                          db.close();
-                          resolve(0);
-                        };
-                      } catch {
-                        db.close();
-                        resolve(0);
-                      }
-                    };
-                  });
-
-                  clientLogger.debug("indexeddb:size-check", {
-                    projectId: initialProjectId,
-                    bytes: idbSize,
-                  });
-
-                  if (idbSize > MAX_BLOCK_CONTENT_LENGTH * 5) {
-                    await purgeProjectIndexedDb();
-                    clientLogger.warn("indexeddb:purged-oversized", {
-                      projectId: initialProjectId,
-                      bytes: idbSize,
-                    });
-                  }
-                } catch (e) {
-                  clientLogger.debug("indexeddb:size-check-failed", String(e));
-                }
-              }
-
               indexeddbProvider = new IndexeddbPersistence(
                 `project-${initialProjectId}`,
                 doc!,
               );
               indexeddbProvider.on("synced", () => {
-                setIsLocalSynced(true);
                 clientLogger.debug("indexeddb:synced");
+                // Validate that the loaded state is safe to encode before
+                // connecting WS — prevents y-websocket sync step 2 from
+                // overflowing on corrupt Yjs state (e.g. 0.8.3 tombstone bug).
+                let corrupt = false;
+                try {
+                  Y.encodeStateAsUpdate(doc!);
+                } catch (e) {
+                  corrupt = true;
+                  clientLogger.warn("indexeddb:corrupt-detected", String(e));
+                }
+                if (corrupt) {
+                  void (async () => {
+                    try {
+                      await purgeProjectIndexedDb();
+                      clientLogger.warn("indexeddb:purged-corrupt", {
+                        projectId: initialProjectId,
+                      });
+                      const freshProvider = new IndexeddbPersistence(
+                        `project-${initialProjectId}`,
+                        doc!,
+                      );
+                      freshProvider.on("synced", () => {
+                        setIsLocalSynced(true);
+                        wsProvider?.connect();
+                      });
+                    } catch {
+                      setIsLocalSynced(true);
+                      wsProvider?.connect();
+                    }
+                  })();
+                } else {
+                  setIsLocalSynced(true);
+                  wsProvider?.connect();
+                }
               });
             } catch (err) {
               const classified = classifyIndexedDbError(err);
@@ -679,6 +640,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   String(e),
                 );
               }
+
+              // IDB init failed — connect WS without local persistence so the
+              // canvas can still load from the server.
+              setIsLocalSynced(true);
+              wsProvider?.connect();
             }
           }
         } catch (e) {

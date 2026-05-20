@@ -94,8 +94,21 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${BETA_TAG}-arm64
 
       - name: Delete intermediate arch-specific images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BETA_TAG: ${{ github.ref_name }}
         run: |
-          docker buildx imagetools rm \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-amd64
-          docker buildx imagetools rm \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-arm64
+          OWNER="${REPO%%/*}"
+          PKG="${REPO##*/}"
+          for SUFFIX in amd64 arm64; do
+            TAG="${BETA_TAG}-${SUFFIX}"
+            VERSION_ID=$(gh api "/users/${OWNER}/packages/container/${PKG}/versions" --paginate \
+              --jq ".[] | select(.metadata.container.tags[] == \"${TAG}\") | .id" | head -1)
+            if [ -n "$VERSION_ID" ]; then
+              gh api --method DELETE "/users/${OWNER}/packages/container/${PKG}/versions/${VERSION_ID}"
+              echo "Deleted ${TAG} (version ${VERSION_ID})"
+            else
+              echo "Tag ${TAG} not found, skipping"
+            fi
+          done

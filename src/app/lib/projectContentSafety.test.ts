@@ -132,10 +132,16 @@ describe("projectContentSafety", () => {
     };
 
     expect(repaired).toBe(true);
-    expect((longTitle.data?.title?.length ?? 0) <= MAX_BLOCK_TITLE_LENGTH).toBe(true);
+    expect((longTitle.data?.title?.length ?? 0) <= MAX_BLOCK_TITLE_LENGTH).toBe(
+      true,
+    );
     expect(longTitle.data?.content).toBe("normal content");
-    expect((both.data?.title?.length ?? 0) <= MAX_BLOCK_TITLE_LENGTH).toBe(true);
-    expect(both.data?.content?.endsWith(SERVER_REPAIR_CONTENT_SUFFIX)).toBe(true);
+    expect((both.data?.title?.length ?? 0) <= MAX_BLOCK_TITLE_LENGTH).toBe(
+      true,
+    );
+    expect(both.data?.content?.endsWith(SERVER_REPAIR_CONTENT_SUFFIX)).toBe(
+      true,
+    );
     expect(ok.data?.title).toBe("short title");
   });
 

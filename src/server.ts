@@ -521,6 +521,95 @@ setPersistence({
     }
 
     if (docName.startsWith("project-")) {
+      const yBlocks = ydoc.getMap<unknown>("blocks");
+      if (yBlocks.size === 0) {
+        const projectId = docName.slice("project-".length);
+        try {
+          const db = getDb();
+          const dbBlocks = await db
+            .selectFrom("blocks")
+            .select([
+              "id",
+              "blockType",
+              "positionX",
+              "positionY",
+              "width",
+              "height",
+              "selected",
+              "content",
+              "ownerId",
+            ])
+            .where("projectId", "=", projectId)
+            .execute();
+          if (dbBlocks.length > 0) {
+            const dbLinks = await db
+              .selectFrom("links")
+              .select([
+                "id",
+                "source",
+                "target",
+                "sourceHandle",
+                "targetHandle",
+                "type",
+                "animated",
+                "label",
+              ])
+              .where("projectId", "=", projectId)
+              .execute();
+
+            const yLinks = ydoc.getMap<unknown>("links");
+            ydoc.transact(() => {
+              for (const b of dbBlocks) {
+                yBlocks.set(b.id, {
+                  id: b.id,
+                  type: b.blockType,
+                  position:
+                    b.blockType === "core"
+                      ? { x: -320, y: -240 }
+                      : { x: b.positionX, y: b.positionY },
+                  width: b.width ?? undefined,
+                  height: b.height ?? undefined,
+                  selected: Boolean(b.selected),
+                  draggable: b.blockType !== "core",
+                  deletable: b.blockType !== "core",
+                  zIndex: b.blockType === "frame" ? 0 : 1,
+                  data: {
+                    blockType: b.blockType,
+                    content: clampBlockContent(b.content || ""),
+                    ownerId: b.ownerId,
+                  },
+                });
+              }
+              for (const l of dbLinks) {
+                yLinks.set(l.id, {
+                  id: l.id,
+                  source: l.source,
+                  target: l.target,
+                  sourceHandle: l.sourceHandle,
+                  targetHandle: l.targetHandle,
+                  type: l.type || "connection",
+                  animated: Boolean(l.animated),
+                  markerEnd: "connection-arrow",
+                  data: { label: l.label },
+                });
+              }
+            }, "seed-from-sql");
+            await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
+            logger.info(
+              { docName, blocks: dbBlocks.length, links: dbLinks.length },
+              "[YJS] Seeded empty project doc from SQL",
+            );
+          }
+        } catch (seedErr) {
+          logger.error(
+            { err: seedErr, docName },
+            "[YJS] Failed to seed project doc from SQL",
+          );
+        }
+      }
+    }
+
+    if (docName.startsWith("project-")) {
       try {
         if (sanitizeProjectDocument(ydoc)) {
           logger.warn(

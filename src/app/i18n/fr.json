@@ -482,6 +482,8 @@
     "manageTrash": "Gérer les projets supprimés",
     "myProjects": "Mes Projets",
     "newProject": "Nouveau Projet",
+    "importProject": "Importer un projet",
+    "exportProject": "Exporter le projet",
     "noCollaboratorsFound": "Aucun collaborateur trouvé",
     "createFolder": "Nouveau Dossier",
     "projects": "Projets",

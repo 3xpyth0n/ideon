@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  css: { postcss: { plugins: [] } },
   resolve: { tsconfigPaths: true },
   test: {
     environment: "node",
@@ -12,6 +13,7 @@ export default defineConfig({
     },
     include: ["src/**/*.test.ts"],
     exclude: ["**/.next/**", "**/node_modules/**", "**/dist/**"],
+    css: false,
     fileParallelism: false,
     coverage: {
       provider: "v8",

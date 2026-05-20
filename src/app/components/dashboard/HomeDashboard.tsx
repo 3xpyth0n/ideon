@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { FolderOpen, Star, Users, Trash2, Plus } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { FolderOpen, Star, Users, Trash2, Plus, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
 import { Button } from "@components/ui/Button";
+import { toast } from "sonner";
 import { ProjectModal } from "./ProjectModal";
 import { DashboardStatCard } from "./DashboardStatCard";
 import { DashboardProjectCard } from "./DashboardProjectCard";
@@ -101,9 +103,11 @@ function DashboardEmptyState({
 export function HomeDashboard() {
   const { dict } = useI18n();
   const { user } = useUser();
+  const router = useRouter();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -126,6 +130,26 @@ export function HomeDashboard() {
         : dict.dashboard.greetingEvening;
   const userName = user?.displayName || user?.username || "";
   const greeting = userName ? `${greetingBase}, ${userName}` : greetingBase;
+
+  const handleImportProject = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/projects/import", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      toast.error(dict.common.error || "Import failed");
+      return;
+    }
+    const { projectId } = (await res.json()) as { projectId: string };
+    router.push(`/project/${projectId}`);
+  };
 
   const handleCreateSuccess = useCallback(() => {
     setShowCreate(false);
@@ -172,14 +196,31 @@ export function HomeDashboard() {
               {dict.dashboard.dashboardSubtitle}
             </p>
           </div>
-          <Button
-            onClick={() => setShowCreate(true)}
-            variant="primary"
-            size="md"
-          >
-            <Plus size={14} />
-            <span>{dict.dashboard.newProject}</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".ideon,.zip"
+              className="hidden"
+              onChange={handleImportProject}
+            />
+            <Button
+              onClick={() => importInputRef.current?.click()}
+              variant="primary"
+              size="md"
+            >
+              <Upload size={14} />
+              <span>{dict.dashboard.importProject}</span>
+            </Button>
+            <Button
+              onClick={() => setShowCreate(true)}
+              variant="primary"
+              size="md"
+            >
+              <Plus size={14} />
+              <span>{dict.dashboard.newProject}</span>
+            </Button>
+          </div>
         </header>
 
         <HomeSearch />

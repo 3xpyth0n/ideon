@@ -1,4 +1,4 @@
-import { Migrator, FileMigrationProvider } from "kysely";
+import { Migrator, FileMigrationProvider, MigrationResult } from "kysely/migration";
 import { getDb } from "./db";
 import { isBuildMode } from "./runtime";
 import { logger } from "./logger";
@@ -24,7 +24,7 @@ export async function runMigrations() {
 
   const { error, results } = await migrator.migrateToLatest();
 
-  results?.forEach((it) => {
+  results?.forEach((it: MigrationResult) => {
     if (it.status === "Success") {
       if (!process.env.VITEST) {
         logger.info(

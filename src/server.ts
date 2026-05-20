@@ -537,6 +537,7 @@ setPersistence({
               "height",
               "selected",
               "content",
+              "metadata",
               "ownerId",
             ])
             .where("projectId", "=", projectId)
@@ -577,6 +578,15 @@ setPersistence({
                     blockType: b.blockType,
                     content: clampBlockContent(b.content || ""),
                     ownerId: b.ownerId,
+                    metadata: b.metadata
+                      ? (() => {
+                          try {
+                            return JSON.parse(b.metadata) as unknown;
+                          } catch {
+                            return undefined;
+                          }
+                        })()
+                      : undefined,
                   },
                 });
               }

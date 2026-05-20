@@ -7,6 +7,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.8.5] - 2026-05-XX
 
+### Added
+
+- Added project export and import. Right-click any project you own to download it as a `.ideon` file (a ZIP archive containing all blocks, links, and file attachments). An "Import project" button next to "New Project" on the dashboard lets you restore or migrate a project from that file — on import, you become the owner of all blocks [#95](https://github.com/3xpyth0n/ideon/issues/95).
+
 ### Fixed
 
 - Fixed an allocation size overflow crash caused by corrupted Yjs state accumulated in browser IndexedDB by the 0.8.4 rapid-input bug. The WebSocket connection is now deferred until after local IndexedDB loads and passes an encode validation, replacing the previous byte-size heuristic [#91](https://github.com/3xpyth0n/ideon/issues/91).

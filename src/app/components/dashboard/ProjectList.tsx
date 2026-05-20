@@ -13,6 +13,8 @@ import {
   Folder as FolderIcon,
   Home,
   ChevronRight,
+  Download,
+  Upload,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useUser } from "@providers/UserProvider";
@@ -110,6 +112,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     y: number;
   } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const isTrash = view === "trash";
 
@@ -900,6 +903,41 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
     }
   };
 
+  const handleExportProject = async (project: Project) => {
+    const res = await fetch(`/api/projects/${project.id}/export`);
+    if (!res.ok) {
+      toast.error(dict.common.error || "Export failed");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project.name}.ideon`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportProject = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/projects/import", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      toast.error(dict.common.error || "Import failed");
+      return;
+    }
+    const { projectId } = (await res.json()) as { projectId: string };
+    router.push(`/project/${projectId}`);
+  };
+
   if (loading && projects.length === 0 && folders.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -1005,13 +1043,29 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                 </Button>
               )}
               {canCreateProject && (
-                <Button
-                  onClick={() => setShowCreate(true)}
-                  className="btn-primary gap-2 w-full sm:w-auto"
-                >
-                  <Plus size={14} />
-                  <span>{dict.dashboard.newProject}</span>
-                </Button>
+                <>
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".ideon,.zip"
+                    className="hidden"
+                    onChange={handleImportProject}
+                  />
+                  <Button
+                    onClick={() => importInputRef.current?.click()}
+                    className="btn-primary gap-2 w-full sm:w-auto"
+                  >
+                    <Upload size={14} />
+                    <span>{dict.dashboard.importProject}</span>
+                  </Button>
+                  <Button
+                    onClick={() => setShowCreate(true)}
+                    className="btn-primary gap-2 w-full sm:w-auto"
+                  >
+                    <Plus size={14} />
+                    <span>{dict.dashboard.newProject}</span>
+                  </Button>
+                </>
               )}
             </div>
           )}
@@ -1601,6 +1655,20 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
               <span>{dict.project.inviteMembers}</span>
             </button>
           )}
+          {contextMenu.project &&
+            contextMenu.project.role !== "viewer" &&
+            contextMenu.project.role !== "editor" && (
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
+                onClick={() => {
+                  handleExportProject(contextMenu.project!);
+                  setContextMenu(null);
+                }}
+              >
+                <Download size={14} />
+                <span>{dict.dashboard.exportProject}</span>
+              </button>
+            )}
           <div className="h-px bg-white/10 my-1" />
           <button
             className="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10 text-red-400 flex items-center gap-2"

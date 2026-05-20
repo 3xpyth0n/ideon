@@ -482,6 +482,8 @@
     "manageTrash": "Manage deleted projects",
     "myProjects": "My Projects",
     "newProject": "New Project",
+    "importProject": "Import project",
+    "exportProject": "Export project",
     "noCollaboratorsFound": "No collaborators found",
     "createFolder": "New Folder",
     "projects": "Projects",

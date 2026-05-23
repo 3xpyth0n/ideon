@@ -158,7 +158,7 @@ export const POST = authenticatedAction(
       blockType: block.blockType as NewBlock["blockType"],
       metadata: remapMetadataBlockIds(block.blockType, block.metadata, idMap),
       parentBlockId: block.parentBlockId
-        ? (idMap.get(block.parentBlockId) ?? null)
+        ? idMap.get(block.parentBlockId) ?? null
         : null,
       positionX: block.positionX,
       positionY: block.positionY,

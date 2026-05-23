@@ -1,4 +1,8 @@
-import { Migrator, FileMigrationProvider, MigrationResult } from "kysely/migration";
+import {
+  Migrator,
+  FileMigrationProvider,
+  MigrationResult,
+} from "kysely/migration";
 import { getDb } from "./db";
 import { isBuildMode } from "./runtime";
 import { logger } from "./logger";

@@ -538,6 +538,7 @@ setPersistence({
               "selected",
               "content",
               "metadata",
+              "data",
               "ownerId",
             ])
             .where("projectId", "=", projectId)
@@ -575,6 +576,15 @@ setPersistence({
                   deletable: b.blockType !== "core",
                   zIndex: b.blockType === "frame" ? 0 : 1,
                   data: {
+                    ...(() => {
+                      try {
+                        return b.data
+                          ? (JSON.parse(b.data) as Record<string, unknown>)
+                          : {};
+                      } catch {
+                        return {};
+                      }
+                    })(),
                     blockType: b.blockType,
                     content: clampBlockContent(b.content || ""),
                     ownerId: b.ownerId,

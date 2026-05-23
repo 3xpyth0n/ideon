@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-05-XX
+
+### Fixed
+
+- Fixed block titles and other fields being lost on first open of imported or newly created projects, caused by the Yjs SQL seed query missing the `data` column [#96](https://github.com/3xpyth0n/ideon/issues/96).
+
 ## [0.8.5] - 2026-05-20
 
 ### Added

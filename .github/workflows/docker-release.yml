@@ -112,27 +112,23 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG_NAME}-arm64
 
       - name: Delete intermediate arch-specific images
-        uses: actions/github-script@v7
         env:
           TAG_NAME: ${{ needs.prepare-tags.outputs.tag_name }}
-        with:
-          script: |
-            const pkg = context.repo.repo;
-            const tagName = process.env.TAG_NAME;
-            const tagsToDelete = [`${tagName}-amd64`, `${tagName}-arm64`];
-            const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
-              username: context.repo.owner,
-              package_type: 'container',
-              package_name: pkg,
-            });
-            for (const version of versions) {
-              const tags = version.metadata?.container?.tags ?? [];
-              if (tags.some(t => tagsToDelete.includes(t))) {
-                await github.rest.packages.deletePackageVersionForUser({
-                  username: context.repo.owner,
-                  package_type: 'container',
-                  package_name: pkg,
-                  version_id: version.id,
-                });
-              }
-            }
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          PACKAGE="${{ github.event.repository.name }}"
+          OWNER_TYPE=$(gh api "users/${OWNER}" --jq '.type')
+          [ "$OWNER_TYPE" = "Organization" ] && BASE="orgs/${OWNER}" || BASE="users/${OWNER}"
+          for SUFFIX in amd64 arm64; do
+            TAG="${TAG_NAME}-${SUFFIX}"
+            VERSION_ID=$(gh api "${BASE}/packages/container/${PACKAGE}/versions" \
+              --paginate \
+              --jq ".[] | select(.metadata.container.tags[] == \"${TAG}\") | .id" | head -1)
+            if [ -n "$VERSION_ID" ]; then
+              gh api --method DELETE "${BASE}/packages/container/${PACKAGE}/versions/${VERSION_ID}"
+              echo "Deleted ${TAG} (id: ${VERSION_ID})"
+            else
+              echo "Warning: tag ${TAG} not found, skipping"
+            fi
+          done

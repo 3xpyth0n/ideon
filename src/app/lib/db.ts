@@ -291,7 +291,10 @@ export async function withShareTokenSession<T>(
 }
 
 export function getGlobalDb(): Kysely<database> {
-  return getDb();
+  if (state.dbInstance) return state.dbInstance;
+  ensureInitialized();
+  if (state.dbInstance) return state.dbInstance;
+  throw new Error("Database failed to initialize");
 }
 
 export function isInAuthenticatedSession(): boolean {

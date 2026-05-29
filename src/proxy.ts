@@ -114,6 +114,7 @@ export async function proxy(req: NextRequest) {
     "/api/auth",
     "/api/config",
     "/api/health",
+    "/webhooks/",
     "/auth/",
     "/favicon.ico",
     "/site.webmanifest",

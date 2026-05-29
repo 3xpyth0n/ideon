@@ -982,7 +982,9 @@ export const useProjectCanvasGraph = ({
         | "sketch"
         | "shell"
         | "folder"
-        | "frame" = "text",
+        | "frame"
+        | "webhook"
+        | "cron" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
@@ -1037,6 +1039,22 @@ export const useProjectCanvasGraph = ({
         checklist: { items: [] },
         folder: { isCollapsed: false },
         frame: { color: "#3b82f6", childBlockIds: [] },
+        webhook: {
+          ruleCreated: false,
+          enabled: true,
+          source: "custom",
+          triggerEvent: "*",
+          action: "set_state",
+          actionParams: { state: "success" },
+          stateDecayMinutes: 1440,
+        },
+        cron: {
+          ruleCreated: false,
+          enabled: true,
+          schedule: "0 9 * * *",
+          action: "set_state",
+          actionParams: { state: "success" },
+        },
       };
       const resolvedMetadata =
         initialMetadata || defaultMetadataByType[blockType];

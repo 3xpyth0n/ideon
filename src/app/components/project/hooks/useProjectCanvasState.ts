@@ -45,6 +45,7 @@ import {
   isBlockContentLocked,
   isBlockPositionLocked,
 } from "@components/project/utils/locks";
+import type { AutomationStateEntry } from "@components/project/AutomationStatesContext";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 
@@ -481,6 +482,9 @@ export const useProjectCanvasState = (
 
   const [blocks, setBlocksState] = useState<Node<BlockData>[]>([]);
   const [links, setLinksState] = useState<Edge[]>([]);
+  const [automationStates, setAutomationStates] = useState<
+    Record<string, AutomationStateEntry>
+  >({});
   const [draftsByBlock, setDraftsByBlock] = useState<DraftsMap>({});
   const [projectOwnerId, setProjectOwnerId] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewModeState] = useState(false);
@@ -737,9 +741,54 @@ export const useProjectCanvasState = (
       setDraftsByBlock(map);
     };
 
+    const updateContentsDeepFromYjs = (
+      events: Y.YEvent<Y.AbstractType<unknown>>[],
+      transaction: Y.Transaction,
+    ) => {
+      if (transaction.local && !(transaction.origin instanceof Y.UndoManager))
+        return;
+
+      const affectedBlockIds = new Set<string>();
+      events.forEach((event) => {
+        if (event.target !== yContents && event.target instanceof Y.Text) {
+          yContents.forEach((value, key) => {
+            if (value === event.target) affectedBlockIds.add(key);
+          });
+        }
+      });
+
+      if (affectedBlockIds.size === 0) return;
+
+      setBlocksState((prev) => {
+        const next = [...prev];
+        let hasChanges = false;
+        affectedBlockIds.forEach((blockId) => {
+          const idx = next.findIndex((n) => n.id === blockId);
+          if (idx >= 0) {
+            const yText = yContents.get(blockId);
+            if (yText) {
+              const newContent = resolveBlockContent(
+                yText,
+                next[idx].data.content,
+              );
+              if (next[idx].data.content !== newContent) {
+                next[idx] = {
+                  ...next[idx],
+                  data: { ...next[idx].data, content: newContent },
+                };
+                hasChanges = true;
+              }
+            }
+          }
+        });
+        return hasChanges ? next : prev;
+      });
+    };
+
     yBlocks.observe(updateBlocksFromYjs);
     yLinks.observe(updateLinksFromYjs);
     yContents.observe(updateContentsFromYjs);
+    yContents.observeDeep(updateContentsDeepFromYjs);
     if (yDrafts) yDrafts.observe(updateDraftsFromYjs);
 
     // Initial sync
@@ -809,9 +858,47 @@ export const useProjectCanvasState = (
       yBlocks.unobserve(updateBlocksFromYjs);
       yLinks.unobserve(updateLinksFromYjs);
       yContents.unobserve(updateContentsFromYjs);
+      yContents.unobserveDeep(updateContentsDeepFromYjs);
       if (yDrafts) yDrafts.unobserve(updateDraftsFromYjs);
     };
   }, [yBlocks, yLinks, yContents, isPreviewMode, applyLongestSideFit]);
+
+  useEffect(() => {
+    if (!yDoc) return;
+    const yAutomationStates =
+      yDoc.getMap<AutomationStateEntry>("automationStates");
+
+    const syncAutomationStates = () => {
+      const next: Record<string, AutomationStateEntry> = {};
+      yAutomationStates.forEach((val, key) => {
+        next[key] = val;
+      });
+      setAutomationStates(next);
+    };
+
+    yAutomationStates.observe(syncAutomationStates);
+    syncAutomationStates();
+
+    return () => yAutomationStates.unobserve(syncAutomationStates);
+  }, [yDoc]);
+
+  const handleResetAutomationState = useCallback(
+    async (blockId: string) => {
+      if (!yDoc || !initialProjectId) return;
+      yDoc.transact(() => {
+        yDoc.getMap<AutomationStateEntry>("automationStates").delete(blockId);
+      });
+      try {
+        await fetch(
+          `/api/projects/${initialProjectId}/blocks/${blockId}/automation-state`,
+          { method: "DELETE" },
+        );
+      } catch {
+        // best-effort
+      }
+    },
+    [yDoc, initialProjectId],
+  );
 
   useEffect(() => {
     if (!initialProjectId || currentUserRole !== "viewer") {
@@ -2716,6 +2803,8 @@ export const useProjectCanvasState = (
   );
 
   return {
+    automationStates,
+    handleResetAutomationState,
     blocks: blocksWithPresence,
     setBlocks,
     onBlocksChange: graph.onBlocksChange,

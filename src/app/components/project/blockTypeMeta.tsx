@@ -14,6 +14,8 @@ import {
   Folder,
   Square,
   Frame,
+  Webhook,
+  Timer,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -33,7 +35,9 @@ export type AddableBlockType =
   | "shell"
   | "folder"
   | "vercel"
-  | "frame";
+  | "frame"
+  | "webhook"
+  | "cron";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
@@ -53,6 +57,8 @@ export type BlockTypeLabelKey =
   | "blockTypeFolder"
   | "blockTypeVercel"
   | "blockTypeFrame"
+  | "blockTypeWebhook"
+  | "blockTypeCron"
   | "blockTypeCore";
 
 export type BlockTypeIconComponent = ComponentType<{
@@ -64,7 +70,7 @@ type AddBlockEntry = {
   type: AddableBlockType;
   icon: BlockTypeIconComponent;
   labelKey: BlockTypeLabelKey;
-  section: "organize" | "block";
+  section: "organize" | "block" | "automation";
 };
 
 const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
@@ -138,6 +144,18 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     labelKey: "blockTypeFrame",
     section: "organize",
   },
+  {
+    type: "webhook",
+    icon: Webhook,
+    labelKey: "blockTypeWebhook",
+    section: "automation",
+  },
+  {
+    type: "cron",
+    icon: Timer,
+    labelKey: "blockTypeCron",
+    section: "automation",
+  },
 ];
 
 const SEARCH_BLOCK_OVERRIDES: Record<
@@ -157,6 +175,10 @@ export const ORGANIZE_BLOCK_TYPES = ADD_BLOCK_ENTRIES.filter(
 
 export const CANVAS_BLOCK_TYPES = ADD_BLOCK_ENTRIES.filter(
   (entry) => entry.section === "block",
+);
+
+export const AUTOMATION_BLOCK_TYPES = ADD_BLOCK_ENTRIES.filter(
+  (entry) => entry.section === "automation",
 );
 
 export function getBlockTypeMeta(blockType: string | undefined): {

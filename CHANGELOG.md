@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-05-XX
+
+### Added
+
+- Added **Webhook Block** — a new block type you drop on the canvas that becomes a live HTTP endpoint. Any service capable of sending an HTTP POST can drive it: CI systems, form submissions, payment providers, monitoring tools, internal scripts, or anything else. Configure conditions to filter events, then choose what happens on the target block — set its visual state, update its color, create a Kanban task, or prepend text to a note. The block displays the endpoint URL and secret inline, shows the last trigger timestamp and status, and runs server-side 24/7 with no user connection required. Payload fields are accessible in action parameters using `{{payload.field}}` templates.
+- Added **Cron Block** — a new block type that fires an action on a configurable schedule. Pick a preset (hourly, daily at 9 AM, every Monday morning, or a custom cron expression) and a target block, and the action executes automatically on the server. Supports the same action set as Webhook Block (visual state, color, Kanban task, note).
+
 ## [0.8.6] - 2026-05-25
 
 ### Fixed

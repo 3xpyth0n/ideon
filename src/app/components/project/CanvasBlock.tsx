@@ -40,6 +40,14 @@ import { BlockFooter } from "./BlockFooter";
 import { parseOptionalJsonRecord } from "@lib/metadata-parsers";
 import type { NoteModeShortcutHandler } from "./utils/interaction";
 import { focusProjectCanvas } from "./utils/focusCanvas";
+import {
+  AutomationStateBadge,
+  AUTOMATION_STATE_BORDER_COLORS,
+} from "./AutomationStateBadge";
+import {
+  useBlockAutomationState,
+  useResetBlockAutomationState,
+} from "./AutomationStatesContext";
 
 export type BlockData = {
   title?: string;
@@ -66,7 +74,9 @@ export type BlockData = {
     | "shell"
     | "folder"
     | "vercel"
-    | "frame";
+    | "frame"
+    | "webhook"
+    | "cron";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;
@@ -619,6 +629,30 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
 
   const borderColor = isBeingMoved ? data.movingUserColor : "var(--border)";
 
+  const VALID_AUTOMATION_STATES = [
+    "processing",
+    "success",
+    "warning",
+    "error",
+  ] as const;
+  type ActiveAutomationState = (typeof VALID_AUTOMATION_STATES)[number];
+  const automationStateEntry = useBlockAutomationState(id);
+  const resetBlockState = useResetBlockAutomationState();
+  const rawAutomationState = (automationStateEntry?.state ??
+    metadata?.automationState) as string | undefined;
+  const automationDecayAt = (automationStateEntry?.decayAt ??
+    metadata?.automationDecayAt) as number | undefined;
+  const isDecayed =
+    automationDecayAt !== undefined && Date.now() > automationDecayAt;
+  const automationState: ActiveAutomationState | null =
+    !isDecayed &&
+    rawAutomationState &&
+    (VALID_AUTOMATION_STATES as readonly string[]).includes(rawAutomationState)
+      ? (rawAutomationState as ActiveAutomationState)
+      : null;
+  const automationLabel = (automationStateEntry?.label ??
+    metadata?.automationLabel) as string | null | undefined;
+
   useEffect(() => {
     if (data.isPreviewMode) return;
 
@@ -1057,6 +1091,9 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
         style={
           {
             "--block-border-color": borderColor,
+            ...(automationState
+              ? { borderColor: AUTOMATION_STATE_BORDER_COLORS[automationState] }
+              : {}),
           } as React.CSSProperties
         }
       >
@@ -1104,6 +1141,13 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
             </div>
 
             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+              {automationState && (
+                <AutomationStateBadge
+                  state={automationState}
+                  customLabel={automationLabel ?? null}
+                  onReset={isReadOnly ? undefined : () => resetBlockState(id)}
+                />
+              )}
               <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                 <BlockTitleInput
                   value={title}

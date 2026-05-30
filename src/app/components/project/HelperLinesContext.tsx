@@ -9,6 +9,7 @@ export interface ActiveResizeSnap {
   y: number;
   width: number;
   height: number;
+  handle: string;
 }
 
 interface HelperLinesContextValue {

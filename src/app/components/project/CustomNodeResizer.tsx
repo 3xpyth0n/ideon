@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo, useRef } from "react";
 import {
   NodeResizer,
   NodeResizerProps,
+  NodeResizeControl,
   useViewport,
   useStore,
   useNodeId,
@@ -249,12 +250,11 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
     (event, params) => {
       resizeStateRef.current = null;
       helperLinesCtxRef.current?.setHelperLines([]);
-      helperLinesCtxRef.current?.setActiveResizeSnap(null);
 
       const node = resizingNodeRef.current;
       const fallbackParams: ResizeParams | undefined =
-        params ??
         lastResizeParamsRef.current ??
+        params ??
         (node
           ? {
               x: node.position.x,
@@ -347,6 +347,7 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
                 y: corrected.y,
                 width: corrected.width,
                 height: corrected.height,
+                handle: currentHandle,
               }
             : null,
         );
@@ -364,6 +365,42 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
 
   if (isBlockPositionLocked(resizingNode?.data as BlockData | undefined)) {
     return null;
+  }
+
+  const isCore = resizingNode?.type === "core";
+
+  const coreHandleStyle = useMemo(
+    () =>
+      ({
+        background: "transparent",
+        backgroundColor: "transparent",
+        border: "none",
+        boxShadow: "none",
+        width: `${hitboxSize}px`,
+        height: `${hitboxSize}px`,
+        "--hitbox-size": `${hitboxSize}px`,
+        pointerEvents: "auto",
+      }) as React.CSSProperties,
+    [hitboxSize],
+  );
+
+  if (isCore) {
+    return (
+      <NodeResizeControl
+        position="bottom-right"
+        className={`${styles.handle} ${props.handleClassName || ""}`}
+        style={coreHandleStyle}
+        minWidth={props.minWidth}
+        minHeight={props.minHeight}
+        maxWidth={props.maxWidth}
+        maxHeight={props.maxHeight}
+        keepAspectRatio={props.keepAspectRatio}
+        shouldResize={shouldResize}
+        onResizeStart={onResizeStart}
+        onResize={onResize}
+        onResizeEnd={onResizeEnd}
+      />
+    );
   }
 
   return (

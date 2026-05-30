@@ -385,17 +385,34 @@ export const useProjectCanvasGraph = ({
       });
 
       const snap = activeResizeSnapRef.current;
+      const snapMovesX =
+        snap !== null &&
+        (snap.handle === "left" ||
+          snap.handle === "top-left" ||
+          snap.handle === "bottom-left");
+      const snapMovesY =
+        snap !== null &&
+        (snap.handle === "top" ||
+          snap.handle === "top-left" ||
+          snap.handle === "top-right");
       const resolvedChanges = snap
         ? filteredChanges.map((c) => {
             if (!("id" in c) || c.id !== snap.id) return c;
             if (c.type === "dimensions" && c.dimensions) {
+              if (c.resizing === false) activeResizeSnapRef.current = null;
               return {
                 ...c,
                 dimensions: { width: snap.width, height: snap.height },
               };
             }
             if (c.type === "position" && c.position) {
-              return { ...c, position: { x: snap.x, y: snap.y } };
+              return {
+                ...c,
+                position: {
+                  x: snapMovesX ? snap.x : c.position.x,
+                  y: snapMovesY ? snap.y : c.position.y,
+                },
+              };
             }
             return c;
           })

@@ -2851,6 +2851,9 @@ export const useProjectCanvasState = (
     onPointerMove,
     onPointerLeave: rt.onPointerLeave,
     helperLines: graph.helperLines,
+    setHelperLines: graph.setHelperLines,
+    isShiftPressed: graph.isShiftPressed,
+    setActiveResizeSnap: graph.setActiveResizeSnap,
     handlePreview: io.handlePreview,
     handleApplyState: async (stateId: string) => {
       if (!initialProjectId) return;

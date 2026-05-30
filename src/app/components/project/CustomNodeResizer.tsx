@@ -1,13 +1,18 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef } from "react";
 import {
   NodeResizer,
   NodeResizerProps,
   useViewport,
   useStore,
+  useNodeId,
 } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
 import styles from "./CustomNodeResizer.module.css";
+import { calculateResizeHelperLines, ResizeHandle } from "./utils/alignment";
+import type { BlockData } from "./CanvasBlock";
+import { useHelperLines } from "./HelperLinesContext";
 
 const TARGET_HITBOX_SIZE_PX = 60;
 const MIN_HITBOX_SIZE = 2;
@@ -15,16 +20,7 @@ const MAX_HITBOX_SIZE = 50;
 const DEFAULT_BLOCK_WIDTH = 320;
 const DEFAULT_BLOCK_HEIGHT = 240;
 const SNAP_THRESHOLD = 0.1;
-
-type ResizeHandle =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right"
-  | "top"
-  | "bottom"
-  | "left"
-  | "right";
+const RESIZE_SNAP_THRESHOLD_PX = 8;
 
 interface NodeGeometry {
   position: { x: number; y: number };
@@ -47,9 +43,18 @@ interface ResizeParams {
 }
 
 const extractHandleFromResizeEvent = (event: unknown): ResizeHandle | null => {
-  if (!event || typeof event !== "object" || !("target" in event)) return null;
+  if (!event || typeof event !== "object") return null;
 
-  const target = (event as { target?: EventTarget | null }).target;
+  // ResizeDragEvent is a D3DragEvent — the DOM target is on sourceEvent, not event
+  const domEvent =
+    "sourceEvent" in event
+      ? (event as { sourceEvent?: unknown }).sourceEvent
+      : event;
+
+  if (!domEvent || typeof domEvent !== "object" || !("target" in domEvent))
+    return null;
+
+  const target = (domEvent as { target?: EventTarget | null }).target;
   if (!(target instanceof Element)) return null;
 
   const handleElement = target.closest(".react-flow__resize-control");
@@ -175,12 +180,25 @@ const resolveFallbackPosition = (
 
 const CustomNodeResizer = memo((props: NodeResizerProps) => {
   const { zoom } = useViewport();
-  const [resizeState, setResizeState] = useState<ResizeState | null>(null);
+  const resizeStateRef = useRef<ResizeState | null>(null);
   const lastResizeParamsRef = useRef<ResizeParams | null>(null);
 
+  const contextNodeId = useNodeId();
+  const effectiveNodeId = props.nodeId ?? contextNodeId;
+
   const resizingNode = useStore((state) =>
-    props.nodeId ? state.nodes.find((n) => n.id === props.nodeId) : null,
+    effectiveNodeId ? state.nodes.find((n) => n.id === effectiveNodeId) : null,
   );
+  const resizingNodeRef = useRef(resizingNode);
+  resizingNodeRef.current = resizingNode;
+
+  const allNodes = useStore((state) => state.nodes as Node<BlockData>[]);
+  const allNodesRef = useRef(allNodes);
+  allNodesRef.current = allNodes;
+
+  const helperLinesCtx = useHelperLines();
+  const helperLinesCtxRef = useRef(helperLinesCtx);
+  helperLinesCtxRef.current = helperLinesCtx;
 
   const hitboxSize = useMemo(() => {
     if (!zoom || zoom <= 0) return MIN_HITBOX_SIZE;
@@ -198,74 +216,74 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
     [hitboxSize, props.handleStyle],
   );
 
+  const propsRef = useRef(props);
+  propsRef.current = props;
+
   const onResizeStart = useCallback<
     NonNullable<NodeResizerProps["onResizeStart"]>
-  >(
-    (event, params) => {
-      const handle = extractHandleFromResizeEvent(event);
+  >((event, params) => {
+    const node = resizingNodeRef.current;
+    const handle = extractHandleFromResizeEvent(event);
 
-      if (resizingNode && handle && params) {
-        const startRect: NodeGeometry = {
-          position: { x: params.x, y: params.y },
-          width: params.width,
-          height: params.height,
-        };
-        const fixedCorner = calculateFixedCorner(startRect, handle);
-        setResizeState({
-          handle,
-          fixedCorner,
-          startPosition: {
-            x: params.x,
-            y: params.y,
-          },
-          originalDims: {
-            width: params.width,
-            height: params.height,
-          },
-        });
-      } else {
-        setResizeState(null);
-      }
+    if (node && handle && params) {
+      const startRect: NodeGeometry = {
+        position: { x: params.x, y: params.y },
+        width: params.width,
+        height: params.height,
+      };
+      resizeStateRef.current = {
+        handle,
+        fixedCorner: calculateFixedCorner(startRect, handle),
+        startPosition: { x: params.x, y: params.y },
+        originalDims: { width: params.width, height: params.height },
+      };
+    } else {
+      resizeStateRef.current = null;
+    }
 
-      props.onResizeStart?.(event, params);
-    },
-    [resizingNode, props],
-  );
+    propsRef.current.onResizeStart?.(event, params);
+  }, []);
 
   const onResizeEnd = useCallback<NonNullable<NodeResizerProps["onResizeEnd"]>>(
     (event, params) => {
-      setResizeState(null);
+      resizeStateRef.current = null;
+      helperLinesCtxRef.current?.setHelperLines([]);
+      helperLinesCtxRef.current?.setActiveResizeSnap(null);
 
+      const node = resizingNodeRef.current;
       const fallbackParams: ResizeParams | undefined =
         params ??
         lastResizeParamsRef.current ??
-        (resizingNode
+        (node
           ? {
-              x: resizingNode.position.x,
-              y: resizingNode.position.y,
-              width: resizingNode.width ?? 0,
-              height: resizingNode.height ?? 0,
+              x: node.position.x,
+              y: node.position.y,
+              width: node.width ?? 0,
+              height: node.height ?? 0,
             }
           : undefined);
 
-      props.onResizeEnd?.(event, fallbackParams);
+      propsRef.current.onResizeEnd?.(event, fallbackParams);
       lastResizeParamsRef.current = null;
     },
-    [props, resizingNode],
+    [],
   );
 
   const onResize = useCallback<NonNullable<NodeResizerProps["onResize"]>>(
     (event, params) => {
-      if (!resizingNode) {
-        props.onResize?.(event, params);
+      const node = resizingNodeRef.current;
+
+      if (!node) {
+        propsRef.current.onResize?.(event, params);
         return;
       }
 
       const { width, height } = applySnapToGrid(params.width, params.height);
+      const resizeState = resizeStateRef.current;
       const currentHandle = resizeState?.handle;
 
       if (!resizeState || !currentHandle) {
-        const fallbackPosition = resolveFallbackPosition(params, resizingNode);
+        const fallbackPosition = resolveFallbackPosition(params, node);
         const corrected = {
           ...params,
           x: fallbackPosition.x,
@@ -275,13 +293,13 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
         };
 
         lastResizeParamsRef.current = corrected;
-        props.onResize?.(event, corrected);
+        propsRef.current.onResize?.(event, corrected);
         return;
       }
 
       const { fixedCorner, startPosition } = resizeState;
       const position = calculateCorrectedPosition(
-        resizingNode,
+        node,
         currentHandle,
         fixedCorner,
         startPosition,
@@ -289,7 +307,7 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
         height,
       );
 
-      const corrected = {
+      let corrected = {
         ...params,
         x: Math.round(position.x),
         y: Math.round(position.y),
@@ -297,10 +315,46 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
         height,
       };
 
+      const ctx = helperLinesCtxRef.current;
+      if (ctx) {
+        const { helperLines, snappedRect } = calculateResizeHelperLines(
+          node.id,
+          {
+            x: corrected.x,
+            y: corrected.y,
+            width: corrected.width,
+            height: corrected.height,
+          },
+          currentHandle,
+          allNodesRef.current,
+          RESIZE_SNAP_THRESHOLD_PX,
+          ctx.isShiftPressed,
+        );
+        ctx.setHelperLines(helperLines);
+        corrected = {
+          ...corrected,
+          x: Math.round(snappedRect.x),
+          y: Math.round(snappedRect.y),
+          width: Math.round(snappedRect.width),
+          height: Math.round(snappedRect.height),
+        };
+        ctx.setActiveResizeSnap(
+          helperLines.length > 0
+            ? {
+                id: node.id,
+                x: corrected.x,
+                y: corrected.y,
+                width: corrected.width,
+                height: corrected.height,
+              }
+            : null,
+        );
+      }
+
       lastResizeParamsRef.current = corrected;
-      props.onResize?.(event, corrected);
+      propsRef.current.onResize?.(event, corrected);
     },
-    [resizingNode, resizeState, props],
+    [],
   );
 
   const shouldResize = useCallback<
@@ -311,7 +365,9 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
     <NodeResizer
       {...props}
       handleClassName={`${styles.handle} ${props.handleClassName || ""}`}
+      lineClassName={`${styles.handle} ${props.lineClassName || ""}`}
       handleStyle={handleStyle}
+      lineStyle={handleStyle}
       onResizeStart={onResizeStart}
       onResize={onResize}
       onResizeEnd={onResizeEnd}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import type { ActiveResizeSnap } from "@components/project/HelperLinesContext";
 import {
   Node,
   Edge,
@@ -109,6 +110,10 @@ export const useProjectCanvasGraph = ({
   const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const activeResizeSnapRef = useRef<ActiveResizeSnap | null>(null);
+  const setActiveResizeSnap = useCallback((snap: ActiveResizeSnap | null) => {
+    activeResizeSnapRef.current = snap;
+  }, []);
   const lastDragPositionRef = useRef<{
     blockId: string;
     position: { x: number; y: number };
@@ -379,11 +384,28 @@ export const useProjectCanvasGraph = ({
         }
       });
 
-      if (filteredChanges.length > 0 || descendantChanges.length > 0) {
+      const snap = activeResizeSnapRef.current;
+      const resolvedChanges = snap
+        ? filteredChanges.map((c) => {
+            if (!("id" in c) || c.id !== snap.id) return c;
+            if (c.type === "dimensions" && c.dimensions) {
+              return {
+                ...c,
+                dimensions: { width: snap.width, height: snap.height },
+              };
+            }
+            if (c.type === "position" && c.position) {
+              return { ...c, position: { x: snap.x, y: snap.y } };
+            }
+            return c;
+          })
+        : filteredChanges;
+
+      if (resolvedChanges.length > 0 || descendantChanges.length > 0) {
         setBlocks(
           (blocks) =>
             applyNodeChanges(
-              [...filteredChanges, ...descendantChanges],
+              [...resolvedChanges, ...descendantChanges],
               blocks,
             ) as Node<BlockData>[],
         );
@@ -1254,5 +1276,8 @@ export const useProjectCanvasGraph = ({
     handleTransferBlock,
     handleFitView,
     helperLines,
+    setHelperLines,
+    isShiftPressed,
+    setActiveResizeSnap,
   };
 };

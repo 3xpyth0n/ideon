@@ -7,6 +7,21 @@ export interface HelperLine {
   position: number;
 }
 
+export type ResizeHandle =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+  | "top"
+  | "bottom"
+  | "left"
+  | "right";
+
+export interface ResizeAlignmentResult {
+  helperLines: HelperLine[];
+  snappedRect: { x: number; y: number; width: number; height: number };
+}
+
 export interface AlignmentResult {
   helperLines: HelperLine[];
   snappedPosition: { x: number; y: number } | null;
@@ -134,4 +149,132 @@ export function calculateHelperLines(
       : null;
 
   return { helperLines, snappedPosition };
+}
+
+export function calculateResizeHelperLines(
+  resizingNodeId: string,
+  rect: { x: number; y: number; width: number; height: number },
+  handle: ResizeHandle,
+  allNodes: Node<BlockData>[],
+  snapThreshold: number = 8,
+  disabled: boolean = false,
+): ResizeAlignmentResult {
+  if (disabled) {
+    return { helperLines: [], snappedRect: rect };
+  }
+
+  const movesLeft =
+    handle === "left" || handle === "top-left" || handle === "bottom-left";
+  const movesRight =
+    handle === "right" || handle === "top-right" || handle === "bottom-right";
+  const movesTop =
+    handle === "top" || handle === "top-left" || handle === "top-right";
+  const movesBottom =
+    handle === "bottom" ||
+    handle === "bottom-left" ||
+    handle === "bottom-right";
+
+  const curLeft = rect.x;
+  const curRight = rect.x + rect.width;
+  const curTop = rect.y;
+  const curBottom = rect.y + rect.height;
+
+  const otherNodes = allNodes.filter(
+    (node) => node.id !== resizingNodeId && node.type !== "core",
+  );
+
+  const verticalLines: HelperLine[] = [];
+  const horizontalLines: HelperLine[] = [];
+  let snapLeft: number | null = null;
+  let snapRight: number | null = null;
+  let snapTop: number | null = null;
+  let snapBottom: number | null = null;
+
+  for (const node of otherNodes) {
+    const nLeft = node.position.x;
+    const nRight =
+      node.position.x +
+      (node.measured?.width || node.width || DEFAULT_BLOCK_WIDTH);
+    const nTop = node.position.y;
+    const nBottom =
+      node.position.y +
+      (node.measured?.height || node.height || DEFAULT_BLOCK_HEIGHT);
+
+    if (movesLeft) {
+      if (Math.abs(curLeft - nLeft) < snapThreshold) {
+        verticalLines.push({ type: "vertical", position: nLeft });
+        if (snapLeft === null) snapLeft = nLeft;
+      }
+      if (Math.abs(curLeft - nRight) < snapThreshold) {
+        verticalLines.push({ type: "vertical", position: nRight });
+        if (snapLeft === null) snapLeft = nRight;
+      }
+    }
+
+    if (movesRight) {
+      if (Math.abs(curRight - nRight) < snapThreshold) {
+        verticalLines.push({ type: "vertical", position: nRight });
+        if (snapRight === null) snapRight = nRight;
+      }
+      if (Math.abs(curRight - nLeft) < snapThreshold) {
+        verticalLines.push({ type: "vertical", position: nLeft });
+        if (snapRight === null) snapRight = nLeft;
+      }
+    }
+
+    if (movesTop) {
+      if (Math.abs(curTop - nTop) < snapThreshold) {
+        horizontalLines.push({ type: "horizontal", position: nTop });
+        if (snapTop === null) snapTop = nTop;
+      }
+      if (Math.abs(curTop - nBottom) < snapThreshold) {
+        horizontalLines.push({ type: "horizontal", position: nBottom });
+        if (snapTop === null) snapTop = nBottom;
+      }
+    }
+
+    if (movesBottom) {
+      if (Math.abs(curBottom - nBottom) < snapThreshold) {
+        horizontalLines.push({ type: "horizontal", position: nBottom });
+        if (snapBottom === null) snapBottom = nBottom;
+      }
+      if (Math.abs(curBottom - nTop) < snapThreshold) {
+        horizontalLines.push({ type: "horizontal", position: nTop });
+        if (snapBottom === null) snapBottom = nTop;
+      }
+    }
+  }
+
+  const uniqueVertical = Array.from(
+    new Map(verticalLines.map((l) => [l.position, l])).values(),
+  );
+  const uniqueHorizontal = Array.from(
+    new Map(horizontalLines.map((l) => [l.position, l])).values(),
+  );
+
+  const helperLines = [...uniqueVertical, ...uniqueHorizontal];
+
+  let { x, y, width, height } = rect;
+
+  if (movesLeft && snapLeft !== null) {
+    const fixedRight = x + width;
+    x = snapLeft;
+    width = fixedRight - x;
+  }
+
+  if (movesRight && snapRight !== null) {
+    width = snapRight - x;
+  }
+
+  if (movesTop && snapTop !== null) {
+    const fixedBottom = y + height;
+    y = snapTop;
+    height = fixedBottom - y;
+  }
+
+  if (movesBottom && snapBottom !== null) {
+    height = snapBottom - y;
+  }
+
+  return { helperLines, snappedRect: { x, y, width, height } };
 }

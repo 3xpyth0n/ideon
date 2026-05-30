@@ -130,6 +130,13 @@
 .project-canvas .shell-block-header,
 .project-canvas .handle-drag-target {
   touch-action: none;
+  cursor: move;
+}
+
+.project-canvas .block-header:active,
+.project-canvas .shell-block-header:active,
+.project-canvas .handle-drag-target:active {
+  cursor: grabbing;
 }
 
 .project-canvas .checklist-block-container,
@@ -873,6 +880,11 @@ body.sketch-modal-open
   display: flex;
   flex-direction: column;
   overflow: visible !important;
+  cursor: move;
+}
+
+.block-card:active {
+  cursor: grabbing;
 }
 
 .resizer-line {

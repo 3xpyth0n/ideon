@@ -1580,11 +1580,11 @@
   color: var(--accent);
 }
 
-.block-footer {
-  cursor: grab;
+.block-author-container {
+  cursor: move;
 }
 
-.block-footer:active {
+.block-author-container:active {
   cursor: grabbing;
 }
 

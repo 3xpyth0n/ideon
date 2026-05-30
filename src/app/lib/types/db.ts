@@ -151,7 +151,8 @@ export interface blocksTable {
     | "vercel"
     | "frame"
     | "webhook"
-    | "cron";
+    | "cron"
+    | "latex";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;

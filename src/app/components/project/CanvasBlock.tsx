@@ -34,6 +34,7 @@ import CustomNodeResizer from "./CustomNodeResizer";
 import { BlockTitleInput } from "./BlockTitleInput";
 
 import NoteBlock from "./NoteBlock";
+import LatexBlock from "./LatexBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import { BlockFooter } from "./BlockFooter";
@@ -76,7 +77,8 @@ export type BlockData = {
     | "vercel"
     | "frame"
     | "webhook"
-    | "cron";
+    | "cron"
+    | "latex";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;
@@ -180,6 +182,7 @@ export type CanvasBlockProps = NodeProps<
     | "sketch"
     | "shell"
     | "folder"
+    | "latex"
   >
 >;
 
@@ -1076,6 +1079,12 @@ const CanvasBlockComponent = (props: CanvasBlockProps) => {
   } else if (type === "text") {
     componentContent = (
       <NoteBlock {...(props as unknown as ComponentProps<typeof NoteBlock>)} />
+    );
+  } else if (type === "latex") {
+    componentContent = (
+      <LatexBlock
+        {...(props as unknown as ComponentProps<typeof LatexBlock>)}
+      />
     );
   } else {
     componentContent = (

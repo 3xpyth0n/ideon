@@ -16,6 +16,7 @@ import {
   Frame,
   Webhook,
   Timer,
+  Sigma,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -37,7 +38,8 @@ export type AddableBlockType =
   | "vercel"
   | "frame"
   | "webhook"
-  | "cron";
+  | "cron"
+  | "latex";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
@@ -59,6 +61,7 @@ export type BlockTypeLabelKey =
   | "blockTypeFrame"
   | "blockTypeWebhook"
   | "blockTypeCron"
+  | "blockTypeLatex"
   | "blockTypeCore";
 
 export type BlockTypeIconComponent = ComponentType<{
@@ -130,6 +133,12 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     type: "shell",
     icon: Terminal,
     labelKey: "blockTypeShell",
+    section: "block",
+  },
+  {
+    type: "latex",
+    icon: Sigma,
+    labelKey: "blockTypeLatex",
     section: "block",
   },
   {

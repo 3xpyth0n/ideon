@@ -284,6 +284,7 @@ const blockTypes = {
   frame: FrameBlock,
   webhook: WebhookBlock,
   cron: CronBlock,
+  latex: CanvasBlock,
   core: ProjectCoreBlock,
 };
 
@@ -1642,11 +1643,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         }
 
         const isFreshNoteBlock =
-          createdBlock?.type === "text" && !(createdBlock.data?.content || "");
+          (createdBlock?.type === "text" || createdBlock?.type === "latex") &&
+          !(createdBlock.data?.content || "");
 
         if (isFreshNoteBlock && blockEl) {
           const editorEl = blockEl.querySelector(
-            ".ProseMirror, .cm-content, [contenteditable='true']",
+            ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor]",
           ) as HTMLElement | null;
 
           if (editorEl && typeof editorEl.focus === "function") {

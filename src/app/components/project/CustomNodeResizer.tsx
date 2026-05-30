@@ -12,6 +12,7 @@ import type { Node } from "@xyflow/react";
 import styles from "./CustomNodeResizer.module.css";
 import { calculateResizeHelperLines, ResizeHandle } from "./utils/alignment";
 import type { BlockData } from "./CanvasBlock";
+import { isBlockPositionLocked } from "./utils/locks";
 import { useHelperLines } from "./HelperLinesContext";
 
 const TARGET_HITBOX_SIZE_PX = 60;
@@ -360,6 +361,10 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
   const shouldResize = useCallback<
     NonNullable<NodeResizerProps["shouldResize"]>
   >(() => true, []);
+
+  if (isBlockPositionLocked(resizingNode?.data as BlockData | undefined)) {
+    return null;
+  }
 
   return (
     <NodeResizer

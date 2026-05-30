@@ -130,12 +130,17 @@
 .project-canvas .shell-block-header,
 .project-canvas .handle-drag-target {
   touch-action: none;
+}
+
+.react-flow__node.draggable .block-header,
+.react-flow__node.draggable .shell-block-header,
+.react-flow__node.draggable .handle-drag-target {
   cursor: move;
 }
 
-.project-canvas .block-header:active,
-.project-canvas .shell-block-header:active,
-.project-canvas .handle-drag-target:active {
+.react-flow__node.draggable .block-header:active,
+.react-flow__node.draggable .shell-block-header:active,
+.react-flow__node.draggable .handle-drag-target:active {
   cursor: grabbing;
 }
 
@@ -880,10 +885,13 @@ body.sketch-modal-open
   display: flex;
   flex-direction: column;
   overflow: visible !important;
+}
+
+.react-flow__node.draggable .block-card {
   cursor: move;
 }
 
-.block-card:active {
+.react-flow__node.draggable .block-card:active {
   cursor: grabbing;
 }
 

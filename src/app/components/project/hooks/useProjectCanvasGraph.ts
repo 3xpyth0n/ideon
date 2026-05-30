@@ -900,6 +900,7 @@ export const useProjectCanvasGraph = ({
       if (isReadOnly) return;
       const block = blocks.find((b) => b.id === blockId);
       if (!block || block.type === "core") return;
+      if (isBlockPositionLocked(block.data)) return;
       setHelperLines([]);
 
       const adjustedPos = getAdjustedPosition(
@@ -1232,6 +1233,8 @@ export const useProjectCanvasGraph = ({
       },
     ) => {
       if (isReadOnly) return;
+      const block = blocks.find((b) => b.id === blockId);
+      if (isBlockPositionLocked(block?.data)) return;
       applyMutation({
         intent: "Transferred block ownership",
         blocksUpdate: (blocks) =>
@@ -1251,7 +1254,7 @@ export const useProjectCanvasGraph = ({
           ),
       });
     },
-    [applyMutation, isReadOnly],
+    [applyMutation, blocks, isReadOnly],
   );
 
   return {

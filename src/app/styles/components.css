@@ -1580,11 +1580,11 @@
   color: var(--accent);
 }
 
-.block-author-container {
+.react-flow__node.draggable .block-author-container {
   cursor: move;
 }
 
-.block-author-container:active {
+.react-flow__node.draggable .block-author-container:active {
   cursor: grabbing;
 }
 

@@ -1,5 +1,7 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
+import crypto from "node:crypto";
 import { logger as appLogger } from "@lib/logger";
+import { getProxyTokenSecret } from "@lib/crypto";
 import Credentials from "next-auth/providers/credentials";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Discord from "next-auth/providers/discord";
@@ -225,6 +227,58 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           };
         },
       }),
+      Credentials({
+        id: "proxy",
+        credentials: {
+          userId: { label: "User ID", type: "text" },
+          internalToken: { label: "Internal Token", type: "text" },
+        },
+        authorize: async (credentials) => {
+          const parsed = z
+            .object({
+              userId: z.string().min(1),
+              internalToken: z.string().min(1),
+            })
+            .safeParse(credentials);
+          if (!parsed.success) return null;
+
+          const { userId, internalToken } = parsed.data;
+          const expected = crypto
+            .createHmac("sha256", getProxyTokenSecret())
+            .update(userId)
+            .digest("hex");
+
+          try {
+            if (
+              !crypto.timingSafeEqual(
+                Buffer.from(expected, "hex"),
+                Buffer.from(internalToken, "hex"),
+              )
+            )
+              return null;
+          } catch {
+            return null;
+          }
+
+          const user = await db
+            .selectFrom("users")
+            .selectAll()
+            .where("id", "=", userId)
+            .executeTakeFirst();
+          if (!user) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.displayName || user.username,
+            username: user.username,
+            displayName: user.displayName,
+            role: user.role,
+            avatarUrl: user.avatarUrl,
+            color: user.color,
+          };
+        },
+      }),
       Google({
         clientId: freshConfig.google?.clientId,
         clientSecret: freshConfig.google?.clientSecret,
@@ -311,7 +365,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           const headersList = await headers();
           const ip = getClientIp(headersList);
 
-          if (account?.provider === "credentials") return true;
+          if (
+            account?.provider === "credentials" ||
+            account?.provider === "proxy"
+          )
+            return true;
 
           if (!user.email) {
             await logSecurityEvent("loginSSO:unknown", "failure", { ip });
@@ -447,7 +505,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
       async jwt({ token, user, account }) {
         if (user && account) {
           // 1. Credentials Provider: user object already contains internal DB data from authorize()
-          if (account.provider === "credentials") {
+          if (
+            account.provider === "credentials" ||
+            account.provider === "proxy"
+          ) {
             if (isAuthUser(user)) {
               token.id = user.id;
               token.role = user.role;

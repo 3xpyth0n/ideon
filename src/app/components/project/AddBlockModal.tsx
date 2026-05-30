@@ -4,6 +4,7 @@ import { Command } from "cmdk";
 import { Modal } from "@components/ui/Modal";
 import { useI18n } from "@providers/I18nProvider";
 import {
+  AUTOMATION_BLOCK_TYPES,
   CANVAS_BLOCK_TYPES,
   ORGANIZE_BLOCK_TYPES,
   type AddableBlockType,
@@ -54,6 +55,24 @@ export default function AddBlockModal({
           </Command.Group>
           <Command.Group heading={dict.canvas.blocksSection || "Blocks"}>
             {CANVAS_BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
+              <Command.Item
+                key={type}
+                value={
+                  dict.blocks[labelKey as keyof typeof dict.blocks] as string
+                }
+                onSelect={() => onAddBlock(type)}
+              >
+                <Icon className="add-block-icon" />
+                <span className="add-block-label">
+                  {dict.blocks[labelKey as keyof typeof dict.blocks]}
+                </span>
+              </Command.Item>
+            ))}
+          </Command.Group>
+          <Command.Group
+            heading={dict.canvas.automationSection || "Automation"}
+          >
+            {AUTOMATION_BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
               <Command.Item
                 key={type}
                 value={

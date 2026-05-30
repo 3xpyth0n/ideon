@@ -41,6 +41,17 @@ export type LinkPreviewUpdate = Updateable<linkPreviewsTable>;
 export type ProjectCollaborator = Selectable<projectCollaboratorsTable>;
 export type NewProjectCollaborator = Insertable<projectCollaboratorsTable>;
 
+export type AutomationRule = Selectable<automationRulesTable>;
+export type NewAutomationRule = Insertable<automationRulesTable>;
+export type AutomationRuleUpdate = Updateable<automationRulesTable>;
+
+export type AutomationLog = Selectable<automationLogsTable>;
+export type NewAutomationLog = Insertable<automationLogsTable>;
+
+export type BlockAutomationState = Selectable<blockAutomationStatesTable>;
+export type NewBlockAutomationState = Insertable<blockAutomationStatesTable>;
+export type BlockAutomationStateUpdate = Updateable<blockAutomationStatesTable>;
+
 export type ProjectRequest = Selectable<projectRequestsTable>;
 export type NewProjectRequest = Insertable<projectRequestsTable>;
 
@@ -138,7 +149,10 @@ export interface blocksTable {
     | "shell"
     | "folder"
     | "vercel"
-    | "frame";
+    | "frame"
+    | "webhook"
+    | "cron"
+    | "latex";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;
@@ -295,6 +309,7 @@ export interface rateLimitsTable {
 import type { userGitTokensTable } from "./userGitTokens.ts";
 import type { userVercelTokensTable } from "./userVercelTokens.ts";
 import type { userVercelProjectsTable } from "./userVercelProjects.ts";
+import type { apiKeysTable } from "./apiKeys.ts";
 
 export interface database {
   users: usersTable;
@@ -323,6 +338,10 @@ export interface database {
   projectRequests: projectRequestsTable;
   userVercelTokens: userVercelTokensTable;
   userVercelProjects: userVercelProjectsTable;
+  automationRules: automationRulesTable;
+  automationLogs: automationLogsTable;
+  blockAutomationStates: blockAutomationStatesTable;
+  apiKeys: apiKeysTable;
 }
 
 export interface projectRequestsTable {
@@ -340,4 +359,39 @@ export interface githubRepoStatsTable {
   repo: string;
   data: string; // JSON string of the stats
   fetchedAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+export interface automationRulesTable {
+  id: Generated<string>;
+  projectId: string;
+  name: string;
+  enabled: ColumnType<number, number | undefined, number>;
+  source: "github" | "custom";
+  triggerEvent: string;
+  conditions: string | null; // JSON: [{field, op, value}]
+  targetBlockId: string | null;
+  action: "create_kanban_task" | "set_state" | "update_note" | "set_color";
+  actionParams: string | null; // JSON: action-specific params
+  webhookSecret: string;
+  stateDecayMinutes: ColumnType<number, number | undefined, number>;
+  sourceBlockId: string | null;
+  lastTriggeredAt: number | null;
+  createdAt: number;
+}
+
+export interface automationLogsTable {
+  id: Generated<string>;
+  ruleId: string;
+  status: "success" | "error" | "skipped" | "test";
+  payload: string | null; // JSON, trimmed to 4KB
+  error: string | null;
+  appliedAt: number;
+}
+
+export interface blockAutomationStatesTable {
+  blockId: string;
+  ruleId: string | null;
+  state: "neutral" | "processing" | "success" | "warning" | "error";
+  label: string | null;
+  lastUpdated: number;
 }

@@ -132,6 +132,18 @@
   touch-action: none;
 }
 
+.react-flow__node.draggable .block-header,
+.react-flow__node.draggable .shell-block-header,
+.react-flow__node.draggable .handle-drag-target {
+  cursor: move;
+}
+
+.react-flow__node.draggable .block-header:active,
+.react-flow__node.draggable .shell-block-header:active,
+.react-flow__node.draggable .handle-drag-target:active {
+  cursor: grabbing;
+}
+
 .project-canvas .checklist-block-container,
 .project-canvas .contact-block-container,
 .project-canvas .palette-block-container,
@@ -873,6 +885,14 @@ body.sketch-modal-open
   display: flex;
   flex-direction: column;
   overflow: visible !important;
+}
+
+.react-flow__node.draggable .block-card {
+  cursor: move;
+}
+
+.react-flow__node.draggable .block-card:active {
+  cursor: grabbing;
 }
 
 .resizer-line {

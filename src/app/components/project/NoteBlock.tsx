@@ -61,6 +61,14 @@ import {
 import dynamic from "next/dynamic";
 import { markdown } from "@codemirror/lang-markdown";
 import "./markdown-editor.css";
+import {
+  AutomationStateBadge,
+  AUTOMATION_STATE_BORDER_COLORS,
+} from "./AutomationStateBadge";
+import {
+  useBlockAutomationState,
+  useResetBlockAutomationState,
+} from "./AutomationStatesContext";
 
 const VimEditor = dynamic(() => import("./VimEditor"), { ssr: false });
 
@@ -371,6 +379,27 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const isProjectOwner = currentUser?.id && projectOwnerId === currentUser.id;
   const isOwner = currentUser?.id && ownerId === currentUser.id;
   const isViewer = data.userRole === "viewer";
+
+  const VALID_AUTOMATION_STATES = [
+    "processing",
+    "success",
+    "warning",
+    "error",
+  ] as const;
+  type ActiveAutomationState = (typeof VALID_AUTOMATION_STATES)[number];
+  const automationStateEntry = useBlockAutomationState(id);
+  const resetBlockState = useResetBlockAutomationState();
+  const isDecayed =
+    automationStateEntry?.decayAt !== undefined &&
+    Date.now() > automationStateEntry.decayAt;
+  const automationState: ActiveAutomationState | null =
+    !isDecayed &&
+    automationStateEntry?.state &&
+    (VALID_AUTOMATION_STATES as readonly string[]).includes(
+      automationStateEntry.state,
+    )
+      ? (automationStateEntry.state as ActiveAutomationState)
+      : null;
   const isReadOnly =
     isPreviewMode ||
     isViewer ||
@@ -789,7 +818,14 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         ref={blockRef}
         className={`block-card block-type-note ${selected ? "selected" : ""} ${
           isReadOnly ? "read-only" : ""
-        } flex flex-col p-0!`}
+        } flex flex-col p-0! relative`}
+        style={
+          automationState
+            ? ({
+                borderColor: AUTOMATION_STATE_BORDER_COLORS[automationState],
+              } as React.CSSProperties)
+            : undefined
+        }
         onMouseDown={(event) => {
           if (isReadOnly || !isEditing) return;
 
@@ -814,6 +850,13 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
               </span>
             </div>
             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+              {automationState && (
+                <AutomationStateBadge
+                  state={automationState}
+                  customLabel={automationStateEntry?.label ?? null}
+                  onReset={isReadOnly ? undefined : () => resetBlockState(id)}
+                />
+              )}
               <BlockTitleInput
                 value={title}
                 onChange={handleTitleChange}

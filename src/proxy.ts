@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import NextAuth from "next-auth";
 
@@ -114,6 +115,7 @@ export async function proxy(req: NextRequest) {
     "/api/auth",
     "/api/config",
     "/api/health",
+    "/webhooks/",
     "/auth/",
     "/favicon.ico",
     "/site.webmanifest",
@@ -158,8 +160,33 @@ export async function proxy(req: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(getRedirectUrl("/home")));
   }
 
-  // 3. If not authenticated and at a protected route, go to /login
+  // 3. If not authenticated and at a protected route, go to /login (or proxy sign-in)
   if (isProtected && !isLoggedIn) {
+    if (process.env.AUTH_PROXY_ENABLED === "true") {
+      const secret = process.env.AUTH_PROXY_SECRET;
+      const emailHeader =
+        process.env.AUTH_PROXY_HEADER_EMAIL ?? "x-remote-email";
+
+      const incoming = req.headers.get("x-proxy-secret") ?? "";
+      const secretValid =
+        !!secret &&
+        incoming.length === secret.length &&
+        incoming.length > 0 &&
+        timingSafeEqual(Buffer.from(incoming), Buffer.from(secret));
+
+      if (secretValid && req.headers.get(emailHeader)) {
+        return applySecurityHeaders(
+          NextResponse.redirect(
+            getRedirectUrl(
+              `/api/auth/proxy-sign-in?callbackUrl=${encodeURIComponent(
+                pathname,
+              )}`,
+            ),
+          ),
+        );
+      }
+    }
+
     if (pathname.startsWith("/api")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     } else {

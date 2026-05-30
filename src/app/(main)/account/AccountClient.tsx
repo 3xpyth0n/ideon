@@ -15,6 +15,7 @@ import { useUser } from "@providers/UserProvider";
 import { toast } from "sonner";
 import { getAvatarUrl } from "@lib/utils";
 import { GitTokenManager } from "@components/account/GitTokenManager";
+import { ApiKeyManager } from "@components/account/ApiKeyManager";
 import { Modal } from "@components/ui/Modal";
 import { ideonSiteConfig } from "@lib/site-config";
 
@@ -43,6 +44,7 @@ export default function AccountPage() {
     { id: "identity", label: dict.account.identity },
     { id: "security", label: dict.account.security },
     { id: "git-tokens", label: dict.gitTokens.title },
+    { id: "api-keys", label: dict.apiKeys.title },
     { id: "vim-mode", label: dict.account.vimMode },
   ];
 
@@ -573,6 +575,22 @@ export default function AccountPage() {
             </div>
             <div className="md:col-span-8 max-w-md">
               <GitTokenManager />
+            </div>
+          </section>
+
+          {/* API Keys Section */}
+          <section
+            id="api-keys"
+            className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 pb-12 scroll-mt-24"
+          >
+            <div className="md:col-span-4">
+              <h2 className="section-title mb-1">{dict.apiKeys.title}</h2>
+              <p className="text-xs text-muted opacity-40 leading-relaxed">
+                {dict.apiKeys.description}
+              </p>
+            </div>
+            <div className="md:col-span-8 max-w-md">
+              <ApiKeyManager />
             </div>
           </section>
 

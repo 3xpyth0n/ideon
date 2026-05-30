@@ -714,6 +714,16 @@ input:-webkit-autofill:active {
   border-radius: 1rem;
 }
 
+.project-canvas.picking-mode .react-flow__node {
+  cursor: crosshair !important;
+}
+
+.project-canvas.picking-mode .react-flow__node:hover > * {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
 /* Form Layouts */
 .form-group {
   display: flex;

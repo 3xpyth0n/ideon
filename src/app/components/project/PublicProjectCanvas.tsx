@@ -62,6 +62,7 @@ const blockTypes = {
   sketch: SketchBlock,
   kanban: KanbanBlock,
   shell: ShellBlock,
+  latex: CanvasBlock,
   core: ProjectCoreBlock,
 };
 

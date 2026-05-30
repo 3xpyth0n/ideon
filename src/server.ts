@@ -1,5 +1,10 @@
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { randomUUID } from "crypto";
+import {
+  handleWebhookRequest,
+  executeCronRule,
+} from "./lib/automation/webhook-handler";
+import cron, { type ScheduledTask } from "node-cron";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import * as Y from "yjs";
@@ -31,6 +36,8 @@ declare global {
   var kickUser: (projectId: string, userId: string) => void;
   var updateProjectRequests: (projectId: string) => Promise<void>;
   var notifyAccessGranted: (projectId: string, userId: string) => Promise<void>;
+  var rescheduleCronBlocks: () => Promise<void>;
+  var triggerRule: (ruleId: string, projectId: string) => Promise<void>;
 }
 
 global.notifyAccessGranted = async (projectId: string, userId: string) => {
@@ -630,6 +637,58 @@ setPersistence({
     }
 
     if (docName.startsWith("project-")) {
+      const projectId = docName.slice("project-".length);
+      try {
+        const db = getDb();
+        const automationStates = await db
+          .selectFrom("blockAutomationStates as bas")
+          .leftJoin("automationRules as ar", "ar.id", "bas.ruleId")
+          .select([
+            "bas.blockId",
+            "bas.state",
+            "bas.label",
+            "bas.lastUpdated",
+            "ar.stateDecayMinutes",
+          ])
+          .where("ar.projectId", "=", projectId)
+          .execute();
+
+        const now = Date.now();
+        const activeStates = automationStates.filter(
+          (s) => now <= s.lastUpdated + (s.stateDecayMinutes ?? 1440) * 60_000,
+        );
+
+        if (activeStates.length > 0) {
+          const yAutomationStates = ydoc.getMap<{
+            state: string;
+            label: string | null;
+            decayAt: number;
+          }>("automationStates");
+          ydoc.transact(() => {
+            for (const s of activeStates) {
+              const decayAt =
+                s.lastUpdated + (s.stateDecayMinutes ?? 1440) * 60_000;
+              yAutomationStates.set(s.blockId, {
+                state: s.state,
+                label: s.label,
+                decayAt,
+              });
+            }
+          }, "seed-automation-states");
+          logger.info(
+            { docName, count: activeStates.length },
+            "[YJS] Seeded automation states from SQL",
+          );
+        }
+      } catch (automationErr) {
+        logger.error(
+          { err: automationErr, docName },
+          "[YJS] Failed to seed automation states",
+        );
+      }
+    }
+
+    if (docName.startsWith("project-")) {
       try {
         if (sanitizeProjectDocument(ydoc)) {
           logger.warn(
@@ -670,6 +729,47 @@ setPersistence({
     await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
   },
 });
+
+// Cron block scheduler — keyed by ruleId to allow reschedule/stop
+const cronTasks = new Map<string, ScheduledTask>();
+
+async function scheduleCronBlocks(): Promise<void> {
+  const db = getDb();
+  const rules = await db
+    .selectFrom("automationRules")
+    .selectAll()
+    .where("enabled", "=", 1)
+    .where("triggerEvent", "like", "cron:%")
+    .execute();
+
+  // Stop tasks no longer in DB
+  for (const [id, task] of cronTasks) {
+    if (!rules.find((r) => r.id === id)) {
+      task.stop();
+      cronTasks.delete(id);
+    }
+  }
+
+  for (const rule of rules) {
+    const expr = rule.triggerEvent.replace(/^cron:/, "");
+    if (!cron.validate(expr)) continue;
+
+    const existing = cronTasks.get(rule.id);
+    if (existing) {
+      existing.stop();
+      cronTasks.delete(rule.id);
+    }
+
+    const task = cron.schedule(expr, () => {
+      void executeCronRule(rule, ldb).catch((err: unknown) => {
+        logger.error({ err, ruleId: rule.id }, "Cron rule execution failed");
+      });
+    });
+    cronTasks.set(rule.id, task);
+  }
+
+  logger.info({ count: cronTasks.size }, "Cron blocks scheduled");
+}
 
 // Initialize Database with fallback mechanism
 
@@ -757,6 +857,12 @@ initDb()
       res.once("finish", onFinish);
 
       try {
+        const webhookMatch = url?.match(/^\/webhooks\/([^/]+)\/([^/?]+)/);
+        if (webhookMatch) {
+          const [, projectId, ruleId] = webhookMatch;
+          await handleWebhookRequest(req, res, projectId, ruleId, ldb);
+          return;
+        }
         await handle(req, res);
       } catch (err) {
         logger.error({ err, url }, "Error occurred handling request");
@@ -987,7 +1093,22 @@ initDb()
 
     server.on("close", () => {
       clearInterval(gcInterval);
+      for (const task of cronTasks.values()) task.stop();
     });
+
+    global.rescheduleCronBlocks = scheduleCronBlocks;
+    global.triggerRule = async (ruleId: string, projectId: string) => {
+      const db = getDb();
+      const rule = await db
+        .selectFrom("automationRules")
+        .selectAll()
+        .where("id", "=", ruleId)
+        .where("projectId", "=", projectId)
+        .executeTakeFirst();
+      if (!rule) throw { status: 404, message: "Automation rule not found" };
+      await executeCronRule(rule, ldb, "manual");
+    };
+    await scheduleCronBlocks();
 
     server.listen(port, () => {
       logger.info(`> Ready on http://${hostname}:${port}`);

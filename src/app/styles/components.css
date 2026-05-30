@@ -1580,11 +1580,11 @@
   color: var(--accent);
 }
 
-.block-footer {
-  cursor: grab;
+.react-flow__node.draggable .block-author-container {
+  cursor: move;
 }
 
-.block-footer:active {
+.react-flow__node.draggable .block-author-container:active {
   cursor: grabbing;
 }
 

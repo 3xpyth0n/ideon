@@ -81,6 +81,10 @@ export function getTokenSecret(): string {
   return deriveKey("token-secret");
 }
 
+export function getProxyTokenSecret(): string {
+  return deriveKey("proxy-auth-token-secret");
+}
+
 /**
  * Hashes a token using HMAC-SHA256 with a secret key.
  * This prevents rainbow table attacks if the database is compromised.

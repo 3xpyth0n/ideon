@@ -102,7 +102,10 @@ export const getSelectedNoteBlockIdForShortcut = ({
 
   const [selectedBlock] = selectedBlocks;
   const isNoteBlock =
-    selectedBlock.type === "text" || selectedBlock.data?.blockType === "text";
+    selectedBlock.type === "text" ||
+    selectedBlock.type === "latex" ||
+    selectedBlock.data?.blockType === "text" ||
+    selectedBlock.data?.blockType === "latex";
 
   return isNoteBlock ? selectedBlock.id : null;
 };

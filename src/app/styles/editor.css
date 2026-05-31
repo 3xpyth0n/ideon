@@ -1024,7 +1024,6 @@ body.sketch-modal-open
 }
 
 .block-card.selected {
-  z-index: 10;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
   border-color: rgba(0, 0, 0, 0.6);
 }
@@ -1035,7 +1034,6 @@ body.sketch-modal-open
 }
 
 .preview-mode .block-card.selected {
-  z-index: 5;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   border-color: rgba(0, 0, 0, 0.4);
 }

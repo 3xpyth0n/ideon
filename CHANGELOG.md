@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-05-XX
+
+### Fixed
+
+- Fixed reaction buttons being unclickable when a block is selected, and always unresponsive on the folder block [#104](https://github.com/3xpyth0n/ideon/issues/104).
+
 ## [0.9.0] - 2026-05-30
 
 ### Added

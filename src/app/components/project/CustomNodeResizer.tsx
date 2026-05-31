@@ -363,10 +363,6 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
     NonNullable<NodeResizerProps["shouldResize"]>
   >(() => true, []);
 
-  if (isBlockPositionLocked(resizingNode?.data as BlockData | undefined)) {
-    return null;
-  }
-
   const isCore = resizingNode?.type === "core";
 
   const coreHandleStyle = useMemo(
@@ -383,6 +379,10 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
       }) as React.CSSProperties,
     [hitboxSize],
   );
+
+  if (isBlockPositionLocked(resizingNode?.data as BlockData | undefined)) {
+    return null;
+  }
 
   if (isCore) {
     return (

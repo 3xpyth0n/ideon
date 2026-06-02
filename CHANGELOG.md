@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fixed reaction buttons being unclickable when a block is selected, and always unresponsive on the folder block [#104](https://github.com/3xpyth0n/ideon/issues/104).
+- Fixed multi-block drag so all selected blocks move as a single rigid group, and hide alignment guides between selected blocks [#105](https://github.com/3xpyth0n/ideon/issues/105).
 
 ## [0.9.0] - 2026-05-30
 

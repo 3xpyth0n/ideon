@@ -36,6 +36,10 @@ import {
   calculateHelperLines,
   HelperLine,
 } from "@components/project/utils/alignment";
+import {
+  computeRigidGroupPositions,
+  DragSession,
+} from "@components/project/utils/groupDrag";
 import * as Y from "yjs";
 import { parseFolderMetadata, parseFrameMetadata } from "@lib/metadata-parsers";
 import { safeReadYText } from "@lib/projectContentSafety";
@@ -118,6 +122,7 @@ export const useProjectCanvasGraph = ({
     blockId: string;
     position: { x: number; y: number };
   } | null>(null);
+  const dragSessionRef = useRef<DragSession | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -343,11 +348,16 @@ export const useProjectCanvasGraph = ({
         }
       }
 
+      // If there's an active drag session, ignore position changes for dragging session members
+      const session = dragSessionRef.current;
       // Prevent core dragging and handle collapsed folders moving children
       const filteredChanges = changes.filter((c) => {
         if (c.type === "position" && c.position) {
           const block = blocks.find((b) => b.id === c.id);
           if (block?.type === "core") return false;
+          // Ignore position changes for dragging session members
+          if (session && c.dragging && session.memberIds.has(c.id))
+            return false;
         }
         return c.type !== "remove";
       });
@@ -670,8 +680,67 @@ export const useProjectCanvasGraph = ({
       if (block.type === "core") return;
       setContextMenu(null);
       updateMyPresence({ draggingBlockId: block.id });
+
+      // Get all selected blocks that are draggable
+      const selectedBlocks = blocks.filter(
+        (b) =>
+          b.selected && b.type !== "core" && !isBlockPositionLocked(b.data),
+      );
+
+      if (selectedBlocks.length >= 2) {
+        // Collect all member ids including descendants
+        const memberIds = new Set<string>();
+        const initialPositions = new Map<string, { x: number; y: number }>();
+
+        selectedBlocks.forEach((b) => {
+          memberIds.add(b.id);
+          initialPositions.set(b.id, { ...b.position });
+
+          // Add folder descendants if collapsed
+          if (b.type === "folder") {
+            const metadata = parseFolderMetadata(b.data?.metadata);
+            if (metadata.isCollapsed) {
+              const descendantIds = getDescendantIds(b.id, links);
+              descendantIds.forEach((descId) => {
+                const descBlock = blocks.find((db) => db.id === descId);
+                if (descBlock) {
+                  memberIds.add(descId);
+                  initialPositions.set(descId, { ...descBlock.position });
+                }
+              });
+            }
+          }
+
+          // Add frame children if frame is anchor and not holding shift
+          if (b.type === "frame" && b.id === block.id && !isShiftPressed) {
+            const metadata = parseFrameMetadata(b.data?.metadata);
+            metadata.childBlockIds.forEach((childId) => {
+              const childBlock = blocks.find((cb) => cb.id === childId);
+              if (childBlock) {
+                memberIds.add(childId);
+                initialPositions.set(childId, { ...childBlock.position });
+              }
+            });
+          }
+        });
+
+        dragSessionRef.current = {
+          anchorId: block.id,
+          initialPositions,
+          memberIds,
+        };
+      } else {
+        dragSessionRef.current = null;
+      }
     },
-    [setContextMenu, updateMyPresence, isReadOnly],
+    [
+      setContextMenu,
+      updateMyPresence,
+      isReadOnly,
+      blocks,
+      links,
+      isShiftPressed,
+    ],
   );
 
   const onBlockDrag = useCallback(
@@ -679,12 +748,16 @@ export const useProjectCanvasGraph = ({
       if (isReadOnly) return;
       if (block.type === "core") return;
 
+      const session = dragSessionRef.current;
+      const excludeIds = session ? session.memberIds : new Set<string>();
+
       const { helperLines: activeHelperLines, snappedPosition } =
         calculateHelperLines(
           block as Node<BlockData>,
           blocks,
           SNAP_THRESHOLD_PX,
           isShiftPressed,
+          excludeIds,
         );
 
       setHelperLines(activeHelperLines);
@@ -710,48 +783,64 @@ export const useProjectCanvasGraph = ({
         position: adjustedPos,
       };
 
-      if (
-        adjustedPos.x !== block.position.x ||
-        adjustedPos.y !== block.position.y
-      ) {
-        const dx = adjustedPos.x - block.position.x;
-        const dy = adjustedPos.y - block.position.y;
-
-        let descendantIds = new Set<string>();
-        if (block.type === "folder") {
-          const metadata = parseFolderMetadata(block.data?.metadata);
-          if (metadata.isCollapsed) {
-            descendantIds = getDescendantIds(block.id, links);
-            descendantIds.delete(block.id);
-          }
-        }
-
-        let frameChildIds = new Set<string>();
-        if (block.type === "frame" && !isShiftPressed) {
-          const metadata = parseFrameMetadata(block.data?.metadata);
-          frameChildIds = new Set(metadata.childBlockIds);
-        }
+      if (session && session.memberIds.has(block.id)) {
+        // Multi-drag: compute rigid group positions
+        const newPositions = computeRigidGroupPositions(session, adjustedPos);
 
         setBlocks((blocks) =>
           blocks.map((b) => {
-            if (b.id === block.id) {
-              return { ...b, position: adjustedPos } as Node<BlockData>;
-            }
-            if (descendantIds.has(b.id)) {
-              return {
-                ...b,
-                position: { x: b.position.x + dx, y: b.position.y + dy },
-              } as Node<BlockData>;
-            }
-            if (frameChildIds.has(b.id)) {
-              return {
-                ...b,
-                position: { x: b.position.x + dx, y: b.position.y + dy },
-              } as Node<BlockData>;
+            const newPos = newPositions.get(b.id);
+            if (newPos) {
+              return { ...b, position: newPos } as Node<BlockData>;
             }
             return b;
           }),
         );
+      } else {
+        // Single block drag: existing behavior
+        if (
+          adjustedPos.x !== block.position.x ||
+          adjustedPos.y !== block.position.y
+        ) {
+          const dx = adjustedPos.x - block.position.x;
+          const dy = adjustedPos.y - block.position.y;
+
+          let descendantIds = new Set<string>();
+          if (block.type === "folder") {
+            const metadata = parseFolderMetadata(block.data?.metadata);
+            if (metadata.isCollapsed) {
+              descendantIds = getDescendantIds(block.id, links);
+              descendantIds.delete(block.id);
+            }
+          }
+
+          let frameChildIds = new Set<string>();
+          if (block.type === "frame" && !isShiftPressed) {
+            const metadata = parseFrameMetadata(block.data?.metadata);
+            frameChildIds = new Set(metadata.childBlockIds);
+          }
+
+          setBlocks((blocks) =>
+            blocks.map((b) => {
+              if (b.id === block.id) {
+                return { ...b, position: adjustedPos } as Node<BlockData>;
+              }
+              if (descendantIds.has(b.id)) {
+                return {
+                  ...b,
+                  position: { x: b.position.x + dx, y: b.position.y + dy },
+                } as Node<BlockData>;
+              }
+              if (frameChildIds.has(b.id)) {
+                return {
+                  ...b,
+                  position: { x: b.position.x + dx, y: b.position.y + dy },
+                } as Node<BlockData>;
+              }
+              return b;
+            }),
+          );
+        }
       }
     },
     [setBlocks, blocks, links, isReadOnly, isShiftPressed],
@@ -772,34 +861,70 @@ export const useProjectCanvasGraph = ({
 
       lastDragPositionRef.current = null;
 
-      if (block.type === "frame" && !isShiftPressed) {
-        const metadata = parseFrameMetadata(block.data?.metadata);
-        const childIds = new Set(metadata.childBlockIds);
+      const session = dragSessionRef.current;
+      dragSessionRef.current = null;
+
+      if (session) {
+        // Multi-drag: save all moved blocks
         applyMutation({
-          intent: "Moved frame",
+          intent: "Moved blocks",
           blocksUpdate: (currentBlocks) =>
             currentBlocks.map((b) => {
-              if (b.id === block.id) {
-                return { ...block, position: finalPosition } as Node<BlockData>;
-              }
-              if (childIds.has(b.id)) {
-                return { ...b } as Node<BlockData>;
+              const newPos = session.initialPositions.get(b.id);
+              if (newPos) {
+                // Compute final position using anchor's final position
+                const anchorInitial = session.initialPositions.get(
+                  session.anchorId,
+                )!;
+                const dx = finalPosition.x - anchorInitial.x;
+                const dy = finalPosition.y - anchorInitial.y;
+                return {
+                  ...b,
+                  position: { x: newPos.x + dx, y: newPos.y + dy },
+                } as Node<BlockData>;
               }
               return b;
             }),
         });
-        return;
+      } else {
+        // Single block drag: existing behavior
+        if (block.type === "frame" && !isShiftPressed) {
+          const metadata = parseFrameMetadata(block.data?.metadata);
+          const childIds = new Set(metadata.childBlockIds);
+          applyMutation({
+            intent: "Moved frame",
+            blocksUpdate: (currentBlocks) =>
+              currentBlocks.map((b) => {
+                if (b.id === block.id) {
+                  return {
+                    ...block,
+                    position: finalPosition,
+                  } as Node<BlockData>;
+                }
+                if (childIds.has(b.id)) {
+                  return { ...b } as Node<BlockData>;
+                }
+                return b;
+              }),
+          });
+          return;
+        }
+
+        applyMutation({
+          intent: "Moved block",
+          blocksUpdate: (currentBlocks) =>
+            currentBlocks.map((b) =>
+              b.id === block.id
+                ? ({ ...block, position: finalPosition } as Node<BlockData>)
+                : b,
+            ),
+        });
       }
 
-      applyMutation({
-        intent: "Moved block",
-        blocksUpdate: (currentBlocks) =>
-          currentBlocks.map((b) =>
-            b.id === block.id
-              ? ({ ...block, position: finalPosition } as Node<BlockData>)
-              : b,
-          ),
-      });
+      if (session) {
+        // For multi-drag, skip frame association (we'll handle only the anchor)
+        return;
+      }
 
       if (block.type === "frame") return;
 

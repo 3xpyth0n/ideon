@@ -243,16 +243,16 @@ const FolderBlock = memo(({ id, data, selected }: FolderBlockProps) => {
           dict={dict}
           lang={lang}
         />
-
-        <BlockReactions
-          reactions={data.reactions}
-          onReact={handleReact}
-          onRemoveReaction={handleRemoveReaction}
-          currentUserId={currentUser?.id}
-          isReadOnly={isReadOnly}
-          canReact={canReact}
-        />
       </div>
+
+      <BlockReactions
+        reactions={data.reactions}
+        onReact={handleReact}
+        onRemoveReaction={handleRemoveReaction}
+        currentUserId={currentUser?.id}
+        isReadOnly={isReadOnly}
+        canReact={canReact}
+      />
 
       <Handle
         id="left"

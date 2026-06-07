@@ -17,6 +17,7 @@ import {
   Webhook,
   Timer,
   Sigma,
+  Calendar,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -39,11 +40,13 @@ export type AddableBlockType =
   | "frame"
   | "webhook"
   | "cron"
-  | "latex";
+  | "latex"
+  | "calendar";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
 export type BlockTypeLabelKey =
+  | "blockTypeCore"
   | "blockTypeText"
   | "blockTypeLink"
   | "blockTypeFile"
@@ -62,7 +65,7 @@ export type BlockTypeLabelKey =
   | "blockTypeWebhook"
   | "blockTypeCron"
   | "blockTypeLatex"
-  | "blockTypeCore";
+  | "blockTypeCalendar";
 
 export type BlockTypeIconComponent = ComponentType<{
   className?: string;
@@ -127,6 +130,12 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     type: "sketch",
     icon: PenTool,
     labelKey: "blockTypeSketch",
+    section: "block",
+  },
+  {
+    type: "calendar",
+    icon: Calendar,
+    labelKey: "blockTypeCalendar",
     section: "block",
   },
   {

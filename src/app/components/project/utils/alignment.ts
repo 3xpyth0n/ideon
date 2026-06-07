@@ -27,26 +27,46 @@ export interface AlignmentResult {
   snappedPosition: { x: number; y: number } | null;
 }
 
+function getNodeRect(node: Node<BlockData>) {
+  return {
+    x: node.position.x,
+    y: node.position.y,
+    width: node.measured?.width || node.width || DEFAULT_BLOCK_WIDTH,
+    height: node.measured?.height || node.height || DEFAULT_BLOCK_HEIGHT,
+  };
+}
+
+function filterOtherNodes(
+  allNodes: Node<BlockData>[],
+  currentNodeId: string,
+  excludeNodeIds: ReadonlySet<string>,
+) {
+  return allNodes.filter(
+    (node) =>
+      node.id !== currentNodeId &&
+      node.type !== "core" &&
+      !excludeNodeIds.has(node.id),
+  );
+}
+
+function deduplicateHelperLines(lines: HelperLine[]): HelperLine[] {
+  return Array.from(
+    new Map(lines.map((line) => [line.position, line])).values(),
+  );
+}
+
 export function calculateHelperLines(
   draggingNode: Node<BlockData>,
   allNodes: Node<BlockData>[],
   snapThreshold: number = 8,
   disabled: boolean = false,
+  excludeNodeIds: ReadonlySet<string> = new Set(),
 ): AlignmentResult {
   if (disabled) {
     return { helperLines: [], snappedPosition: null };
   }
 
-  const draggingRect = {
-    x: draggingNode.position.x,
-    y: draggingNode.position.y,
-    width:
-      draggingNode.measured?.width || draggingNode.width || DEFAULT_BLOCK_WIDTH,
-    height:
-      draggingNode.measured?.height ||
-      draggingNode.height ||
-      DEFAULT_BLOCK_HEIGHT,
-  };
+  const draggingRect = getNodeRect(draggingNode);
 
   const draggingLeft = draggingRect.x;
   const draggingRight = draggingRect.x + draggingRect.width;
@@ -55,8 +75,10 @@ export function calculateHelperLines(
   const draggingCenterX = draggingRect.x + draggingRect.width / 2;
   const draggingCenterY = draggingRect.y + draggingRect.height / 2;
 
-  const otherNodes = allNodes.filter(
-    (node) => node.id !== draggingNode.id && node.type !== "core",
+  const otherNodes = filterOtherNodes(
+    allNodes,
+    draggingNode.id,
+    excludeNodeIds,
   );
 
   const verticalLines: HelperLine[] = [];
@@ -65,12 +87,7 @@ export function calculateHelperLines(
   let snapY: number | null = null;
 
   for (const node of otherNodes) {
-    const nodeRect = {
-      x: node.position.x,
-      y: node.position.y,
-      width: node.measured?.width || node.width || DEFAULT_BLOCK_WIDTH,
-      height: node.measured?.height || node.height || DEFAULT_BLOCK_HEIGHT,
-    };
+    const nodeRect = getNodeRect(node);
 
     const left = nodeRect.x;
     const right = nodeRect.x + nodeRect.width;
@@ -130,14 +147,8 @@ export function calculateHelperLines(
     }
   }
 
-  const uniqueVerticalLines = Array.from(
-    new Map(verticalLines.map((line) => [line.position, line])).values(),
-  );
-
-  const uniqueHorizontalLines = Array.from(
-    new Map(horizontalLines.map((line) => [line.position, line])).values(),
-  );
-
+  const uniqueVerticalLines = deduplicateHelperLines(verticalLines);
+  const uniqueHorizontalLines = deduplicateHelperLines(horizontalLines);
   const helperLines = [...uniqueVerticalLines, ...uniqueHorizontalLines];
 
   const snappedPosition =
@@ -158,6 +169,7 @@ export function calculateResizeHelperLines(
   allNodes: Node<BlockData>[],
   snapThreshold: number = 8,
   disabled: boolean = false,
+  excludeNodeIds: ReadonlySet<string> = new Set(),
 ): ResizeAlignmentResult {
   if (disabled) {
     return { helperLines: [], snappedRect: rect };
@@ -179,9 +191,7 @@ export function calculateResizeHelperLines(
   const curTop = rect.y;
   const curBottom = rect.y + rect.height;
 
-  const otherNodes = allNodes.filter(
-    (node) => node.id !== resizingNodeId && node.type !== "core",
-  );
+  const otherNodes = filterOtherNodes(allNodes, resizingNodeId, excludeNodeIds);
 
   const verticalLines: HelperLine[] = [];
   const horizontalLines: HelperLine[] = [];
@@ -191,14 +201,11 @@ export function calculateResizeHelperLines(
   let snapBottom: number | null = null;
 
   for (const node of otherNodes) {
-    const nLeft = node.position.x;
-    const nRight =
-      node.position.x +
-      (node.measured?.width || node.width || DEFAULT_BLOCK_WIDTH);
-    const nTop = node.position.y;
-    const nBottom =
-      node.position.y +
-      (node.measured?.height || node.height || DEFAULT_BLOCK_HEIGHT);
+    const nodeRect = getNodeRect(node);
+    const nLeft = nodeRect.x;
+    const nRight = nodeRect.x + nodeRect.width;
+    const nTop = nodeRect.y;
+    const nBottom = nodeRect.y + nodeRect.height;
 
     if (movesLeft) {
       if (Math.abs(curLeft - nLeft) < snapThreshold) {
@@ -245,13 +252,8 @@ export function calculateResizeHelperLines(
     }
   }
 
-  const uniqueVertical = Array.from(
-    new Map(verticalLines.map((l) => [l.position, l])).values(),
-  );
-  const uniqueHorizontal = Array.from(
-    new Map(horizontalLines.map((l) => [l.position, l])).values(),
-  );
-
+  const uniqueVertical = deduplicateHelperLines(verticalLines);
+  const uniqueHorizontal = deduplicateHelperLines(horizontalLines);
   const helperLines = [...uniqueVertical, ...uniqueHorizontal];
 
   let { x, y, width, height } = rect;

@@ -152,8 +152,15 @@ const LatexBlock = memo(({ data, selected, id }: LatexBlockProps) => {
     shouldStartNoteInEditMode(data.content, isReadOnly),
   );
   const [title, setTitle] = useState(data.title || "");
+  const [localContent, setLocalContent] = useState(data.content || "");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (document.activeElement !== textareaRef.current) {
+      setLocalContent(data.content || "");
+    }
+  }, [data.content]);
 
   const focusEditor = useCallback(() => {
     if (isReadOnly || !isEditing) return;
@@ -530,8 +537,11 @@ const LatexBlock = memo(({ data, selected, id }: LatexBlockProps) => {
                   ref={textareaRef}
                   data-latex-editor
                   className="w-full h-full resize-none bg-transparent font-mono text-sm leading-relaxed outline-none px-4 py-2 text-inherit"
-                  value={data.content || ""}
-                  onChange={(e) => handleContentChange(e.target.value)}
+                  value={localContent}
+                  onChange={(e) => {
+                    setLocalContent(e.target.value);
+                    handleContentChange(e.target.value);
+                  }}
                   placeholder={
                     dict.blocks.latexPlaceholder ||
                     "Write LaTeX — use $...$ for inline math, $$...$$ for display math"

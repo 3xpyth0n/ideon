@@ -72,15 +72,24 @@ Try the hosted demo instantly (no setup required):
 
 ## Getting Started
 
-Requires **Docker**.
+Requires **Docker** and **Docker Compose**.
 
-Run this command to install and start Ideon:
+**1. Clone the repository** (or download [`docker-compose.yml`](docker-compose.yml) directly)
+
+**2. Copy the [environment template](env.example) and fill in the required values**
 
 ```bash
-curl -fsSL https://install.theideon.com | sh
+cp env.example .env
 ```
 
-The installer will set up the containers and generate secure secrets.
+Edit `.env` and set at minimum `SECRET_KEY` (generate with `openssl rand -hex 32`) and any DB credentials you want to change.
+
+**3. Start the stack**
+
+```bash
+docker compose up -d
+```
+
 Once running, access the dashboard at: `http://localhost:3000`
 
 ## Contributing
@@ -94,8 +103,6 @@ Start here:
 - read [CONTRIBUTING.md](CONTRIBUTING.md)
 - open an issue
 - submit a pull request
-
----
 
 ## Contributors
 
@@ -131,8 +138,6 @@ Thanks go to these wonderful people:
 This project follows the [all-contributors](https://allcontributors.org) specification.
 Contributions of any kind are welcome!
 
----
-
 ## Project growth over time
 
 <a href="https://www.star-history.com/#3xpyth0n/ideon&type=date&legend=bottom-right">
@@ -142,8 +147,6 @@ Contributions of any kind are welcome!
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=3xpyth0n/ideon&type=date&legend=bottom-right" />
  </picture>
 </a>
-
----
 
 ## License
 

@@ -78,7 +78,8 @@ export type BlockData = {
     | "frame"
     | "webhook"
     | "cron"
-    | "latex";
+    | "latex"
+    | "calendar";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;

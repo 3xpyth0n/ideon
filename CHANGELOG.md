@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.1] - 2026-05-XX
+## [0.9.1] - 2026-06-XX
+
+### Added
+
+- Added **Calendar Block** — a new block type for tracking events and deadlines on the canvas. Features a monthly view with event cards, color-coded events, completion status and `.ics` import support, allowing users to import events from calendar exports directly into Ideon.
 
 ### Fixed
 

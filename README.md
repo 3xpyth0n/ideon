@@ -76,7 +76,7 @@ Requires **Docker** and **Docker Compose**.
 
 **1. Clone the repository** (or download [`docker-compose.yml`](docker-compose.yml) directly)
 
-**2. Copy the environment template and fill in the required values**
+**2. Copy the [environment template](env.example) and fill in the required values**
 
 ```bash
 cp env.example .env
@@ -103,8 +103,6 @@ Start here:
 - read [CONTRIBUTING.md](CONTRIBUTING.md)
 - open an issue
 - submit a pull request
-
----
 
 ## Contributors
 
@@ -140,8 +138,6 @@ Thanks go to these wonderful people:
 This project follows the [all-contributors](https://allcontributors.org) specification.
 Contributions of any kind are welcome!
 
----
-
 ## Project growth over time
 
 <a href="https://www.star-history.com/#3xpyth0n/ideon&type=date&legend=bottom-right">
@@ -151,8 +147,6 @@ Contributions of any kind are welcome!
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=3xpyth0n/ideon&type=date&legend=bottom-right" />
  </picture>
 </a>
-
----
 
 ## License
 

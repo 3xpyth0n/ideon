@@ -86,6 +86,44 @@ _Note: Ideon runs in production mode within Docker for maximum performance. You 
 - **No inline styles** allowed (use CSS files).
 - **No hardcoded strings** in the UI (use i18n dictionaries).
 
+## Adding a New Block Type
+
+Blocks are a core feature in Ideon. Adding a new block type touches a few layers (database, graph persistence, UI registration). If you miss one, you can end up with a block that renders locally but fails when saving a snapshot or importing a project.
+
+### Checklist
+
+1.  **Start with the database**
+
+    - Add a migration in `src/app/db/migrations/` that allows the new `blockType` in the `blocks` table.
+    - This is required for snapshots, exports, and imports to work.
+
+2.  **Update TypeScript types and validation**
+
+    - Add the new type to `src/app/lib/types/db.ts` (the `blocksTable.blockType` union).
+    - Update graph validation in `src/app/lib/graph.ts` so the new `blockType` is accepted when saving and loading the canvas.
+
+3.  **Register it in the UI**
+
+    - Add an entry (type, icon, label key, section) in `src/app/components/project/blockTypeMeta.tsx` so it shows up in the Add Block modal.
+    - Add the label key to **all** i18n dictionaries in `src/app/i18n/`.
+
+4.  **Render it on the canvas**
+
+    - Create the block component in `src/app/components/project/`.
+    - Register the block in the `blockTypes` map in `src/app/components/project/ProjectCanvas.tsx`.
+
+5.  **Set sensible defaults for new blocks**
+
+    - Ensure the block can be created from the UI by updating defaults in `src/app/components/project/hooks/useProjectCanvasGraph.ts` (size and initial metadata if needed).
+
+6.  **Test the full flow**
+    - Create the block, take a snapshot, refresh the page, and confirm it still loads.
+    - Export a project and import it back, and confirm the block round-trips.
+    - Run:
+      - `npm run check`
+      - `npm run test`
+      - `npm run validate:i18n`
+
 ## Adding a New Language
 
 Ideon supports dynamic language loading. To add a new language:

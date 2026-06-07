@@ -675,7 +675,7 @@ export const useProjectCanvasGraph = ({
   }, [blocks, links, setBlocks, applyFolderVisibility]);
 
   const onBlockDragStart = useCallback(
-    (_: React.MouseEvent, block: Node) => {
+    (_: MouseEvent | TouchEvent, block: Node) => {
       if (isReadOnly) return;
       if (block.type === "core") return;
       setContextMenu(null);
@@ -744,7 +744,7 @@ export const useProjectCanvasGraph = ({
   );
 
   const onBlockDrag = useCallback(
-    (_: React.MouseEvent, block: Node) => {
+    (_: MouseEvent | TouchEvent, block: Node) => {
       if (isReadOnly) return;
       if (block.type === "core") return;
 
@@ -847,7 +847,7 @@ export const useProjectCanvasGraph = ({
   );
 
   const onBlockDragStop = useCallback(
-    (_: React.MouseEvent, block: Node) => {
+    (_: MouseEvent | TouchEvent, block: Node) => {
       if (isReadOnly) return;
       if (block.type === "core") return;
       updateMyPresence({ draggingBlockId: null });

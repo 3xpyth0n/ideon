@@ -27,6 +27,7 @@ import SketchBlock from "./SketchBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
 import KanbanBlock from "./KanbanBlock";
+import CalendarBlock from "./CalendarBlock";
 import FolderBlock from "./FolderBlock";
 import VercelBlock from "./VercelBlock";
 import ShellBlock from "./ShellBlock";
@@ -277,6 +278,7 @@ const blockTypes = {
   snippet: SnippetBlock,
   checklist: ChecklistBlock,
   kanban: KanbanBlock,
+  calendar: CalendarBlock,
   sketch: SketchBlock,
   folder: FolderBlock,
   vercel: VercelBlock,

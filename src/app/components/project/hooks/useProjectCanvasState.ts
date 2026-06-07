@@ -2007,6 +2007,26 @@ export const useProjectCanvasState = (
   );
 
   useEffect(() => {
+    const handleGlobalDragReset = () => {
+      externalDragDepthRef.current = 0;
+      setIsExternalDropActive(false);
+    };
+
+    window.addEventListener("drop", handleGlobalDragReset);
+    window.addEventListener("dragend", handleGlobalDragReset);
+    window.addEventListener("ideon:external-drop-reset", handleGlobalDragReset);
+
+    return () => {
+      window.removeEventListener("drop", handleGlobalDragReset);
+      window.removeEventListener("dragend", handleGlobalDragReset);
+      window.removeEventListener(
+        "ideon:external-drop-reset",
+        handleGlobalDragReset,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const activeElement = document.activeElement;
       if (

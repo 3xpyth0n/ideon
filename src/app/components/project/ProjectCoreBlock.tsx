@@ -16,10 +16,13 @@ import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
 import { BlockTitleInput } from "./BlockTitleInput";
 import { CORE_BLOCK_WIDTH, CORE_BLOCK_HEIGHT } from "./utils/constants";
+import { CORE_BLOCK_MARGIN } from "./utils/constants";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { focusProjectCanvas } from "./utils/focusCanvas";
+import { clampCenteredRect } from "./utils/collision";
+import { DEFAULT_BLOCK_HEIGHT, DEFAULT_BLOCK_WIDTH } from "./utils/constants";
 
 export type ProjectCoreBlockProps = NodeProps<Node<BlockData, "core">>;
 
@@ -144,15 +147,69 @@ const ProjectCoreBlock = memo(
     const isBottomConnected = isHandleConnected("bottom");
 
     const nodeCount = useStore((s) => s.nodeLookup.size);
+    const nodes = useStore((s) => s.nodes as Node<BlockData>[]);
     const placeholder =
       description === "" && nodeCount === 1
         ? dict.canvas.coreBlockPlaceholder
         : dict.blocks.description;
 
+    const toPositiveNumber = useCallback((value: unknown, fallback: number) => {
+      if (typeof value !== "number") return fallback;
+      if (!Number.isFinite(value) || value <= 0) return fallback;
+      return value;
+    }, []);
+
     const handleResize = useCallback(
       (_event: unknown, params: ResizeParams) => {
-        const { width, height } = params;
-        lastDimensions.current = { width, height };
+        const width = Math.ceil(params.width);
+        const height = Math.ceil(params.height);
+        const clampedRect = clampCenteredRect(
+          {
+            x: -width / 2,
+            y: -height / 2,
+            width,
+            height,
+          },
+          nodes
+            .filter((node) => node.id !== id)
+            .map((node) => {
+              const positionAbsolute = (
+                node as unknown as {
+                  positionAbsolute?: { x: number; y: number };
+                }
+              ).positionAbsolute;
+              const position = positionAbsolute ?? node.position;
+              const style = node.style as
+                | { width?: unknown; height?: unknown }
+                | undefined;
+              const resolvedWidth = toPositiveNumber(
+                (typeof style?.width === "number" ? style.width : undefined) ??
+                  node.measured?.width ??
+                  node.width,
+                DEFAULT_BLOCK_WIDTH,
+              );
+              const resolvedHeight = toPositiveNumber(
+                (typeof style?.height === "number"
+                  ? style.height
+                  : undefined) ??
+                  node.measured?.height ??
+                  node.height,
+                DEFAULT_BLOCK_HEIGHT,
+              );
+              return {
+                x: position.x,
+                y: position.y,
+                width: resolvedWidth,
+                height: resolvedHeight,
+              };
+            }),
+          CORE_BLOCK_MARGIN + 4,
+        );
+
+        lastDimensions.current = {
+          width: clampedRect.width,
+          height: clampedRect.height,
+        };
 
         setNodes((nodes) =>
           nodes.map((node) => {
@@ -160,18 +217,18 @@ const ProjectCoreBlock = memo(
               return {
                 ...node,
                 position: {
-                  x: -width / 2,
-                  y: -height / 2,
+                  x: clampedRect.x,
+                  y: clampedRect.y,
                 },
-                width,
-                height,
+                width: clampedRect.width,
+                height: clampedRect.height,
               };
             }
             return node;
           }),
         );
       },
-      [id, setNodes],
+      [id, nodes, setNodes, toPositiveNumber],
     );
 
     return (

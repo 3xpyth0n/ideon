@@ -32,7 +32,7 @@ import {
   CORE_BLOCK_HEIGHT,
 } from "@components/project/utils/constants";
 import {
-  clampCenteredRect,
+  clampBottomRightRect,
   getAdjustedPosition,
   Rect,
 } from "@components/project/utils/collision";
@@ -316,7 +316,7 @@ export const useProjectCanvasGraph = ({
         handleDeleteBlock(toRemove);
       }
 
-      // Enforce symmetric resizing
+      // Keep core resize constrained by nearby blocks
       const coreChanges = changes.filter((c) => {
         if (!("id" in c)) return false;
         const block = blocks.find((b) => b.id === c.id);
@@ -330,9 +330,6 @@ export const useProjectCanvasGraph = ({
           dimChange.type === "dimensions" &&
           dimChange.dimensions
         ) {
-          const newWidth = dimChange.dimensions.width;
-          const newHeight = dimChange.dimensions.height;
-
           const processedChanges = changes
             .map((c) => {
               if (
@@ -345,14 +342,6 @@ export const useProjectCanvasGraph = ({
             })
             .filter(Boolean) as NodeChange[];
 
-          if (dimChange) {
-            processedChanges.push({
-              id: dimChange.id,
-              type: "position",
-              position: { x: -newWidth / 2, y: -newHeight / 2 },
-            });
-          }
-
           setBlocks((nds) => {
             const next = applyNodeChanges(
               processedChanges,
@@ -364,7 +353,7 @@ export const useProjectCanvasGraph = ({
               return next;
             }
 
-            const clampedCoreRect = clampCenteredRect(
+            const clampedCoreRect = clampBottomRightRect(
               getCoreRect(next),
               next
                 .filter((n) => n.type !== "core")

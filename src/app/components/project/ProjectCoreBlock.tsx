@@ -21,7 +21,7 @@ import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
 import CustomNodeResizer from "./CustomNodeResizer";
 import { focusProjectCanvas } from "./utils/focusCanvas";
-import { clampCenteredRect } from "./utils/collision";
+import { clampBottomRightRect } from "./utils/collision";
 import { DEFAULT_BLOCK_HEIGHT, DEFAULT_BLOCK_WIDTH } from "./utils/constants";
 
 export type ProjectCoreBlockProps = NodeProps<Node<BlockData, "core">>;
@@ -163,46 +163,48 @@ const ProjectCoreBlock = memo(
       (_event: unknown, params: ResizeParams) => {
         const width = Math.ceil(params.width);
         const height = Math.ceil(params.height);
-        const clampedRect = clampCenteredRect(
-          {
-            x: -width / 2,
-            y: -height / 2,
-            width,
-            height,
-          },
-          nodes
-            .filter((node) => node.id !== id)
-            .map((node) => {
-              const positionAbsolute = (
-                node as unknown as {
-                  positionAbsolute?: { x: number; y: number };
-                }
-              ).positionAbsolute;
-              const position = positionAbsolute ?? node.position;
-              const style = node.style as
-                | { width?: unknown; height?: unknown }
-                | undefined;
-              const resolvedWidth = toPositiveNumber(
-                (typeof style?.width === "number" ? style.width : undefined) ??
-                  node.measured?.width ??
-                  node.width,
-                DEFAULT_BLOCK_WIDTH,
-              );
-              const resolvedHeight = toPositiveNumber(
-                (typeof style?.height === "number"
-                  ? style.height
-                  : undefined) ??
-                  node.measured?.height ??
-                  node.height,
-                DEFAULT_BLOCK_HEIGHT,
-              );
-              return {
-                x: position.x,
-                y: position.y,
-                width: resolvedWidth,
-                height: resolvedHeight,
-              };
-            }),
+        const proposedRect = {
+          x: params.x,
+          y: params.y,
+          width,
+          height,
+        };
+        const blockingRects = nodes
+          .filter((node) => node.id !== id)
+          .map((node) => {
+            const positionAbsolute = (
+              node as unknown as {
+                positionAbsolute?: { x: number; y: number };
+              }
+            ).positionAbsolute;
+            const position = positionAbsolute ?? node.position;
+            const style = node.style as
+              | { width?: unknown; height?: unknown }
+              | undefined;
+            const resolvedWidth = toPositiveNumber(
+              (typeof style?.width === "number" ? style.width : undefined) ??
+                node.measured?.width ??
+                node.width,
+              DEFAULT_BLOCK_WIDTH,
+            );
+            const resolvedHeight = toPositiveNumber(
+              (typeof style?.height === "number" ? style.height : undefined) ??
+                node.measured?.height ??
+                node.height,
+              DEFAULT_BLOCK_HEIGHT,
+            );
+            return {
+              id: node.id,
+              type: node.type,
+              x: position.x,
+              y: position.y,
+              width: resolvedWidth,
+              height: resolvedHeight,
+            };
+          });
+        const clampedRect = clampBottomRightRect(
+          proposedRect,
+          blockingRects,
           CORE_BLOCK_MARGIN + 4,
         );
 

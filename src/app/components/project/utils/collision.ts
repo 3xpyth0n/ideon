@@ -82,15 +82,6 @@ export function getAdjustedPosition(
   return { x: adjustedX, y: adjustedY };
 }
 
-function overlaps(a: Rect, b: Rect): boolean {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  );
-}
-
 export function clampCenteredRect(
   proposedRect: Rect,
   blockingRects: Rect[],
@@ -98,65 +89,98 @@ export function clampCenteredRect(
 ): Rect {
   const centerX = proposedRect.x + proposedRect.width / 2;
   const centerY = proposedRect.y + proposedRect.height / 2;
-  let width = proposedRect.width;
-  let height = proposedRect.height;
+  const expandedRects = blockingRects.map((rect) => ({
+    x: rect.x - margin,
+    y: rect.y - margin,
+    width: rect.width + margin * 2,
+    height: rect.height + margin * 2,
+  }));
+  let halfWidth = proposedRect.width / 2;
+  let halfHeight = proposedRect.height / 2;
 
-  for (let iteration = 0; iteration < 4; iteration += 1) {
-    const currentRect = {
-      x: centerX - width / 2,
-      y: centerY - height / 2,
-      width,
-      height,
-    };
-    let nextWidth = width;
-    let nextHeight = height;
+  for (const rect of expandedRects) {
+    const verticalOverlap =
+      centerY + halfHeight > rect.y &&
+      centerY - halfHeight < rect.y + rect.height;
 
-    for (const rect of blockingRects) {
-      const expandedRect = {
-        x: rect.x - margin,
-        y: rect.y - margin,
-        width: rect.width + margin * 2,
-        height: rect.height + margin * 2,
-      };
-
-      if (!overlaps(currentRect, expandedRect)) {
-        continue;
+    if (verticalOverlap) {
+      if (rect.x >= centerX) {
+        halfWidth = Math.min(halfWidth, rect.x - centerX);
       }
-
-      if (expandedRect.x >= centerX) {
-        nextWidth = Math.min(nextWidth, (expandedRect.x - centerX) * 2);
-      }
-
-      if (expandedRect.x + expandedRect.width <= centerX) {
-        nextWidth = Math.min(
-          nextWidth,
-          (centerX - (expandedRect.x + expandedRect.width)) * 2,
-        );
-      }
-
-      if (expandedRect.y >= centerY) {
-        nextHeight = Math.min(nextHeight, (expandedRect.y - centerY) * 2);
-      }
-
-      if (expandedRect.y + expandedRect.height <= centerY) {
-        nextHeight = Math.min(
-          nextHeight,
-          (centerY - (expandedRect.y + expandedRect.height)) * 2,
-        );
+      if (rect.x + rect.width <= centerX) {
+        halfWidth = Math.min(halfWidth, centerX - (rect.x + rect.width));
       }
     }
-
-    if (nextWidth === width && nextHeight === height) {
-      break;
-    }
-
-    width = Math.max(0, nextWidth);
-    height = Math.max(0, nextHeight);
   }
+
+  halfWidth = Math.max(0, halfWidth);
+
+  for (const rect of expandedRects) {
+    const horizontalOverlap =
+      centerX + halfWidth > rect.x && centerX - halfWidth < rect.x + rect.width;
+
+    if (horizontalOverlap) {
+      if (rect.y >= centerY) {
+        halfHeight = Math.min(halfHeight, rect.y - centerY);
+      }
+      if (rect.y + rect.height <= centerY) {
+        halfHeight = Math.min(halfHeight, centerY - (rect.y + rect.height));
+      }
+    }
+  }
+
+  halfHeight = Math.max(0, halfHeight);
+
+  const width = halfWidth * 2;
+  const height = halfHeight * 2;
 
   return {
     x: centerX - width / 2,
     y: centerY - height / 2,
+    width,
+    height,
+  };
+}
+
+export function clampBottomRightRect(
+  proposedRect: Rect,
+  blockingRects: Rect[],
+  margin: number = CORE_BLOCK_MARGIN,
+): Rect {
+  const expandedRects = blockingRects.map((rect) => ({
+    x: rect.x - margin,
+    y: rect.y - margin,
+    width: rect.width + margin * 2,
+    height: rect.height + margin * 2,
+  }));
+  let width = proposedRect.width;
+  let height = proposedRect.height;
+
+  for (const rect of expandedRects) {
+    const verticalOverlap =
+      proposedRect.y + height > rect.y && proposedRect.y < rect.y + rect.height;
+
+    if (verticalOverlap && rect.x >= proposedRect.x) {
+      width = Math.min(width, rect.x - proposedRect.x);
+    }
+  }
+
+  width = Math.max(0, width);
+
+  for (const rect of expandedRects) {
+    const horizontalOverlap =
+      proposedRect.x + width > rect.x && proposedRect.x < rect.x + rect.width;
+
+    if (horizontalOverlap && rect.y >= proposedRect.y) {
+      height = Math.min(height, rect.y - proposedRect.y);
+    }
+  }
+
+  height = Math.max(0, height);
+
+  return {
+    x: proposedRect.x,
+    y: proposedRect.y,
     width,
     height,
   };

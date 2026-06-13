@@ -15,10 +15,7 @@ import { calculateResizeHelperLines, ResizeHandle } from "./utils/alignment";
 import type { BlockData } from "./CanvasBlock";
 import { isBlockPositionLocked } from "./utils/locks";
 import { useHelperLines } from "./HelperLinesContext";
-import {
-  clampCenteredRect,
-  isOverlappingRestrictedZone,
-} from "./utils/collision";
+import { isOverlappingRestrictedZone } from "./utils/collision";
 import { CORE_BLOCK_MARGIN } from "./utils/constants";
 
 const TARGET_HITBOX_SIZE_PX = 60;
@@ -28,7 +25,6 @@ const DEFAULT_BLOCK_WIDTH = 320;
 const DEFAULT_BLOCK_HEIGHT = 240;
 const SNAP_THRESHOLD = 0.1;
 const RESIZE_SNAP_THRESHOLD_PX = 8;
-const CORE_RESIZE_COLLISION_EPSILON_PX = 4;
 const BLOCK_RESIZE_COLLISION_EPSILON_PX = 2;
 
 function toPositiveNumber(value: unknown, fallback: number) {
@@ -352,39 +348,44 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
 
       const ctx = helperLinesCtxRef.current;
       if (ctx) {
-        const { helperLines, snappedRect } = calculateResizeHelperLines(
-          node.id,
-          {
-            x: corrected.x,
-            y: corrected.y,
-            width: corrected.width,
-            height: corrected.height,
-          },
-          currentHandle,
-          allNodesRef.current,
-          RESIZE_SNAP_THRESHOLD_PX,
-          ctx.isShiftPressed,
-        );
-        ctx.setHelperLines(helperLines);
-        corrected = {
-          ...corrected,
-          x: Math.round(snappedRect.x),
-          y: Math.round(snappedRect.y),
-          width: Math.round(snappedRect.width),
-          height: Math.round(snappedRect.height),
-        };
-        ctx.setActiveResizeSnap(
-          helperLines.length > 0
-            ? {
-                id: node.id,
-                x: corrected.x,
-                y: corrected.y,
-                width: corrected.width,
-                height: corrected.height,
-                handle: currentHandle,
-              }
-            : null,
-        );
+        if (node.type !== "core") {
+          const { helperLines, snappedRect } = calculateResizeHelperLines(
+            node.id,
+            {
+              x: corrected.x,
+              y: corrected.y,
+              width: corrected.width,
+              height: corrected.height,
+            },
+            currentHandle,
+            allNodesRef.current,
+            RESIZE_SNAP_THRESHOLD_PX,
+            ctx.isShiftPressed,
+          );
+          ctx.setHelperLines(helperLines);
+          corrected = {
+            ...corrected,
+            x: Math.round(snappedRect.x),
+            y: Math.round(snappedRect.y),
+            width: Math.round(snappedRect.width),
+            height: Math.round(snappedRect.height),
+          };
+          ctx.setActiveResizeSnap(
+            helperLines.length > 0
+              ? {
+                  id: node.id,
+                  x: corrected.x,
+                  y: corrected.y,
+                  width: corrected.width,
+                  height: corrected.height,
+                  handle: currentHandle,
+                }
+              : null,
+          );
+        } else {
+          ctx.setHelperLines([]);
+          ctx.setActiveResizeSnap(null);
+        }
       }
 
       lastResizeParamsRef.current = corrected;
@@ -402,31 +403,7 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
       return propsRef.current.shouldResize?.(event, params) ?? true;
     }
 
-    if (node.type === "core") {
-      const proposedWidth = Math.ceil(params.width);
-      const proposedHeight = Math.ceil(params.height);
-      const nextRect = {
-        x: Number.isFinite(params.x) ? params.x : -(proposedWidth / 2),
-        y: Number.isFinite(params.y) ? params.y : -(proposedHeight / 2),
-        width: proposedWidth,
-        height: proposedHeight,
-      };
-      const clampedRect = clampCenteredRect(
-        nextRect,
-        allNodesRef.current
-          .filter((otherNode) => otherNode.id !== node.id)
-          .map(getCollisionRectForNode),
-        CORE_BLOCK_MARGIN + CORE_RESIZE_COLLISION_EPSILON_PX,
-      );
-
-      const canResizeCore =
-        clampedRect.width === nextRect.width &&
-        clampedRect.height === nextRect.height;
-
-      if (!canResizeCore) {
-        return false;
-      }
-    } else {
+    if (node.type !== "core") {
       const core = allNodesRef.current.find((n) => n.type === "core");
       if (core) {
         const proposedRect = {

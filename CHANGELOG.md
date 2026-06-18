@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed NoteBlock collaborative editing architecture. Replaced the broken React state ↔ Yjs observer roundtrip with y-prosemirror's direct Y.XmlFragment binding, eliminating infinite loops and "Invalid string length" crashes. Content now flows directly between ProseMirror and Yjs without passing through React state [#107](https://github.com/3xpyth0n/ideon/issues/107).
 - Fixed core block collision bounds not updating after resizing, which allowed blocks to overlap the core block or hit an invisible border [#106](https://github.com/3xpyth0n/ideon/issues/106).
 
 ## [0.9.1] - 2026-06-07

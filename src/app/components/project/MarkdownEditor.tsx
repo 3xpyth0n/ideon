@@ -7,11 +7,18 @@ import {
   type Editor,
   wrappingInputRule,
 } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
+import { Extension, type Extensions } from "@tiptap/core";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useState, useRef } from "react";
+import * as Y from "yjs";
+import {
+  ySyncPlugin,
+  yUndoPlugin,
+  undoCommand as yUndoCommand,
+  redoCommand as yRedoCommand,
+} from "y-prosemirror";
 import { Markdown } from "tiptap-markdown";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
@@ -179,6 +186,46 @@ const SmartTasks = Extension.create({
   },
 });
 
+const SizeLimit = Extension.create({
+  name: "sizeLimit",
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        filterTransaction: (tr) => {
+          if (!tr.docChanged) return true;
+          if (tr.doc.textContent.length > MAX_BLOCK_CONTENT_LENGTH) {
+            return false;
+          }
+          return true;
+        },
+      }),
+    ];
+  },
+});
+
+function buildCollaborativeExtension(yNoteDocument: Y.XmlFragment): Extension {
+  return Extension.create({
+    name: "yjsCollaboration",
+    addCommands() {
+      return {
+        undo:
+          () =>
+          ({ state, dispatch }) => {
+            return yUndoCommand(state, dispatch);
+          },
+        redo:
+          () =>
+          ({ state, dispatch }) => {
+            return yRedoCommand(state, dispatch);
+          },
+      };
+    },
+    addProseMirrorPlugins() {
+      return [ySyncPlugin(yNoteDocument), yUndoPlugin()];
+    },
+  });
+}
+
 interface MarkdownEditorProps {
   content?: string;
   onChange?: (content: string) => void;
@@ -192,6 +239,9 @@ interface MarkdownEditorProps {
   onUndoShortcut?: () => void;
   onRedoShortcut?: () => void;
   onPreviewShortcut?: () => void;
+  yNoteDocument?: Y.XmlFragment;
+  /** Fallback markdown content for one-time migration into an empty Y.XmlFragment */
+  migrationContent?: string;
 }
 
 interface MarkdownStorage {
@@ -262,7 +312,7 @@ function getTableMarkdownBlocks(doc: ProseMirrorNode): string[] {
   return tables;
 }
 
-function getStableMarkdown(editor: Editor): string {
+export function getStableMarkdown(editor: Editor): string {
   const rawMarkdown = stripMarkdownTaskPlaceholder(
     (editor.storage as unknown as MarkdownStorage).markdown.getMarkdown(),
   );
@@ -294,6 +344,28 @@ function getStableMarkdown(editor: Editor): string {
   });
 }
 
+/**
+ * Migrates persisted markdown content into an empty Y.XmlFragment.
+ *
+ * This handles the initial content migration for existing notes that have
+ * markdown content but an empty Y.XmlFragment (e.g., first load after the
+ * collaborative upgrade, or after a corrupted Y.Doc was rebuilt).
+ *
+ * The function is idempotent: it only populates the fragment when it's empty
+ * and there's actual content to migrate. ySyncPlugin automatically propagates
+ * the ProseMirror doc change to the Y.XmlFragment.
+ */
+export function migrateContentToFragment(
+  editor: Editor,
+  yNoteDocument: Y.XmlFragment,
+  markdownContent: string,
+): void {
+  if (yNoteDocument.length > 0) return;
+  if (!markdownContent || !markdownContent.trim()) return;
+
+  editor.commands.setContent(markdownContent);
+}
+
 const MarkdownEditor = ({
   content,
   onChange,
@@ -307,6 +379,8 @@ const MarkdownEditor = ({
   onUndoShortcut,
   onRedoShortcut,
   onPreviewShortcut,
+  yNoteDocument,
+  migrationContent,
 }: MarkdownEditorProps) => {
   const { dict } = useI18n();
   const [, setIsFocused] = useState(false);
@@ -340,14 +414,19 @@ const MarkdownEditor = ({
   const editorContent =
     content === undefined ? undefined : normalizeMarkdownTaskList(content);
 
+  const collaborativeExtension = yNoteDocument
+    ? buildCollaborativeExtension(yNoteDocument)
+    : null;
+
   const editor = useEditor({
     immediatelyRender: false,
-    content: editorContent,
+    content: yNoteDocument ? undefined : editorContent,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         link: false,
         underline: false,
+        undoRedo: collaborativeExtension ? false : undefined,
       }),
       Markdown.configure({
         html: false,
@@ -401,7 +480,9 @@ const MarkdownEditor = ({
       }),
       SmartCode,
       SmartTasks,
-    ],
+      SizeLimit,
+      ...(collaborativeExtension ? [collaborativeExtension] : []),
+    ] as Extensions,
     editable: !isReadOnly,
     editorProps: {
       attributes: {
@@ -442,6 +523,7 @@ const MarkdownEditor = ({
     },
     onUpdate: ({ editor }) => {
       if (isSyncingRef.current || isReadOnly) return;
+      if (yNoteDocument) return;
       const markdown = getStableMarkdown(editor);
 
       if (markdown.length > MAX_BLOCK_CONTENT_LENGTH) {
@@ -509,8 +591,19 @@ const MarkdownEditor = ({
     }
   }, [editor, onEditorReady]);
 
+  const hasMigratedRef = useRef(false);
+
   useEffect(() => {
-    if (editor && content !== undefined) {
+    if (hasMigratedRef.current) return;
+    if (!editor || !yNoteDocument) return;
+    if (!migrationContent || !migrationContent.trim()) return;
+
+    hasMigratedRef.current = true;
+    migrateContentToFragment(editor, yNoteDocument, migrationContent);
+  }, [editor, yNoteDocument, migrationContent]);
+
+  useEffect(() => {
+    if (editor && content !== undefined && !yNoteDocument) {
       const processedContent = normalizeMarkdownTaskList(content);
       const currentMarkdown = normalizeMarkdownTaskList(
         getStableMarkdown(editor),
@@ -532,7 +625,7 @@ const MarkdownEditor = ({
         }
       }
     }
-  }, [content, editor, isReadOnly]);
+  }, [content, editor, isReadOnly, yNoteDocument]);
 
   useEffect(() => {
     if (editor) {

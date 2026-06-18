@@ -362,6 +362,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         id: user.id,
         username: user.username || dict.common.guest,
         displayName: user.displayName,
+        name: user.displayName || user.username || dict.common.guest,
         avatarUrl: user.avatarUrl,
         color: user.color || undefined,
         vimMode: user.vimMode || false,

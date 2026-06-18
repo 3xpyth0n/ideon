@@ -45,6 +45,8 @@ import {
   isBlockContentLocked,
   isBlockPositionLocked,
 } from "@components/project/utils/locks";
+import { getNoteEditor } from "@components/project/utils/noteEditorRegistry";
+import { getStableMarkdown } from "@components/project/MarkdownEditor";
 import type { AutomationStateEntry } from "@components/project/AutomationStatesContext";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
@@ -52,6 +54,68 @@ import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 const FIT_PADDING = 0.12;
 const FIT_DURATION = 800;
 const FIT_MIN_ZOOM = 0.1;
+
+/**
+ * Shallow comparison of block data objects, skipping `content` (managed by Y.Text)
+ * and runtime-only fields. Avoids JSON.stringify which crashes on large content strings.
+ */
+export function shallowEqualBlockData(
+  a: Record<string, unknown> | undefined,
+  b: Record<string, unknown> | undefined,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+
+  // Compare all keys except content (synced via Y.Text) and runtime refs
+  const skipKeys = new Set([
+    "content",
+    "yText",
+    "yNoteDocument",
+    "yAwareness",
+    "typingUsers",
+    "movingUserColor",
+    "onContentChange",
+    "onFocus",
+    "onBlur",
+    "onCaretMove",
+    "onResize",
+    "onResizeEnd",
+    "onRequestUndo",
+    "onRequestRedo",
+    "currentUser",
+    "initialProjectId",
+    "projectOwnerId",
+    "drafts",
+    "_yDoc",
+  ]);
+
+  const keysA = Object.keys(a).filter((k) => !skipKeys.has(k));
+  const keysB = Object.keys(b).filter((k) => !skipKeys.has(k));
+
+  if (keysA.length !== keysB.length) return false;
+
+  for (const key of keysA) {
+    const valA = a[key];
+    const valB = b[key];
+    if (valA === valB) continue;
+    if (typeof valA !== typeof valB) return false;
+    if (typeof valA === "object" && valA !== null && valB !== null) {
+      // For nested objects (like metadata), use a bounded JSON comparison
+      try {
+        const strA = JSON.stringify(valA);
+        const strB = JSON.stringify(valB);
+        if (strA.length > 100_000 || strB.length > 100_000) continue; // skip huge nested objects
+        if (strA !== strB) return false;
+      } catch {
+        return false;
+      }
+    } else {
+      if (valA !== valB) return false;
+    }
+  }
+
+  return true;
+}
 
 function safePosition(pos: unknown): { x: number; y: number } {
   const p = pos as { x?: unknown; y?: unknown } | undefined;
@@ -354,6 +418,7 @@ const cleanBlockDataForSync = (
   const rest = { ...data };
   delete rest.content;
   delete rest.yText;
+  delete rest.yNoteDocument;
   delete rest.typingUsers;
   delete rest.movingUserColor;
   delete rest.onContentChange;
@@ -370,6 +435,7 @@ const cleanBlockDataForSync = (
   const restAny = rest as unknown as Record<string, unknown>;
   delete restAny.drafts;
   delete restAny._yDoc;
+  delete restAny.yAwareness;
   return rest;
 };
 
@@ -393,6 +459,8 @@ export interface UserPresence {
   id: string;
   username: string;
   displayName?: string | null;
+  /** Short name used by yCursorPlugin for the remote cursor label */
+  name?: string;
   avatarUrl: string | null;
   color?: string;
   vimMode?: boolean;
@@ -549,6 +617,10 @@ export const useProjectCanvasState = (
       ? (yDoc.getMap("drafts") as Y.Map<string>)
       : null;
 
+    const yNoteDocuments: Y.Map<Y.XmlFragment> | null = yDoc
+      ? (yDoc.getMap("noteDocuments") as Y.Map<Y.XmlFragment>)
+      : null;
+
     const updateBlocksFromYjs = (
       event: Y.YMapEvent<Node<BlockData>>,
       transaction: Y.Transaction,
@@ -579,6 +651,15 @@ export const useProjectCanvasState = (
             const rn = yBlocks.get(key);
             if (rn) {
               const yText = yContents.get(key);
+              const yNoteDocument = yNoteDocuments?.get(key);
+              // For text blocks in collaborative mode, keep content stale —
+              // it's only used as a migration fallback. Content lives in Y.XmlFragment.
+              const blockContent = yNoteDocument
+                ? (rn.data as unknown as { content?: string }).content ?? ""
+                : resolveBlockContent(
+                    yText,
+                    (rn.data as unknown as { content?: string }).content,
+                  );
               const syncedBlock = {
                 ...rn,
                 draggable: rn.type !== "core",
@@ -590,10 +671,9 @@ export const useProjectCanvasState = (
                 data: {
                   ...(rn.data as unknown as Record<string, unknown>),
                   yText,
-                  content: resolveBlockContent(
-                    yText,
-                    (rn.data as unknown as { content?: string }).content,
-                  ),
+                  yNoteDocument,
+                  yAwareness: awareness ?? undefined,
+                  content: blockContent,
                 },
               };
 
@@ -696,6 +776,10 @@ export const useProjectCanvasState = (
         keys.forEach((key) => {
           const index = next.findIndex((n) => n.id === key);
           if (index >= 0) {
+            // Skip content updates for text blocks in collaborative mode —
+            // their content lives in Y.XmlFragment, not Y.Text
+            if (next[index].data.yNoteDocument) return;
+
             const yText = yContents.get(key);
             if (
               yText &&
@@ -765,6 +849,10 @@ export const useProjectCanvasState = (
         affectedBlockIds.forEach((blockId) => {
           const idx = next.findIndex((n) => n.id === blockId);
           if (idx >= 0) {
+            // Skip content updates for text blocks in collaborative mode —
+            // their content lives in Y.XmlFragment, not Y.Text
+            if (next[idx].data.yNoteDocument) return;
+
             const yText = yContents.get(blockId);
             if (yText) {
               const newContent = resolveBlockContent(
@@ -795,9 +883,17 @@ export const useProjectCanvasState = (
     const initialBlocks = Array.from(yBlocks.values());
     const initialLinks = Array.from(yLinks.values());
 
+    if (yNoteDocuments && !isReadOnly) {
+      // NOTE: Do NOT create Y.XmlFragment here during initial sync.
+      // y-prosemirror will create and seed the fragment when the editor mounts.
+      // Creating empty or pre-seeded fragments here causes "allocation size overflow"
+      // because Y.XmlText is not a valid ProseMirror document structure.
+    }
+
     setBlocksState(
       initialBlocks.map((rn) => {
         const yText = yContents.get(rn.id);
+        const yNoteDocument = yNoteDocuments?.get(rn.id);
         // Defer toString() to avoid main thread freeze during initial sync of 1000+ blocks
         const initialContent = (rn.data as unknown as { content?: string })
           ?.content;
@@ -814,8 +910,13 @@ export const useProjectCanvasState = (
           data: {
             ...(rn.data as unknown as Record<string, unknown>),
             yText,
-            // Only use existing content string if available, don't force a yText.toString() here
-            content: resolveBlockContent(yText, initialContent),
+            yNoteDocument,
+            yAwareness: awareness ?? undefined,
+            // For text blocks in collaborative mode, keep content stale —
+            // it's only used as a migration fallback. Content lives in Y.XmlFragment.
+            content: yNoteDocument
+              ? initialContent ?? ""
+              : resolveBlockContent(yText, initialContent),
           },
         } as Node<BlockData>;
       }),
@@ -918,6 +1019,9 @@ export const useProjectCanvasState = (
 
     const resetBlocks = Array.from(yBlocks.values()).map((rn) => {
       const yText = yContents.get(rn.id);
+      const yNoteDocument = yDoc
+        ?.getMap<Y.XmlFragment>("noteDocuments")
+        .get(rn.id);
       const initialContent = (rn.data as unknown as { content?: string })
         ?.content;
 
@@ -933,7 +1037,13 @@ export const useProjectCanvasState = (
         data: {
           ...(rn.data as unknown as Record<string, unknown>),
           yText,
-          content: resolveBlockContent(yText, initialContent),
+          yNoteDocument,
+          yAwareness: awareness ?? undefined,
+          // For text blocks in collaborative mode, keep content stale —
+          // it's only used as a migration fallback. Content lives in Y.XmlFragment.
+          content: yNoteDocument
+            ? initialContent ?? ""
+            : resolveBlockContent(yText, initialContent),
         },
       } as Node<BlockData>;
     });
@@ -977,10 +1087,9 @@ export const useProjectCanvasState = (
             : n,
         );
 
-        const enrichedNextBlocks = nextBlocks;
         selectedBlockOrderRef.current = updateSelectedBlockOrder(
           selectedBlockOrderRef.current,
-          enrichedNextBlocks,
+          nextBlocks,
         );
         const prevBlocksMap = new Map(prev.map((b) => [b.id, b]));
 
@@ -1025,6 +1134,13 @@ export const useProjectCanvasState = (
                 yContents.set(block.id, yText);
               }
 
+              if (block.type === "text" && !existing) {
+                const yNoteDocument = new Y.XmlFragment();
+                yBlocks.doc
+                  ?.getMap("noteDocuments")
+                  .set(block.id, yNoteDocument);
+              }
+
               const blockData = cleanBlockDataForSync(
                 (blockToSync.data as Partial<BlockData>) || {},
               );
@@ -1062,8 +1178,7 @@ export const useProjectCanvasState = (
                 existing.width !== cleanBlockToSync.width ||
                 existing.height !== cleanBlockToSync.height ||
                 existing.type !== cleanBlockToSync.type ||
-                JSON.stringify(existing.data) !==
-                  JSON.stringify(cleanBlockToSync.data);
+                !shallowEqualBlockData(existing.data, cleanBlockToSync.data);
 
               if (hasChanged) {
                 yBlocks.set(block.id, cleanBlockToSync as Node<BlockData>);
@@ -1072,11 +1187,37 @@ export const useProjectCanvasState = (
           }, transactionOrigin);
         }
 
-        // Return blocks
-        return enrichedNextBlocks as unknown as Node<BlockData>[];
+        // Enrich local blocks with yNoteDocument and yAwareness so that
+        // newly created text blocks immediately have the collaborative
+        // binding references available for NoteBlock rendering.
+        const yNoteDocuments =
+          yBlocks.doc?.getMap<Y.XmlFragment>("noteDocuments") ?? null;
+        const enrichedNextBlocks = nextBlocks.map((block) => {
+          const yText = yContents.get(block.id) ?? block.data?.yText;
+          const yNoteDocument =
+            yNoteDocuments?.get(block.id) ?? block.data?.yNoteDocument;
+          if (
+            yText === block.data?.yText &&
+            yNoteDocument === block.data?.yNoteDocument &&
+            (awareness ?? undefined) === block.data?.yAwareness
+          ) {
+            return block;
+          }
+          return {
+            ...block,
+            data: {
+              ...block.data,
+              yText,
+              yNoteDocument,
+              yAwareness: awareness ?? undefined,
+            },
+          } as Node<BlockData>;
+        });
+
+        return enrichedNextBlocks;
       });
     },
-    [yBlocks, yContents, currentUserRole],
+    [yBlocks, yContents, currentUserRole, awareness],
   );
 
   const deleteBlocks = useCallback(
@@ -1087,6 +1228,7 @@ export const useProjectCanvasState = (
         ids.forEach((id) => {
           yBlocks.delete(id);
           yContents.delete(id);
+          yBlocks.doc?.getMap("noteDocuments").delete(id);
         });
       }, CANVAS_HISTORY_ORIGIN);
 
@@ -1180,17 +1322,20 @@ export const useProjectCanvasState = (
         Array.from(yBlocks.keys()).forEach((id) => yBlocks.delete(id));
         Array.from(yLinks.keys()).forEach((id) => yLinks.delete(id));
         Array.from(yContents.keys()).forEach((id) => yContents.delete(id));
+        const yNoteDocuments = yBlocks.doc?.getMap("noteDocuments");
+        if (yNoteDocuments) {
+          Array.from(yNoteDocuments.keys()).forEach((id) =>
+            yNoteDocuments.delete(id),
+          );
+        }
 
-        // 2. Set new blocks and links in local state first to avoid flickering
+        // 2. Add new blocks to Yjs
         const sanitizedBlocks = newBlocks.map((n) =>
           n.type === "core"
             ? { ...n, position: { x: CORE_BLOCK_X, y: CORE_BLOCK_Y } }
             : n,
         );
-        setBlocksState(sanitizedBlocks);
-        setLinksState(newLinks);
 
-        // 3. Add new blocks to Yjs (setBlocks will be called by effects, but we can do it here for atomicity)
         sanitizedBlocks.forEach((block) => {
           const blockToSync = { ...block };
           delete blockToSync.selected;
@@ -1201,6 +1346,11 @@ export const useProjectCanvasState = (
             yText.insert(0, initialContent);
           }
           yContents.set(block.id, yText);
+
+          if (block.type === "text") {
+            const yNoteDocument = new Y.XmlFragment();
+            yBlocks.doc?.getMap("noteDocuments").set(block.id, yNoteDocument);
+          }
 
           const blockData = cleanBlockDataForSync(
             (blockToSync.data as Partial<BlockData>) || {},
@@ -1215,11 +1365,29 @@ export const useProjectCanvasState = (
           delete linkToSync.selected;
           yLinks.set(link.id, linkToSync as Edge);
         });
+
+        // 3. Set local state with enriched blocks (include yNoteDocument/yAwareness)
+        const noteDocsMap = yBlocks.doc?.getMap<Y.XmlFragment>("noteDocuments");
+        const enrichedBlocks = sanitizedBlocks.map((block) => {
+          const yText = yContents.get(block.id);
+          const yNoteDocument = noteDocsMap?.get(block.id);
+          return {
+            ...block,
+            data: {
+              ...block.data,
+              yText,
+              yNoteDocument,
+              yAwareness: awareness ?? undefined,
+            },
+          } as Node<BlockData>;
+        });
+        setBlocksState(enrichedBlocks);
+        setLinksState(newLinks);
       }, yBlocks.doc.clientID);
 
       clear();
     },
-    [yBlocks, yLinks, yContents, isReadOnly, clear],
+    [yBlocks, yLinks, yContents, isReadOnly, clear, awareness],
   );
 
   // Drafts API: keep drafts in separate state to avoid polluting BlockData
@@ -1354,9 +1522,13 @@ export const useProjectCanvasState = (
       const initialBlocks = Array.from(yBlocks.values());
       const initialLinks = Array.from(yLinks.values());
 
+      const yNoteDocumentsMap =
+        yBlocks.doc?.getMap<Y.XmlFragment>("noteDocuments");
+
       setBlocksState(
         initialBlocks.map((rn) => {
           const yText = yContents.get(rn.id);
+          const yNoteDocument = yNoteDocumentsMap?.get(rn.id);
           return {
             ...rn,
             selected: false,
@@ -1369,7 +1541,12 @@ export const useProjectCanvasState = (
             data: {
               ...rn.data,
               yText,
-              content: resolveBlockContent(yText, rn.data?.content),
+              yNoteDocument,
+              yAwareness: awareness ?? undefined,
+              // For text blocks in collaborative mode, keep content stale
+              content: yNoteDocument
+                ? rn.data?.content ?? ""
+                : resolveBlockContent(yText, rn.data?.content),
             },
           } as Node<BlockData>;
         }),
@@ -1379,7 +1556,7 @@ export const useProjectCanvasState = (
     }
 
     setIsPreviewMode(false);
-  }, [yBlocks, yLinks, yContents]);
+  }, [yBlocks, yLinks, yContents, awareness]);
 
   const handleSaveState = useCallback(
     async (
@@ -1392,12 +1569,27 @@ export const useProjectCanvasState = (
       const isAuto = options?.isAuto ?? false;
       try {
         const blocksToSave = (overrideBlocks || blocks).map((n) => {
-          const resolvedContent = resolveBlockContent(
-            yContents?.get(n.id) || n.data.yText,
-            n.data.content,
-          );
+          const resolvedContent =
+            n.data.blockType === "text" && n.data.yNoteDocument
+              ? (() => {
+                  const editor = getNoteEditor(n.id);
+                  if (editor && !editor.isDestroyed) {
+                    return getStableMarkdown(editor);
+                  }
+                  // Editor not mounted — fall back to yText/stored content
+                  return resolveBlockContent(
+                    yContents?.get(n.id) || n.data.yText,
+                    n.data.content,
+                  );
+                })()
+              : resolveBlockContent(
+                  yContents?.get(n.id) || n.data.yText,
+                  n.data.content,
+                );
           const serializableData = { ...n.data };
           delete serializableData.yText;
+          delete serializableData.yNoteDocument;
+          delete serializableData.yAwareness;
           delete serializableData.onContentChange;
           // internals.userNode carries yText back — only spread the DB-relevant fields
           return {

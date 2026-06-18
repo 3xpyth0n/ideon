@@ -58,6 +58,10 @@ import {
   shouldStartNoteInEditMode,
   type NoteModeShortcutHandler,
 } from "./utils/interaction";
+import {
+  registerNoteEditor,
+  unregisterNoteEditor,
+} from "./utils/noteEditorRegistry";
 import dynamic from "next/dynamic";
 import { markdown } from "@codemirror/lang-markdown";
 import "./markdown-editor.css";
@@ -419,6 +423,16 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
     shouldStartNoteInEditMode(data.content, isReadOnly),
   );
 
+  // Register/unregister editor in the global registry for export serialization
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      registerNoteEditor(id, editor);
+      return () => {
+        unregisterNoteEditor(id);
+      };
+    }
+  }, [editor, id]);
+
   const focusEditor = useCallback(() => {
     if (!editor || isReadOnly || !isEditing) return;
 
@@ -615,7 +629,9 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         return;
       }
 
-      syncToYjs(safeContent);
+      if (!data.yNoteDocument) {
+        syncToYjs(safeContent);
+      }
 
       pendingContentRef.current = safeContent;
       if (onContentChangeTimerRef.current)
@@ -910,9 +926,15 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                 />
               ) : (
                 <MarkdownEditor
-                  key={data.yText ? `collab-note-${id}` : `local-note-${id}`}
-                  content={data.content}
-                  onChange={handleContentChange}
+                  key={
+                    data.yNoteDocument
+                      ? `collab-note-${id}`
+                      : `local-note-${id}`
+                  }
+                  content={data.yNoteDocument ? undefined : data.content}
+                  onChange={
+                    data.yNoteDocument ? undefined : handleContentChange
+                  }
                   isReadOnly={false}
                   placeholder={dict.blocks.contentPlaceholder || "..."}
                   className="text-base prosemirror-full-height"
@@ -927,18 +949,26 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                     data.onRequestRedo?.();
                   }}
                   onPreviewShortcut={handleEditorPreviewShortcut}
+                  yNoteDocument={data.yNoteDocument}
+                  migrationContent={
+                    data.yNoteDocument ? data.content : undefined
+                  }
                 />
               )
             ) : (
               <MarkdownEditor
-                key={data.yText ? `collab-note-${id}` : `local-note-${id}`}
-                content={data.content}
-                onChange={handleContentChange}
+                key={
+                  data.yNoteDocument ? `collab-note-${id}` : `local-note-${id}`
+                }
+                content={data.yNoteDocument ? undefined : data.content}
+                onChange={data.yNoteDocument ? undefined : handleContentChange}
                 isReadOnly={true}
                 placeholder=""
                 className="text-base prosemirror-full-height"
                 onEditorReady={setEditor}
                 onLinkShortcut={openLinkModal}
+                yNoteDocument={data.yNoteDocument}
+                migrationContent={data.yNoteDocument ? data.content : undefined}
               />
             )}
           </div>

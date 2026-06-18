@@ -28,6 +28,7 @@ import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { DEFAULT_BLOCK_WIDTH } from "./utils/constants";
 import * as Y from "yjs";
+import type { Awareness } from "y-protocols/awareness";
 import { UserPresence } from "./hooks/useProjectCanvasState";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 import CustomNodeResizer from "./CustomNodeResizer";
@@ -54,6 +55,8 @@ export type BlockData = {
   title?: string;
   content: string;
   yText?: Y.Text;
+  yNoteDocument?: Y.XmlFragment;
+  yAwareness?: Awareness;
   updatedAt: string;
   lastEditor: string;
   authorName?: string;

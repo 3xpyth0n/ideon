@@ -43,6 +43,7 @@ import {
   stripMarkdownTaskPlaceholder,
   toggleReadonlyTaskItem,
 } from "./markdownTaskList";
+import { CommentHighlight } from "./comments/CommentHighlightExtension";
 import "./markdown-editor.css";
 
 // Caps inline code match processing to avoid expensive scans on large content; once exceeded, further inline code matches are skipped to keep the editor responsive.
@@ -56,6 +57,7 @@ const KeyboardShortcuts = Extension.create({
       onLinkShortcut: () => {},
       onUndoShortcut: (): boolean => false,
       onRedoShortcut: (): boolean => false,
+      onCommentShortcut: () => {},
     };
   },
 
@@ -89,6 +91,12 @@ const KeyboardShortcuts = Extension.create({
       },
       "Mod-k": () => {
         this.options.onLinkShortcut();
+        return true;
+      },
+      "Mod-Alt-m": () => {
+        const { from, to } = this.editor.state.selection;
+        if (from === to) return false;
+        this.options.onCommentShortcut();
         return true;
       },
     };
@@ -239,6 +247,7 @@ interface MarkdownEditorProps {
   onUndoShortcut?: () => void;
   onRedoShortcut?: () => void;
   onPreviewShortcut?: () => void;
+  onCommentShortcut?: () => void;
   yNoteDocument?: Y.XmlFragment;
   /** Fallback markdown content for one-time migration into an empty Y.XmlFragment */
   migrationContent?: string;
@@ -379,6 +388,7 @@ const MarkdownEditor = ({
   onUndoShortcut,
   onRedoShortcut,
   onPreviewShortcut,
+  onCommentShortcut,
   yNoteDocument,
   migrationContent,
 }: MarkdownEditorProps) => {
@@ -398,6 +408,7 @@ const MarkdownEditor = ({
   const onLinkShortcutRef = useRef(onLinkShortcut);
   const onUndoShortcutRef = useRef(onUndoShortcut);
   const onRedoShortcutRef = useRef(onRedoShortcut);
+  const onCommentShortcutRef = useRef(onCommentShortcut);
 
   useEffect(() => {
     onLinkShortcutRef.current = onLinkShortcut;
@@ -410,6 +421,10 @@ const MarkdownEditor = ({
   useEffect(() => {
     onRedoShortcutRef.current = onRedoShortcut;
   }, [onRedoShortcut]);
+
+  useEffect(() => {
+    onCommentShortcutRef.current = onCommentShortcut;
+  }, [onCommentShortcut]);
 
   const editorContent =
     content === undefined ? undefined : normalizeMarkdownTaskList(content);
@@ -477,10 +492,16 @@ const MarkdownEditor = ({
           onRedoShortcutRef.current();
           return true;
         },
+        onCommentShortcut: () => {
+          if (!isReadOnly && onCommentShortcutRef.current) {
+            onCommentShortcutRef.current();
+          }
+        },
       }),
       SmartCode,
       SmartTasks,
       SizeLimit,
+      CommentHighlight,
       ...(collaborativeExtension ? [collaborativeExtension] : []),
     ] as Extensions,
     editable: !isReadOnly,

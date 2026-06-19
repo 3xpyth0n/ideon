@@ -62,6 +62,14 @@ import {
   registerNoteEditor,
   unregisterNoteEditor,
 } from "./utils/noteEditorRegistry";
+import { CommentTrigger } from "./comments/CommentTrigger";
+import { CommentPanel } from "./comments/CommentPanel";
+import { CommentInput } from "./comments/CommentInput";
+import { CommentThreadCard } from "./comments/CommentThreadCard";
+import { useCommentStore } from "./comments/CommentStore";
+import { isRangeValid } from "./comments/rangeGuard";
+import { stringToColor } from "@lib/utils";
+import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { markdown } from "@codemirror/lang-markdown";
 import "./markdown-editor.css";
@@ -89,6 +97,9 @@ interface BubbleMenuProps {
   cancelLink: () => void;
   blockRect: DOMRect;
   zoom: number;
+  isReadOnly: boolean;
+  userRole: "creator" | "owner" | "editor" | "viewer";
+  onCommentTrigger: (selection: { from: number; to: number }) => void;
 }
 
 const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
@@ -104,6 +115,9 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
       cancelLink,
       blockRect,
       zoom,
+      isReadOnly,
+      userRole,
+      onCommentTrigger,
     },
     ref,
   ) => {
@@ -361,6 +375,15 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 </button>
               </>
             )}
+
+            {userRole !== "viewer" && !isReadOnly && (
+              <CommentTrigger
+                editor={editor}
+                isReadOnly={isReadOnly}
+                userRole={userRole}
+                onTrigger={onCommentTrigger}
+              />
+            )}
           </>
         )}
       </div>
@@ -447,6 +470,186 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   const [isEditingLink, setIsEditingLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const blockRef = useRef<HTMLDivElement>(null);
+  const [pendingCommentSelection, setPendingCommentSelection] = useState<{
+    from: number;
+    to: number;
+  } | null>(null);
+
+  // Comment store — wires Y.Map observers on mount and cleans up on unmount
+  const commentStore = useCommentStore(id);
+
+  // Fetch project collaborators for @mention autocomplete (cached per projectId)
+  const [collaborators, setCollaborators] = useState<
+    import("./comments/MentionTextarea").MentionUser[]
+  >([]);
+
+  useEffect(() => {
+    if (!data.initialProjectId) return;
+
+    // Use a simple module-level cache to avoid fetching per block
+    const cacheKey = `__collab_${data.initialProjectId}`;
+    const cached = (window as unknown as Record<string, unknown>)[cacheKey] as
+      | import("./comments/MentionTextarea").MentionUser[]
+      | undefined;
+    if (cached) {
+      setCollaborators(cached);
+      return;
+    }
+
+    fetch(`/api/projects/${data.initialProjectId}/collaborators`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((users) => {
+        const mapped = users.map(
+          (u: {
+            id: string;
+            username: string;
+            displayName?: string;
+            color?: string;
+          }) => ({
+            id: u.id,
+            username: u.username,
+            displayName: u.displayName || null,
+            color: u.color || null,
+          }),
+        );
+        (window as unknown as Record<string, unknown>)[cacheKey] = mapped;
+        setCollaborators(mapped);
+      })
+      .catch(() => setCollaborators([]));
+  }, [data.initialProjectId]);
+
+  // Track which comment thread the cursor is currently inside
+  const [cursorThreadId, setCursorThreadId] = useState<string | null>(null);
+  const cursorThreadIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateCursorThread = () => {
+      const { from } = editor.state.selection;
+      const markType = editor.schema.marks.commentHighlight;
+      if (!markType) {
+        if (cursorThreadIdRef.current !== null) {
+          cursorThreadIdRef.current = null;
+          setCursorThreadId(null);
+        }
+        return;
+      }
+
+      const $pos = editor.state.doc.resolve(from);
+      const marks = $pos.marks();
+      const commentMark = marks.find((m) => m.type === markType);
+      const newId = commentMark ? (commentMark.attrs.threadId as string) : null;
+
+      if (newId !== cursorThreadIdRef.current) {
+        cursorThreadIdRef.current = newId;
+        setCursorThreadId(newId);
+      }
+    };
+
+    editor.on("selectionUpdate", updateCursorThread);
+
+    return () => {
+      editor.off("selectionUpdate", updateCursorThread);
+    };
+  }, [editor]);
+
+  const handleCommentTrigger = useCallback(
+    (selection: { from: number; to: number }) => {
+      if (!editor) return;
+      if (!isRangeValid(editor, selection.from, selection.to)) {
+        toast.error("The selected text is no longer available.");
+        return;
+      }
+      setPendingCommentSelection(selection);
+    },
+    [editor],
+  );
+
+  const handleCommentSubmit = useCallback(
+    (text: string) => {
+      if (!editor || !pendingCommentSelection || !currentUser) return;
+
+      // Re-validate range at submission time
+      if (
+        !isRangeValid(
+          editor,
+          pendingCommentSelection.from,
+          pendingCommentSelection.to,
+        )
+      ) {
+        toast.error("The selected text is no longer available.");
+        setPendingCommentSelection(null);
+        return;
+      }
+
+      const author = {
+        id: currentUser.id,
+        name: currentUser.displayName || currentUser.username || "Anonymous",
+        color:
+          currentUser.color ||
+          data.authorColor ||
+          stringToColor(currentUser.username || currentUser.id),
+      };
+
+      const thread = commentStore.createThread({
+        from: pendingCommentSelection.from,
+        to: pendingCommentSelection.to,
+        text,
+        author,
+      });
+
+      if (thread) {
+        editor
+          .chain()
+          .focus()
+          .setTextSelection({
+            from: pendingCommentSelection.from,
+            to: pendingCommentSelection.to,
+          })
+          .setCommentHighlight({ threadId: thread.id, color: author.color })
+          .run();
+      }
+
+      setPendingCommentSelection(null);
+    },
+    [
+      editor,
+      pendingCommentSelection,
+      currentUser,
+      data.authorColor,
+      commentStore,
+    ],
+  );
+
+  const handleCommentCancel = useCallback(() => {
+    setPendingCommentSelection(null);
+  }, []);
+
+  const handleCommentReply = useCallback(
+    (threadId: string, text: string) => {
+      if (!currentUser) return;
+      const author = {
+        id: currentUser.id,
+        name: currentUser.displayName || currentUser.username || "Anonymous",
+        color:
+          currentUser.color ||
+          data.authorColor ||
+          stringToColor(currentUser.username || currentUser.id),
+      };
+      commentStore.addReply(threadId, { text, author });
+    },
+    [currentUser, data.authorColor, commentStore],
+  );
+
+  const handleCommentDelete = useCallback(
+    (threadId: string) => {
+      if (!editor) return;
+      editor.commands.unsetCommentHighlight(threadId);
+      commentStore.deleteThread(threadId);
+    },
+    [editor, commentStore],
+  );
 
   useEffect(() => {
     if (isReadOnly || !isEditing) {
@@ -949,6 +1152,13 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
                     data.onRequestRedo?.();
                   }}
                   onPreviewShortcut={handleEditorPreviewShortcut}
+                  onCommentShortcut={() => {
+                    if (!editor) return;
+                    const { from, to } = editor.state.selection;
+                    if (from !== to) {
+                      handleCommentTrigger({ from, to });
+                    }
+                  }}
                   yNoteDocument={data.yNoteDocument}
                   migrationContent={
                     data.yNoteDocument ? data.content : undefined
@@ -1071,8 +1281,32 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           cancelLink={cancelLink}
           blockRef={blockRef}
           showBubbleMenu={showBubbleMenu}
+          isReadOnly={isReadOnly}
+          userRole={data.userRole || "viewer"}
+          onCommentTrigger={handleCommentTrigger}
         />
       )}
+
+      {/* Comment Panel — visible only when cursor is in a comment or creating one */}
+      <NoteCommentPanel
+        blockRef={blockRef}
+        visible={!!(pendingCommentSelection || cursorThreadId)}
+        activeThreads={
+          cursorThreadId
+            ? commentStore.activeThreads.filter((t) => t.id === cursorThreadId)
+            : []
+        }
+        pendingCommentSelection={pendingCommentSelection}
+        onCommentSubmit={handleCommentSubmit}
+        onCommentCancel={handleCommentCancel}
+        onReply={handleCommentReply}
+        onDelete={handleCommentDelete}
+        currentUserId={currentUser?.id || ""}
+        projectOwnerId={data.projectOwnerId || null}
+        collaborators={collaborators}
+        isReadOnly={isReadOnly}
+        userRole={data.userRole || "viewer"}
+      />
     </>
   );
 });
@@ -1089,6 +1323,9 @@ const NoteBubbleMenu = memo(
     cancelLink,
     blockRef,
     showBubbleMenu,
+    isReadOnly,
+    userRole,
+    onCommentTrigger,
   }: {
     editor: Editor;
     isEditingLink: boolean;
@@ -1100,6 +1337,9 @@ const NoteBubbleMenu = memo(
     cancelLink: () => void;
     blockRef: React.RefObject<HTMLDivElement | null>;
     showBubbleMenu: boolean;
+    isReadOnly: boolean;
+    userRole: "creator" | "owner" | "editor" | "viewer";
+    onCommentTrigger: (selection: { from: number; to: number }) => void;
   }) => {
     const viewport = useViewport();
     const [blockRect, setBlockRect] = useState<DOMRect | null>(null);
@@ -1184,6 +1424,9 @@ const NoteBubbleMenu = memo(
         cancelLink={cancelLink}
         blockRect={blockRect}
         zoom={viewport.zoom}
+        isReadOnly={isReadOnly}
+        userRole={userRole}
+        onCommentTrigger={onCommentTrigger}
       />,
       document.getElementById("app-main-container") || document.body,
     );
@@ -1191,6 +1434,94 @@ const NoteBubbleMenu = memo(
 );
 
 NoteBubbleMenu.displayName = "NoteBubbleMenu";
+
+/**
+ * NoteCommentPanel wraps CommentPanel with viewport zoom awareness and renders
+ * active/resolved thread cards plus the comment input when a selection is pending.
+ */
+const NoteCommentPanel = memo(
+  ({
+    blockRef,
+    visible,
+    activeThreads,
+    pendingCommentSelection,
+    onCommentSubmit,
+    onCommentCancel,
+    onReply,
+    onDelete,
+    currentUserId,
+    projectOwnerId,
+    collaborators,
+    isReadOnly,
+    userRole,
+  }: {
+    blockRef: React.RefObject<HTMLDivElement | null>;
+    visible: boolean;
+    activeThreads: import("./comments/types").CommentThread[];
+    pendingCommentSelection: { from: number; to: number } | null;
+    onCommentSubmit: (text: string) => void;
+    onCommentCancel: () => void;
+    onReply: (threadId: string, text: string) => void;
+    onDelete: (threadId: string) => void;
+    currentUserId: string;
+    projectOwnerId: string | null;
+    collaborators: import("./comments/MentionTextarea").MentionUser[];
+    isReadOnly: boolean;
+    userRole: "creator" | "owner" | "editor" | "viewer";
+  }) => {
+    const viewport = useViewport();
+    const canMutate = userRole !== "viewer" && !isReadOnly;
+
+    return (
+      <CommentPanel
+        blockId=""
+        blockRef={blockRef}
+        editor={null}
+        isReadOnly={isReadOnly}
+        userRole={userRole}
+        currentUser={{ id: "", username: "" }}
+        zoom={viewport.zoom}
+        visible={visible}
+      >
+        {/* Pending comment input */}
+        {pendingCommentSelection && canMutate && (
+          <CommentInput
+            onSubmit={onCommentSubmit}
+            onCancel={onCommentCancel}
+            collaborators={collaborators}
+          />
+        )}
+
+        {/* Active thread cards */}
+        {activeThreads.map((thread) => {
+          const threadCreatorId = thread.messages[0]?.authorId;
+          const canDelete =
+            canMutate &&
+            (currentUserId === threadCreatorId ||
+              currentUserId === projectOwnerId);
+
+          return (
+            <CommentThreadCard
+              key={thread.id}
+              thread={thread}
+              isReadOnly={isReadOnly}
+              canResolve={canDelete}
+              canReply={canMutate}
+              onReply={(text) => onReply(thread.id, text)}
+              onResolve={() => {}}
+              onReopen={() => {}}
+              onDelete={() => onDelete(thread.id)}
+              onHighlightHover={() => {}}
+              collaborators={collaborators}
+            />
+          );
+        })}
+      </CommentPanel>
+    );
+  },
+);
+
+NoteCommentPanel.displayName = "NoteCommentPanel";
 
 NoteBlock.displayName = "NoteBlock";
 

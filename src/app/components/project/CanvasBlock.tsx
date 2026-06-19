@@ -150,6 +150,7 @@ export type BlockData = {
     id: string;
     username: string;
     displayName?: string | null;
+    color?: string;
     vimMode?: boolean;
   };
   userRole?: "creator" | "owner" | "editor" | "viewer";

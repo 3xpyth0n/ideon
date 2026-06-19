@@ -67,6 +67,7 @@ export default function CommandPalette({
     [dict.canvas.cheatNote]: [
       { label: dict.canvas.cheatSwitchToEditMode, keys: ["Ctrl", "E"] },
       { label: dict.canvas.cheatSwitchToPreviewMode, keys: ["Ctrl", "P"] },
+      { label: dict.canvas.cheatComment, keys: ["Ctrl", "Alt", "M"] },
     ],
     [dict.canvas.cheatTasks]: [
       { label: dict.canvas.cheatIndent, keys: ["Tab"] },

@@ -11,7 +11,7 @@ export default defineConfig({
       NODE_ENV: "test",
       LOG_LEVEL: "warn",
     },
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     exclude: ["**/.next/**", "**/node_modules/**", "**/dist/**"],
     css: false,
     fileParallelism: false,

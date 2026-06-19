@@ -218,6 +218,15 @@ const GitBlock = (props: CanvasBlockProps) => {
 
   const [gitError, setGitError] = useState<string | null>(null);
   const [isFetchingGit, setIsFetchingGit] = useState(false);
+  const [cachedStats, setCachedStats] = useState<GitStats | null>(() => {
+    try {
+      const key = `ideon:git:${id}`;
+      const cached = localStorage.getItem(key);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const fetchGitStats = useCallback(
     async (url: string, signal?: AbortSignal) => {
@@ -292,8 +301,15 @@ const GitBlock = (props: CanvasBlockProps) => {
             "contributors",
           ];
 
+          // Cache stats in localStorage for instant load next time
+          try {
+            localStorage.setItem(`ideon:git:${id}`, JSON.stringify(result));
+          } catch {
+            // localStorage full or unavailable — ignore
+          }
+          setCachedStats(result);
+
           // Always update metadata with new fetch time and results
-          // This ensures we respect the 1-minute throttle on subsequent reloads
           updateMetadata({
             ...currentMetadata,
             github: {
@@ -329,13 +345,18 @@ const GitBlock = (props: CanvasBlockProps) => {
     ],
   );
 
+  const fetchGitStatsRef = useRef(fetchGitStats);
+  useEffect(() => {
+    fetchGitStatsRef.current = fetchGitStats;
+  }, [fetchGitStats]);
+
   useEffect(() => {
     const controller = new AbortController();
     if (content && !isEditingGit) {
-      fetchGitStats(content, controller.signal);
+      fetchGitStatsRef.current(content, controller.signal);
     }
     return () => controller.abort();
-  }, [content, isEditingGit, fetchGitStats]);
+  }, [content, isEditingGit]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -403,7 +424,7 @@ const GitBlock = (props: CanvasBlockProps) => {
   };
 
   const renderContent = () => {
-    const rawStats = metadata?.github?.lastStats as unknown as
+    const rawStats = (metadata?.github?.lastStats || cachedStats) as unknown as
       | (GitStats & { stats?: GitStats })
       | null;
     const stats = rawStats?.stats || rawStats;

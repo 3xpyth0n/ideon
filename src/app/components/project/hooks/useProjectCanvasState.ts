@@ -2538,7 +2538,12 @@ export const useProjectCanvasState = (
           projectOwnerId,
           initialProjectId,
           currentUser: currentUser
-            ? { id: currentUser.id, username: currentUser.username }
+            ? {
+                id: currentUser.id,
+                username: currentUser.username,
+                displayName: currentUser.name,
+                color: currentUser.color,
+              }
             : undefined,
           directChildrenCount,
           onContentChange: isPreviewMode ? undefined : graph.onContentChange,
@@ -2590,12 +2595,8 @@ export const useProjectCanvasState = (
         io.fetchProjectMetadata();
 
         setTimeout(() => {
-          const rawBlocks =
-            blocks.length > 0
-              ? blocks
-              : (Array.from(yBlocks!.values()) as Node<BlockData>[]);
-          const rawLinks =
-            links.length > 0 ? links : Array.from(yLinks!.values());
+          const rawBlocks = Array.from(yBlocks!.values()) as Node<BlockData>[];
+          const rawLinks = Array.from(yLinks!.values());
           const initialHiddenIds = computeHiddenNodeIds(rawBlocks, rawLinks);
 
           const filteredRawBlocks = rawBlocks.filter(
@@ -2616,7 +2617,7 @@ export const useProjectCanvasState = (
             lastProjectId.current = initialProjectId;
             io.fetchGraph();
           }
-        }, 2000); // 2s timeout for remote sync
+        }, 2000);
 
         return () => clearTimeout(timer);
       }

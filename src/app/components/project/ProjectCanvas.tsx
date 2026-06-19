@@ -327,7 +327,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   }, [router]);
 
   useEffect(() => {
-    // Validate access on mount to prevent cached access
+    // Validate access on mount — sets role which triggers Yjs init
     const validateAccess = async () => {
       try {
         const res = await fetch(`/api/projects/${initialProjectId}`);
@@ -362,6 +362,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         id: user.id,
         username: user.username || dict.common.guest,
         displayName: user.displayName,
+        name: user.displayName || user.username || dict.common.guest,
         avatarUrl: user.avatarUrl,
         color: user.color || undefined,
         vimMode: user.vimMode || false,
@@ -442,7 +443,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
         wsProvider.on("status", (event: { status: string }) => {
           clientLogger.info("yjs:status", { status: event.status });
-          setIsSocketConnected(event.status === "connected");
+          const connected = event.status === "connected";
+          setIsSocketConnected(connected);
         });
 
         wsProvider.on("connection-close", (event: { code?: number } | null) => {
@@ -1670,8 +1672,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
   if (!isAccessValidated) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center w-full h-full bg-page">
+        <div className="text-sm opacity-60">{dict.canvas.loadingCanvas}</div>
       </div>
     );
   }

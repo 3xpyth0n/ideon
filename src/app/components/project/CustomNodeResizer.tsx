@@ -15,6 +15,8 @@ import { calculateResizeHelperLines, ResizeHandle } from "./utils/alignment";
 import type { BlockData } from "./CanvasBlock";
 import { isBlockPositionLocked } from "./utils/locks";
 import { useHelperLines } from "./HelperLinesContext";
+import { isOverlappingRestrictedZone } from "./utils/collision";
+import { CORE_BLOCK_MARGIN } from "./utils/constants";
 
 const TARGET_HITBOX_SIZE_PX = 60;
 const MIN_HITBOX_SIZE = 2;
@@ -23,6 +25,34 @@ const DEFAULT_BLOCK_WIDTH = 320;
 const DEFAULT_BLOCK_HEIGHT = 240;
 const SNAP_THRESHOLD = 0.1;
 const RESIZE_SNAP_THRESHOLD_PX = 8;
+const BLOCK_RESIZE_COLLISION_EPSILON_PX = 2;
+
+function toPositiveNumber(value: unknown, fallback: number) {
+  if (typeof value !== "number") return fallback;
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return value;
+}
+
+function getCollisionRectForNode(node: Node<BlockData>) {
+  const positionAbsolute = (
+    node as unknown as { positionAbsolute?: { x: number; y: number } }
+  ).positionAbsolute;
+  const position = positionAbsolute ?? node.position;
+  const style = node.style as { width?: unknown; height?: unknown } | undefined;
+  const width = toPositiveNumber(
+    (typeof style?.width === "number" ? style.width : undefined) ??
+      node.measured?.width ??
+      node.width,
+    DEFAULT_BLOCK_WIDTH,
+  );
+  const height = toPositiveNumber(
+    (typeof style?.height === "number" ? style.height : undefined) ??
+      node.measured?.height ??
+      node.height,
+    DEFAULT_BLOCK_HEIGHT,
+  );
+  return { x: position.x, y: position.y, width, height };
+}
 
 interface NodeGeometry {
   position: { x: number; y: number };
@@ -318,39 +348,44 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
 
       const ctx = helperLinesCtxRef.current;
       if (ctx) {
-        const { helperLines, snappedRect } = calculateResizeHelperLines(
-          node.id,
-          {
-            x: corrected.x,
-            y: corrected.y,
-            width: corrected.width,
-            height: corrected.height,
-          },
-          currentHandle,
-          allNodesRef.current,
-          RESIZE_SNAP_THRESHOLD_PX,
-          ctx.isShiftPressed,
-        );
-        ctx.setHelperLines(helperLines);
-        corrected = {
-          ...corrected,
-          x: Math.round(snappedRect.x),
-          y: Math.round(snappedRect.y),
-          width: Math.round(snappedRect.width),
-          height: Math.round(snappedRect.height),
-        };
-        ctx.setActiveResizeSnap(
-          helperLines.length > 0
-            ? {
-                id: node.id,
-                x: corrected.x,
-                y: corrected.y,
-                width: corrected.width,
-                height: corrected.height,
-                handle: currentHandle,
-              }
-            : null,
-        );
+        if (node.type !== "core") {
+          const { helperLines, snappedRect } = calculateResizeHelperLines(
+            node.id,
+            {
+              x: corrected.x,
+              y: corrected.y,
+              width: corrected.width,
+              height: corrected.height,
+            },
+            currentHandle,
+            allNodesRef.current,
+            RESIZE_SNAP_THRESHOLD_PX,
+            ctx.isShiftPressed,
+          );
+          ctx.setHelperLines(helperLines);
+          corrected = {
+            ...corrected,
+            x: Math.round(snappedRect.x),
+            y: Math.round(snappedRect.y),
+            width: Math.round(snappedRect.width),
+            height: Math.round(snappedRect.height),
+          };
+          ctx.setActiveResizeSnap(
+            helperLines.length > 0
+              ? {
+                  id: node.id,
+                  x: corrected.x,
+                  y: corrected.y,
+                  width: corrected.width,
+                  height: corrected.height,
+                  handle: currentHandle,
+                }
+              : null,
+          );
+        } else {
+          ctx.setHelperLines([]);
+          ctx.setActiveResizeSnap(null);
+        }
       }
 
       lastResizeParamsRef.current = corrected;
@@ -361,7 +396,38 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
 
   const shouldResize = useCallback<
     NonNullable<NodeResizerProps["shouldResize"]>
-  >(() => true, []);
+  >((event, params) => {
+    const node = resizingNodeRef.current;
+
+    if (!node) {
+      return propsRef.current.shouldResize?.(event, params) ?? true;
+    }
+
+    if (node.type !== "core") {
+      const core = allNodesRef.current.find((n) => n.type === "core");
+      if (core) {
+        const proposedRect = {
+          x: Number.isFinite(params.x) ? params.x : node.position.x,
+          y: Number.isFinite(params.y) ? params.y : node.position.y,
+          width: Math.ceil(params.width),
+          height: Math.ceil(params.height),
+        };
+
+        const coreRect = getCollisionRectForNode(core);
+        if (
+          isOverlappingRestrictedZone(
+            proposedRect,
+            coreRect,
+            CORE_BLOCK_MARGIN + BLOCK_RESIZE_COLLISION_EPSILON_PX,
+          )
+        ) {
+          return false;
+        }
+      }
+    }
+
+    return propsRef.current.shouldResize?.(event, params) ?? true;
+  }, []);
 
   const isCore = resizingNode?.type === "core";
 

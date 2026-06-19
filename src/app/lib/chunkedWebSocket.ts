@@ -151,6 +151,11 @@ export class ChunkedWebSocket {
   static readonly CLOSING = WebSocket.CLOSING;
   static readonly CLOSED = WebSocket.CLOSED;
 
+  readonly CONNECTING = WebSocket.CONNECTING;
+  readonly OPEN = WebSocket.OPEN;
+  readonly CLOSING = WebSocket.CLOSING;
+  readonly CLOSED = WebSocket.CLOSED;
+
   readonly url: string;
   readonly protocol: string;
   readonly extensions: string;

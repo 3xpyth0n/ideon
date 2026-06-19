@@ -404,6 +404,12 @@ const ldb = new LeveldbPersistence(persistenceDir);
 
 function buildCleanDocFromCorrupted(corruptedDoc: Y.Doc): Y.Doc {
   const cleanDoc = new Y.Doc({ gc: true });
+
+  // Copy only blocks and contents — do NOT copy noteDocuments or other
+  // potentially corrupted collaborative types. This avoids "allocation size
+  // overflow" when the corrupted doc has accumulated massive CRDT tombstones.
+
+  // Step 1: Copy blocks (plain JSON objects — safe to copy directly)
   const srcBlocks = corruptedDoc.getMap<unknown>("blocks");
   const dstBlocks = cleanDoc.getMap<unknown>("blocks");
   srcBlocks.forEach((value, key) => {
@@ -435,6 +441,8 @@ function buildCleanDocFromCorrupted(corruptedDoc: Y.Doc): Y.Doc {
       dstBlocks.set(key, value);
     }
   });
+
+  // Step 2: Copy contents as fresh Y.Text instances (safe, bounded)
   const srcContents = corruptedDoc.getMap<unknown>("contents");
   const dstContents = cleanDoc.getMap<unknown>("contents");
   srcContents.forEach((value, key) => {
@@ -465,6 +473,11 @@ function buildCleanDocFromCorrupted(corruptedDoc: Y.Doc): Y.Doc {
     }
     dstContents.set(key, fresh);
   });
+
+  // Step 3: noteDocuments are intentionally NOT copied — they will be
+  // recreated fresh when clients connect. This prevents corrupted XmlFragments
+  // from propagating.
+
   return cleanDoc;
 }
 
@@ -706,6 +719,14 @@ setPersistence({
     }
 
     ydoc.on("update", (update: Uint8Array) => {
+      // Guard: reject abnormally large updates (likely corruption in progress)
+      if (update.byteLength > 5_000_000) {
+        logger.warn(
+          { docName, updateSize: update.byteLength },
+          "[YJS] Rejected oversized update (>5MB) — likely corruption",
+        );
+        return;
+      }
       ldb.storeUpdate(docName, update);
     });
   },

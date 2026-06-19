@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-06-19
+
+### Added
+
+- Added **Inline Comments** — select text in a NoteBlock to leave comments and start threaded discussions with collaborators. Comments can be resolved and reopened, sync in real-time, and are accessible via `Ctrl+Alt+M`.
+
+### Fixed
+
+- Fixed NoteBlock collaborative editing architecture. Replaced the broken React state ↔ Yjs observer roundtrip with y-prosemirror's direct Y.XmlFragment binding, eliminating infinite loops and "Invalid string length" crashes. Content now flows directly between ProseMirror and Yjs without passing through React state [#107](https://github.com/3xpyth0n/ideon/issues/107).
+- Fixed core block collision bounds not updating after resizing, which allowed blocks to overlap the core block or hit an invisible border [#106](https://github.com/3xpyth0n/ideon/issues/106).
+
 ## [0.9.1] - 2026-06-07
 
 ### Added

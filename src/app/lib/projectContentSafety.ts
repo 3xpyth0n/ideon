@@ -151,6 +151,7 @@ export function sanitizeProjectDocument(
       isFiniteNumber(v) && (v as number) > 0;
 
     const blocks = doc.getMap<unknown>("blocks");
+    const noteDocuments = doc.getMap<unknown>("noteDocuments");
     blocks.forEach((value, key) => {
       if (!value || typeof value !== "object") {
         return;
@@ -188,6 +189,10 @@ export function sanitizeProjectDocument(
         !hCorrupted
       ) {
         return;
+      }
+
+      if (contentCorrupted) {
+        noteDocuments.delete(key);
       }
 
       const dataCorrupted = contentCorrupted || titleCorrupted;

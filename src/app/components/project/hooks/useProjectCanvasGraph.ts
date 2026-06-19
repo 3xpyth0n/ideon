@@ -31,7 +31,11 @@ import {
   CORE_BLOCK_WIDTH,
   CORE_BLOCK_HEIGHT,
 } from "@components/project/utils/constants";
-import { getAdjustedPosition } from "@components/project/utils/collision";
+import {
+  clampBottomRightRect,
+  getAdjustedPosition,
+  Rect,
+} from "@components/project/utils/collision";
 import {
   calculateHelperLines,
   HelperLine,
@@ -60,6 +64,15 @@ const FIT_MIN_ZOOM = 0.1;
 const FIT_MAX_ZOOM_SELECTED = 2;
 const FIT_MAX_ZOOM_ALL = 1;
 const SNAP_THRESHOLD_PX = 8;
+
+function getCoreRect(nodes: Node<BlockData>[]): Rect {
+  const core = nodes.find((n) => n.type === "core");
+  const width = core?.measured?.width || core?.width || CORE_BLOCK_WIDTH;
+  const height = core?.measured?.height || core?.height || CORE_BLOCK_HEIGHT;
+  const x = core?.position.x ?? CORE_BLOCK_X;
+  const y = core?.position.y ?? CORE_BLOCK_Y;
+  return { x, y, width, height };
+}
 
 interface UseProjectCanvasGraphProps {
   currentUser: UserPresence | null;
@@ -303,7 +316,7 @@ export const useProjectCanvasGraph = ({
         handleDeleteBlock(toRemove);
       }
 
-      // Enforce symmetric resizing
+      // Keep core resize constrained by nearby blocks
       const coreChanges = changes.filter((c) => {
         if (!("id" in c)) return false;
         const block = blocks.find((b) => b.id === c.id);
@@ -317,9 +330,6 @@ export const useProjectCanvasGraph = ({
           dimChange.type === "dimensions" &&
           dimChange.dimensions
         ) {
-          const newWidth = dimChange.dimensions.width;
-          const newHeight = dimChange.dimensions.height;
-
           const processedChanges = changes
             .map((c) => {
               if (
@@ -332,18 +342,52 @@ export const useProjectCanvasGraph = ({
             })
             .filter(Boolean) as NodeChange[];
 
-          if (dimChange) {
-            processedChanges.push({
-              id: dimChange.id,
-              type: "position",
-              position: { x: -newWidth / 2, y: -newHeight / 2 },
-            });
-          }
+          setBlocks((nds) => {
+            const next = applyNodeChanges(
+              processedChanges,
+              nds,
+            ) as Node<BlockData>[];
+            const core = next.find((n) => n.type === "core");
 
-          setBlocks(
-            (nds) =>
-              applyNodeChanges(processedChanges, nds) as Node<BlockData>[],
-          );
+            if (!core) {
+              return next;
+            }
+
+            const clampedCoreRect = clampBottomRightRect(
+              getCoreRect(next),
+              next
+                .filter((n) => n.type !== "core")
+                .map((n) => ({
+                  x: n.position.x,
+                  y: n.position.y,
+                  width: n.measured?.width || n.width || DEFAULT_BLOCK_WIDTH,
+                  height:
+                    n.measured?.height || n.height || DEFAULT_BLOCK_HEIGHT,
+                })),
+            );
+
+            if (
+              clampedCoreRect.x === core.position.x &&
+              clampedCoreRect.y === core.position.y &&
+              clampedCoreRect.width ===
+                (core.measured?.width || core.width || CORE_BLOCK_WIDTH) &&
+              clampedCoreRect.height ===
+                (core.measured?.height || core.height || CORE_BLOCK_HEIGHT)
+            ) {
+              return next;
+            }
+
+            return next.map((n) =>
+              n.type === "core"
+                ? {
+                    ...n,
+                    position: { x: clampedCoreRect.x, y: clampedCoreRect.y },
+                    width: clampedCoreRect.width,
+                    height: clampedCoreRect.height,
+                  }
+                : n,
+            );
+          });
           return;
         }
       }
@@ -771,12 +815,7 @@ export const useProjectCanvasGraph = ({
         height: block.measured?.height || block.height || DEFAULT_BLOCK_HEIGHT,
       };
 
-      const adjustedPos = getAdjustedPosition(blockRect, {
-        x: CORE_BLOCK_X,
-        y: CORE_BLOCK_Y,
-        width: CORE_BLOCK_WIDTH,
-        height: CORE_BLOCK_HEIGHT,
-      });
+      const adjustedPos = getAdjustedPosition(blockRect, getCoreRect(blocks));
 
       lastDragPositionRef.current = {
         blockId: block.id,
@@ -1052,12 +1091,7 @@ export const useProjectCanvasGraph = ({
           width: params.width,
           height: params.height,
         },
-        {
-          x: CORE_BLOCK_X,
-          y: CORE_BLOCK_Y,
-          width: CORE_BLOCK_WIDTH,
-          height: CORE_BLOCK_HEIGHT,
-        },
+        getCoreRect(blocks),
       );
 
       applyMutation({
@@ -1188,12 +1222,7 @@ export const useProjectCanvasGraph = ({
           width: blockWidth,
           height: blockHeight,
         },
-        {
-          x: CORE_BLOCK_X,
-          y: CORE_BLOCK_Y,
-          width: CORE_BLOCK_WIDTH,
-          height: CORE_BLOCK_HEIGHT,
-        },
+        getCoreRect(blocks),
       );
 
       const newBlockId = uuidv4();

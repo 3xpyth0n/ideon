@@ -301,6 +301,8 @@ export class WSSharedDoc extends Y.Doc {
   conns: Map<WebSocket, Set<number>>;
   awareness: awarenessProtocol.Awareness;
   createdAt: number;
+  whenReady: Promise<void>;
+  _resolveReady!: () => void;
 
   constructor(name: string) {
     super({ gc: gcEnabled });
@@ -309,6 +311,9 @@ export class WSSharedDoc extends Y.Doc {
     this.awareness = new awarenessProtocol.Awareness(this);
     this.createdAt = Date.now();
     this.awareness.setLocalState(null);
+    this.whenReady = new Promise<void>((resolve) => {
+      this._resolveReady = resolve;
+    });
 
     const awarenessChangeHandler = (
       {
@@ -365,7 +370,20 @@ export const getYDoc = (docname: string, gc = true): WSSharedDoc =>
     const doc = new WSSharedDoc(docname);
     doc.gc = gc;
     if (persistence !== null) {
-      persistence.bindState(docname, doc);
+      persistence.bindState(docname, doc).then(
+        () => {
+          doc._resolveReady();
+        },
+        (err) => {
+          logger.error(
+            { err, docname },
+            "[YJS] bindState failed — doc will start empty",
+          );
+          doc._resolveReady();
+        },
+      );
+    } else {
+      doc._resolveReady();
     }
     docs.set(docname, doc);
     return doc;
@@ -578,7 +596,10 @@ export const setupWSConnection = (
     pongReceived = true;
   });
 
-  {
+  doc.whenReady.then(() => {
+    // Connection may have closed while waiting for persistence
+    if (!doc.conns.has(conn)) return;
+
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, messageSync);
     syncProtocol.writeSyncStep1(encoder, doc);
@@ -596,5 +617,5 @@ export const setupWSConnection = (
       );
       send(doc, conn, encoding.toUint8Array(encoder));
     }
-  }
+  });
 };

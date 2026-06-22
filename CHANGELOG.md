@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-06-XX
+
+### Fixed
+
+- Fixed file upload error handling crash when the server response is not valid JSON (e.g. proxy timeout, network interruption). The client now gracefully handles non-JSON error responses instead of throwing a `SyntaxError` [#110](https://github.com/3xpyth0n/ideon/issues/110).
+
 ## [0.9.2] - 2026-06-19
 
 ### Added

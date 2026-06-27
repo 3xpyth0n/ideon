@@ -72,7 +72,7 @@ export default function TaskModal({
 
     const lines = (task.text || "").split("\n");
     setLocalTitle(lines[0] || "");
-    setLocalDesc(lines.slice(1).join("\n") || "");
+    setLocalDesc(task.description ?? (lines.slice(1).join("\n") || ""));
     setDescEditing(false);
     setLocalAssignees(
       task.assigneeIds
@@ -114,7 +114,8 @@ export default function TaskModal({
   const handleSave = () => {
     const merged: Task = {
       ...task,
-      text: [localTitle, localDesc].filter((s) => s !== "").join("\n"),
+      text: localTitle,
+      description: localDesc || undefined,
       assigneeIds: localAssignees,
       fields: localFields,
       linkedTasks: localLinkedTasks.length > 0 ? localLinkedTasks : undefined,

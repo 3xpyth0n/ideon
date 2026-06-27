@@ -4,6 +4,7 @@ import {
   handleWebhookRequest,
   executeCronRule,
 } from "./lib/automation/webhook-handler";
+import { handleMcpRequest } from "./lib/mcp/handler";
 import cron, { type ScheduledTask } from "node-cron";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
@@ -878,6 +879,12 @@ initDb()
       res.once("finish", onFinish);
 
       try {
+        // MCP endpoint — intercept before Next.js handler
+        if (url?.startsWith("/api/mcp")) {
+          await handleMcpRequest(req, res, ldb);
+          return;
+        }
+
         const webhookMatch = url?.match(/^\/webhooks\/([^/]+)\/([^/?]+)/);
         if (webhookMatch) {
           const [, projectId, ruleId] = webhookMatch;

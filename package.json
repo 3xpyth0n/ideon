@@ -37,6 +37,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@excalidraw/excalidraw": "^0.18.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@react-email/components": "^1.0.12",
     "@replit/codemirror-vim": "^6.3.0",
     "@tiptap/extension-bubble-menu": "^3.27.1",

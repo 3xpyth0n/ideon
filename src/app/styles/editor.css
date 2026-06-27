@@ -730,6 +730,10 @@ body.sketch-modal-open
   z-index: 0;
 }
 
+.project-canvas .react-flow__edgelabel-renderer {
+  z-index: 0;
+}
+
 .mental-canvas .react-flow__edge-path {
   stroke: var(--text-main);
   opacity: 0.3;

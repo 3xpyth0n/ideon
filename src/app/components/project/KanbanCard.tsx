@@ -190,10 +190,10 @@ export default function KanbanCard({
   // Menu open/close is managed by parent `KanbanBlock` via props:
   // `openMenuKey`, `openMenuPos`, `onRequestOpenMenu`, `onRequestCloseMenu`.
   const resizingRef = useRef<null | { startY: number; startH: number }>(null);
-  // split text into title + description
-  const lines = (t.text || "").split("\n");
-  const title = lines[0] || "";
-  const description = lines.slice(1).join("\n").trim();
+  // Title is stored in task.text, description in task.description
+  const title = (t.text || "").split("\n")[0] || "";
+  const description =
+    t.description ?? (t.text || "").split("\n").slice(1).join("\n").trim();
   const taskRecordMap = new Map(
     taskRecords.map((record) => [
       buildTaskLinkKey(record.blockId, record.taskId),

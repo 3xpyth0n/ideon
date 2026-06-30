@@ -328,10 +328,19 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       if (e.key === "Escape" && selectedItems.size > 0) {
         setSelectedItems(new Set());
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        const tag = (document.activeElement as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        e.preventDefault();
+        const allKeys = new Set<string>();
+        folders.forEach((f) => allKeys.add(`folder:${f.id}`));
+        projects.forEach((p) => allKeys.add(`project:${p.id}`));
+        setSelectedItems(allKeys);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedItems]);
+  }, [selectedItems, folders, projects]);
 
   const dispatchFavoriteChanged = useCallback(
     (

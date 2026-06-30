@@ -158,6 +158,7 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
   >([]);
   const [changelogLoading, setChangelogLoading] = useState(false);
   const [changelogError, setChangelogError] = useState(false);
+  const showDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch("/api/system/version")
@@ -182,28 +183,27 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
     }
   }, []);
 
+  const cancelShow = useCallback(() => {
+    if (showDelayRef.current) {
+      clearTimeout(showDelayRef.current);
+      showDelayRef.current = null;
+    }
+  }, []);
+
   const scheduleHide = useCallback(() => {
     cancelHide();
+    cancelShow();
     hideTimeoutRef.current = setTimeout(() => {
       if (!isHoveringBadgeRef.current && !isHoveringTooltipRef.current) {
         setShowTooltip(false);
       }
     }, 150);
-  }, [cancelHide]);
-
-  useEffect(() => {
-    if (
-      isMounted &&
-      (isHoveringBadgeRef.current || isHoveringTooltipRef.current)
-    ) {
-      const timer = setTimeout(() => setShowTooltip(true), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isMounted]);
+  }, [cancelHide, cancelShow]);
 
   const handleBadgeMouseEnter = (e: React.MouseEvent) => {
     isHoveringBadgeRef.current = true;
     cancelHide();
+    cancelShow();
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltipPos({
       top: rect.bottom + 6,
@@ -211,13 +211,17 @@ export function VersionBadge({ currentVersion }: VersionBadgeProps) {
     });
     if (!isMounted) {
       setIsMounted(true);
-    } else {
-      setShowTooltip(true);
     }
+    showDelayRef.current = setTimeout(() => {
+      if (isHoveringBadgeRef.current || isHoveringTooltipRef.current) {
+        setShowTooltip(true);
+      }
+    }, 50);
   };
 
   const handleBadgeMouseLeave = () => {
     isHoveringBadgeRef.current = false;
+    cancelShow();
     if (hasUpdate) {
       scheduleHide();
     } else {

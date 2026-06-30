@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed Vim editor showing empty content on collaborative NoteBlocks after page refresh. Edits made in Vim mode now persist correctly and remain visible across reloads [#111](https://github.com/3xpyth0n/ideon/issues/111).
 - Fixed file upload error handling crash when the server response is not valid JSON (e.g. proxy timeout, network interruption). The client now gracefully handles non-JSON error responses instead of throwing a `SyntaxError` [#110](https://github.com/3xpyth0n/ideon/issues/110).
 
 ## [0.9.2] - 2026-06-19

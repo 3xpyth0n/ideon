@@ -17,6 +17,7 @@ import {
 import { useI18n } from "@providers/I18nProvider";
 import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
 import { clientLogger } from "../../../lib/clientLogger";
+import { toast } from "sonner";
 import { CanvasBlockProps } from "./CanvasBlock";
 import { BlockReactions } from "./BlockReactions";
 import { useBlockReactions } from "./hooks/useBlockReactions";
@@ -277,11 +278,19 @@ const FileBlock = (props: CanvasBlockProps) => {
           );
         }
       } else {
-        const err = await res.json();
-        clientLogger.error("Upload failed", err);
+        let errMsg: string;
+        try {
+          const err = await res.json();
+          errMsg = err?.error || res.statusText;
+        } catch {
+          errMsg = `${res.status} ${res.statusText}`;
+        }
+        clientLogger.error("Upload failed", errMsg);
+        toast.error(dict.blocks.uploadError || `Upload failed (${errMsg})`);
       }
     } catch (error) {
       clientLogger.error("Upload error", error);
+      toast.error(dict.blocks.uploadError || "Upload failed");
     }
   };
 

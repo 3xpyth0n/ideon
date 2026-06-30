@@ -45,6 +45,10 @@ import {
   safeReadYText,
   syncYTextValue,
 } from "@lib/projectContentSafety";
+import {
+  extractTextFromXmlFragment,
+  syncTextToXmlFragment,
+} from "@lib/xmlFragmentUtils";
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
 import { BlockFooter } from "./BlockFooter";
@@ -442,9 +446,14 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   });
 
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [isEditing, setIsEditing] = useState(() =>
-    shouldStartNoteInEditMode(data.content, isReadOnly),
-  );
+  const [isEditing, setIsEditing] = useState(() => {
+    // When yNoteDocument exists, check its content rather than data.content (which is stale/"")
+    if (data.yNoteDocument) {
+      const fragmentText = extractTextFromXmlFragment(data.yNoteDocument);
+      return !isReadOnly && fragmentText.trim().length === 0;
+    }
+    return shouldStartNoteInEditMode(data.content, isReadOnly);
+  });
 
   // Register/unregister editor in the global registry for export serialization
   useEffect(() => {
@@ -664,12 +673,18 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   }, [currentUser?.vimMode, isEditing, isReadOnly]);
 
   useEffect(() => {
-    if (!shouldStartNoteInEditMode(data.content, isReadOnly)) {
-      return;
+    // When yNoteDocument exists, use its content to decide edit mode (data.content is stale/"")
+    if (data.yNoteDocument) {
+      const fragmentText = extractTextFromXmlFragment(data.yNoteDocument);
+      if (isReadOnly || fragmentText.trim().length > 0) return;
+    } else {
+      if (!shouldStartNoteInEditMode(data.content, isReadOnly)) {
+        return;
+      }
     }
 
     focusEditor();
-  }, [data.content, focusEditor, isReadOnly]);
+  }, [data.content, data.yNoteDocument, focusEditor, isReadOnly]);
 
   useEffect(() => {
     const isNonVimEdit = !currentUser?.vimMode && isEditing && !isReadOnly;
@@ -725,8 +740,26 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
 
   const noteVimExtensions = useMemo(() => [markdown()], []);
 
+  // Version counter bumped by the yNoteDocument observer on remote changes,
+  // used to bust the vimEditorValue memo cache so the Vim editor re-renders.
+  const [vimRemoteVersion, setVimRemoteVersion] = useState(0);
+
+  // Vim editor value: read from yNoteDocument (XmlFragment) when it exists,
+  // otherwise fall back to data.content (preservation for non-collaborative blocks).
+  // Re-extracts when entering edit mode (isEditing) to pick up debounced writes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const vimEditorValue = useMemo(() => {
+    if (data.yNoteDocument) {
+      return extractTextFromXmlFragment(data.yNoteDocument);
+    }
+    return data.content || "";
+  }, [data.yNoteDocument, data.content, vimRemoteVersion, isEditing]);
+
   const lastSyncedTextRef = useRef<string | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const xmlFragmentSyncTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const onContentChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -776,12 +809,56 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   useEffect(() => {
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      if (xmlFragmentSyncTimeoutRef.current)
+        clearTimeout(xmlFragmentSyncTimeoutRef.current);
       if (onContentChangeTimerRef.current)
         clearTimeout(onContentChangeTimerRef.current);
       if (onTitleChangeTimerRef.current)
         clearTimeout(onTitleChangeTimerRef.current);
     };
   }, []);
+
+  // Flush pending yNoteDocument sync immediately when leaving edit mode.
+  // Without this, the 500ms debounce may not have fired yet, so the fragment
+  // still contains stale content when the user returns to edit mode.
+  useEffect(() => {
+    if (!isEditing && xmlFragmentSyncTimeoutRef.current) {
+      clearTimeout(xmlFragmentSyncTimeoutRef.current);
+      xmlFragmentSyncTimeoutRef.current = null;
+      const fragment = dataRef.current.yNoteDocument;
+      if (fragment && pendingContentRef.current !== null) {
+        syncTextToXmlFragment(fragment, pendingContentRef.current);
+      }
+    }
+  }, [isEditing]);
+
+  // Observe yNoteDocument for remote changes when Vim mode is active.
+  // Remote edits (from collaborators in MarkdownEditor) increment the version counter
+  // which busts the vimEditorValue memo cache, causing Vim to re-render with updated content.
+  useEffect(() => {
+    const fragment = data.yNoteDocument;
+    if (!currentUser?.vimMode || !fragment) return;
+
+    const doc = fragment.doc;
+    if (!doc) return;
+
+    const localClientID = doc.clientID;
+
+    // observeDeep callback receives (events, transaction).
+    // We use the transaction arg to check if it's a local or remote change.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const observer = (_events: any[], transaction: any) => {
+      // Local edits from syncTextToXmlFragment use doc.clientID as origin — skip those.
+      if (transaction.origin !== localClientID) {
+        setVimRemoteVersion((v) => v + 1);
+      }
+    };
+
+    fragment.observeDeep(observer);
+    return () => {
+      fragment.unobserveDeep(observer);
+    };
+  }, [currentUser?.vimMode, data.yNoteDocument]);
 
   useEffect(() => {
     setTitle(data.title || "");
@@ -874,6 +951,21 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         return;
       }
 
+      // Write to yNoteDocument (XmlFragment) when it exists for collaborative persistence
+      if (data.yNoteDocument) {
+        if (xmlFragmentSyncTimeoutRef.current) {
+          clearTimeout(xmlFragmentSyncTimeoutRef.current);
+        }
+        xmlFragmentSyncTimeoutRef.current = setTimeout(() => {
+          xmlFragmentSyncTimeoutRef.current = null;
+          const fragment = dataRef.current.yNoteDocument;
+          if (fragment) {
+            syncTextToXmlFragment(fragment, safeContent);
+          }
+        }, 500);
+      }
+
+      // Always sync to yText for backward compatibility (search/export)
       syncToYjs(safeContent);
 
       pendingContentRef.current = safeContent;
@@ -896,7 +988,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
         );
       }, 150);
     },
-    [id, data.content, data.yText, syncToYjs],
+    [id, data.content, data.yText, data.yNoteDocument, syncToYjs],
   );
 
   const openLinkModal = useCallback(() => {
@@ -1118,7 +1210,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
             {isEditing && !isReadOnly ? (
               currentUser?.vimMode ? (
                 <VimEditor
-                  value={data.content || ""}
+                  value={vimEditorValue}
                   onChange={handleVimChange}
                   editable={!isReadOnly}
                   vimEnabled={true}

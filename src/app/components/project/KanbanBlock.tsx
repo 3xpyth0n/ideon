@@ -355,7 +355,9 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     const normalized = normalizeColumnsForSave(nextColumns);
 
     lastNormalizedColumnsRef.current = JSON.stringify(normalized.columns);
-    hasUnsavedNormalizationRef.current = normalized.changed;
+    // Never trigger a save from metadata observer — only user actions should save.
+    // Remote Yjs updates and initial loads should not overwrite the source of truth.
+    hasUnsavedNormalizationRef.current = false;
     setColumns(normalized.columns);
     setFields(meta.fields || []);
   }, [data.metadata, normalizeColumnsForSave]);

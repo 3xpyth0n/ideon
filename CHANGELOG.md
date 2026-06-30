@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-07-01
+
+### Added
+
+- Added **MCP Server** — Ideon now exposes a [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `POST /api/mcp` (Streamable HTTP transport). AI agents from Claude Code, Cursor, or any MCP-compatible client can read and manipulate the canvas programmatically ([See Guide](https://www.theideon.com/docs/guides/mcp)).
+
+### Fixed
+
+- Fixed Vim editor showing empty content on collaborative NoteBlocks after page refresh. Edits made in Vim mode now persist correctly and remain visible across reloads [#111](https://github.com/3xpyth0n/ideon/issues/111).
+- Fixed file upload error handling crash when the server response is not valid JSON (e.g. proxy timeout, network interruption). The client now gracefully handles non-JSON error responses instead of throwing a `SyntaxError` [#110](https://github.com/3xpyth0n/ideon/issues/110).
+
 ## [0.9.2] - 2026-06-19
 
 ### Added

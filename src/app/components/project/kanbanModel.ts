@@ -36,6 +36,7 @@ export type Task = {
   id: string;
   text: string;
   checked: boolean;
+  description?: string;
   height?: number;
   assigneeId?: string;
   assigneeIds?: string[];
@@ -248,6 +249,10 @@ export const parseKanbanMetadata = (raw: unknown): ParsedKanbanMetadata => {
                 ? entry.taskNumber
                 : undefined,
               linkedTasks: normalizeLinkedTaskReferences(entry.linkedTasks),
+              description:
+                typeof entry.description === "string"
+                  ? entry.description
+                  : undefined,
             } satisfies Task;
           })
           .filter((task): task is Task => task !== null);

@@ -45,6 +45,15 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "tonghuaroot",
+      "name": "tonghuaroot (童话)",
+      "avatar_url": "https://avatars.githubusercontent.com/u/23011166?v=4",
+      "profile": "http://www.tonghuaroot.com",
+      "contributions": [
+        "security"
+      ]
     }
   ],
   "commitConvention": "angular"

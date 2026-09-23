@@ -92,6 +92,14 @@ docker compose up -d
 
 Once running, access the dashboard at: `http://localhost:3000`
 
+## Easypanel
+
+[Easypanel](https://easypanel.io) is a self-hosted Docker deployment platform, and Ideon has a one-click deployment template there.
+
+[![Deploy on Easypanel](https://easypanel.io/img/deploy-on-easypanel-40.svg)](https://easypanel.io/templates/ideon)
+
+The template sets up the required PostgreSQL database and a persistent volume for `/app/storage` automatically.
+
 ## Contributing
 
 If you've ever wanted to contribute to open source, and a great cause, now is your chance!

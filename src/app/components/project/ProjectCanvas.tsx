@@ -11,6 +11,7 @@ import {
   Node,
   Edge,
 } from "@xyflow/react";
+import { captureSubCanvasThumbnail } from "./subcanvas/thumbnailCapture";
 
 import "@xyflow/react/dist/style.css";
 
@@ -103,6 +104,12 @@ import {
 } from "./hooks/useProjectCanvasState";
 import { focusProjectCanvas } from "./utils/focusCanvas";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
+import SubCanvasBlock from "./SubCanvasBlock";
+import SubCanvasBreadcrumb from "./SubCanvasBreadcrumb";
+import SubCanvasProvider, {
+  useSubCanvasNavigation,
+} from "./subcanvas/SubCanvasProvider";
+import { MAX_CANVAS_DEPTH } from "./subcanvas/subCanvasUtils";
 import {
   getSelectedNoteBlockIdForShortcut,
   shouldIgnoreNodeContextMenuShortcut,
@@ -287,6 +294,7 @@ const blockTypes = {
   webhook: WebhookBlock,
   cron: CronBlock,
   latex: CanvasBlock,
+  subcanvas: SubCanvasBlock,
   core: ProjectCoreBlock,
 };
 
@@ -297,8 +305,14 @@ const linkTypes = {
 function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
   const { dict } = useI18n();
   const { user } = useUser();
-  const { getViewport, setViewport, screenToFlowPosition, setNodes } =
-    useReactFlowHook();
+  const {
+    getNodes,
+    getViewport,
+    setViewport,
+    fitView,
+    screenToFlowPosition,
+    setNodes,
+  } = useReactFlowHook();
   const router = useRouter();
   const flowContainerRef = useRef<HTMLDivElement>(null);
   const lastClickRef = useRef<{ time: number; x: number; y: number } | null>(
@@ -714,2055 +728,2260 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     };
   }, [initialProjectId, currentUserRole]);
 
-  const { yDoc, provider } = yjsData || { yDoc: null, provider: null };
+  const yDoc = yjsData?.yDoc ?? null;
+  const provider = yjsData?.provider ?? null;
 
-  const yBlocks = useMemo(() => {
-    if (!yDoc) return null;
-    return yDoc.getMap("blocks") as Y.Map<Node<BlockData>>;
-  }, [yDoc]);
+  const captureActiveCanvasThumbnail = useCallback(async () => {
+    const stage = flowContainerRef.current?.querySelector<HTMLElement>(
+      ".react-flow__viewport",
+    );
+    if (!stage) return null;
 
-  const yLinks = useMemo(() => {
-    if (!yDoc) return null;
-    return yDoc.getMap("links") as Y.Map<Edge>;
-  }, [yDoc]);
+    return captureSubCanvasThumbnail({ nodes: getNodes(), stage });
+  }, [getNodes]);
 
-  const yContents = useMemo(() => {
-    if (!yDoc) return null;
-    return yDoc.getMap("contents") as Y.Map<Y.Text>;
-  }, [yDoc]);
-
-  const handleSaveStateRef = useRef<
-    | ((
-        intent?: string,
-        overrideBlocks?: Node<BlockData>[],
-        overrideLinks?: Edge[],
-        options?: { isAuto?: boolean },
-      ) => Promise<boolean | { success: boolean; unchanged?: boolean }>)
-    | null
-  >(null);
-  const isPreviewModeRef = useRef(false);
-
-  const { triggerAutoSnapshot } = useAutoSnapshot({
-    handleSaveStateRef,
-    isPreviewMode: false,
-    isPreviewModeRef,
-    isReadOnly: currentUserRole === "viewer",
-    isRemoteSynced,
-  });
-
-  const onGraphMutationCallback = useCallback(
-    (intent: string) => {
-      triggerAutoSnapshot(intent as AutoSnapshotIntent);
-    },
-    [triggerAutoSnapshot],
+  return (
+    <SubCanvasProvider
+      yDoc={yDoc}
+      canMutate={currentUserRole !== "viewer"}
+      captureThumbnail={captureActiveCanvasThumbnail}
+    >
+      <ProjectCanvasSubCanvas
+        initialProjectId={initialProjectId}
+        yDoc={yDoc}
+        provider={provider}
+        currentUser={currentUser}
+        currentUserRole={currentUserRole}
+        isLocalSynced={isLocalSynced}
+        isRemoteSynced={isRemoteSynced}
+        isSocketConnected={isSocketConnected}
+        isAccessValidated={isAccessValidated}
+        pointerTypeRef={pointerTypeRef}
+        flowContainerRef={flowContainerRef}
+        lastClickRef={lastClickRef}
+        lastNodeClickRef={lastNodeClickRef}
+      />
+    </SubCanvasProvider>
   );
 
-  const {
-    blocks,
-    onBlocksChange,
-    links,
-    setLinks: _setLinks,
-    isLoading,
-    blockToDelete,
-    setBlockToDelete,
-    blocksToDelete,
-    setBlocksToDelete,
-    zoom,
-    contextMenu,
-    setContextMenu,
-    isInviteModalOpen,
-    setIsInviteModalOpen,
-    transferBlock,
-    setTransferBlock,
-    isPreviewMode,
-    selectedStateId,
-    handleFitView,
-    handleZoomIn,
-    handleZoomOut,
-    onViewportChange,
-    onMove,
-    handleDeleteState,
-    handleRenameState,
-    handleSaveState,
-    onLinksChange,
-    onBlockDragStart,
-    onBlockDrag,
-    onBlockDragStop,
-    onConnect,
-    handleDeleteBlock: _handleDeleteBlock,
-    deleteLinks: _deleteLinks,
-    handleToggleContentLock,
-    handleTogglePositionLock,
-    handleTransferBlock,
-    confirmDelete,
-    onKeyDown,
-    onPointerMove,
-    onPointerLeave,
-    mousePosRef,
-    handlePreview,
-    handleApplyState,
-    onBlockContextMenu,
-    onEdgeContextMenu,
-    onPaneContextMenu,
-    onPaneClick: originalOnPaneClick,
-    onLinkClick,
-    handleCreateBlock,
-    handleDuplicateBlock,
-    onExternalDragEnter,
-    onExternalDragLeave,
-    onExternalDragOver,
-    handleExternalDrop,
-    isExternalDropActive,
-    dropImportProgress,
-    remoteCursorsRef,
-    presenceUsers,
-    draftsByBlock,
-    getDraftsForBlock,
-    writeDraft,
-    deleteDraft,
-    shareCursor,
-    setShareCursor,
-    projectOwnerId,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    hasSeenOnboarding,
-    helperLines,
-    setHelperLines,
-    isShiftPressed,
-    setActiveResizeSnap,
-    automationStates,
-    handleResetAutomationState,
-  } = useProjectCanvasState(
+  function ProjectCanvasSubCanvas({
     initialProjectId,
-    currentUser,
-    currentUserRole || undefined,
-    yBlocks,
-    yLinks,
-    yContents,
     yDoc,
-    provider?.awareness || null,
+    provider,
+    currentUser,
+    currentUserRole,
     isLocalSynced,
     isRemoteSynced,
-    onGraphMutationCallback,
-  );
-
-  useEffect(() => {
-    handleSaveStateRef.current = handleSaveState;
-  }, [handleSaveState]);
-
-  const isReadOnly = isPreviewMode || currentUserRole === "viewer";
-
-  useEffect(() => {
-    isPreviewModeRef.current = isPreviewMode;
-  }, [isPreviewMode]);
-
-  const [logsBlock, setLogsBlock] = useState<{
-    id: string;
-    title?: string;
-  } | null>(null);
-  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-  const [isCanvasSearchOpen, setIsCanvasSearchOpen] = useState(false);
-  const [canvasSearchQuery, setCanvasSearchQuery] = useState("");
-  const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isMobileTopbar, setIsMobileTopbar] = useState(false);
-  const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
-  const [newBlockId, setNewBlockId] = useState<string | null>(null);
-  const [pendingBlockPosition, setPendingBlockPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [pendingConnection, setPendingConnection] = useState<{
-    sourceNodeId: string;
-    handleId: string | null;
-    position: { x: number; y: number };
-  } | null>(null);
-  const mobileActionsRef = useRef<HTMLDivElement>(null);
-  const noteModeShortcutHandlersRef = useRef(
-    new Map<string, NoteModeShortcutHandler>(),
-  );
-
-  const registerNoteModeShortcutHandler = useCallback(
-    (blockId: string, handler: NoteModeShortcutHandler | null) => {
-      if (handler) {
-        noteModeShortcutHandlersRef.current.set(blockId, handler);
+    isSocketConnected,
+    isAccessValidated,
+    pointerTypeRef,
+    flowContainerRef,
+    lastClickRef,
+    lastNodeClickRef,
+  }: {
+    initialProjectId: string | undefined;
+    yDoc: Y.Doc | null;
+    provider: WebsocketProvider | null;
+    currentUser: UserPresence | null;
+    currentUserRole: string | null;
+    isLocalSynced: boolean;
+    isRemoteSynced: boolean;
+    isSocketConnected: boolean;
+    isAccessValidated: boolean;
+    pointerTypeRef: React.MutableRefObject<string>;
+    flowContainerRef: React.MutableRefObject<HTMLDivElement | null>;
+    lastClickRef: React.MutableRefObject<{
+      time: number;
+      x: number;
+      y: number;
+    } | null>;
+    lastNodeClickRef: React.MutableRefObject<{
+      id: string;
+      time: number;
+    } | null>;
+  }) {
+    const { dict } = useI18n();
+    const {
+      activeCanvasId,
+      activeDepth,
+      popCanvas,
+      pendingRestore,
+      clearPendingRestore,
+      setPreviewMode,
+    } = useSubCanvasNavigation();
+    // Apply a queued viewport restore (fitView or saved viewport) after a
+    // push/pop/jump changes the active canvas. Consumed once, then cleared.
+    // fitView is deferred one frame so ReactFlow can render the new canvas
+    // nodes before we compute the bounding box.
+    useEffect(() => {
+      if (!pendingRestore) return;
+      if (pendingRestore.type === "viewport") {
+        setViewport(
+          {
+            x: pendingRestore.viewport.x,
+            y: pendingRestore.viewport.y,
+            zoom: pendingRestore.viewport.zoom,
+          },
+          { duration: 0 },
+        );
+        clearPendingRestore();
       } else {
-        noteModeShortcutHandlersRef.current.delete(blockId);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            fitView({ padding: 0.2, duration: 0 });
+            clearPendingRestore();
+          });
+        });
       }
-    },
-    [],
-  );
+    }, [pendingRestore, setViewport, fitView, clearPendingRestore]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+    const yBlocks = useMemo(() => {
+      if (!yDoc) return null;
+      return yDoc.getMap(
+        activeCanvasId === "root" ? "blocks" : `blocks:${activeCanvasId}`,
+      ) as Y.Map<Node<BlockData>>;
+    }, [yDoc, activeCanvasId]);
 
-    const media = window.matchMedia("(max-width: 870px)");
-    const update = () => setIsMobileTopbar(media.matches);
+    const yLinks = useMemo(() => {
+      if (!yDoc) return null;
+      return yDoc.getMap(
+        activeCanvasId === "root" ? "links" : `links:${activeCanvasId}`,
+      ) as Y.Map<Edge>;
+    }, [yDoc, activeCanvasId]);
 
-    update();
+    const yContents = useMemo(() => {
+      if (!yDoc) return null;
+      return yDoc.getMap(
+        activeCanvasId === "root" ? "contents" : `contents:${activeCanvasId}`,
+      ) as Y.Map<Y.Text>;
+    }, [yDoc, activeCanvasId]);
 
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", update);
-      return () => media.removeEventListener("change", update);
-    }
+    const yNoteDocuments = useMemo(() => {
+      if (!yDoc) return null;
+      return yDoc.getMap(
+        activeCanvasId === "root"
+          ? "noteDocuments"
+          : `noteDocuments:${activeCanvasId}`,
+      ) as Y.Map<Y.XmlFragment>;
+    }, [yDoc, activeCanvasId]);
 
-    media.addListener(update);
-    return () => media.removeListener(update);
-  }, []);
+    const handleSaveStateRef = useRef<
+      | ((
+          intent?: string,
+          overrideBlocks?: Node<BlockData>[],
+          overrideLinks?: Edge[],
+          options?: { isAuto?: boolean },
+        ) => Promise<boolean | { success: boolean; unchanged?: boolean }>)
+      | null
+    >(null);
+    const isPreviewModeRef = useRef(false);
 
-  useEffect(() => {
-    if (!isMobileTopbar) {
-      setIsMobileActionsOpen(false);
-    }
-  }, [isMobileTopbar]);
+    const { triggerAutoSnapshot } = useAutoSnapshot({
+      handleSaveStateRef,
+      isPreviewMode: false,
+      isPreviewModeRef,
+      isReadOnly: currentUserRole === "viewer",
+      isRemoteSynced,
+    });
 
-  useEffect(() => {
-    if (!isMobileActionsOpen) return;
+    const onGraphMutationCallback = useCallback(
+      (intent: string) => triggerAutoSnapshot(intent as AutoSnapshotIntent),
+      [triggerAutoSnapshot],
+    );
 
-    const closeOnOutside = (event: MouseEvent | TouchEvent) => {
-      const target = event.target;
-      if (!(target instanceof globalThis.Node)) return;
-      if (mobileActionsRef.current?.contains(target)) return;
-      setIsMobileActionsOpen(false);
-    };
+    const {
+      blocks,
+      onBlocksChange,
+      links,
+      setLinks: _setLinks,
+      isLoading,
+      blockToDelete,
+      setBlockToDelete,
+      blocksToDelete,
+      setBlocksToDelete,
+      zoom,
+      contextMenu,
+      setContextMenu,
+      isInviteModalOpen,
+      setIsInviteModalOpen,
+      transferBlock,
+      setTransferBlock,
+      isPreviewMode,
+      selectedStateId,
+      handleFitView,
+      handleZoomIn,
+      handleZoomOut,
+      onViewportChange,
+      onMove,
+      handleDeleteState,
+      handleRenameState,
+      handleSaveState,
+      onLinksChange,
+      onBlockDragStart,
+      onBlockDrag,
+      onBlockDragStop,
+      onConnect,
+      handleDeleteBlock: _handleDeleteBlock,
+      deleteLinks: _deleteLinks,
+      handleToggleContentLock,
+      handleTogglePositionLock,
+      handleTransferBlock,
+      confirmDelete,
+      onKeyDown,
+      onPointerMove,
+      onPointerLeave,
+      mousePosRef,
+      handlePreview,
+      handleApplyState,
+      onBlockContextMenu,
+      onEdgeContextMenu,
+      onPaneContextMenu,
+      onPaneClick: originalOnPaneClick,
+      onLinkClick,
+      handleCreateBlock,
+      handleDuplicateBlock,
+      onExternalDragEnter,
+      onExternalDragLeave,
+      onExternalDragOver,
+      handleExternalDrop,
+      isExternalDropActive,
+      dropImportProgress,
+      remoteCursorsRef,
+      presenceUsers,
+      draftsByBlock,
+      getDraftsForBlock,
+      writeDraft,
+      deleteDraft,
+      shareCursor,
+      setShareCursor,
+      projectOwnerId,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
+      hasSeenOnboarding,
+      helperLines,
+      setHelperLines,
+      isShiftPressed,
+      setActiveResizeSnap,
+      automationStates,
+      handleResetAutomationState,
+    } = useProjectCanvasState(
+      initialProjectId,
+      currentUser,
+      currentUserRole || undefined,
+      yBlocks,
+      yLinks,
+      yContents,
+      yDoc,
+      provider?.awareness || null,
+      isLocalSynced,
+      isRemoteSynced,
+      onGraphMutationCallback,
+      yNoteDocuments,
+      activeCanvasId,
+    );
 
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+    useEffect(() => {
+      setPreviewMode(isPreviewMode);
+    }, [isPreviewMode, setPreviewMode]);
+
+    useEffect(() => {
+      handleSaveStateRef.current = handleSaveState;
+    }, [handleSaveState]);
+
+    const isReadOnly = isPreviewMode || currentUserRole === "viewer";
+
+    useEffect(() => {
+      isPreviewModeRef.current = isPreviewMode;
+    }, [isPreviewMode]);
+
+    const [logsBlock, setLogsBlock] = useState<{
+      id: string;
+      title?: string;
+    } | null>(null);
+    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+    const [isCanvasSearchOpen, setIsCanvasSearchOpen] = useState(false);
+    const [canvasSearchQuery, setCanvasSearchQuery] = useState("");
+    const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [isMobileTopbar, setIsMobileTopbar] = useState(false);
+    const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
+    const [newBlockId, setNewBlockId] = useState<string | null>(null);
+    const [pendingBlockPosition, setPendingBlockPosition] = useState<{
+      x: number;
+      y: number;
+    } | null>(null);
+    const [pendingConnection, setPendingConnection] = useState<{
+      sourceNodeId: string;
+      handleId: string | null;
+      position: { x: number; y: number };
+    } | null>(null);
+    const mobileActionsRef = useRef<HTMLDivElement>(null);
+    const noteModeShortcutHandlersRef = useRef(
+      new Map<string, NoteModeShortcutHandler>(),
+    );
+
+    const registerNoteModeShortcutHandler = useCallback(
+      (blockId: string, handler: NoteModeShortcutHandler | null) => {
+        if (handler) {
+          noteModeShortcutHandlersRef.current.set(blockId, handler);
+        } else {
+          noteModeShortcutHandlersRef.current.delete(blockId);
+        }
+      },
+      [],
+    );
+
+    useEffect(() => {
+      if (typeof window === "undefined") return;
+
+      const media = window.matchMedia("(max-width: 870px)");
+      const update = () => setIsMobileTopbar(media.matches);
+
+      update();
+
+      if (typeof media.addEventListener === "function") {
+        media.addEventListener("change", update);
+        return () => media.removeEventListener("change", update);
+      }
+
+      media.addListener(update);
+      return () => media.removeListener(update);
+    }, []);
+
+    useEffect(() => {
+      if (!isMobileTopbar) {
         setIsMobileActionsOpen(false);
       }
-    };
+    }, [isMobileTopbar]);
 
-    document.addEventListener("mousedown", closeOnOutside, true);
-    document.addEventListener("touchstart", closeOnOutside, true);
-    window.addEventListener("keydown", closeOnEscape, true);
+    useEffect(() => {
+      if (!isMobileActionsOpen) return;
 
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutside, true);
-      document.removeEventListener("touchstart", closeOnOutside, true);
-      window.removeEventListener("keydown", closeOnEscape, true);
-    };
-  }, [isMobileActionsOpen]);
+      const closeOnOutside = (event: MouseEvent | TouchEvent) => {
+        const target = event.target;
+        if (!(target instanceof globalThis.Node)) return;
+        if (mobileActionsRef.current?.contains(target)) return;
+        setIsMobileActionsOpen(false);
+      };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && pendingConnection) {
-        setPendingConnection(null);
-        window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-        return;
-      }
+      const closeOnEscape = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          setIsMobileActionsOpen(false);
+        }
+      };
 
-      if (e.key === "Escape" && isCanvasSearchOpen) {
-        setIsCanvasSearchOpen(false);
-        return;
-      }
+      document.addEventListener("mousedown", closeOnOutside, true);
+      document.addEventListener("touchstart", closeOnOutside, true);
+      window.addEventListener("keydown", closeOnEscape, true);
 
-      if (e.ctrlKey || e.metaKey) {
-        if (document.body.classList.contains("sketch-modal-open")) {
+      return () => {
+        document.removeEventListener("mousedown", closeOnOutside, true);
+        document.removeEventListener("touchstart", closeOnOutside, true);
+        window.removeEventListener("keydown", closeOnEscape, true);
+      };
+    }, [isMobileActionsOpen]);
+
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && pendingConnection) {
+          setPendingConnection(null);
+          window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
           return;
         }
 
-        const target = e.target as HTMLElement | null;
-        const activeElement =
-          document.activeElement instanceof HTMLElement
-            ? document.activeElement
-            : target;
-        const shortcutKey = e.key.toLowerCase();
-        const isEditing =
-          !!activeElement &&
-          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
-            activeElement.isContentEditable);
+        if (e.key === "Escape" && isCanvasSearchOpen) {
+          setIsCanvasSearchOpen(false);
+          return;
+        }
 
-        if (!isEditing) {
-          if (shortcutKey === "z" && !e.shiftKey) {
+        if (
+          e.key === "Escape" &&
+          activeDepth > 0 &&
+          !document.body.classList.contains("sketch-modal-open")
+        ) {
+          const activeEl = document.activeElement as HTMLElement | null;
+          const isEditing =
+            !!activeEl &&
+            (["INPUT", "TEXTAREA", "SELECT"].includes(activeEl.tagName) ||
+              activeEl.isContentEditable);
+          if (!isEditing) {
             e.preventDefault();
             e.stopPropagation();
-            undo();
+            void popCanvas();
+            return;
+          }
+        }
+
+        if (e.ctrlKey || e.metaKey) {
+          if (document.body.classList.contains("sketch-modal-open")) {
             return;
           }
 
-          if (shortcutKey === "y" || (shortcutKey === "z" && e.shiftKey)) {
-            e.preventDefault();
-            e.stopPropagation();
-            redo();
-            return;
-          }
+          const target = e.target as HTMLElement | null;
+          const activeElement =
+            document.activeElement instanceof HTMLElement
+              ? document.activeElement
+              : target;
+          const shortcutKey = e.key.toLowerCase();
+          const isEditing =
+            !!activeElement &&
+            (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+              activeElement.isContentEditable);
 
-          if (shortcutKey === "p" || shortcutKey === "e") {
-            const noteBlockId = getSelectedNoteBlockIdForShortcut({
-              blocks,
-              activeElement,
-            });
-            const shortcutResult = noteBlockId
-              ? noteModeShortcutHandlersRef.current.get(noteBlockId)?.(
-                  shortcutKey as NoteModeShortcutKey,
-                )
-              : undefined;
-
-            if (shortcutResult === "handled") {
+          if (!isEditing) {
+            if (shortcutKey === "z" && !e.shiftKey) {
               e.preventDefault();
               e.stopPropagation();
+              undo();
+              return;
+            }
+
+            if (shortcutKey === "y" || (shortcutKey === "z" && e.shiftKey)) {
+              e.preventDefault();
+              e.stopPropagation();
+              redo();
+              return;
+            }
+
+            if (shortcutKey === "p" || shortcutKey === "e") {
+              const noteBlockId = getSelectedNoteBlockIdForShortcut({
+                blocks,
+                activeElement,
+              });
+              const shortcutResult = noteBlockId
+                ? noteModeShortcutHandlersRef.current.get(noteBlockId)?.(
+                    shortcutKey as NoteModeShortcutKey,
+                  )
+                : undefined;
+
+              if (shortcutResult === "handled") {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
+            }
+
+            if (shortcutKey === "p") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsPaletteOpen((v) => !v);
+            } else if (shortcutKey === "k") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsCanvasSearchOpen((v) => !v);
+            } else if (shortcutKey === "a") {
+              e.preventDefault();
+              e.stopPropagation();
+              setPendingBlockPosition(
+                screenToFlowPosition(mousePosRef.current),
+              );
+              setIsAddBlockOpen((v) => !v);
+            } else if (shortcutKey === "h") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsHistoryOpen((v) => !v);
+            }
+          }
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown, true);
+      return () => window.removeEventListener("keydown", handleKeyDown, true);
+    }, [
+      isCanvasSearchOpen,
+      mousePosRef,
+      pendingConnection,
+      activeDepth,
+      popCanvas,
+      redo,
+      screenToFlowPosition,
+      setPendingBlockPosition,
+      undo,
+    ]);
+    const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+    useEffect(() => {
+      if (
+        !currentUser ||
+        !projectOwnerId ||
+        currentUser.id !== projectOwnerId ||
+        !initialProjectId
+      )
+        return;
+
+      const fetchRequests = async () => {
+        try {
+          const res = await fetch(`/api/projects/${initialProjectId}/requests`);
+          if (res.ok) {
+            const requests = await res.json();
+            // Filter for pending requests
+            const pending = Array.isArray(requests)
+              ? requests.filter(
+                  (r: { status: string }) => r.status === "pending",
+                ).length
+              : 0;
+            setPendingRequestsCount(pending);
+          }
+        } catch (e) {
+          clientLogger.error("Failed to fetch requests count", e);
+        }
+      };
+
+      fetchRequests();
+    }, [initialProjectId, currentUser, projectOwnerId]);
+
+    // Listen for pending requests updates via WebSocket
+    useEffect(() => {
+      if (
+        !yDoc ||
+        !currentUser ||
+        !projectOwnerId ||
+        currentUser.id !== projectOwnerId
+      )
+        return;
+
+      const metaMap = yDoc.getMap("meta");
+
+      const handleMetaUpdate = () => {
+        const count = metaMap.get("pendingRequestsCount");
+        if (typeof count === "number") {
+          setPendingRequestsCount(count);
+        }
+      };
+
+      metaMap.observe(handleMetaUpdate);
+
+      // Check if value already exists
+      const currentCount = metaMap.get("pendingRequestsCount");
+      if (typeof currentCount === "number") {
+        setPendingRequestsCount(currentCount);
+      }
+
+      return () => {
+        metaMap.unobserve(handleMetaUpdate);
+      };
+    }, [yDoc, currentUser, projectOwnerId]);
+
+    const onConnectWithSnapshot = useCallback(
+      (...args: Parameters<typeof onConnect>) => {
+        onConnect(...args);
+        triggerAutoSnapshot("Connection created");
+      },
+      [onConnect, triggerAutoSnapshot],
+    );
+
+    const onConnectStart = useCallback(
+      (
+        _: unknown,
+        {
+          nodeId,
+          handleId,
+        }: { nodeId: string | null; handleId: string | null },
+      ) => {
+        if (!nodeId) return;
+        setPendingConnection({
+          sourceNodeId: nodeId,
+          handleId,
+          position: { x: 0, y: 0 },
+        });
+      },
+      [],
+    );
+
+    const onConnectEnd = useCallback(
+      (event: MouseEvent | TouchEvent) => {
+        if (!pendingConnection) return;
+
+        const target = event.target as HTMLElement;
+        const isPane =
+          target.classList.contains("react-flow__pane") ||
+          target.closest(".react-flow__pane");
+        const isNode = !!target.closest(".react-flow__node");
+        const isEdge = !!target.closest(".react-flow__edge");
+
+        if (isPane && !isNode && !isEdge) {
+          let clientX = 0;
+          let clientY = 0;
+
+          if ("clientX" in event) {
+            clientX = event.clientX;
+            clientY = event.clientY;
+          } else {
+            const touch = event.touches?.[0] || event.changedTouches?.[0];
+            if (touch) {
+              clientX = touch.clientX;
+              clientY = touch.clientY;
+            }
+          }
+
+          const flowPos = screenToFlowPosition({ x: clientX, y: clientY });
+
+          setPendingConnection((prev) =>
+            prev ? { ...prev, position: flowPos } : null,
+          );
+          setIsAddBlockOpen(true);
+        } else {
+          setPendingConnection(null);
+        }
+      },
+      [pendingConnection, screenToFlowPosition],
+    );
+
+    const onLongPress = useCallback(
+      (
+        e: React.PointerEvent | PointerEvent | React.TouchEvent | TouchEvent,
+        x: number,
+        y: number,
+      ) => {
+        if (isReadOnly) return;
+
+        // Clear any existing selection to prevent text selection on long press
+        if (window.getSelection) {
+          window.getSelection()?.removeAllRanges();
+        }
+
+        const target = e.target as HTMLElement;
+        const nodeElement = target.closest(".react-flow__node");
+        const edgeElement = target.closest(".react-flow__edge");
+
+        if (nodeElement) {
+          const nodeId = nodeElement.getAttribute("data-id");
+          if (nodeId) {
+            const node = (blocks as Node<BlockData>[]).find(
+              (n) => n.id === nodeId,
+            );
+            if (node) {
+              onBlockContextMenu(
+                {
+                  preventDefault: () => {},
+                  clientX: x,
+                  clientY: y,
+                } as unknown as React.MouseEvent,
+                node,
+              );
+            }
+          }
+        } else if (edgeElement) {
+          // Do nothing for edges on long press, they use double tap
+          return;
+        } else {
+          return;
+        }
+      },
+      [isReadOnly, blocks, onBlockContextMenu, onPaneContextMenu],
+    );
+
+    const handlePaneClick = useCallback(
+      (event: React.MouseEvent | React.TouchEvent) => {
+        // button 2 is right click
+        if ("button" in event && event.button === 2) return;
+
+        const activeElement = document.activeElement as HTMLElement | null;
+        const focusedEditors = Array.from(
+          document.querySelectorAll(
+            ".ProseMirror, .cm-content, [contenteditable='true']",
+          ),
+        ) as HTMLElement[];
+
+        focusedEditors.forEach((element) => {
+          if (typeof element.blur === "function") {
+            element.blur();
+          }
+        });
+
+        if (
+          activeElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
+            activeElement.isContentEditable)
+        ) {
+          activeElement.blur();
+        }
+
+        focusProjectCanvas();
+
+        originalOnPaneClick();
+
+        const now = Date.now();
+        const clientX =
+          "clientX" in event
+            ? event.clientX
+            : (event as React.TouchEvent).touches?.[0]?.clientX;
+        const clientY =
+          "clientY" in event
+            ? event.clientY
+            : (event as React.TouchEvent).touches?.[0]?.clientY;
+
+        if (lastClickRef.current) {
+          const timeDiff = now - lastClickRef.current.time;
+          const dist = Math.sqrt(
+            Math.pow(clientX - lastClickRef.current.x, 2) +
+              Math.pow(clientY - lastClickRef.current.y, 2),
+          );
+
+          if (timeDiff < 400 && dist < 20) {
+            onPaneContextMenu(event as React.MouseEvent);
+            lastClickRef.current = null;
+            return;
+          }
+        }
+        lastClickRef.current = { time: now, x: clientX, y: clientY };
+      },
+      [onPaneContextMenu, originalOnPaneClick],
+    );
+
+    const handleNodeClick = useCallback(
+      (event: React.MouseEvent, node: Node) => {
+        // Clear context menu as per original onBlockClick
+        originalOnPaneClick();
+
+        if (shouldIgnoreNodeContextMenuShortcut(event.target)) {
+          lastNodeClickRef.current = null;
+          return;
+        }
+
+        const now = Date.now();
+        if (
+          lastNodeClickRef.current &&
+          lastNodeClickRef.current.id === node.id
+        ) {
+          const diff = now - lastNodeClickRef.current.time;
+          if (diff < 400) {
+            onBlockContextMenu(event, node as Node<BlockData>);
+            lastNodeClickRef.current = null;
+            return;
+          }
+        }
+        lastNodeClickRef.current = { id: node.id, time: now };
+      },
+      [onBlockContextMenu, originalOnPaneClick],
+    );
+
+    const touchHandlers = useTouchGestures({
+      onLongPress,
+      onDoubleTap: (e, x, y) => {
+        if (isReadOnly) return;
+
+        // Using elementFromPoint for more reliable hit testing for edges/pane
+        const elementAtPoint = document.elementFromPoint(x, y);
+        const target = (elementAtPoint || e.target) as HTMLElement;
+
+        const edgeElement = target.closest(".react-flow__edge");
+
+        if (edgeElement) {
+          const edgeId = edgeElement.getAttribute("data-id");
+          if (edgeId) {
+            const edge = (links as Edge[]).find((l) => l.id === edgeId);
+            if (edge) {
+              onEdgeContextMenu(
+                {
+                  preventDefault: () => {},
+                  clientX: x,
+                  clientY: y,
+                } as unknown as React.MouseEvent,
+                edge,
+              );
+              return;
+            }
+          }
+        }
+
+        onPaneContextMenu({
+          preventDefault: () => {},
+          clientX: x,
+          clientY: y,
+        } as unknown as React.MouseEvent);
+      },
+      allowLongPress: false,
+    });
+
+    const canvasTouchViewportHandlers = useCanvasTouchViewport({
+      disabled: isReadOnly,
+      minZoom: 0.1,
+      maxZoom: 4,
+      getViewport,
+      setViewport,
+      onPaneDoubleTap: (x, y) => {
+        onPaneContextMenu({
+          preventDefault: () => {},
+          clientX: x,
+          clientY: y,
+        } as unknown as React.MouseEvent);
+      },
+    });
+
+    useEffect(() => {
+      const container = flowContainerRef.current;
+      if (!container) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const { x, y, zoom } = getViewport();
+          const delta = -e.deltaY;
+          const sensitivity = 0.01; // Boosted
+          const factor = Math.pow(2, delta * sensitivity);
+          const nextZoom = Math.min(Math.max(zoom * factor, 0.1), 4);
+
+          if (nextZoom === zoom) return;
+
+          const rect = container.getBoundingClientRect();
+          const centerX = e.clientX - rect.left;
+          const centerY = e.clientY - rect.top;
+
+          const flowX = (centerX - x) / zoom;
+          const flowY = (centerY - y) / zoom;
+
+          const nextX = centerX - flowX * nextZoom;
+          const nextY = centerY - flowY * nextZoom;
+
+          setViewport({ x: nextX, y: nextY, zoom: nextZoom }, { duration: 0 });
+        }
+      };
+
+      container.addEventListener("wheel", handleWheel, { passive: false });
+      return () => container.removeEventListener("wheel", handleWheel);
+    }, [getViewport, setViewport]);
+
+    const [dontAskAgain, setDontAskAgain] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+    const handleEdgeLabelSubmit = useCallback(
+      (edgeId: string, label: string) => {
+        _setLinks((eds) =>
+          eds.map((edge) => {
+            if (edge.id === edgeId) {
+              return {
+                ...edge,
+                data: { ...edge.data, label, isEditing: false },
+              };
+            }
+            return edge;
+          }),
+        );
+      },
+      [_setLinks],
+    );
+
+    const handleEdgeLabelCancel = useCallback(
+      (edgeId: string) => {
+        _setLinks((eds) =>
+          eds.map((edge) => {
+            if (edge.id === edgeId) {
+              return {
+                ...edge,
+                data: { ...edge.data, isEditing: false },
+              };
+            }
+            return edge;
+          }),
+        );
+      },
+      [_setLinks],
+    );
+
+    const onLinkDoubleClick = useCallback(
+      (event: React.MouseEvent, edge: Edge) => {
+        if (isReadOnly) return;
+        _setLinks((eds) =>
+          eds.map((e) => {
+            if (e.id === edge.id) {
+              return {
+                ...e,
+                data: {
+                  ...e.data,
+                  isEditing: true,
+                  onLabelSubmit: handleEdgeLabelSubmit,
+                  onLabelCancel: handleEdgeLabelCancel,
+                },
+              };
+            }
+            return e;
+          }),
+        );
+      },
+      [isReadOnly, _setLinks, handleEdgeLabelSubmit, handleEdgeLabelCancel],
+    );
+
+    const isValidConnection = useCallback(
+      (connection: { source: string; target: string }) => {
+        if (connection.source === connection.target) {
+          return false;
+        }
+
+        const sourceBlock = blocks.find(
+          (block) => block.id === connection.source,
+        );
+        const targetBlock = blocks.find(
+          (block) => block.id === connection.target,
+        );
+
+        if (sourceBlock?.type === "folder" && targetBlock?.type === "core") {
+          return false;
+        }
+
+        return true;
+      },
+      [blocks],
+    );
+
+    const isTyping = useMemo(() => {
+      if (!currentUser) return false;
+      return presenceUsers.some((u) => u.id === currentUser.id && u.isTyping);
+    }, [presenceUsers, currentUser]);
+
+    const contextMenuRef = useRef<HTMLDivElement>(null);
+
+    useLayoutEffect(() => {
+      if (contextMenu && contextMenuRef.current) {
+        const menu = contextMenuRef.current;
+        const parent = menu.parentElement;
+        if (!parent) return;
+
+        const rect = menu.getBoundingClientRect();
+        const parentRect = parent.getBoundingClientRect();
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 10;
+
+        let adjustedTop = contextMenu.top;
+        let adjustedLeft = contextMenu.left;
+
+        // Vertical repositioning
+        if (adjustedTop + rect.height > viewportHeight - margin) {
+          adjustedTop = adjustedTop - rect.height;
+        }
+
+        // Horizontal repositioning
+        if (adjustedLeft + rect.width > viewportWidth - margin) {
+          adjustedLeft = adjustedLeft - rect.width;
+        }
+
+        // Final clamping to viewport bounds
+        adjustedTop = Math.max(
+          margin,
+          Math.min(adjustedTop, viewportHeight - rect.height - margin),
+        );
+        adjustedLeft = Math.max(
+          margin,
+          Math.min(adjustedLeft, viewportWidth - rect.width - margin),
+        );
+
+        // Pass 1: Set position relative to parent
+        const finalTop = adjustedTop - parentRect.top;
+        const finalLeft = adjustedLeft - parentRect.left;
+
+        menu.style.setProperty("--menu-top", `${finalTop}px`);
+        menu.style.setProperty("--menu-left", `${finalLeft}px`);
+        menu.style.opacity = "1";
+
+        // Pass 2: Detect and fix layout shift (closed-loop correction)
+        const actualRect = menu.getBoundingClientRect();
+        const errorX = actualRect.left - adjustedLeft;
+        const errorY = actualRect.top - adjustedTop;
+
+        if (Math.abs(errorX) > 1 || Math.abs(errorY) > 1) {
+          menu.style.setProperty("--menu-top", `${finalTop - errorY}px`);
+          menu.style.setProperty("--menu-left", `${finalLeft - errorX}px`);
+        }
+      }
+    }, [contextMenu]);
+
+    const contextMenuBlock = useMemo(() => {
+      if (!contextMenu?.id) return null;
+      return blocks.find((n: Node<BlockData>) => n.id === contextMenu.id);
+    }, [contextMenu?.id, blocks]);
+
+    const isCoreOnly = useMemo(() => {
+      return blocks.length === 1 && blocks[0].type === "core";
+    }, [blocks]);
+
+    // --- Hide children of collapsed folders ---
+    const getVisibleBlockIds = (
+      allBlocks: Node<BlockData>[],
+      allLinks: Edge[],
+    ) => {
+      // Build parent->children map
+      const childrenMap = new Map<string, string[]>();
+      allLinks.forEach((edge) => {
+        if (edge.type === "connection" && edge.source && edge.target) {
+          if (!childrenMap.has(edge.source)) childrenMap.set(edge.source, []);
+          childrenMap.get(edge.source)!.push(edge.target);
+        }
+      });
+
+      // Find all collapsed folders
+      const collapsedFolders = new Set<string>();
+      allBlocks.forEach((block) => {
+        if (block.type === "folder") {
+          let meta: Record<string, unknown> = {};
+          const metadata = block.data?.metadata;
+          try {
+            if (typeof metadata === "string") {
+              meta = JSON.parse(metadata);
+            } else if (metadata) {
+              meta = metadata;
+            }
+          } catch {
+            // ignore invalid json
+          }
+          if (meta && (meta as { isCollapsed?: boolean }).isCollapsed)
+            collapsedFolders.add(block.id);
+        }
+      });
+
+      // Recursively collect all descendants of a folder
+      const collectDescendants = (id: string, acc: Set<string>) => {
+        const children = childrenMap.get(id);
+        if (!children) return;
+        for (const childId of children) {
+          acc.add(childId);
+          collectDescendants(childId, acc);
+        }
+      };
+
+      // Exclude all descendants of collapsed folders
+      const hidden = new Set<string>();
+      for (const folderId of collapsedFolders) {
+        collectDescendants(folderId, hidden);
+      }
+
+      // Visible blocks are those not in hidden
+      return new Set(
+        allBlocks.map((b) => b.id).filter((id) => !hidden.has(id)),
+      );
+    };
+
+    const visibleBlockIds = useMemo(
+      () => getVisibleBlockIds(blocks, links),
+      [blocks, links],
+    );
+
+    const blocksWithPreview = useMemo(() => {
+      return blocks
+        .filter((block) => !block.hidden && visibleBlockIds.has(block.id))
+        .map((block) => ({
+          ...block,
+          zIndex: block.type === "frame" ? 0 : 1,
+          className:
+            block.id === newBlockId
+              ? "block-just-created"
+              : block.className || "",
+          data: {
+            ...block.data,
+            isPreviewMode,
+            currentUser: currentUser || undefined,
+            registerNoteModeShortcutHandler,
+            onRequestUndo: undo,
+            onRequestRedo: redo,
+            userRole: currentUserRole || undefined,
+          },
+        }));
+    }, [
+      blocks,
+      isPreviewMode,
+      currentUser,
+      currentUserRole,
+      newBlockId,
+      registerNoteModeShortcutHandler,
+      visibleBlockIds,
+    ]);
+
+    // Focus newly created / duplicated block.
+    useEffect(() => {
+      if (!newBlockId) return;
+      const id = newBlockId;
+
+      const timer = setTimeout(() => {
+        try {
+          setNodes((nodes) =>
+            nodes.map((n) => ({ ...n, selected: n.id === id })),
+          );
+
+          const createdBlock = blocks.find((block) => block.id === id);
+          const blockEl = document.querySelector(
+            `[data-id="${id}"]`,
+          ) as HTMLElement | null;
+
+          if (blockEl) {
+            try {
+              blockEl.scrollIntoView({ block: "center", inline: "center" });
+            } catch {
+              // ignore
+            }
+          }
+
+          const isFreshNoteBlock =
+            (createdBlock?.type === "text" || createdBlock?.type === "latex") &&
+            !(createdBlock.data?.content || "");
+
+          if (isFreshNoteBlock && blockEl) {
+            const editorEl = blockEl.querySelector(
+              ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor]",
+            ) as HTMLElement | null;
+
+            if (editorEl && typeof editorEl.focus === "function") {
+              editorEl.focus();
               return;
             }
           }
 
-          if (shortcutKey === "p") {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsPaletteOpen((v) => !v);
-          } else if (shortcutKey === "k") {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsCanvasSearchOpen((v) => !v);
-          } else if (shortcutKey === "a") {
-            e.preventDefault();
-            e.stopPropagation();
-            setPendingBlockPosition(screenToFlowPosition(mousePosRef.current));
-            setIsAddBlockOpen((v) => !v);
-          } else if (shortcutKey === "h") {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsHistoryOpen((v) => !v);
-          }
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [
-    blocks,
-    isCanvasSearchOpen,
-    mousePosRef,
-    pendingConnection,
-    redo,
-    screenToFlowPosition,
-    setPendingBlockPosition,
-    undo,
-  ]);
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
-
-  useEffect(() => {
-    if (
-      !currentUser ||
-      !projectOwnerId ||
-      currentUser.id !== projectOwnerId ||
-      !initialProjectId
-    )
-      return;
-
-    const fetchRequests = async () => {
-      try {
-        const res = await fetch(`/api/projects/${initialProjectId}/requests`);
-        if (res.ok) {
-          const requests = await res.json();
-          // Filter for pending requests
-          const pending = Array.isArray(requests)
-            ? requests.filter((r: { status: string }) => r.status === "pending")
-                .length
-            : 0;
-          setPendingRequestsCount(pending);
-        }
-      } catch (e) {
-        clientLogger.error("Failed to fetch requests count", e);
-      }
-    };
-
-    fetchRequests();
-  }, [initialProjectId, currentUser, projectOwnerId]);
-
-  // Listen for pending requests updates via WebSocket
-  useEffect(() => {
-    if (
-      !yDoc ||
-      !currentUser ||
-      !projectOwnerId ||
-      currentUser.id !== projectOwnerId
-    )
-      return;
-
-    const metaMap = yDoc.getMap("meta");
-
-    const handleMetaUpdate = () => {
-      const count = metaMap.get("pendingRequestsCount");
-      if (typeof count === "number") {
-        setPendingRequestsCount(count);
-      }
-    };
-
-    metaMap.observe(handleMetaUpdate);
-
-    // Check if value already exists
-    const currentCount = metaMap.get("pendingRequestsCount");
-    if (typeof currentCount === "number") {
-      setPendingRequestsCount(currentCount);
-    }
-
-    return () => {
-      metaMap.unobserve(handleMetaUpdate);
-    };
-  }, [yDoc, currentUser, projectOwnerId]);
-
-  const onConnectWithSnapshot = useCallback(
-    (...args: Parameters<typeof onConnect>) => {
-      onConnect(...args);
-      triggerAutoSnapshot("Connection created");
-    },
-    [onConnect, triggerAutoSnapshot],
-  );
-
-  const onConnectStart = useCallback(
-    (
-      _: unknown,
-      { nodeId, handleId }: { nodeId: string | null; handleId: string | null },
-    ) => {
-      if (!nodeId) return;
-      setPendingConnection({
-        sourceNodeId: nodeId,
-        handleId,
-        position: { x: 0, y: 0 },
-      });
-    },
-    [],
-  );
-
-  const onConnectEnd = useCallback(
-    (event: MouseEvent | TouchEvent) => {
-      if (!pendingConnection) return;
-
-      const target = event.target as HTMLElement;
-      const isPane =
-        target.classList.contains("react-flow__pane") ||
-        target.closest(".react-flow__pane");
-      const isNode = !!target.closest(".react-flow__node");
-      const isEdge = !!target.closest(".react-flow__edge");
-
-      if (isPane && !isNode && !isEdge) {
-        let clientX = 0;
-        let clientY = 0;
-
-        if ("clientX" in event) {
-          clientX = event.clientX;
-          clientY = event.clientY;
-        } else {
-          const touch = event.touches?.[0] || event.changedTouches?.[0];
-          if (touch) {
-            clientX = touch.clientX;
-            clientY = touch.clientY;
-          }
-        }
-
-        const flowPos = screenToFlowPosition({ x: clientX, y: clientY });
-
-        setPendingConnection((prev) =>
-          prev ? { ...prev, position: flowPos } : null,
-        );
-        setIsAddBlockOpen(true);
-      } else {
-        setPendingConnection(null);
-      }
-    },
-    [pendingConnection, screenToFlowPosition],
-  );
-
-  const onLongPress = useCallback(
-    (
-      e: React.PointerEvent | PointerEvent | React.TouchEvent | TouchEvent,
-      x: number,
-      y: number,
-    ) => {
-      if (isReadOnly) return;
-
-      // Clear any existing selection to prevent text selection on long press
-      if (window.getSelection) {
-        window.getSelection()?.removeAllRanges();
-      }
-
-      const target = e.target as HTMLElement;
-      const nodeElement = target.closest(".react-flow__node");
-      const edgeElement = target.closest(".react-flow__edge");
-
-      if (nodeElement) {
-        const nodeId = nodeElement.getAttribute("data-id");
-        if (nodeId) {
-          const node = (blocks as Node<BlockData>[]).find(
-            (n) => n.id === nodeId,
-          );
-          if (node) {
-            onBlockContextMenu(
-              {
-                preventDefault: () => {},
-                clientX: x,
-                clientY: y,
-              } as unknown as React.MouseEvent,
-              node,
-            );
-          }
-        }
-      } else if (edgeElement) {
-        // Do nothing for edges on long press, they use double tap
-        return;
-      } else {
-        return;
-      }
-    },
-    [isReadOnly, blocks, onBlockContextMenu, onPaneContextMenu],
-  );
-
-  const handlePaneClick = useCallback(
-    (event: React.MouseEvent | React.TouchEvent) => {
-      // button 2 is right click
-      if ("button" in event && event.button === 2) return;
-
-      const activeElement = document.activeElement as HTMLElement | null;
-      const focusedEditors = Array.from(
-        document.querySelectorAll(
-          ".ProseMirror, .cm-content, [contenteditable='true']",
-        ),
-      ) as HTMLElement[];
-
-      focusedEditors.forEach((element) => {
-        if (typeof element.blur === "function") {
-          element.blur();
-        }
-      });
-
-      if (
-        activeElement &&
-        (["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName) ||
-          activeElement.isContentEditable)
-      ) {
-        activeElement.blur();
-      }
-
-      focusProjectCanvas();
-
-      originalOnPaneClick();
-
-      const now = Date.now();
-      const clientX =
-        "clientX" in event
-          ? event.clientX
-          : (event as React.TouchEvent).touches?.[0]?.clientX;
-      const clientY =
-        "clientY" in event
-          ? event.clientY
-          : (event as React.TouchEvent).touches?.[0]?.clientY;
-
-      if (lastClickRef.current) {
-        const timeDiff = now - lastClickRef.current.time;
-        const dist = Math.sqrt(
-          Math.pow(clientX - lastClickRef.current.x, 2) +
-            Math.pow(clientY - lastClickRef.current.y, 2),
-        );
-
-        if (timeDiff < 400 && dist < 20) {
-          onPaneContextMenu(event as React.MouseEvent);
-          lastClickRef.current = null;
-          return;
-        }
-      }
-      lastClickRef.current = { time: now, x: clientX, y: clientY };
-    },
-    [onPaneContextMenu, originalOnPaneClick],
-  );
-
-  const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      // Clear context menu as per original onBlockClick
-      originalOnPaneClick();
-
-      if (shouldIgnoreNodeContextMenuShortcut(event.target)) {
-        lastNodeClickRef.current = null;
-        return;
-      }
-
-      const now = Date.now();
-      if (lastNodeClickRef.current && lastNodeClickRef.current.id === node.id) {
-        const diff = now - lastNodeClickRef.current.time;
-        if (diff < 400) {
-          onBlockContextMenu(event, node as Node<BlockData>);
-          lastNodeClickRef.current = null;
-          return;
-        }
-      }
-      lastNodeClickRef.current = { id: node.id, time: now };
-    },
-    [onBlockContextMenu, originalOnPaneClick],
-  );
-
-  const touchHandlers = useTouchGestures({
-    onLongPress,
-    onDoubleTap: (e, x, y) => {
-      if (isReadOnly) return;
-
-      // Using elementFromPoint for more reliable hit testing for edges/pane
-      const elementAtPoint = document.elementFromPoint(x, y);
-      const target = (elementAtPoint || e.target) as HTMLElement;
-
-      const edgeElement = target.closest(".react-flow__edge");
-
-      if (edgeElement) {
-        const edgeId = edgeElement.getAttribute("data-id");
-        if (edgeId) {
-          const edge = (links as Edge[]).find((l) => l.id === edgeId);
-          if (edge) {
-            onEdgeContextMenu(
-              {
-                preventDefault: () => {},
-                clientX: x,
-                clientY: y,
-              } as unknown as React.MouseEvent,
-              edge,
-            );
-            return;
-          }
-        }
-      }
-
-      onPaneContextMenu({
-        preventDefault: () => {},
-        clientX: x,
-        clientY: y,
-      } as unknown as React.MouseEvent);
-    },
-    allowLongPress: false,
-  });
-
-  const canvasTouchViewportHandlers = useCanvasTouchViewport({
-    disabled: isReadOnly,
-    minZoom: 0.1,
-    maxZoom: 4,
-    getViewport,
-    setViewport,
-    onPaneDoubleTap: (x, y) => {
-      onPaneContextMenu({
-        preventDefault: () => {},
-        clientX: x,
-        clientY: y,
-      } as unknown as React.MouseEvent);
-    },
-  });
-
-  useEffect(() => {
-    const container = flowContainerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const { x, y, zoom } = getViewport();
-        const delta = -e.deltaY;
-        const sensitivity = 0.01; // Boosted
-        const factor = Math.pow(2, delta * sensitivity);
-        const nextZoom = Math.min(Math.max(zoom * factor, 0.1), 4);
-
-        if (nextZoom === zoom) return;
-
-        const rect = container.getBoundingClientRect();
-        const centerX = e.clientX - rect.left;
-        const centerY = e.clientY - rect.top;
-
-        const flowX = (centerX - x) / zoom;
-        const flowY = (centerY - y) / zoom;
-
-        const nextX = centerX - flowX * nextZoom;
-        const nextY = centerY - flowY * nextZoom;
-
-        setViewport({ x: nextX, y: nextY, zoom: nextZoom }, { duration: 0 });
-      }
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
-  }, [getViewport, setViewport]);
-
-  const [dontAskAgain, setDontAskAgain] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
-  const handleEdgeLabelSubmit = useCallback(
-    (edgeId: string, label: string) => {
-      _setLinks((eds) =>
-        eds.map((edge) => {
-          if (edge.id === edgeId) {
-            return {
-              ...edge,
-              data: { ...edge.data, label, isEditing: false },
-            };
-          }
-          return edge;
-        }),
-      );
-    },
-    [_setLinks],
-  );
-
-  const handleEdgeLabelCancel = useCallback(
-    (edgeId: string) => {
-      _setLinks((eds) =>
-        eds.map((edge) => {
-          if (edge.id === edgeId) {
-            return {
-              ...edge,
-              data: { ...edge.data, isEditing: false },
-            };
-          }
-          return edge;
-        }),
-      );
-    },
-    [_setLinks],
-  );
-
-  const onLinkDoubleClick = useCallback(
-    (event: React.MouseEvent, edge: Edge) => {
-      if (isReadOnly) return;
-      _setLinks((eds) =>
-        eds.map((e) => {
-          if (e.id === edge.id) {
-            return {
-              ...e,
-              data: {
-                ...e.data,
-                isEditing: true,
-                onLabelSubmit: handleEdgeLabelSubmit,
-                onLabelCancel: handleEdgeLabelCancel,
-              },
-            };
-          }
-          return e;
-        }),
-      );
-    },
-    [isReadOnly, _setLinks, handleEdgeLabelSubmit, handleEdgeLabelCancel],
-  );
-
-  const isValidConnection = useCallback(
-    (connection: { source: string; target: string }) => {
-      if (connection.source === connection.target) {
-        return false;
-      }
-
-      const sourceBlock = blocks.find(
-        (block) => block.id === connection.source,
-      );
-      const targetBlock = blocks.find(
-        (block) => block.id === connection.target,
-      );
-
-      if (sourceBlock?.type === "folder" && targetBlock?.type === "core") {
-        return false;
-      }
-
-      return true;
-    },
-    [blocks],
-  );
-
-  const isTyping = useMemo(() => {
-    if (!currentUser) return false;
-    return presenceUsers.some((u) => u.id === currentUser.id && u.isTyping);
-  }, [presenceUsers, currentUser]);
-
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (contextMenu && contextMenuRef.current) {
-      const menu = contextMenuRef.current;
-      const parent = menu.parentElement;
-      if (!parent) return;
-
-      const rect = menu.getBoundingClientRect();
-      const parentRect = parent.getBoundingClientRect();
-
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const margin = 10;
-
-      let adjustedTop = contextMenu.top;
-      let adjustedLeft = contextMenu.left;
-
-      // Vertical repositioning
-      if (adjustedTop + rect.height > viewportHeight - margin) {
-        adjustedTop = adjustedTop - rect.height;
-      }
-
-      // Horizontal repositioning
-      if (adjustedLeft + rect.width > viewportWidth - margin) {
-        adjustedLeft = adjustedLeft - rect.width;
-      }
-
-      // Final clamping to viewport bounds
-      adjustedTop = Math.max(
-        margin,
-        Math.min(adjustedTop, viewportHeight - rect.height - margin),
-      );
-      adjustedLeft = Math.max(
-        margin,
-        Math.min(adjustedLeft, viewportWidth - rect.width - margin),
-      );
-
-      // Pass 1: Set position relative to parent
-      const finalTop = adjustedTop - parentRect.top;
-      const finalLeft = adjustedLeft - parentRect.left;
-
-      menu.style.setProperty("--menu-top", `${finalTop}px`);
-      menu.style.setProperty("--menu-left", `${finalLeft}px`);
-      menu.style.opacity = "1";
-
-      // Pass 2: Detect and fix layout shift (closed-loop correction)
-      const actualRect = menu.getBoundingClientRect();
-      const errorX = actualRect.left - adjustedLeft;
-      const errorY = actualRect.top - adjustedTop;
-
-      if (Math.abs(errorX) > 1 || Math.abs(errorY) > 1) {
-        menu.style.setProperty("--menu-top", `${finalTop - errorY}px`);
-        menu.style.setProperty("--menu-left", `${finalLeft - errorX}px`);
-      }
-    }
-  }, [contextMenu]);
-
-  const contextMenuBlock = useMemo(() => {
-    if (!contextMenu?.id) return null;
-    return blocks.find((n: Node<BlockData>) => n.id === contextMenu.id);
-  }, [contextMenu?.id, blocks]);
-
-  const isCoreOnly = useMemo(() => {
-    return blocks.length === 1 && blocks[0].type === "core";
-  }, [blocks]);
-
-  // --- Hide children of collapsed folders ---
-  const getVisibleBlockIds = (
-    allBlocks: Node<BlockData>[],
-    allLinks: Edge[],
-  ) => {
-    // Build parent->children map
-    const childrenMap = new Map<string, string[]>();
-    allLinks.forEach((edge) => {
-      if (edge.type === "connection" && edge.source && edge.target) {
-        if (!childrenMap.has(edge.source)) childrenMap.set(edge.source, []);
-        childrenMap.get(edge.source)!.push(edge.target);
-      }
-    });
-
-    // Find all collapsed folders
-    const collapsedFolders = new Set<string>();
-    allBlocks.forEach((block) => {
-      if (block.type === "folder") {
-        let meta: Record<string, unknown> = {};
-        const metadata = block.data?.metadata;
-        try {
-          if (typeof metadata === "string") {
-            meta = JSON.parse(metadata);
-          } else if (metadata) {
-            meta = metadata;
-          }
+          focusProjectCanvas();
         } catch {
-          // ignore invalid json
+          // ignore
         }
-        if (meta && (meta as { isCollapsed?: boolean }).isCollapsed)
-          collapsedFolders.add(block.id);
-      }
-    });
+      }, 50);
 
-    // Recursively collect all descendants of a folder
-    const collectDescendants = (id: string, acc: Set<string>) => {
-      const children = childrenMap.get(id);
-      if (!children) return;
-      for (const childId of children) {
-        acc.add(childId);
-        collectDescendants(childId, acc);
-      }
-    };
+      return () => clearTimeout(timer);
+    }, [newBlockId, blocks, setNodes]);
 
-    // Exclude all descendants of collapsed folders
-    const hidden = new Set<string>();
-    for (const folderId of collapsedFolders) {
-      collectDescendants(folderId, hidden);
+    if (!isAccessValidated) {
+      return (
+        <div className="flex items-center justify-center w-full h-full bg-page">
+          <div className="text-sm opacity-60">{dict.canvas.loadingCanvas}</div>
+        </div>
+      );
     }
 
-    // Visible blocks are those not in hidden
-    return new Set(allBlocks.map((b) => b.id).filter((id) => !hidden.has(id)));
-  };
-
-  const visibleBlockIds = useMemo(
-    () => getVisibleBlockIds(blocks, links),
-    [blocks, links],
-  );
-
-  const blocksWithPreview = useMemo(() => {
-    return blocks
-      .filter((block) => !block.hidden && visibleBlockIds.has(block.id))
-      .map((block) => ({
-        ...block,
-        zIndex: block.type === "frame" ? 0 : 1,
-        className:
-          block.id === newBlockId
-            ? "block-just-created"
-            : block.className || "",
-        data: {
-          ...block.data,
-          isPreviewMode,
-          currentUser: currentUser || undefined,
-          registerNoteModeShortcutHandler,
-          onRequestUndo: undo,
-          onRequestRedo: redo,
-          userRole: currentUserRole || undefined,
-        },
-      }));
-  }, [
-    blocks,
-    isPreviewMode,
-    currentUser,
-    currentUserRole,
-    newBlockId,
-    registerNoteModeShortcutHandler,
-    visibleBlockIds,
-  ]);
-
-  // Focus newly created / duplicated block.
-  useEffect(() => {
-    if (!newBlockId) return;
-    const id = newBlockId;
-
-    const timer = setTimeout(() => {
-      try {
-        setNodes((nodes) =>
-          nodes.map((n) => ({ ...n, selected: n.id === id })),
-        );
-
-        const createdBlock = blocks.find((block) => block.id === id);
-        const blockEl = document.querySelector(
-          `[data-id="${id}"]`,
-        ) as HTMLElement | null;
-
-        if (blockEl) {
-          try {
-            blockEl.scrollIntoView({ block: "center", inline: "center" });
-          } catch {
-            // ignore
-          }
-        }
-
-        const isFreshNoteBlock =
-          (createdBlock?.type === "text" || createdBlock?.type === "latex") &&
-          !(createdBlock.data?.content || "");
-
-        if (isFreshNoteBlock && blockEl) {
-          const editorEl = blockEl.querySelector(
-            ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor]",
-          ) as HTMLElement | null;
-
-          if (editorEl && typeof editorEl.focus === "function") {
-            editorEl.focus();
-            return;
-          }
-        }
-
-        focusProjectCanvas();
-      } catch {
-        // ignore
-      }
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, [newBlockId, blocks, setNodes]);
-
-  if (!isAccessValidated) {
     return (
-      <div className="flex items-center justify-center w-full h-full bg-page">
-        <div className="text-sm opacity-60">{dict.canvas.loadingCanvas}</div>
-      </div>
-    );
-  }
-
-  return (
-    <YDocContext.Provider value={yDoc}>
-      <>
-        <svg className="absolute w-0 h-0 pointer-events-none">
-          <defs>
-            <marker
-              id="connection-arrow"
-              viewBox="0 0 20 10"
-              refX="19"
-              refY="5"
-              markerWidth="16"
-              markerHeight="8"
-              orient="auto"
-            >
-              <path d="M 0 0 L 19 5 L 0 10 L 4 5 Z" fill="var(--text-main)" />
-            </marker>
-          </defs>
-        </svg>
-        <div
-          className={`project-canvas-container ${
-            isPreviewMode ? "preview-mode" : ""
-          } ${isExternalDropActive ? "drop-active" : ""}`}
-          onKeyDown={onKeyDown}
-          onDragEnter={onExternalDragEnter}
-          onDragLeave={onExternalDragLeave}
-          onDragOver={onExternalDragOver}
-          onDrop={handleExternalDrop}
-          tabIndex={0}
-          ref={flowContainerRef}
-          onPointerDownCapture={(e) => {
-            pointerTypeRef.current = e.pointerType;
-            canvasTouchViewportHandlers.onPointerDownCapture(e);
-          }}
-          onPointerMoveCapture={
-            canvasTouchViewportHandlers.onPointerMoveCapture
-          }
-          onPointerUpCapture={canvasTouchViewportHandlers.onPointerUpCapture}
-          onPointerCancelCapture={
-            canvasTouchViewportHandlers.onPointerCancelCapture
-          }
-          {...touchHandlers}
-        >
-          {isLoading && (
-            <div className="loading-overlay">
-              <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          )}
-
-          {isExternalDropActive && !dropImportProgress.isImporting && (
-            <div className="drop-import-hover-overlay">
-              <div className="drop-import-hover-card">
-                <FileIcon className="drop-import-hover-icon" />
-                <div className="drop-import-hover-text">
-                  <p>{dict.canvas.dropHoverTitle}</p>
-                  <p>{dict.canvas.dropHoverDescription}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {dropImportProgress.isImporting && (
-            <div className="drop-import-progress-overlay">
-              <div className="drop-import-progress-card">
-                <Loader2 className="drop-import-progress-spinner" />
-                <div className="drop-import-progress-text">
-                  <p>{dict.canvas.dropImportLoadingTitle}</p>
-                  <p>
-                    {dropImportProgress.total > 0
-                      ? (
-                          dict.canvas.dropImportLoadingProgress ||
-                          "{processed}/{total} files processed"
-                        )
-                          .replace(
-                            "{processed}",
-                            String(dropImportProgress.processed),
-                          )
-                          .replace("{total}", String(dropImportProgress.total))
-                      : dict.canvas.dropImportLoadingScanning ||
-                        "Preparing import..."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <AutomationStatesContext.Provider
-            value={{
-              states: automationStates,
-              resetBlockState: handleResetAutomationState,
-            }}
-          >
-            <UserMapProvider activeUsers={presenceUsers}>
-              <DraftsProvider
-                value={{
-                  draftsByBlock,
-                  getDraftsForBlock,
-                  writeDraft,
-                  deleteDraft,
-                }}
+      <YDocContext.Provider value={yDoc}>
+        <>
+          <svg className="absolute w-0 h-0 pointer-events-none">
+            <defs>
+              <marker
+                id="connection-arrow"
+                viewBox="0 0 20 10"
+                refX="19"
+                refY="5"
+                markerWidth="16"
+                markerHeight="8"
+                orient="auto"
               >
-                <HelperLinesContext.Provider
+                <path d="M 0 0 L 19 5 L 0 10 L 4 5 Z" fill="var(--text-main)" />
+              </marker>
+            </defs>
+          </svg>
+          <div
+            className={`project-canvas-container ${
+              isPreviewMode ? "preview-mode" : ""
+            } ${isExternalDropActive ? "drop-active" : ""}`}
+            onKeyDown={onKeyDown}
+            onDragEnter={onExternalDragEnter}
+            onDragLeave={onExternalDragLeave}
+            onDragOver={onExternalDragOver}
+            onDrop={handleExternalDrop}
+            tabIndex={0}
+            ref={flowContainerRef}
+            onPointerDownCapture={(e) => {
+              pointerTypeRef.current = e.pointerType;
+              canvasTouchViewportHandlers.onPointerDownCapture(e);
+            }}
+            onPointerMoveCapture={
+              canvasTouchViewportHandlers.onPointerMoveCapture
+            }
+            onPointerUpCapture={canvasTouchViewportHandlers.onPointerUpCapture}
+            onPointerCancelCapture={
+              canvasTouchViewportHandlers.onPointerCancelCapture
+            }
+            {...touchHandlers}
+          >
+            {isLoading && (
+              <div className="loading-overlay">
+                <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            )}
+
+            {isExternalDropActive && !dropImportProgress.isImporting && (
+              <div className="drop-import-hover-overlay">
+                <div className="drop-import-hover-card">
+                  <FileIcon className="drop-import-hover-icon" />
+                  <div className="drop-import-hover-text">
+                    <p>{dict.canvas.dropHoverTitle}</p>
+                    <p>{dict.canvas.dropHoverDescription}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {dropImportProgress.isImporting && (
+              <div className="drop-import-progress-overlay">
+                <div className="drop-import-progress-card">
+                  <Loader2 className="drop-import-progress-spinner" />
+                  <div className="drop-import-progress-text">
+                    <p>{dict.canvas.dropImportLoadingTitle}</p>
+                    <p>
+                      {dropImportProgress.total > 0
+                        ? (
+                            dict.canvas.dropImportLoadingProgress ||
+                            "{processed}/{total} files processed"
+                          )
+                            .replace(
+                              "{processed}",
+                              String(dropImportProgress.processed),
+                            )
+                            .replace(
+                              "{total}",
+                              String(dropImportProgress.total),
+                            )
+                        : dict.canvas.dropImportLoadingScanning ||
+                          "Preparing import..."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <AutomationStatesContext.Provider
+              value={{
+                states: automationStates,
+                resetBlockState: handleResetAutomationState,
+              }}
+            >
+              <UserMapProvider activeUsers={presenceUsers}>
+                <DraftsProvider
                   value={{
-                    setHelperLines,
-                    isShiftPressed,
-                    setActiveResizeSnap,
+                    draftsByBlock,
+                    getDraftsForBlock,
+                    writeDraft,
+                    deleteDraft,
                   }}
                 >
-                  <ReactFlow
-                    nodes={blocksWithPreview}
-                    edges={links.filter(
-                      (edge) =>
-                        !blocks.find((b) => b.id === edge.source && b.hidden) &&
-                        !blocks.find((b) => b.id === edge.target && b.hidden) &&
-                        visibleBlockIds.has(edge.source) &&
-                        visibleBlockIds.has(edge.target),
-                    )}
-                    onNodesChange={isPreviewMode ? undefined : onBlocksChange}
-                    onEdgesChange={isPreviewMode ? undefined : onLinksChange}
-                    onNodeDragStart={
-                      isPreviewMode ? undefined : onBlockDragStart
-                    }
-                    onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
-                    onNodeDragStop={isPreviewMode ? undefined : onBlockDragStop}
-                    onConnect={
-                      isPreviewMode ? undefined : onConnectWithSnapshot
-                    }
-                    onConnectStart={isPreviewMode ? undefined : onConnectStart}
-                    onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
-                    isValidConnection={isValidConnection}
-                    onPointerMove={onPointerMove}
-                    onPointerLeave={onPointerLeave}
-                    onPaneContextMenu={(e) => {
-                      if (
-                        pointerTypeRef.current === "touch" ||
-                        pointerTypeRef.current === "pen"
-                      ) {
-                        e.preventDefault();
-                        return;
-                      }
-                      onPaneContextMenu(e);
+                  <HelperLinesContext.Provider
+                    value={{
+                      setHelperLines,
+                      isShiftPressed,
+                      setActiveResizeSnap,
                     }}
-                    onNodeContextMenu={onBlockContextMenu}
-                    onEdgeContextMenu={onEdgeContextMenu}
-                    onPaneClick={handlePaneClick}
-                    onNodeClick={handleNodeClick}
-                    onEdgeClick={onLinkClick}
-                    onEdgeDoubleClick={onLinkDoubleClick}
-                    onMove={onMove}
-                    onViewportChange={onViewportChange}
-                    zoomOnPinch={true}
-                    zoomOnDoubleClick={false}
-                    nodeTypes={blockTypes}
-                    edgeTypes={linkTypes}
-                    defaultViewport={DEFAULT_VIEWPORT}
-                    connectionMode={ConnectionMode.Loose}
-                    connectionRadius={30}
-                    translateExtent={FIXED_EXTENT}
-                    minZoom={0.1}
-                    maxZoom={4}
-                    deleteKeyCode={null}
-                    disableKeyboardA11y
-                    selectionOnDrag={!isReadOnly}
-                    selectionKeyCode={null}
-                    nodesDraggable={!isReadOnly}
-                    nodesConnectable={!isReadOnly}
-                    elementsSelectable={true}
-                    edgesReconnectable={!isReadOnly}
-                    panOnScroll
-                    panOnDrag={true}
-                    multiSelectionKeyCode="Control"
-                    fitView
-                    onlyRenderVisibleElements={true}
-                    className={`project-canvas ${
-                      isReadOnly ? "read-only" : ""
-                    }`}
-                    proOptions={{ hideAttribution: true }}
                   >
-                    <div
-                      className={`canvas-cursor-overlay ${
-                        isTyping ? "hide-native-cursor" : ""
+                    <ReactFlow
+                      nodes={blocksWithPreview}
+                      edges={links.filter(
+                        (edge) =>
+                          !blocks.find(
+                            (b) => b.id === edge.source && b.hidden,
+                          ) &&
+                          !blocks.find(
+                            (b) => b.id === edge.target && b.hidden,
+                          ) &&
+                          visibleBlockIds.has(edge.source) &&
+                          visibleBlockIds.has(edge.target),
+                      )}
+                      onNodesChange={isPreviewMode ? undefined : onBlocksChange}
+                      onEdgesChange={isPreviewMode ? undefined : onLinksChange}
+                      onNodeDragStart={
+                        isPreviewMode ? undefined : onBlockDragStart
+                      }
+                      onNodeDrag={isPreviewMode ? undefined : onBlockDrag}
+                      onNodeDragStop={
+                        isPreviewMode ? undefined : onBlockDragStop
+                      }
+                      onConnect={
+                        isPreviewMode ? undefined : onConnectWithSnapshot
+                      }
+                      onConnectStart={
+                        isPreviewMode ? undefined : onConnectStart
+                      }
+                      onConnectEnd={isPreviewMode ? undefined : onConnectEnd}
+                      isValidConnection={isValidConnection}
+                      onPointerMove={onPointerMove}
+                      onPointerLeave={onPointerLeave}
+                      onPaneContextMenu={(e) => {
+                        if (
+                          pointerTypeRef.current === "touch" ||
+                          pointerTypeRef.current === "pen"
+                        ) {
+                          e.preventDefault();
+                          return;
+                        }
+                        onPaneContextMenu(e);
+                      }}
+                      onNodeContextMenu={onBlockContextMenu}
+                      onEdgeContextMenu={onEdgeContextMenu}
+                      onPaneClick={handlePaneClick}
+                      onNodeClick={handleNodeClick}
+                      onEdgeClick={onLinkClick}
+                      onEdgeDoubleClick={onLinkDoubleClick}
+                      onMove={onMove}
+                      onViewportChange={onViewportChange}
+                      zoomOnPinch={true}
+                      zoomOnDoubleClick={false}
+                      nodeTypes={blockTypes}
+                      edgeTypes={linkTypes}
+                      defaultViewport={DEFAULT_VIEWPORT}
+                      connectionMode={ConnectionMode.Loose}
+                      connectionRadius={30}
+                      translateExtent={FIXED_EXTENT}
+                      minZoom={0.1}
+                      maxZoom={4}
+                      deleteKeyCode={null}
+                      disableKeyboardA11y
+                      selectionOnDrag={!isReadOnly}
+                      selectionKeyCode={null}
+                      nodesDraggable={!isReadOnly}
+                      nodesConnectable={!isReadOnly}
+                      elementsSelectable={true}
+                      edgesReconnectable={!isReadOnly}
+                      panOnScroll
+                      panOnDrag={true}
+                      multiSelectionKeyCode="Control"
+                      fitView
+                      onlyRenderVisibleElements={true}
+                      className={`project-canvas ${
+                        isReadOnly ? "read-only" : ""
                       }`}
-                    />
-                    <Panel
-                      position="top-left"
-                      className="pointer-events-none m-0!"
-                      style={{ width: "100%", height: "100%", zIndex: 1500 }}
+                      proOptions={{ hideAttribution: true }}
                     >
-                      <RemoteCursors
-                        presenceUsers={presenceUsers}
-                        currentUserId={currentUser?.id}
-                        remoteCursorsRef={remoteCursorsRef}
+                      <div
+                        className={`canvas-cursor-overlay ${
+                          isTyping ? "hide-native-cursor" : ""
+                        }`}
                       />
-                    </Panel>
-                    {!isReadOnly && (
                       <Panel
                         position="top-left"
                         className="pointer-events-none m-0!"
-                        style={{ width: "100%", height: "100%", zIndex: 999 }}
+                        style={{ width: "100%", height: "100%", zIndex: 1500 }}
                       >
-                        <HelperLines helperLines={helperLines} />
+                        <RemoteCursors
+                          presenceUsers={presenceUsers}
+                          currentUserId={currentUser?.id}
+                          remoteCursorsRef={remoteCursorsRef}
+                        />
                       </Panel>
-                    )}
-                    {/* Background disabled to prevent global rasterization blur */}
-
-                    {!hasSeenOnboarding && isCoreOnly && !isPreviewMode && (
-                      <Panel
-                        position="bottom-center"
-                        className="onboarding-panel"
-                        role="status"
-                        aria-label={dict.canvas.magicPasteOnboardingHint}
-                      >
-                        <div className="onboarding-content">
-                          <div className="onboarding-icons">
-                            <FaGithub size={20} />
-                            <div className="separator" />
-                            <SiFigma size={20} />
-                            <div className="separator" />
-                            <FileIcon size={20} />
-                          </div>
-                          <div className="onboarding-text">
-                            <h3>Magic Paste</h3>
-                            <p>{dict.project.onboardingHint}</p>
-                          </div>
-                        </div>
-                      </Panel>
-                    )}
-                    <Panel
-                      position="top-left"
-                      className="m-6! ml-12! mt-3!"
-                      style={{ zIndex: 2000 }}
-                    >
-                      {!isPreviewMode && !isMobileTopbar && (
-                        <div className="project-canvas-topbar-left">
-                          <div className="project-canvas-topbar-left-controls">
-                            <span className="text-sm font-bold opacity-40 select-none">
-                              {dict.project.shareCursor}
-                            </span>
-                            <input
-                              type="checkbox"
-                              className="theme-checkbox"
-                              checked={shareCursor}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                setShareCursor(e.target.checked);
-                              }}
-                            />
-                            <button
-                              className="command-palette-hint"
-                              onClick={() => setIsAddBlockOpen(true)}
-                            >
-                              <kbd>Ctrl + A</kbd>
-                              <span>{dict.canvas.addBlock}</span>
-                            </button>
-                            <button
-                              className="command-palette-hint"
-                              onClick={() => setIsPaletteOpen(true)}
-                            >
-                              <kbd>Ctrl + P</kbd>
-                              <span>{dict.canvas.commandPalette}</span>
-                            </button>
-                          </div>
-                          <div className="project-canvas-topbar-left-search">
-                            <CanvasSearchBar
-                              query={canvasSearchQuery}
-                              onQueryChange={setCanvasSearchQuery}
-                              onOpenAdvanced={() => setIsCanvasSearchOpen(true)}
-                            />
-                          </div>
-                        </div>
+                      {!isReadOnly && (
+                        <Panel
+                          position="top-left"
+                          className="pointer-events-none m-0!"
+                          style={{ width: "100%", height: "100%", zIndex: 999 }}
+                        >
+                          <HelperLines helperLines={helperLines} />
+                        </Panel>
                       )}
-                    </Panel>
+                      {/* Background disabled to prevent global rasterization blur */}
 
-                    <Panel
-                      position="top-right"
-                      className={`flex items-center gap-2 m-6! mt-3! ${
-                        isMobileTopbar ? "project-topbar-panel-mobile" : ""
-                      }`}
-                      style={{ zIndex: 2000 }}
-                    >
-                      {isPreviewMode && (
-                        <div className="preview-mode-banner">
-                          <span className="preview-mode-text">
-                            {dict.canvas.previewMode}
-                          </span>
-                          <div className="preview-mode-actions">
-                            <button
-                              onClick={() => handlePreview(null)}
-                              className="preview-action-btn preview-return-btn"
-                              title={dict.canvas.returnToPresent}
-                            >
-                              <ArrowLeft size={14} />
-                              <span className="preview-btn-text">
-                                {dict.canvas.return}
+                      {!hasSeenOnboarding && isCoreOnly && !isPreviewMode && (
+                        <Panel
+                          position="bottom-center"
+                          className="onboarding-panel"
+                          role="status"
+                          aria-label={dict.canvas.magicPasteOnboardingHint}
+                        >
+                          <div className="onboarding-content">
+                            <div className="onboarding-icons">
+                              <FaGithub size={20} />
+                              <div className="separator" />
+                              <SiFigma size={20} />
+                              <div className="separator" />
+                              <FileIcon size={20} />
+                            </div>
+                            <div className="onboarding-text">
+                              <h3>Magic Paste</h3>
+                              <p>{dict.project.onboardingHint}</p>
+                            </div>
+                          </div>
+                        </Panel>
+                      )}
+                      <Panel
+                        position="top-left"
+                        className="m-6! ml-12! mt-3!"
+                        style={{ zIndex: 2000 }}
+                      >
+                        {!isPreviewMode && !isMobileTopbar && (
+                          <div className="project-canvas-topbar-left">
+                            <div className="project-canvas-topbar-left-controls">
+                              <span className="text-sm font-bold opacity-40 select-none">
+                                {dict.project.shareCursor}
                               </span>
-                            </button>
-                            {currentUser?.id === projectOwnerId && (
+                              <input
+                                type="checkbox"
+                                className="theme-checkbox"
+                                checked={shareCursor}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  setShareCursor(e.target.checked);
+                                }}
+                              />
                               <button
-                                onClick={() =>
-                                  selectedStateId &&
-                                  handleApplyState(selectedStateId)
-                                }
-                                className="preview-action-btn preview-apply-btn"
-                                title={dict.canvas.apply}
-                                disabled={!selectedStateId}
+                                className="command-palette-hint"
+                                onClick={() => setIsAddBlockOpen(true)}
                               >
-                                <Check size={14} />
+                                <kbd>Ctrl + A</kbd>
+                                <span>{dict.canvas.addBlock}</span>
+                              </button>
+                              <button
+                                className="command-palette-hint"
+                                onClick={() => setIsPaletteOpen(true)}
+                              >
+                                <kbd>Ctrl + P</kbd>
+                                <span>{dict.canvas.commandPalette}</span>
+                              </button>
+                            </div>
+                            <div className="project-canvas-topbar-left-search">
+                              <CanvasSearchBar
+                                query={canvasSearchQuery}
+                                onQueryChange={setCanvasSearchQuery}
+                                onOpenAdvanced={() =>
+                                  setIsCanvasSearchOpen(true)
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </Panel>
+
+                      {activeDepth > 0 && (
+                        <Panel
+                          position="top-left"
+                          className="ml-12! mt-14!"
+                          style={{ zIndex: 2500 }}
+                        >
+                          <SubCanvasBreadcrumb />
+                        </Panel>
+                      )}
+
+                      <Panel
+                        position="top-right"
+                        className={`flex items-center gap-2 m-6! mt-3! ${
+                          isMobileTopbar ? "project-topbar-panel-mobile" : ""
+                        }`}
+                        style={{ zIndex: 2000 }}
+                      >
+                        {isPreviewMode && (
+                          <div className="preview-mode-banner">
+                            <span className="preview-mode-text">
+                              {dict.canvas.previewMode}
+                            </span>
+                            <div className="preview-mode-actions">
+                              <button
+                                onClick={() => handlePreview(null)}
+                                className="preview-action-btn preview-return-btn"
+                                title={dict.canvas.returnToPresent}
+                              >
+                                <ArrowLeft size={14} />
                                 <span className="preview-btn-text">
-                                  {dict.canvas.apply}
+                                  {dict.canvas.return}
                                 </span>
                               </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="project-topbar-row">
-                        {!isPreviewMode && (
-                          <div className="project-presence-strip">
-                            <SyncIndicator
-                              isSocketConnected={isSocketConnected}
-                              isRemoteSynced={isRemoteSynced}
-                            />
-                            <div className="project-presence-avatars">
-                              {presenceUsers.map((u) => (
-                                <div
-                                  key={u.id}
-                                  className="user-presence-item relative shrink-0"
+                              {currentUser?.id === projectOwnerId && (
+                                <button
+                                  onClick={() =>
+                                    selectedStateId &&
+                                    handleApplyState(selectedStateId)
+                                  }
+                                  className="preview-action-btn preview-apply-btn"
+                                  title={dict.canvas.apply}
+                                  disabled={!selectedStateId}
                                 >
-                                  <div
-                                    className="user-presence-avatar"
-                                    style={{ borderColor: u.color || "#000" }}
-                                  >
-                                    <img
-                                      src={getAvatarUrl(
-                                        u.avatarUrl,
-                                        u.username,
-                                      )}
-                                      alt={u.displayName || u.username}
-                                      className="user-presence-avatar-img"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  </div>
-
-                                  <div
-                                    className="user-presence-tooltip"
-                                    style={
-                                      {
-                                        "--user-color": u.color || "#000",
-                                      } as React.CSSProperties
-                                    }
-                                  >
-                                    {u.displayName || u.username}
-                                    <div className="user-presence-tooltip-arrow" />
-                                  </div>
-                                </div>
-                              ))}
+                                  <Check size={14} />
+                                  <span className="preview-btn-text">
+                                    {dict.canvas.apply}
+                                  </span>
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
 
-                        {isMobileTopbar ? (
-                          <div
-                            className="project-mobile-actions"
-                            ref={mobileActionsRef}
-                          >
-                            <button
-                              className={`project-mobile-actions-trigger ${
-                                isMobileActionsOpen ? "active" : ""
-                              }`}
-                              onClick={() =>
-                                setIsMobileActionsOpen((open) => !open)
-                              }
-                              title={dict.project.mobileActions}
-                              aria-label={dict.project.mobileActions}
-                            >
-                              <Menu size={18} />
-                            </button>
-
-                            {isMobileActionsOpen && (
-                              <div className="project-mobile-actions-menu">
-                                {!isPreviewMode && (
-                                  <label className="project-mobile-actions-item project-mobile-actions-switch">
-                                    <span>{dict.project.shareCursor}</span>
-                                    <input
-                                      type="checkbox"
-                                      className="theme-checkbox"
-                                      checked={shareCursor}
-                                      onChange={(e) => {
-                                        e.stopPropagation();
-                                        setShareCursor(e.target.checked);
-                                      }}
-                                    />
-                                  </label>
-                                )}
-
-                                {!isPreviewMode && (
-                                  <button
-                                    className="project-mobile-actions-item"
-                                    onClick={() => {
-                                      setIsAddBlockOpen(true);
-                                      setIsMobileActionsOpen(false);
-                                    }}
+                        <div className="project-topbar-row">
+                          {!isPreviewMode && (
+                            <div className="project-presence-strip">
+                              <SyncIndicator
+                                isSocketConnected={isSocketConnected}
+                                isRemoteSynced={isRemoteSynced}
+                              />
+                              <div className="project-presence-avatars">
+                                {presenceUsers.map((u) => (
+                                  <div
+                                    key={u.id}
+                                    className="user-presence-item relative shrink-0"
                                   >
-                                    {dict.canvas.addBlock}
-                                  </button>
-                                )}
+                                    <div
+                                      className="user-presence-avatar"
+                                      style={{ borderColor: u.color || "#000" }}
+                                    >
+                                      <img
+                                        src={getAvatarUrl(
+                                          u.avatarUrl,
+                                          u.username,
+                                        )}
+                                        alt={u.displayName || u.username}
+                                        className="user-presence-avatar-img"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    </div>
 
-                                {!isPreviewMode && (
-                                  <button
-                                    className="project-mobile-actions-item"
-                                    onClick={() => {
-                                      setIsPaletteOpen(true);
-                                      setIsMobileActionsOpen(false);
-                                    }}
-                                  >
-                                    {dict.canvas.commandPalette}
-                                  </button>
-                                )}
-
-                                {!isPreviewMode && (
-                                  <button
-                                    className="project-mobile-actions-item"
-                                    onClick={() => {
-                                      setIsCanvasSearchOpen(true);
-                                      setIsMobileActionsOpen(false);
-                                    }}
-                                  >
-                                    <span>{dict.canvas.canvasSearchLabel}</span>
-                                  </button>
-                                )}
-
-                                {currentUserRole !== "viewer" && (
-                                  <button
-                                    className="project-mobile-actions-item relative"
-                                    onClick={() => {
-                                      setIsInviteModalOpen(true);
-                                      setIsMobileActionsOpen(false);
-                                    }}
-                                    disabled={isPreviewMode}
-                                  >
-                                    <span>
-                                      {dict.project.access || "Access"}
-                                    </span>
-                                    {pendingRequestsCount > 0 && (
-                                      <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                        {pendingRequestsCount}
-                                      </span>
-                                    )}
-                                  </button>
-                                )}
-
-                                {currentUser?.id === projectOwnerId && (
-                                  <button
-                                    className="project-mobile-actions-item"
-                                    onClick={() => {
-                                      setIsShareModalOpen(true);
-                                      setIsMobileActionsOpen(false);
-                                    }}
-                                    disabled={isPreviewMode}
-                                  >
-                                    {dict.project.share || "Share"}
-                                  </button>
-                                )}
-
-                                {!isPreviewMode && (
-                                  <button
-                                    className="project-mobile-actions-item"
-                                    onClick={() => {
-                                      setIsHistoryOpen(true);
-                                      setIsMobileActionsOpen(false);
-                                    }}
-                                  >
-                                    {dict.canvas.temporalHistory || "History"}
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {currentUserRole !== "viewer" && (
-                              <div className="relative">
-                                <Button
-                                  onClick={() => setIsInviteModalOpen(true)}
-                                  className="btn-primary"
-                                  disabled={isPreviewMode}
-                                >
-                                  {(
-                                    dict.project.access || "Access"
-                                  ).toUpperCase()}
-                                </Button>
-                                {pendingRequestsCount > 0 && (
-                                  <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                    {pendingRequestsCount}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {currentUser?.id === projectOwnerId && (
-                              <Button
-                                onClick={() => setIsShareModalOpen(true)}
-                                className="btn-secondary px-3!"
-                                disabled={isPreviewMode}
-                                title={dict.project.share || "Share"}
-                              >
-                                <Share2 size={16} />
-                              </Button>
-                            )}
-                            <DecisionHistory
-                              projectId={initialProjectId!}
-                              onPreview={handlePreview}
-                              onApply={handleApplyState}
-                              onSave={handleSaveState}
-                              onDelete={handleDeleteState}
-                              onRename={handleRenameState}
-                              isPreviewing={isPreviewMode}
-                              selectedStateId={selectedStateId}
-                              projectOwnerId={projectOwnerId}
-                              currentUserId={currentUser?.id}
-                              isHistoryOpen={isHistoryOpen}
-                              onHistoryOpenChange={setIsHistoryOpen}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </Panel>
-
-                    {isMobileTopbar && (
-                      <DecisionHistory
-                        projectId={initialProjectId!}
-                        onPreview={handlePreview}
-                        onApply={handleApplyState}
-                        onSave={handleSaveState}
-                        onDelete={handleDeleteState}
-                        onRename={handleRenameState}
-                        isPreviewing={isPreviewMode}
-                        selectedStateId={selectedStateId}
-                        projectOwnerId={projectOwnerId}
-                        currentUserId={currentUser?.id}
-                        isHistoryOpen={isHistoryOpen}
-                        onHistoryOpenChange={setIsHistoryOpen}
-                      />
-                    )}
-
-                    <div className="zoom-indicator">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold opacity-40 tabular-nums">
-                          {zoom}%
-                        </span>
-                      </div>
-                    </div>
-
-                    <Controls
-                      showInteractive={false}
-                      showZoom={false}
-                      showFitView={false}
-                      position="bottom-right"
-                    >
-                      <ControlButton
-                        onClick={undo}
-                        disabled={!canUndo || isPreviewMode}
-                        title={dict.canvas.undo || "Undo"}
-                      >
-                        <Undo2 />
-                      </ControlButton>
-                      <ControlButton
-                        onClick={redo}
-                        disabled={!canRedo || isPreviewMode}
-                        title={dict.canvas.redo || "Redo"}
-                      >
-                        <Redo2 />
-                      </ControlButton>
-                      <ControlButton
-                        onClick={handleZoomIn}
-                        title={dict.canvas.zoomIn}
-                      >
-                        <Plus />
-                      </ControlButton>
-                      <ControlButton
-                        onClick={handleZoomOut}
-                        title={dict.canvas.zoomOut}
-                      >
-                        <Minus />
-                      </ControlButton>
-                      <ControlButton
-                        onClick={handleFitView}
-                        title={dict.canvas.fitView}
-                      >
-                        <Maximize />
-                      </ControlButton>
-                      <DownloadButton />
-                    </Controls>
-                  </ReactFlow>
-                </HelperLinesContext.Provider>
-
-                {contextMenu && (
-                  <div
-                    ref={contextMenuRef}
-                    className="context-menu"
-                    style={
-                      {
-                        opacity: 0,
-                      } as React.CSSProperties
-                    }
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {contextMenu.type === "pane" ? (
-                      <>
-                        {!isPreviewMode && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setPendingBlockPosition(
-                                  screenToFlowPosition({
-                                    x: contextMenu.left,
-                                    y: contextMenu.top,
-                                  }),
-                                );
-                                setIsAddBlockOpen(true);
-                                setContextMenu(null);
-                              }}
-                              className="context-menu-item"
-                            >
-                              <span className="context-menu-icon">
-                                <Plus size={14} />
-                              </span>
-                              <span className="context-menu-label">
-                                {dict.canvas.addBlock || "Add Block"}
-                              </span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                const id = handleCreateBlock(
-                                  undefined,
-                                  undefined,
-                                  "folder",
-                                );
-
-                                if (id) {
-                                  setNewBlockId(id);
-                                  setTimeout(() => setNewBlockId(null), 800);
-                                  triggerAutoSnapshot("Block created");
-                                }
-
-                                setContextMenu(null);
-                              }}
-                              className="context-menu-item"
-                            >
-                              <span className="context-menu-icon">
-                                <Folder size={14} />
-                              </span>
-                              <span className="context-menu-label">
-                                {dict.canvas.addFolder || "Add Folder"}
-                              </span>
-                            </button>
-                            <div className="context-menu-separator" />
-                          </>
-                        )}
-                      </>
-                    ) : contextMenu.type === "block" ? (
-                      (() => {
-                        const block = contextMenuBlock;
-                        if (!block || !currentUser) return null;
-                        const isOwner =
-                          currentUser.id &&
-                          (block.data as BlockData)?.ownerId === currentUser.id;
-                        const isProjectOwner =
-                          currentUser.id && projectOwnerId === currentUser.id;
-                        const canManage = isOwner || isProjectOwner;
-                        const isContentLocked = isBlockContentLocked(
-                          block.data as BlockData,
-                        );
-                        const isPositionLocked = isBlockPositionLocked(
-                          block.data as BlockData,
-                        );
-
-                        return (
-                          <>
-                            {canManage && (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    handleToggleContentLock(block.id)
-                                  }
-                                  className="context-menu-item"
-                                >
-                                  <span className="context-menu-icon">
-                                    {isContentLocked ? (
-                                      <Unlock size={14} />
-                                    ) : (
-                                      <LuPencilOff size={14} />
-                                    )}
-                                  </span>
-                                  <span className="context-menu-label">
-                                    {isContentLocked
-                                      ? dict.blocks.unlockContent ||
-                                        "Unlock Content"
-                                      : dict.blocks.lockContent ||
-                                        "Lock Content"}
-                                  </span>
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleTogglePositionLock(block.id)
-                                  }
-                                  className="context-menu-item"
-                                >
-                                  <span className="context-menu-icon">
-                                    {isPositionLocked ? (
-                                      <Unlock size={14} />
-                                    ) : (
-                                      <TbLocationOff size={14} />
-                                    )}
-                                  </span>
-                                  <span className="context-menu-label">
-                                    {isPositionLocked
-                                      ? dict.blocks.unlockPosition ||
-                                        "Unlock Position"
-                                      : dict.blocks.lockPosition ||
-                                        "Lock Position"}
-                                  </span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setTransferBlock(block);
-                                    setContextMenu(null);
-                                  }}
-                                  className="context-menu-item"
-                                >
-                                  <span className="context-menu-icon">
-                                    <UserPlus size={14} />
-                                  </span>
-                                  <span className="context-menu-label">
-                                    {dict.project.transferOwnership ||
-                                      "Transfer Ownership"}
-                                  </span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (contextMenuBlock) {
-                                      const id = handleDuplicateBlock(
-                                        contextMenuBlock.id,
-                                      );
-                                      if (id) {
-                                        setNewBlockId(id);
-                                        setTimeout(
-                                          () => setNewBlockId(null),
-                                          800,
-                                        );
-                                        triggerAutoSnapshot("Block created");
+                                    <div
+                                      className="user-presence-tooltip"
+                                      style={
+                                        {
+                                          "--user-color": u.color || "#000",
+                                        } as React.CSSProperties
                                       }
-                                    }
-                                    setContextMenu(null);
-                                  }}
-                                  className="context-menu-item"
-                                >
-                                  <span className="context-menu-icon">
-                                    <Copy size={14} />
-                                  </span>
-                                  <span className="context-menu-label">
+                                    >
+                                      {u.displayName || u.username}
+                                      <div className="user-presence-tooltip-arrow" />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {isMobileTopbar ? (
+                            <div
+                              className="project-mobile-actions"
+                              ref={mobileActionsRef}
+                            >
+                              <button
+                                className={`project-mobile-actions-trigger ${
+                                  isMobileActionsOpen ? "active" : ""
+                                }`}
+                                onClick={() =>
+                                  setIsMobileActionsOpen((open) => !open)
+                                }
+                                title={dict.project.mobileActions}
+                                aria-label={dict.project.mobileActions}
+                              >
+                                <Menu size={18} />
+                              </button>
+
+                              {isMobileActionsOpen && (
+                                <div className="project-mobile-actions-menu">
+                                  {!isPreviewMode && (
+                                    <label className="project-mobile-actions-item project-mobile-actions-switch">
+                                      <span>{dict.project.shareCursor}</span>
+                                      <input
+                                        type="checkbox"
+                                        className="theme-checkbox"
+                                        checked={shareCursor}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          setShareCursor(e.target.checked);
+                                        }}
+                                      />
+                                    </label>
+                                  )}
+
+                                  {!isPreviewMode && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setIsAddBlockOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                    >
+                                      {dict.canvas.addBlock}
+                                    </button>
+                                  )}
+
+                                  {!isPreviewMode && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setIsPaletteOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                    >
+                                      {dict.canvas.commandPalette}
+                                    </button>
+                                  )}
+
+                                  {!isPreviewMode && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setIsCanvasSearchOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                    >
+                                      <span>
+                                        {dict.canvas.canvasSearchLabel}
+                                      </span>
+                                    </button>
+                                  )}
+
+                                  {currentUserRole !== "viewer" && (
+                                    <button
+                                      className="project-mobile-actions-item relative"
+                                      onClick={() => {
+                                        setIsInviteModalOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                      disabled={isPreviewMode}
+                                    >
+                                      <span>
+                                        {dict.project.access || "Access"}
+                                      </span>
+                                      {pendingRequestsCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                          {pendingRequestsCount}
+                                        </span>
+                                      )}
+                                    </button>
+                                  )}
+
+                                  {currentUser?.id === projectOwnerId && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setIsShareModalOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                      disabled={isPreviewMode}
+                                    >
+                                      {dict.project.share || "Share"}
+                                    </button>
+                                  )}
+
+                                  {!isPreviewMode && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setIsHistoryOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                    >
+                                      {dict.canvas.temporalHistory || "History"}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {currentUserRole !== "viewer" && (
+                                <div className="relative">
+                                  <Button
+                                    onClick={() => setIsInviteModalOpen(true)}
+                                    className="btn-primary"
+                                    disabled={isPreviewMode}
+                                  >
                                     {(
-                                      dict.blocks as unknown as Record<
-                                        string,
-                                        string
-                                      >
-                                    ).duplicate ||
-                                      (
-                                        dict.common as unknown as Record<
+                                      dict.project.access || "Access"
+                                    ).toUpperCase()}
+                                  </Button>
+                                  {pendingRequestsCount > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                      {pendingRequestsCount}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {currentUser?.id === projectOwnerId && (
+                                <Button
+                                  onClick={() => setIsShareModalOpen(true)}
+                                  className="btn-secondary px-3!"
+                                  disabled={isPreviewMode}
+                                  title={dict.project.share || "Share"}
+                                >
+                                  <Share2 size={16} />
+                                </Button>
+                              )}
+                              <DecisionHistory
+                                projectId={initialProjectId!}
+                                onPreview={handlePreview}
+                                onApply={handleApplyState}
+                                onSave={handleSaveState}
+                                onDelete={handleDeleteState}
+                                onRename={handleRenameState}
+                                isPreviewing={isPreviewMode}
+                                selectedStateId={selectedStateId}
+                                projectOwnerId={projectOwnerId}
+                                currentUserId={currentUser?.id}
+                                isHistoryOpen={isHistoryOpen}
+                                onHistoryOpenChange={setIsHistoryOpen}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </Panel>
+
+                      {isMobileTopbar && (
+                        <DecisionHistory
+                          projectId={initialProjectId!}
+                          onPreview={handlePreview}
+                          onApply={handleApplyState}
+                          onSave={handleSaveState}
+                          onDelete={handleDeleteState}
+                          onRename={handleRenameState}
+                          isPreviewing={isPreviewMode}
+                          selectedStateId={selectedStateId}
+                          projectOwnerId={projectOwnerId}
+                          currentUserId={currentUser?.id}
+                          isHistoryOpen={isHistoryOpen}
+                          onHistoryOpenChange={setIsHistoryOpen}
+                        />
+                      )}
+
+                      <div className="zoom-indicator">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold opacity-40 tabular-nums">
+                            {zoom}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <Controls
+                        showInteractive={false}
+                        showZoom={false}
+                        showFitView={false}
+                        position="bottom-right"
+                      >
+                        <ControlButton
+                          onClick={undo}
+                          disabled={!canUndo || isPreviewMode}
+                          title={dict.canvas.undo || "Undo"}
+                        >
+                          <Undo2 />
+                        </ControlButton>
+                        <ControlButton
+                          onClick={redo}
+                          disabled={!canRedo || isPreviewMode}
+                          title={dict.canvas.redo || "Redo"}
+                        >
+                          <Redo2 />
+                        </ControlButton>
+                        <ControlButton
+                          onClick={handleZoomIn}
+                          title={dict.canvas.zoomIn}
+                        >
+                          <Plus />
+                        </ControlButton>
+                        <ControlButton
+                          onClick={handleZoomOut}
+                          title={dict.canvas.zoomOut}
+                        >
+                          <Minus />
+                        </ControlButton>
+                        <ControlButton
+                          onClick={handleFitView}
+                          title={dict.canvas.fitView}
+                        >
+                          <Maximize />
+                        </ControlButton>
+                        <DownloadButton />
+                      </Controls>
+                    </ReactFlow>
+                  </HelperLinesContext.Provider>
+
+                  {contextMenu && (
+                    <div
+                      ref={contextMenuRef}
+                      className="context-menu"
+                      style={
+                        {
+                          opacity: 0,
+                        } as React.CSSProperties
+                      }
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {contextMenu.type === "pane" ? (
+                        <>
+                          {!isPreviewMode && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setPendingBlockPosition(
+                                    screenToFlowPosition({
+                                      x: contextMenu.left,
+                                      y: contextMenu.top,
+                                    }),
+                                  );
+                                  setIsAddBlockOpen(true);
+                                  setContextMenu(null);
+                                }}
+                                className="context-menu-item"
+                              >
+                                <span className="context-menu-icon">
+                                  <Plus size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {dict.canvas.addBlock || "Add Block"}
+                                </span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const id = handleCreateBlock(
+                                    undefined,
+                                    undefined,
+                                    "folder",
+                                  );
+
+                                  if (id) {
+                                    setNewBlockId(id);
+                                    setTimeout(() => setNewBlockId(null), 800);
+                                    triggerAutoSnapshot("Block created");
+                                  }
+
+                                  setContextMenu(null);
+                                }}
+                                className="context-menu-item"
+                              >
+                                <span className="context-menu-icon">
+                                  <Folder size={14} />
+                                </span>
+                                <span className="context-menu-label">
+                                  {dict.canvas.addFolder || "Add Folder"}
+                                </span>
+                              </button>
+                              <div className="context-menu-separator" />
+                            </>
+                          )}
+                        </>
+                      ) : contextMenu.type === "block" ? (
+                        (() => {
+                          const block = contextMenuBlock;
+                          if (!block || !currentUser) return null;
+                          const isOwner =
+                            currentUser.id &&
+                            (block.data as BlockData)?.ownerId ===
+                              currentUser.id;
+                          const isProjectOwner =
+                            currentUser.id && projectOwnerId === currentUser.id;
+                          const canManage = isOwner || isProjectOwner;
+                          const isContentLocked = isBlockContentLocked(
+                            block.data as BlockData,
+                          );
+                          const isPositionLocked = isBlockPositionLocked(
+                            block.data as BlockData,
+                          );
+
+                          return (
+                            <>
+                              {canManage && (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      handleToggleContentLock(block.id)
+                                    }
+                                    className="context-menu-item"
+                                  >
+                                    <span className="context-menu-icon">
+                                      {isContentLocked ? (
+                                        <Unlock size={14} />
+                                      ) : (
+                                        <LuPencilOff size={14} />
+                                      )}
+                                    </span>
+                                    <span className="context-menu-label">
+                                      {isContentLocked
+                                        ? dict.blocks.unlockContent ||
+                                          "Unlock Content"
+                                        : dict.blocks.lockContent ||
+                                          "Lock Content"}
+                                    </span>
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleTogglePositionLock(block.id)
+                                    }
+                                    className="context-menu-item"
+                                  >
+                                    <span className="context-menu-icon">
+                                      {isPositionLocked ? (
+                                        <Unlock size={14} />
+                                      ) : (
+                                        <TbLocationOff size={14} />
+                                      )}
+                                    </span>
+                                    <span className="context-menu-label">
+                                      {isPositionLocked
+                                        ? dict.blocks.unlockPosition ||
+                                          "Unlock Position"
+                                        : dict.blocks.lockPosition ||
+                                          "Lock Position"}
+                                    </span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setTransferBlock(block);
+                                      setContextMenu(null);
+                                    }}
+                                    className="context-menu-item"
+                                  >
+                                    <span className="context-menu-icon">
+                                      <UserPlus size={14} />
+                                    </span>
+                                    <span className="context-menu-label">
+                                      {dict.project.transferOwnership ||
+                                        "Transfer Ownership"}
+                                    </span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (contextMenuBlock) {
+                                        const id = handleDuplicateBlock(
+                                          contextMenuBlock.id,
+                                        );
+                                        if (id) {
+                                          setNewBlockId(id);
+                                          setTimeout(
+                                            () => setNewBlockId(null),
+                                            800,
+                                          );
+                                          triggerAutoSnapshot("Block created");
+                                        }
+                                      }
+                                      setContextMenu(null);
+                                    }}
+                                    className="context-menu-item"
+                                  >
+                                    <span className="context-menu-icon">
+                                      <Copy size={14} />
+                                    </span>
+                                    <span className="context-menu-label">
+                                      {(
+                                        dict.blocks as unknown as Record<
                                           string,
                                           string
                                         >
                                       ).duplicate ||
-                                      "Duplicate"}
-                                  </span>
-                                </button>
-                                {(block.type === "webhook" ||
-                                  block.type === "cron") && (
-                                  <>
-                                    <button
-                                      onClick={() => {
-                                        setLogsBlock({
-                                          id: block.id,
-                                          title:
-                                            (block.data as BlockData).title ||
-                                            undefined,
-                                        });
-                                        setContextMenu(null);
-                                      }}
-                                      className="context-menu-item"
-                                    >
-                                      <span className="context-menu-icon">
-                                        <ScrollText size={14} />
-                                      </span>
-                                      <span className="context-menu-label">
-                                        {(
-                                          dict.automation as unknown as Record<
+                                        (
+                                          dict.common as unknown as Record<
                                             string,
                                             string
                                           >
-                                        ).viewLogs || "Logs"}
-                                      </span>
-                                    </button>
-                                  </>
-                                )}
-                                <div className="context-menu-separator" />
-                                <button
-                                  onClick={() => {
-                                    if (contextMenuBlock) {
-                                      const skipConfirm =
-                                        typeof window !== "undefined" &&
-                                        localStorage.getItem(
-                                          "ideon_skip_delete_confirm",
-                                        ) === "true";
+                                        ).duplicate ||
+                                        "Duplicate"}
+                                    </span>
+                                  </button>
+                                  {(block.type === "webhook" ||
+                                    block.type === "cron") && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setLogsBlock({
+                                            id: block.id,
+                                            title:
+                                              (block.data as BlockData).title ||
+                                              undefined,
+                                          });
+                                          setContextMenu(null);
+                                        }}
+                                        className="context-menu-item"
+                                      >
+                                        <span className="context-menu-icon">
+                                          <ScrollText size={14} />
+                                        </span>
+                                        <span className="context-menu-label">
+                                          {(
+                                            dict.automation as unknown as Record<
+                                              string,
+                                              string
+                                            >
+                                          ).viewLogs || "Logs"}
+                                        </span>
+                                      </button>
+                                    </>
+                                  )}
+                                  <div className="context-menu-separator" />
+                                  <button
+                                    onClick={() => {
+                                      if (contextMenuBlock) {
+                                        const skipConfirm =
+                                          typeof window !== "undefined" &&
+                                          localStorage.getItem(
+                                            "ideon_skip_delete_confirm",
+                                          ) === "true";
 
-                                      if (skipConfirm) {
-                                        _handleDeleteBlock(contextMenuBlock.id);
-                                      } else {
-                                        setBlockToDelete(contextMenuBlock.id);
+                                        if (skipConfirm) {
+                                          _handleDeleteBlock(
+                                            contextMenuBlock.id,
+                                          );
+                                        } else {
+                                          setBlockToDelete(contextMenuBlock.id);
+                                        }
+                                        setContextMenu(null);
                                       }
-                                      setContextMenu(null);
-                                    }
-                                  }}
-                                  className="context-menu-item danger"
-                                >
-                                  <span className="context-menu-icon">
-                                    <Trash2 size={14} />
-                                  </span>
-                                  <span className="context-menu-label">
-                                    {dict.common.delete || "Delete"}
-                                  </span>
-                                </button>
-                              </>
-                            )}
-                            {!canManage && (
-                              <div className="px-3 py-2 text-xs text-gray-500">
-                                {dict.blocks.viewOnly || "View Only"}
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()
-                    ) : contextMenu.type === "edge" ? (
-                      (() => {
-                        const edgeId = contextMenu.id;
-                        if (!edgeId) return null;
+                                    }}
+                                    className="context-menu-item danger"
+                                  >
+                                    <span className="context-menu-icon">
+                                      <Trash2 size={14} />
+                                    </span>
+                                    <span className="context-menu-label">
+                                      {dict.common.delete || "Delete"}
+                                    </span>
+                                  </button>
+                                </>
+                              )}
+                              {!canManage && (
+                                <div className="px-3 py-2 text-xs text-gray-500">
+                                  {dict.blocks.viewOnly || "View Only"}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()
+                      ) : contextMenu.type === "edge" ? (
+                        (() => {
+                          const edgeId = contextMenu.id;
+                          if (!edgeId) return null;
 
-                        return (
-                          <button
-                            onClick={() => {
-                              _deleteLinks([edgeId]);
-                              setContextMenu(null);
-                              triggerAutoSnapshot("Connection deleted");
-                            }}
-                            className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            {dict.common.delete || "Delete"}
-                          </button>
-                        );
-                      })()
-                    ) : null}
-                  </div>
-                )}
-              </DraftsProvider>
-            </UserMapProvider>
-          </AutomationStatesContext.Provider>
+                          return (
+                            <button
+                              onClick={() => {
+                                _deleteLinks([edgeId]);
+                                setContextMenu(null);
+                                triggerAutoSnapshot("Connection deleted");
+                              }}
+                              className="context-menu-item text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                              {dict.common.delete || "Delete"}
+                            </button>
+                          );
+                        })()
+                      ) : null}
+                    </div>
+                  )}
+                </DraftsProvider>
+              </UserMapProvider>
+            </AutomationStatesContext.Provider>
 
-          <ProjectAccessModal
-            isOpen={isInviteModalOpen}
-            onClose={() => setIsInviteModalOpen(false)}
-            projectId={initialProjectId!}
-            isOwner={
-              currentUserRole === "owner" || currentUserRole === "creator"
-            }
-            currentUserRole={currentUserRole}
-          />
-
-          <ShareModal
-            isOpen={isShareModalOpen}
-            onClose={() => setIsShareModalOpen(false)}
-            projectId={initialProjectId!}
-            isOwner={currentUser?.id === projectOwnerId}
-            onRegenerate={async (updateContent) => {
-              if (updateContent) {
-                await handleSaveState("Share link regeneration");
-              }
-            }}
-          />
-
-          {transferBlock && (
-            <TransferBlockModal
-              isOpen={!!transferBlock}
-              onClose={() => setTransferBlock(null)}
-              blockId={transferBlock.id}
+            <ProjectAccessModal
+              isOpen={isInviteModalOpen}
+              onClose={() => setIsInviteModalOpen(false)}
               projectId={initialProjectId!}
-              currentOwnerId={transferBlock.data.ownerId}
-              onTransfer={async (blockId, newOwnerId) => {
-                handleTransferBlock(blockId, {
-                  id: newOwnerId,
-                  username: "",
-                  displayName: "",
-                });
-                setTransferBlock(null);
-                triggerAutoSnapshot("Block transferred");
+              isOwner={
+                currentUserRole === "owner" || currentUserRole === "creator"
+              }
+              currentUserRole={currentUserRole}
+            />
+
+            <ShareModal
+              isOpen={isShareModalOpen}
+              onClose={() => setIsShareModalOpen(false)}
+              projectId={initialProjectId!}
+              isOwner={currentUser?.id === projectOwnerId}
+              onRegenerate={async (updateContent) => {
+                if (updateContent) {
+                  await handleSaveState("Share link regeneration");
+                }
               }}
             />
-          )}
 
-          {logsBlock && initialProjectId && (
-            <AutomationLogsModal
-              isOpen={!!logsBlock}
-              onClose={() => setLogsBlock(null)}
-              blockId={logsBlock.id}
-              projectId={initialProjectId}
-              blockTitle={logsBlock.title}
-            />
-          )}
-
-          <Modal
-            isOpen={!!blockToDelete || blocksToDelete.length > 0}
-            onClose={() => {
-              setBlockToDelete(null);
-              setBlocksToDelete([]);
-            }}
-            title={dict.modals.confirmDelete}
-            className="max-w-md"
-          >
-            <p className="modal-description">
-              {blocksToDelete.length > 0
-                ? dict.modals.deleteBlocksWarning.replace(
-                    "{count}",
-                    blocksToDelete.length.toString(),
-                  )
-                : dict.modals.deleteBlockWarning}
-            </p>
-
-            <div className="flex items-center gap-2 mt-4 mb-2">
-              <input
-                type="checkbox"
-                id="dont-ask-again"
-                checked={dontAskAgain}
-                onChange={(e) => setDontAskAgain(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <label htmlFor="dont-ask-again" className="text-sm opacity-80">
-                {dict.modals.dontAskAgain}
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button
-                onClick={() => {
-                  setBlockToDelete(null);
-                  setBlocksToDelete([]);
-                }}
-                className="btn-ghost"
-              >
-                {dict.common.cancel}
-              </Button>
-              <Button
-                onClick={() => {
-                  if (dontAskAgain) {
-                    localStorage.setItem("ideon_skip_delete_confirm", "true");
-                  }
-                  confirmDelete();
-                  triggerAutoSnapshot("Block deleted");
-                }}
-                className="btn-danger"
-              >
-                {dict.common.delete}
-              </Button>
-            </div>
-          </Modal>
-
-          <CommandPalette
-            isOpen={isPaletteOpen}
-            onClose={() => setIsPaletteOpen(false)}
-          />
-
-          <CanvasSearch
-            isOpen={isCanvasSearchOpen}
-            onClose={() => setIsCanvasSearchOpen(false)}
-            query={canvasSearchQuery}
-            onQueryChange={setCanvasSearchQuery}
-          />
-
-          <AddBlockModal
-            isOpen={isAddBlockOpen}
-            onClose={() => {
-              setIsAddBlockOpen(false);
-              setPendingConnection(null);
-              setPendingBlockPosition(null);
-            }}
-            onAddBlock={(blockType) => {
-              const isBehaviorBlock =
-                blockType === "webhook" || blockType === "cron";
-              const initialMeta = isBehaviorBlock
-                ? { projectId: initialProjectId }
-                : undefined;
-              const id = handleCreateBlock(
-                pendingConnection?.position ||
-                  pendingBlockPosition ||
-                  undefined,
-                pendingConnection?.sourceNodeId || undefined,
-                blockType as
-                  | "text"
-                  | "link"
-                  | "file"
-                  | "github"
-                  | "palette"
-                  | "contact"
-                  | "video"
-                  | "snippet"
-                  | "checklist"
-                  | "kanban"
-                  | "sketch"
-                  | "shell"
-                  | "folder"
-                  | "webhook"
-                  | "cron",
-                "",
-                initialMeta,
-              );
-              if (id) {
-                setNewBlockId(id);
-                setTimeout(() => setNewBlockId(null), 800);
-                triggerAutoSnapshot("Block created");
-                if (isBehaviorBlock) {
-                  void fetch(`/api/projects/${initialProjectId}/automations`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      id,
-                      name: blockType === "webhook" ? "Webhook" : "Cron",
-                      source: "custom",
-                      triggerEvent:
-                        blockType === "cron" ? "cron:0 9 * * *" : "*",
-                      action: "set_state",
-                      actionParams: { state: "success" },
-                    }),
-                  }).then(async (res) => {
-                    if (res.ok) {
-                      const rule = (await res.json()) as {
-                        webhookSecret: string;
-                      };
-                      const node = blocks.find((b) => b.id === id);
-                      if (node) {
-                        const existingMeta =
-                          typeof node.data.metadata === "string"
-                            ? (JSON.parse(node.data.metadata || "{}") as Record<
-                                string,
-                                unknown
-                              >)
-                            : (node.data.metadata as
-                                | Record<string, unknown>
-                                | undefined) ?? {};
-                        node.data.onContentChange?.(
-                          id,
-                          node.data.content || "",
-                          new Date().toISOString(),
-                          "",
-                          {
-                            ...existingMeta,
-                            ruleCreated: true,
-                            webhookSecret: rule.webhookSecret,
-                            projectId: initialProjectId,
-                          },
-                        );
-                      }
-                    }
+            {transferBlock && (
+              <TransferBlockModal
+                isOpen={!!transferBlock}
+                onClose={() => setTransferBlock(null)}
+                blockId={transferBlock.id}
+                projectId={initialProjectId!}
+                currentOwnerId={transferBlock.data.ownerId}
+                onTransfer={async (blockId, newOwnerId) => {
+                  handleTransferBlock(blockId, {
+                    id: newOwnerId,
+                    username: "",
+                    displayName: "",
                   });
+                  setTransferBlock(null);
+                  triggerAutoSnapshot("Block transferred");
+                }}
+              />
+            )}
+
+            {logsBlock && initialProjectId && (
+              <AutomationLogsModal
+                isOpen={!!logsBlock}
+                onClose={() => setLogsBlock(null)}
+                blockId={logsBlock.id}
+                projectId={initialProjectId}
+                blockTitle={logsBlock.title}
+              />
+            )}
+
+            <Modal
+              isOpen={!!blockToDelete || blocksToDelete.length > 0}
+              onClose={() => {
+                setBlockToDelete(null);
+                setBlocksToDelete([]);
+              }}
+              title={dict.modals.confirmDelete}
+              className="max-w-md"
+            >
+              <p className="modal-description">
+                {blocksToDelete.length > 0
+                  ? dict.modals.deleteBlocksWarning.replace(
+                      "{count}",
+                      blocksToDelete.length.toString(),
+                    )
+                  : dict.modals.deleteBlockWarning}
+              </p>
+
+              {blocks.some(
+                (block) =>
+                  block.type === "subcanvas" &&
+                  (block.id === blockToDelete ||
+                    blocksToDelete.includes(block.id)),
+              ) && (
+                <p className="modal-description mt-2 text-red-500">
+                  {dict.modals.subCanvasDeleteWarning}
+                </p>
+              )}
+
+              <div className="flex items-center gap-2 mt-4 mb-2">
+                <input
+                  type="checkbox"
+                  id="dont-ask-again"
+                  checked={dontAskAgain}
+                  onChange={(e) => setDontAskAgain(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="dont-ask-again" className="text-sm opacity-80">
+                  {dict.modals.dontAskAgain}
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  onClick={() => {
+                    setBlockToDelete(null);
+                    setBlocksToDelete([]);
+                  }}
+                  className="btn-ghost"
+                >
+                  {dict.common.cancel}
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (dontAskAgain) {
+                      localStorage.setItem("ideon_skip_delete_confirm", "true");
+                    }
+                    confirmDelete();
+                    triggerAutoSnapshot("Block deleted");
+                  }}
+                  className="btn-danger"
+                >
+                  {dict.common.delete}
+                </Button>
+              </div>
+            </Modal>
+
+            <CommandPalette
+              isOpen={isPaletteOpen}
+              onClose={() => setIsPaletteOpen(false)}
+            />
+
+            <CanvasSearch
+              isOpen={isCanvasSearchOpen}
+              onClose={() => setIsCanvasSearchOpen(false)}
+              query={canvasSearchQuery}
+              onQueryChange={setCanvasSearchQuery}
+            />
+
+            <AddBlockModal
+              isOpen={isAddBlockOpen}
+              onClose={() => {
+                setIsAddBlockOpen(false);
+                setPendingConnection(null);
+                setPendingBlockPosition(null);
+              }}
+              onAddBlock={(blockType) => {
+                if (
+                  blockType === "subcanvas" &&
+                  activeDepth >= MAX_CANVAS_DEPTH
+                ) {
+                  toast.error(dict.blocks.subCanvasMaxDepth);
+                  setIsAddBlockOpen(false);
+                  return;
                 }
-              }
-              setIsAddBlockOpen(false);
-              setPendingConnection(null);
-              setPendingBlockPosition(null);
-              if (blockType !== "text") {
-                requestAnimationFrame(() => focusProjectCanvas());
-              }
-            }}
-          />
-        </div>
-      </>
-    </YDocContext.Provider>
-  );
+                const isBehaviorBlock =
+                  blockType === "webhook" || blockType === "cron";
+                const initialMeta = isBehaviorBlock
+                  ? { projectId: initialProjectId }
+                  : undefined;
+                const id = handleCreateBlock(
+                  pendingConnection?.position ||
+                    pendingBlockPosition ||
+                    undefined,
+                  pendingConnection?.sourceNodeId || undefined,
+                  blockType as
+                    | "text"
+                    | "link"
+                    | "file"
+                    | "github"
+                    | "palette"
+                    | "contact"
+                    | "video"
+                    | "snippet"
+                    | "checklist"
+                    | "kanban"
+                    | "sketch"
+                    | "shell"
+                    | "folder"
+                    | "webhook"
+                    | "cron"
+                    | "subcanvas",
+                  "",
+                  initialMeta,
+                );
+                if (id) {
+                  setNewBlockId(id);
+                  setTimeout(() => setNewBlockId(null), 800);
+                  triggerAutoSnapshot("Block created");
+                  if (isBehaviorBlock) {
+                    void fetch(
+                      `/api/projects/${initialProjectId}/automations`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          id,
+                          name: blockType === "webhook" ? "Webhook" : "Cron",
+                          source: "custom",
+                          triggerEvent:
+                            blockType === "cron" ? "cron:0 9 * * *" : "*",
+                          action: "set_state",
+                          actionParams: { state: "success" },
+                        }),
+                      },
+                    ).then(async (res) => {
+                      if (res.ok) {
+                        const rule = (await res.json()) as {
+                          webhookSecret: string;
+                        };
+                        const node = blocks.find((b) => b.id === id);
+                        if (node) {
+                          const existingMeta =
+                            typeof node.data.metadata === "string"
+                              ? (JSON.parse(
+                                  node.data.metadata || "{}",
+                                ) as Record<string, unknown>)
+                              : (node.data.metadata as
+                                  | Record<string, unknown>
+                                  | undefined) ?? {};
+                          node.data.onContentChange?.(
+                            id,
+                            node.data.content || "",
+                            new Date().toISOString(),
+                            "",
+                            {
+                              ...existingMeta,
+                              ruleCreated: true,
+                              webhookSecret: rule.webhookSecret,
+                              projectId: initialProjectId,
+                            },
+                          );
+                        }
+                      }
+                    });
+                  }
+                }
+                setIsAddBlockOpen(false);
+                setPendingConnection(null);
+                setPendingBlockPosition(null);
+                if (blockType !== "text") {
+                  requestAnimationFrame(() => focusProjectCanvas());
+                }
+              }}
+            />
+          </div>
+        </>
+      </YDocContext.Provider>
+    );
+  }
 }
 
 export default function ProjectCanvas(props: ProjectCanvasProps) {

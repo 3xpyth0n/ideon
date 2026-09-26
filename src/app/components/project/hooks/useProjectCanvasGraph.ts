@@ -48,6 +48,7 @@ import * as Y from "yjs";
 import { parseFolderMetadata, parseFrameMetadata } from "@lib/metadata-parsers";
 import { safeReadYText } from "@lib/projectContentSafety";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
+import { deleteSubCanvasRecursive } from "@components/project/subcanvas/subCanvasUtils";
 import {
   computeHiddenNodeIds,
   getDescendantIds,
@@ -107,6 +108,7 @@ interface UseProjectCanvasGraphProps {
   } | null;
   isReadOnly?: boolean;
   markUndoBoundary: () => void;
+  yDoc: Y.Doc | null;
 }
 
 export const useProjectCanvasGraph = ({
@@ -122,6 +124,7 @@ export const useProjectCanvasGraph = ({
   contextMenu,
   isReadOnly = false,
   markUndoBoundary,
+  yDoc,
 }: UseProjectCanvasGraphProps) => {
   const { dict } = useI18n();
   const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
@@ -287,6 +290,16 @@ export const useProjectCanvasGraph = ({
       applyWithUndoBoundary(() => {
         deleteBlocks(deletableIds);
 
+        // Clean up namespaced sub-canvas data for any deleted sub-canvas blocks.
+        if (yDoc) {
+          for (const id of deletableIds) {
+            const block = blocks.find((b) => b.id === id);
+            if (block?.type === "subcanvas") {
+              deleteSubCanvasRecursive(yDoc, id);
+            }
+          }
+        }
+
         const linksToRemove = links
           .filter((l) => idSet.has(l.source) || idSet.has(l.target))
           .map((l) => l.id);
@@ -302,6 +315,7 @@ export const useProjectCanvasGraph = ({
       links,
       isReadOnly,
       applyWithUndoBoundary,
+      yDoc,
     ],
   );
 
@@ -1183,7 +1197,8 @@ export const useProjectCanvasGraph = ({
         | "folder"
         | "frame"
         | "webhook"
-        | "cron" = "text",
+        | "cron"
+        | "subcanvas" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {

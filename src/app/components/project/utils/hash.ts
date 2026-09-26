@@ -1,9 +1,11 @@
 import { Node, Edge } from "@xyflow/react";
 import { BlockData } from "@components/project/CanvasBlock";
+import type { CanvasStateSnapshot } from "../../../../lib/yjs-canvas-state";
 
 export const generateStateHash = async (
   blocks: Node<BlockData>[],
   links: Edge[],
+  canvasStates?: CanvasStateSnapshot[],
 ): Promise<string> => {
   // Sort blocks by ID to ensure order independence
   const sortedBlocks = [...blocks]
@@ -31,9 +33,51 @@ export const generateStateHash = async (
       target: l.target,
     }));
 
+  const sortedCanvasStates = canvasStates
+    ?.map((canvas) => ({
+      canvasId: canvas.canvasId,
+      blocks: canvas.blocks
+        .map((block) => ({
+          id: block.id,
+          position: {
+            x: Math.round(block.position.x),
+            y: Math.round(block.position.y),
+          },
+          data: {
+            content: block.data?.content,
+            title: block.data?.title,
+            metadata: block.data?.metadata,
+          },
+          width: block.width,
+          height: block.height,
+          type: block.type,
+        }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      links: canvas.links
+        .map((link) => ({
+          id: link.id,
+          source: link.source,
+          target: link.target,
+        }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      contents: Object.fromEntries(
+        Object.entries(canvas.contents).sort(([left], [right]) =>
+          left.localeCompare(right),
+        ),
+      ),
+      noteDocuments: Object.fromEntries(
+        Object.entries(canvas.noteDocuments).sort(([left], [right]) =>
+          left.localeCompare(right),
+        ),
+      ),
+      viewport: canvas.viewport,
+    }))
+    .sort((left, right) => left.canvasId.localeCompare(right.canvasId));
+
   const stateString = JSON.stringify({
     blocks: sortedBlocks,
     links: sortedLinks,
+    canvasStates: sortedCanvasStates,
   });
 
   // Use Web Crypto for SHA-256

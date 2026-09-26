@@ -82,7 +82,8 @@ export type BlockData = {
     | "webhook"
     | "cron"
     | "latex"
-    | "calendar";
+    | "calendar"
+    | "subcanvas";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;
@@ -170,6 +171,14 @@ export interface BlockMetadata {
   hasFetchedMetadata?: boolean;
   disablePublicMetadataFetch?: boolean;
   [key: string]: unknown;
+}
+
+export interface SubCanvasBlockMetadata {
+  thumbnailDataUrl?: string;
+  thumbnailLightDataUrl?: string;
+  thumbnailDarkDataUrl?: string;
+  thumbnailUpdatedAt?: string;
+  thumbnailError?: boolean;
 }
 
 export type CanvasBlockProps = NodeProps<

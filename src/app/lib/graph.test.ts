@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { transformBlock, prepareBlockForDb, DbBlock } from "./graph";
+import {
+  applyGraphMutation,
+  transformBlock,
+  prepareBlockForDb,
+  DbBlock,
+} from "./graph";
 import {
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
@@ -265,5 +270,54 @@ describe("graph library", () => {
         metadata: { size: 1024, mime: "image/png" },
       });
     });
+
+    it("should accept sub-canvas blocks", () => {
+      const node: Node = {
+        id: "subcanvas-1",
+        type: "subcanvas",
+        position: { x: 20, y: 30 },
+        data: { blockType: "subcanvas", content: "" },
+      };
+
+      expect(prepareBlockForDb(node, "project-1", "user-1").blockType).toBe(
+        "subcanvas",
+      );
+    });
+  });
+
+  it("preserves nested canvas states when reconstructing snapshots", () => {
+    const canvasStates = [
+      {
+        canvasId: "root",
+        blocks: [
+          {
+            id: "subcanvas-1",
+            type: "subcanvas",
+            position: { x: 0, y: 0 },
+            data: { blockType: "subcanvas", content: "" },
+          },
+        ],
+        links: [],
+        contents: {},
+        noteDocuments: {},
+      },
+      {
+        canvasId: "subcanvas-1",
+        blocks: [],
+        links: [],
+        contents: {},
+        noteDocuments: {},
+      },
+    ];
+
+    const state = applyGraphMutation(
+      { blocks: [], links: [] },
+      {
+        type: "graphSnapshot",
+        payload: { blocks: canvasStates[0].blocks, links: [], canvasStates },
+      },
+    );
+
+    expect(state.canvasStates).toEqual(canvasStates);
   });
 });

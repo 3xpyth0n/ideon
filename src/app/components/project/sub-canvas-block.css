@@ -1,0 +1,221 @@
+.sub-canvas-block {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: none;
+  background: transparent;
+  isolation: isolate;
+}
+
+.block-card.sub-canvas-block {
+  --sub-canvas-border-strong: color-mix(
+    in srgb,
+    var(--block-border-color, var(--border)) 72%,
+    var(--text-main)
+  );
+  --sub-canvas-border-active: var(--sub-canvas-border-strong);
+  position: relative;
+}
+
+.block-card.sub-canvas-block.selected {
+  --sub-canvas-border-active: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .block-card.sub-canvas-block.selected {
+  --sub-canvas-border-active: rgba(255, 255, 255, 0.6);
+}
+
+.preview-mode .block-card.sub-canvas-block.selected {
+  --sub-canvas-border-active: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .preview-mode .block-card.sub-canvas-block.selected {
+  --sub-canvas-border-active: rgba(255, 255, 255, 0.4);
+}
+
+.sub-canvas-block-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-island);
+  border: 2px solid var(--sub-canvas-border-active);
+  border-radius: 1rem;
+}
+
+.sub-canvas-block-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  min-height: 0;
+  flex: 1;
+}
+
+.sub-canvas-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sub-canvas-block-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.sub-canvas-block-title {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  opacity: 0.8;
+}
+
+.sub-canvas-block-title::placeholder {
+  opacity: 0.4;
+}
+
+.sub-canvas-block-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-main) 40%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.sub-canvas-block-empty-label {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.35;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Thumbnail container */
+.sub-canvas-block-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  pointer-events: none;
+}
+
+.sub-canvas-block-thumbnail-error {
+  display: inline-flex;
+  align-items: center;
+  color: var(--danger, #ef4444);
+  flex-shrink: 0;
+  cursor: help;
+}
+
+/* Breadcrumb overlay — rendered inside ReactFlow Panel, positioned above controls */
+.sub-canvas-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--bg-island) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-main);
+  max-width: 480px;
+  overflow: hidden;
+}
+
+.sub-canvas-breadcrumb-sep {
+  opacity: 0.4;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.sub-canvas-breadcrumb-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: inherit;
+  font-weight: inherit;
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  transition: opacity 0.15s;
+}
+
+.sub-canvas-breadcrumb-link:hover {
+  opacity: 1;
+}
+
+.sub-canvas-breadcrumb-current {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  opacity: 1;
+}
+
+/* Low-zoom title-only mode — hides header/body, shows only centered title */
+.sub-canvas-block-main.zoom-title-only .sub-canvas-block-shell {
+  justify-content: center;
+  align-items: center;
+}
+
+.sub-canvas-block-main.zoom-title-only .sub-canvas-block-header {
+  display: none;
+}
+
+.sub-canvas-block-main.zoom-title-only .sub-canvas-block-body {
+  display: none;
+}
+
+.sub-canvas-block-main.zoom-title-only .sub-canvas-block-title-only {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-main);
+  opacity: 0.7;
+  text-align: center;
+  user-select: none;
+  pointer-events: none;
+  padding: 4px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hidden by default — only shown in zoom-title-only mode */
+.sub-canvas-block-title-only {
+  display: none;
+}

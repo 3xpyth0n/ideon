@@ -29,6 +29,7 @@ import {
   DEFAULT_BLOCK_WIDTH,
 } from "@components/project/utils/constants";
 import { generateStateHash } from "@components/project/utils/hash";
+import { captureCanvasStateSnapshots } from "../../../../lib/yjs-canvas-state";
 import {
   buildMultiBlockCopyText,
   shouldOverrideMultiBlockCopy,
@@ -483,6 +484,8 @@ export const useProjectCanvasState = (
   isLocalSynced: boolean = false,
   isRemoteSynced: boolean = false,
   onGraphMutation?: (intent: string) => void,
+  yNoteDocuments?: Y.Map<Y.XmlFragment> | null,
+  activeCanvasId: string = "root",
 ) => {
   const { dict } = useI18n();
   const {
@@ -493,6 +496,9 @@ export const useProjectCanvasState = (
     setViewport,
     screenToFlowPosition,
   } = useReactFlow();
+  const noteDocumentsMap =
+    yNoteDocuments ??
+    (yDoc ? yDoc.getMap<Y.XmlFragment>("noteDocuments") : null);
 
   const applyLongestSideFit = useCallback(
     (targetBlocks: Node<BlockData>[], maxZoom: number) => {
@@ -617,9 +623,7 @@ export const useProjectCanvasState = (
       ? (yDoc.getMap("drafts") as Y.Map<string>)
       : null;
 
-    const yNoteDocuments: Y.Map<Y.XmlFragment> | null = yDoc
-      ? (yDoc.getMap("noteDocuments") as Y.Map<Y.XmlFragment>)
-      : null;
+    const yNoteDocumentsToObserve = noteDocumentsMap;
 
     const updateBlocksFromYjs = (
       event: Y.YMapEvent<Node<BlockData>>,
@@ -651,7 +655,7 @@ export const useProjectCanvasState = (
             const rn = yBlocks.get(key);
             if (rn) {
               const yText = yContents.get(key);
-              const yNoteDocument = yNoteDocuments?.get(key);
+              const yNoteDocument = yNoteDocumentsToObserve?.get(key);
               // For text blocks in collaborative mode, keep content stale —
               // it's only used as a migration fallback. Content lives in Y.XmlFragment.
               const blockContent = yNoteDocument
@@ -883,7 +887,7 @@ export const useProjectCanvasState = (
     const initialBlocks = Array.from(yBlocks.values());
     const initialLinks = Array.from(yLinks.values());
 
-    if (yNoteDocuments && !isReadOnly) {
+    if (yNoteDocumentsToObserve && !isReadOnly) {
       // NOTE: Do NOT create Y.XmlFragment here during initial sync.
       // y-prosemirror will create and seed the fragment when the editor mounts.
       // Creating empty or pre-seeded fragments here causes "allocation size overflow"
@@ -893,7 +897,7 @@ export const useProjectCanvasState = (
     setBlocksState(
       initialBlocks.map((rn) => {
         const yText = yContents.get(rn.id);
-        const yNoteDocument = yNoteDocuments?.get(rn.id);
+        const yNoteDocument = yNoteDocumentsToObserve?.get(rn.id);
         // Defer toString() to avoid main thread freeze during initial sync of 1000+ blocks
         const initialContent = (rn.data as unknown as { content?: string })
           ?.content;
@@ -962,7 +966,14 @@ export const useProjectCanvasState = (
       yContents.unobserveDeep(updateContentsDeepFromYjs);
       if (yDrafts) yDrafts.unobserve(updateDraftsFromYjs);
     };
-  }, [yBlocks, yLinks, yContents, isPreviewMode, applyLongestSideFit]);
+  }, [
+    yBlocks,
+    yLinks,
+    yContents,
+    noteDocumentsMap,
+    isPreviewMode,
+    applyLongestSideFit,
+  ]);
 
   useEffect(() => {
     if (!yDoc) return;
@@ -1019,9 +1030,7 @@ export const useProjectCanvasState = (
 
     const resetBlocks = Array.from(yBlocks.values()).map((rn) => {
       const yText = yContents.get(rn.id);
-      const yNoteDocument = yDoc
-        ?.getMap<Y.XmlFragment>("noteDocuments")
-        .get(rn.id);
+      const yNoteDocument = noteDocumentsMap?.get(rn.id);
       const initialContent = (rn.data as unknown as { content?: string })
         ?.content;
 
@@ -1063,6 +1072,7 @@ export const useProjectCanvasState = (
     yBlocks,
     yLinks,
     yContents,
+    noteDocumentsMap,
   ]);
 
   const setBlocks = useCallback(
@@ -1136,9 +1146,7 @@ export const useProjectCanvasState = (
 
               if (block.type === "text" && !existing) {
                 const yNoteDocument = new Y.XmlFragment();
-                yBlocks.doc
-                  ?.getMap("noteDocuments")
-                  .set(block.id, yNoteDocument);
+                noteDocumentsMap?.set(block.id, yNoteDocument);
               }
 
               const blockData = cleanBlockDataForSync(
@@ -1190,12 +1198,14 @@ export const useProjectCanvasState = (
         // Enrich local blocks with yNoteDocument and yAwareness so that
         // newly created text blocks immediately have the collaborative
         // binding references available for NoteBlock rendering.
-        const yNoteDocuments =
-          yBlocks.doc?.getMap<Y.XmlFragment>("noteDocuments") ?? null;
+        const previewActive = isPreviewModeRef.current;
         const enrichedNextBlocks = nextBlocks.map((block) => {
-          const yText = yContents.get(block.id) ?? block.data?.yText;
-          const yNoteDocument =
-            yNoteDocuments?.get(block.id) ?? block.data?.yNoteDocument;
+          const yText = previewActive
+            ? block.data?.yText ?? yContents.get(block.id)
+            : yContents.get(block.id) ?? block.data?.yText;
+          const yNoteDocument = previewActive
+            ? block.data?.yNoteDocument ?? noteDocumentsMap?.get(block.id)
+            : noteDocumentsMap?.get(block.id) ?? block.data?.yNoteDocument;
           if (
             yText === block.data?.yText &&
             yNoteDocument === block.data?.yNoteDocument &&
@@ -1217,7 +1227,7 @@ export const useProjectCanvasState = (
         return enrichedNextBlocks;
       });
     },
-    [yBlocks, yContents, currentUserRole, awareness],
+    [yBlocks, yContents, noteDocumentsMap, currentUserRole, awareness],
   );
 
   const deleteBlocks = useCallback(
@@ -1228,13 +1238,13 @@ export const useProjectCanvasState = (
         ids.forEach((id) => {
           yBlocks.delete(id);
           yContents.delete(id);
-          yBlocks.doc?.getMap("noteDocuments").delete(id);
+          noteDocumentsMap?.delete(id);
         });
       }, CANVAS_HISTORY_ORIGIN);
 
       setBlocksState((prev) => prev.filter((n) => !ids.includes(n.id)));
     },
-    [yBlocks, yContents, isReadOnly],
+    [yBlocks, yContents, noteDocumentsMap, isReadOnly],
   );
 
   const setLinks = useCallback(
@@ -1322,10 +1332,9 @@ export const useProjectCanvasState = (
         Array.from(yBlocks.keys()).forEach((id) => yBlocks.delete(id));
         Array.from(yLinks.keys()).forEach((id) => yLinks.delete(id));
         Array.from(yContents.keys()).forEach((id) => yContents.delete(id));
-        const yNoteDocuments = yBlocks.doc?.getMap("noteDocuments");
-        if (yNoteDocuments) {
-          Array.from(yNoteDocuments.keys()).forEach((id) =>
-            yNoteDocuments.delete(id),
+        if (noteDocumentsMap) {
+          Array.from(noteDocumentsMap.keys()).forEach((id) =>
+            noteDocumentsMap.delete(id),
           );
         }
 
@@ -1349,7 +1358,7 @@ export const useProjectCanvasState = (
 
           if (block.type === "text") {
             const yNoteDocument = new Y.XmlFragment();
-            yBlocks.doc?.getMap("noteDocuments").set(block.id, yNoteDocument);
+            noteDocumentsMap?.set(block.id, yNoteDocument);
           }
 
           const blockData = cleanBlockDataForSync(
@@ -1367,10 +1376,9 @@ export const useProjectCanvasState = (
         });
 
         // 3. Set local state with enriched blocks (include yNoteDocument/yAwareness)
-        const noteDocsMap = yBlocks.doc?.getMap<Y.XmlFragment>("noteDocuments");
         const enrichedBlocks = sanitizedBlocks.map((block) => {
           const yText = yContents.get(block.id);
-          const yNoteDocument = noteDocsMap?.get(block.id);
+          const yNoteDocument = noteDocumentsMap?.get(block.id);
           return {
             ...block,
             data: {
@@ -1387,7 +1395,7 @@ export const useProjectCanvasState = (
 
       clear();
     },
-    [yBlocks, yLinks, yContents, isReadOnly, clear, awareness],
+    [yBlocks, yLinks, yContents, yNoteDocuments, isReadOnly, clear, awareness],
   );
 
   // Drafts API: keep drafts in separate state to avoid polluting BlockData
@@ -1522,13 +1530,10 @@ export const useProjectCanvasState = (
       const initialBlocks = Array.from(yBlocks.values());
       const initialLinks = Array.from(yLinks.values());
 
-      const yNoteDocumentsMap =
-        yBlocks.doc?.getMap<Y.XmlFragment>("noteDocuments");
-
       setBlocksState(
         initialBlocks.map((rn) => {
           const yText = yContents.get(rn.id);
-          const yNoteDocument = yNoteDocumentsMap?.get(rn.id);
+          const yNoteDocument = noteDocumentsMap?.get(rn.id);
           return {
             ...rn,
             selected: false,
@@ -1556,7 +1561,7 @@ export const useProjectCanvasState = (
     }
 
     setIsPreviewMode(false);
-  }, [yBlocks, yLinks, yContents, awareness]);
+  }, [yBlocks, yLinks, yContents, noteDocumentsMap, awareness]);
 
   const handleSaveState = useCallback(
     async (
@@ -1609,9 +1614,31 @@ export const useProjectCanvasState = (
           };
         });
 
+        const canvasStates = yDoc
+          ? captureCanvasStateSnapshots(yDoc, {
+              canvasId: activeCanvasId,
+              blocks: blocksToSave,
+              links: overrideLinks || links,
+            })
+          : undefined;
+        const rootCanvas = canvasStates?.find(
+          (canvas) => canvas.canvasId === "root",
+        );
+        if (activeCanvasId !== "root" && !rootCanvas) {
+          return { success: false };
+        }
+        const snapshotBlocks =
+          activeCanvasId === "root" || !rootCanvas
+            ? blocksToSave
+            : (rootCanvas.blocks as Node<BlockData>[]);
+        const snapshotLinks =
+          activeCanvasId === "root" || !rootCanvas
+            ? overrideLinks || links
+            : rootCanvas.links;
         const currentHash = await generateStateHash(
-          blocksToSave,
-          overrideLinks || links,
+          snapshotBlocks,
+          snapshotLinks,
+          canvasStates,
         );
 
         if (lastSnapshotHash.current === currentHash) {
@@ -1628,8 +1655,9 @@ export const useProjectCanvasState = (
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "create",
-            blocks: blocksToSave,
-            links: overrideLinks || links,
+            blocks: snapshotBlocks,
+            links: snapshotLinks,
+            canvasStates,
             intent,
             isAuto,
           }),
@@ -1665,7 +1693,7 @@ export const useProjectCanvasState = (
         return { success: false };
       }
     },
-    [initialProjectId, blocks, links, yContents],
+    [initialProjectId, blocks, links, yContents, yDoc, activeCanvasId],
   );
 
   const handleDeleteState = useCallback(
@@ -1756,6 +1784,7 @@ export const useProjectCanvasState = (
     contextMenu,
     isReadOnly: isPreviewMode || currentUserRole === "viewer",
     markUndoBoundary,
+    yDoc,
   });
 
   const handleCreateBlockWrapper = useCallback(
@@ -2408,6 +2437,8 @@ export const useProjectCanvasState = (
     isPreviewMode,
     setProjectOwnerId,
     handleExitPreview,
+    yDoc,
+    activeCanvasId,
   });
 
   const checkVisibleBlocks = useCallback(
@@ -3068,49 +3099,7 @@ export const useProjectCanvasState = (
     isShiftPressed: graph.isShiftPressed,
     setActiveResizeSnap: graph.setActiveResizeSnap,
     handlePreview: io.handlePreview,
-    handleApplyState: async (stateId: string) => {
-      if (!initialProjectId) return;
-
-      // If in preview mode, we can check for duplicates
-      if (isPreviewMode && yBlocks && yLinks && yContents) {
-        // 1. Get Present State from Yjs
-        const presentBlocks = Array.from(yBlocks.values()).map((b) => {
-          const yText = yContents.get(b.id);
-          return {
-            ...b,
-            data: {
-              ...b.data,
-              content: safeReadYText(yText, b.data.content || ""),
-            },
-          } as Node<BlockData>;
-        });
-        const presentLinks = Array.from(yLinks.values());
-
-        // 2. Get Snapshot State (currently in 'blocks' and 'links' because isPreviewMode=true)
-        const snapshotBlocks = blocks;
-        const snapshotLinks = links;
-
-        const presentHash = await generateStateHash(
-          presentBlocks,
-          presentLinks,
-        );
-        const snapshotHash = await generateStateHash(
-          snapshotBlocks,
-          snapshotLinks,
-        );
-
-        if (presentHash === snapshotHash) {
-          toast.info(
-            dict.modals.stateAlreadyApplied ||
-              "This state is already applied to the present",
-          );
-          return;
-        }
-      }
-
-      // Proceed
-      await io.handleApplyState(stateId);
-    },
+    handleApplyState: io.handleApplyState,
     onBlockContextMenu: graph.onBlockContextMenu,
     onEdgeContextMenu: graph.onEdgeContextMenu,
     onPaneContextMenu: graph.onPaneContextMenu,

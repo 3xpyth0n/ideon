@@ -6,6 +6,13 @@ import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
 import { unzipSync, strFromU8 } from "fflate";
 import type { NewBlock, NewLink } from "@lib/types/db";
+import {
+  parseCanvasStateSnapshots,
+  remapCanvasStateSnapshots,
+  restoreCanvasStateSnapshots,
+  type CanvasStateSnapshot,
+} from "../../../../lib/yjs-canvas-state";
+import { getProjectYjsDoc } from "../../../../lib/projectYjsDoc";
 
 function remapMetadataBlockIds(
   blockType: string,
@@ -87,6 +94,46 @@ interface ExportedLink {
   updatedAt: string;
 }
 
+function remapMetadataValue(
+  blockType: string,
+  metadata: unknown,
+  idMap: Map<string, string>,
+): unknown {
+  const serialized =
+    typeof metadata === "string" ? metadata : JSON.stringify(metadata ?? {});
+  const remapped = remapMetadataBlockIds(blockType, serialized, idMap);
+  try {
+    return JSON.parse(remapped) as unknown;
+  } catch {
+    return metadata;
+  }
+}
+
+function remapBlockData(
+  blockType: string,
+  data: string,
+  idMap: Map<string, string>,
+  ownerId: string,
+): string {
+  try {
+    const parsed: unknown = JSON.parse(data);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return data;
+    }
+    const remapped = { ...(parsed as Record<string, unknown>), ownerId };
+    if ("metadata" in remapped) {
+      remapped.metadata = remapMetadataValue(
+        blockType,
+        remapped.metadata,
+        idMap,
+      );
+    }
+    return JSON.stringify(remapped);
+  } catch {
+    return data;
+  }
+}
+
 export const POST = authenticatedAction(
   async (req, { user }) => {
     if (!user) throw { status: 401, message: "Unauthorized" };
@@ -119,7 +166,10 @@ export const POST = authenticatedAction(
       throw { status: 400, message: "Failed to parse manifest" };
     }
 
-    if (manifest.format !== "ideon-project" || manifest.version !== "1") {
+    if (
+      manifest.format !== "ideon-project" ||
+      !["1", "2"].includes(manifest.version)
+    ) {
       throw { status: 400, message: "Unsupported export format or version" };
     }
 
@@ -134,11 +184,21 @@ export const POST = authenticatedAction(
     let projectMeta: { name: string; description: string | null };
     let exportedBlocks: ExportedBlock[];
     let exportedLinks: ExportedLink[];
+    let canvasStates: CanvasStateSnapshot[] = [];
 
     try {
       projectMeta = JSON.parse(strFromU8(projectEntry));
       exportedBlocks = JSON.parse(strFromU8(blocksEntry));
       exportedLinks = JSON.parse(strFromU8(linksEntry));
+      if (manifest.version === "2") {
+        const canvasStatesEntry = archive["canvas-states.json"];
+        if (!canvasStatesEntry) {
+          throw new Error("Canvas state file is missing");
+        }
+        canvasStates = parseCanvasStateSnapshots(
+          JSON.parse(strFromU8(canvasStatesEntry)),
+        );
+      }
     } catch {
       throw { status: 400, message: "Failed to parse import file" };
     }
@@ -150,6 +210,52 @@ export const POST = authenticatedAction(
     const idMap = new Map<string, string>();
     for (const block of exportedBlocks) {
       idMap.set(block.id, uuidv4());
+    }
+    for (const canvas of canvasStates) {
+      for (const block of canvas.blocks) {
+        if (!idMap.has(block.id)) idMap.set(block.id, uuidv4());
+      }
+    }
+
+    const linkIdMap = new Map<string, string>();
+    for (const link of exportedLinks) linkIdMap.set(link.id, uuidv4());
+    for (const canvas of canvasStates) {
+      for (const link of canvas.links) {
+        if (!linkIdMap.has(link.id)) linkIdMap.set(link.id, uuidv4());
+      }
+    }
+
+    const importedCanvasStates = remapCanvasStateSnapshots(
+      canvasStates,
+      idMap,
+      linkIdMap,
+      (block) => {
+        const data: Record<string, unknown> = {
+          ...(block.data ?? {}),
+          ownerId: user.id,
+        };
+        const blockType =
+          typeof data.blockType === "string"
+            ? data.blockType
+            : block.type ?? "text";
+        if ("metadata" in data) {
+          data.metadata = remapMetadataValue(blockType, data.metadata, idMap);
+        }
+        return { ...block, data };
+      },
+    );
+    const projectYjsDoc =
+      importedCanvasStates.length > 0
+        ? await getProjectYjsDoc(newProjectId)
+        : null;
+    if (importedCanvasStates.length > 0 && !projectYjsDoc) {
+      throw {
+        status: 503,
+        message: "Yjs persistence is unavailable for this import",
+      };
+    }
+    if (projectYjsDoc) {
+      restoreCanvasStateSnapshots(projectYjsDoc.doc, importedCanvasStates);
     }
 
     const blocks: NewBlock[] = exportedBlocks.map((block) => ({
@@ -166,14 +272,14 @@ export const POST = authenticatedAction(
       height: block.height ?? null,
       ownerId: user.id,
       content: block.content ?? null,
-      data: block.data,
+      data: remapBlockData(block.blockType, block.data, idMap, user.id),
       selected: 0,
       createdAt: now,
       updatedAt: now,
     }));
 
     const links: NewLink[] = exportedLinks.map((link) => ({
-      id: uuidv4(),
+      id: linkIdMap.get(link.id)!,
       projectId: newProjectId,
       source: idMap.get(link.source) ?? link.source,
       target: idMap.get(link.target) ?? link.target,
@@ -211,6 +317,11 @@ export const POST = authenticatedAction(
         await trx.insertInto("links").values(links).execute();
       }
     });
+
+    if (projectYjsDoc) {
+      await projectYjsDoc.persist();
+      if (!projectYjsDoc.isLive) projectYjsDoc.doc.destroy();
+    }
 
     // Write bundled assets if present
     const assetEntries = Object.entries(archive).filter(([path]) =>

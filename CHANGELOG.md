@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.7] - 2026-09-26
+
+> **Development is picking back up !** After a short break, Ideon is actively moving forward again. More updates and improvements are on the way.
+
+### Added
+
+- **Sub-Canvases**: Break large projects into focused sub-canvases, giving each area of work its own space while keeping related blocks and ideas organized and easy to navigate.
+
 ## [0.9.6] - 2026-07-26
 
 ### Security

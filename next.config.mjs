@@ -10,6 +10,8 @@ const nextConfig = {
     "kysely",
     "pg",
     "better-sqlite3",
+    "y-leveldb",
+    "classic-level",
     "nanoid",
     "uuid",
   ],

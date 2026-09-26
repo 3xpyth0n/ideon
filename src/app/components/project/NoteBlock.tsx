@@ -747,7 +747,6 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   // Vim editor value: read from yNoteDocument (XmlFragment) when it exists,
   // otherwise fall back to data.content (preservation for non-collaborative blocks).
   // Re-extracts when entering edit mode (isEditing) to pick up debounced writes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const vimEditorValue = useMemo(() => {
     if (data.yNoteDocument) {
       return extractTextFromXmlFragment(data.yNoteDocument);

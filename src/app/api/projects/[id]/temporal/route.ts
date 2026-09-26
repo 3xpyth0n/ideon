@@ -12,6 +12,7 @@ import { uniqueById } from "@lib/utils";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { canvasStateSnapshotsSchema } from "../../../../../lib/yjs-canvas-state";
 
 export const dynamic = "force-dynamic";
 
@@ -101,8 +102,10 @@ export const GET = projectAction(async (req, { project }) => {
 const postSchema = z.object({
   stateId: z.string().optional(),
   action: z.string(),
+  canvasId: z.string().optional(),
   blocks: z.array(z.any()).optional(),
   links: z.array(z.any()).optional(),
+  canvasStates: canvasStateSnapshotsSchema.optional(),
   intent: z.string().optional(),
   isAuto: z.boolean().optional(),
 });
@@ -113,8 +116,10 @@ export const POST = projectAction(
     const db = getDb();
     const {
       action,
+      canvasId: requestedCanvasId,
       blocks: inputBlocks,
       links: inputLinks,
+      canvasStates: inputCanvasStates,
       intent,
       isAuto,
     } = body;
@@ -141,6 +146,7 @@ export const POST = projectAction(
       const snapshotId = uuidv4();
       const uniqueBlocks = uniqueById(inputBlocks || []);
       const uniqueLinks = uniqueById(inputLinks || []);
+      const canvasStates = inputCanvasStates;
 
       const violatedRule = validateFolderLinkRules(
         uniqueBlocks.map((block: Node) => ({
@@ -226,7 +232,11 @@ export const POST = projectAction(
       const diff = JSON.stringify([
         {
           type: "graphSnapshot",
-          payload: { blocks: uniqueBlocks, links: uniqueLinks },
+          payload: {
+            blocks: uniqueBlocks,
+            links: uniqueLinks,
+            ...(canvasStates && { canvasStates }),
+          },
         },
       ]);
 
@@ -383,6 +393,18 @@ export const POST = projectAction(
       const snapshotId = uuidv4();
       const uniqueBlocks = uniqueById(graph.blocks);
       const uniqueLinks = uniqueById(graph.links);
+      if (
+        requestedCanvasId &&
+        requestedCanvasId !== "root" &&
+        !graph.canvasStates?.some(
+          (canvas) => canvas.canvasId === requestedCanvasId,
+        )
+      ) {
+        throw {
+          status: 400,
+          message: "This historical state does not contain the active canvas",
+        };
+      }
 
       await runTransaction(db, async (trx) => {
         await trx
@@ -395,7 +417,13 @@ export const POST = projectAction(
             diff: JSON.stringify([
               {
                 type: "graphSnapshot",
-                payload: { blocks: uniqueBlocks, links: uniqueLinks },
+                payload: {
+                  blocks: uniqueBlocks,
+                  links: uniqueLinks,
+                  ...(graph.canvasStates && {
+                    canvasStates: graph.canvasStates,
+                  }),
+                },
               },
             ]),
             isSnapshot: 1,
@@ -447,7 +475,11 @@ export const POST = projectAction(
         }
       });
 
-      return { success: true, stateId: snapshotId };
+      return {
+        success: true,
+        stateId: snapshotId,
+        canvasStates: graph.canvasStates,
+      };
     }
 
     if (action === "update") {

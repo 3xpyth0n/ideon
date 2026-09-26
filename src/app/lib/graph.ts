@@ -11,10 +11,15 @@ import {
   parseJsonRecord,
 } from "@lib/metadata-parsers";
 import { clampBlockContent } from "@lib/projectContentSafety";
+import {
+  parseCanvasStateSnapshots,
+  type CanvasStateSnapshot,
+} from "../../lib/yjs-canvas-state";
 
 export interface GraphState {
   blocks: Node[];
   links: Edge[];
+  canvasStates?: CanvasStateSnapshot[];
 }
 
 export interface Mutation {
@@ -62,6 +67,7 @@ const BlockDataSchema = z
         "cron",
         "latex",
         "calendar",
+        "subcanvas",
       ])
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -143,7 +149,8 @@ export function prepareBlockForDb(
       | "shell"
       | "folder"
       | "vercel"
-      | "frame") ||
+      | "frame"
+      | "subcanvas") ||
     "text";
 
   return {
@@ -276,11 +283,17 @@ export function applyGraphMutation(
     case "edgeDelete":
       return { ...state, links: links.filter((l) => l.id !== payload.id) };
 
-    case "graphSnapshot":
+    case "graphSnapshot": {
+      const canvasStates = Array.isArray(payload.canvasStates)
+        ? parseCanvasStateSnapshots(payload.canvasStates)
+        : state.canvasStates;
       return {
+        ...state,
         blocks: (payload.blocks as Node[]) || blocks,
         links: (payload.links as Edge[]) || links,
+        ...(canvasStates && { canvasStates }),
       };
+    }
 
     default:
       return state;

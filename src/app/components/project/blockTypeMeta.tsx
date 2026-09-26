@@ -18,6 +18,7 @@ import {
   Timer,
   Sigma,
   Calendar,
+  Layers,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -41,7 +42,8 @@ export type AddableBlockType =
   | "webhook"
   | "cron"
   | "latex"
-  | "calendar";
+  | "calendar"
+  | "subcanvas";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
@@ -65,7 +67,8 @@ export type BlockTypeLabelKey =
   | "blockTypeWebhook"
   | "blockTypeCron"
   | "blockTypeLatex"
-  | "blockTypeCalendar";
+  | "blockTypeCalendar"
+  | "blockTypeSubcanvas";
 
 export type BlockTypeIconComponent = ComponentType<{
   className?: string;
@@ -84,6 +87,12 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     type: "folder",
     icon: Folder,
     labelKey: "blockTypeFolder",
+    section: "organize",
+  },
+  {
+    type: "subcanvas",
+    icon: Layers,
+    labelKey: "blockTypeSubcanvas",
     section: "organize",
   },
   { type: "text", icon: FileText, labelKey: "blockTypeText", section: "block" },

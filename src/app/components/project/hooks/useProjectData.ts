@@ -1,10 +1,18 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
+import * as Y from "yjs";
 import { Node, Edge, useReactFlow } from "@xyflow/react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import { useRouter } from "next/navigation";
 import { BlockData } from "@components/project/CanvasBlock";
 import { clientLogger } from "../../../../lib/clientLogger";
+import type { GraphState } from "@lib/graph";
+import {
+  parseCanvasStateSnapshots,
+  restoreCanvasStateSnapshots,
+} from "../../../../lib/yjs-canvas-state";
+import { captureCanvasStateSnapshots } from "../../../../lib/yjs-canvas-state";
+import { generateStateHash } from "@components/project/utils/hash";
 
 /**
  * Deduplicates an array of objects by the `id` property, keeping the last occurrence.
@@ -25,6 +33,8 @@ const FIT_MAX_ZOOM_ALL = 1;
 
 interface UseProjectDataProps {
   initialProjectId?: string;
+  activeCanvasId: string;
+  yDoc: Y.Doc | null;
   blocks: Node<BlockData>[];
   links: Edge[];
   setBlocks: (
@@ -53,6 +63,8 @@ interface BlockResponse {
 
 export const useProjectData = ({
   initialProjectId,
+  activeCanvasId,
+  yDoc,
   blocks,
   links,
   setBlocks,
@@ -74,6 +86,14 @@ export const useProjectData = ({
     blocks: Node<BlockData>[];
     links: Edge[];
   } | null>(null);
+  const previewDocRef = useRef<Y.Doc | null>(null);
+
+  const clearPreviewDoc = useCallback(() => {
+    previewDocRef.current?.destroy();
+    previewDocRef.current = null;
+  }, []);
+
+  useEffect(() => clearPreviewDoc, [clearPreviewDoc]);
 
   const cloneBlocks = useCallback(
     (source: Node<BlockData>[]) =>
@@ -294,6 +314,7 @@ export const useProjectData = ({
   const handlePreview = useCallback(
     async (stateId: string | null) => {
       if (!stateId) {
+        clearPreviewDoc();
         const previousGraph = prePreviewGraphRef.current;
         if (previousGraph) {
           setBlocks(cloneBlocks(previousGraph.blocks));
@@ -314,6 +335,7 @@ export const useProjectData = ({
         };
       }
 
+      clearPreviewDoc();
       setIsPreviewMode(true);
       setSelectedStateId(stateId);
 
@@ -322,16 +344,49 @@ export const useProjectData = ({
           `/api/projects/${initialProjectId}/temporal?action=reconstruct&stateId=${stateId}`,
         );
         if (!res.ok) throw new Error();
-        const data = await res.json();
-        setBlocks(data.blocks as Node<BlockData>[]);
+        const data = (await res.json()) as GraphState;
+        const canvasStates = data.canvasStates
+          ? parseCanvasStateSnapshots(data.canvasStates)
+          : undefined;
+        const activeCanvas = canvasStates?.find(
+          (canvas) => canvas.canvasId === activeCanvasId,
+        );
+        if (activeCanvasId !== "root" && !activeCanvas) throw new Error();
+        let previewBlocks = activeCanvas?.blocks ?? data.blocks;
+        if (canvasStates && activeCanvas) {
+          const previewDoc = new Y.Doc();
+          restoreCanvasStateSnapshots(previewDoc, canvasStates);
+          previewDocRef.current = previewDoc;
+          const mapSuffix =
+            activeCanvasId === "root" ? "" : `:${activeCanvasId}`;
+          const contents = previewDoc.getMap<Y.Text>(`contents${mapSuffix}`);
+          const noteDocuments = previewDoc.getMap<Y.XmlFragment>(
+            `noteDocuments${mapSuffix}`,
+          );
+          previewBlocks = activeCanvas.blocks.map((block) => ({
+            ...block,
+            data: {
+              ...block.data,
+              yText: contents.get(block.id),
+              yNoteDocument: noteDocuments.get(block.id),
+            },
+          }));
+        }
+        setBlocks(previewBlocks as Node<BlockData>[]);
         setLinks(
-          (data.links || []).map((l: Edge) => ({
+          (activeCanvas?.links ?? data.links ?? []).map((l: Edge) => ({
             ...l,
             type: l.type || "connection",
             markerEnd: "connection-arrow",
           })),
         );
       } catch {
+        clearPreviewDoc();
+        const previousGraph = prePreviewGraphRef.current;
+        if (previousGraph) {
+          setBlocks(cloneBlocks(previousGraph.blocks));
+          setLinks(cloneLinks(previousGraph.links));
+        }
         prePreviewGraphRef.current = null;
         setIsPreviewMode(false);
         setSelectedStateId(null);
@@ -340,7 +395,9 @@ export const useProjectData = ({
     },
     [
       initialProjectId,
+      activeCanvasId,
       isPreviewMode,
+      yDoc,
       blocks,
       links,
       dict.common,
@@ -351,26 +408,85 @@ export const useProjectData = ({
       setIsPreviewMode,
       setSelectedStateId,
       handleExitPreview,
+      clearPreviewDoc,
     ],
   );
 
   const handleApplyState = useCallback(
     async (stateId: string) => {
       try {
+        if (isPreviewMode && yDoc && previewDocRef.current) {
+          const presentCanvasStates = captureCanvasStateSnapshots(yDoc);
+          const previewCanvasStates = captureCanvasStateSnapshots(
+            previewDocRef.current,
+          );
+          const presentRoot = presentCanvasStates.find(
+            (canvas) => canvas.canvasId === "root",
+          );
+          const previewRoot = previewCanvasStates.find(
+            (canvas) => canvas.canvasId === "root",
+          );
+          if (presentRoot && previewRoot) {
+            const presentHash = await generateStateHash(
+              presentRoot.blocks as Node<BlockData>[],
+              presentRoot.links,
+              presentCanvasStates,
+            );
+            const previewHash = await generateStateHash(
+              previewRoot.blocks as Node<BlockData>[],
+              previewRoot.links,
+              previewCanvasStates,
+            );
+            if (presentHash === previewHash) {
+              toast.info(
+                dict.modals.stateAlreadyApplied ||
+                  "This state is already applied to the present",
+              );
+              return;
+            }
+          }
+        }
+
         const res = await fetch(`/api/projects/${initialProjectId}/temporal`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stateId, action: "apply" }),
+          body: JSON.stringify({
+            stateId,
+            action: "apply",
+            canvasId: activeCanvasId,
+          }),
         });
         if (!res.ok) throw new Error();
+        const data = (await res.json()) as GraphState;
+        const canvasStates = data.canvasStates
+          ? parseCanvasStateSnapshots(data.canvasStates)
+          : undefined;
+        const activeCanvas = canvasStates?.find(
+          (canvas) => canvas.canvasId === activeCanvasId,
+        );
+        if (activeCanvasId !== "root" && !activeCanvas) throw new Error();
+        if (canvasStates && !yDoc) throw new Error();
 
+        clearPreviewDoc();
+        if (canvasStates && activeCanvas && yDoc) {
+          restoreCanvasStateSnapshots(yDoc, canvasStates);
+        }
         setIsPreviewMode(false);
         setSelectedStateId(null);
         toast.success(dict.modals.stateApplied);
 
-        queueMicrotask(() => {
-          fetchGraph(true);
-        });
+        if (activeCanvas) {
+          setBlocks(activeCanvas.blocks as Node<BlockData>[]);
+          setLinks(
+            activeCanvas.links.map((link) => ({
+              ...link,
+              type: link.type || "connection",
+              markerEnd: "connection-arrow",
+            })),
+          );
+        } else if (activeCanvasId === "root") {
+          queueMicrotask(() => fetchGraph(true));
+        }
         prePreviewGraphRef.current = null;
       } catch {
         toast.error(dict.modals.noHistory);
@@ -378,10 +494,18 @@ export const useProjectData = ({
     },
     [
       initialProjectId,
+      activeCanvasId,
+      isPreviewMode,
       dict.common,
+      dict.modals.stateAlreadyApplied,
       setIsPreviewMode,
       setSelectedStateId,
       fetchGraph,
+      yDoc,
+      setBlocks,
+      setLinks,
+      clearPreviewDoc,
+      yDoc,
     ],
   );
 

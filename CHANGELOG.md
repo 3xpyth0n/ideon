@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-10-XX
+
+### Added
+
+- Improved Markdown tables in canvas notes so comparison matrices remain readable and collaborative while editing ([#121](https://github.com/3xpyth0n/ideon/issues/121)).
+
 ## [0.9.8] - 2026-10-01
 
 ### Added

@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "ideon",
   "private": true,
-  "version": "0.9.8",
+  "version": "1.0.0-beta",
   "description": "The Visual Hub for Everything Your Project Needs",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -41,6 +41,7 @@
     "@react-email/components": "^1.0.12",
     "@replit/codemirror-vim": "^6.4.0",
     "@tiptap/extension-bubble-menu": "^3.31.4",
+    "@tiptap/extension-image": "^3.31.4",
     "@tiptap/extension-link": "^3.31.4",
     "@tiptap/extension-placeholder": "^3.31.4",
     "@tiptap/extension-table": "^3.31.4",

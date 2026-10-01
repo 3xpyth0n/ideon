@@ -53,6 +53,28 @@ describe("Yjs canvas state serialization", () => {
     bold.insert(0, [noteText]);
     paragraph.insert(0, [bold]);
     note.push([paragraph]);
+
+    const table = new Y.XmlElement("table");
+    const headerRow = new Y.XmlElement("tableRow");
+    const headerCell = new Y.XmlElement("tableHeader");
+    const headerParagraph = new Y.XmlElement("paragraph");
+    const headerText = new Y.XmlText();
+    headerText.insert(0, "Metric");
+    headerParagraph.insert(0, [headerText]);
+    headerCell.insert(0, [headerParagraph]);
+    headerRow.insert(0, [headerCell]);
+
+    const bodyRow = new Y.XmlElement("tableRow");
+    const bodyCell = new Y.XmlElement("tableCell");
+    const bodyParagraph = new Y.XmlElement("paragraph");
+    const bodyText = new Y.XmlText();
+    bodyText.insert(0, "Capacity");
+    bodyParagraph.insert(0, [bodyText]);
+    bodyCell.insert(0, [bodyParagraph]);
+    bodyRow.insert(0, [bodyCell]);
+    table.insert(0, [headerRow, bodyRow]);
+    note.push([table]);
+
     source.getMap("viewports").set("subcanvas-1", { x: -20, y: 15, zoom: 1.4 });
 
     const snapshots = captureCanvasStateSnapshots(source);
@@ -66,6 +88,12 @@ describe("Yjs canvas state serialization", () => {
         .get("note-1")
         ?.toJSON(),
     ).toContain("<bold>Preserved formatting</bold>");
+    expect(
+      restored
+        .getMap<Y.XmlFragment>("noteDocuments:subcanvas-1")
+        .get("note-1")
+        ?.toJSON(),
+    ).toContain("<table><tablerow><tableheader><paragraph>Metric</paragraph>");
   });
 
   it("clears child canvas maps absent from the restored project", () => {

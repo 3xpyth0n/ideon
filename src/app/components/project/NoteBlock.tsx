@@ -45,12 +45,13 @@ import {
   safeReadYText,
   syncYTextValue,
 } from "@lib/projectContentSafety";
-import {
-  extractTextFromXmlFragment,
-  syncTextToXmlFragment,
-} from "@lib/xmlFragmentUtils";
+import { extractTextFromXmlFragment } from "@lib/xmlFragmentUtils";
 import { BlockData } from "./CanvasBlock";
 import MarkdownEditor from "./MarkdownEditor";
+import {
+  getMarkdownFromXmlFragment,
+  syncMarkdownToXmlFragment,
+} from "./noteMarkdown";
 import { BlockFooter } from "./BlockFooter";
 import { BlockTitleInput } from "./BlockTitleInput";
 import { BlockReactions } from "./BlockReactions";
@@ -749,7 +750,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
   // Re-extracts when entering edit mode (isEditing) to pick up debounced writes.
   const vimEditorValue = useMemo(() => {
     if (data.yNoteDocument) {
-      return extractTextFromXmlFragment(data.yNoteDocument);
+      return getMarkdownFromXmlFragment(data.yNoteDocument);
     }
     return data.content || "";
   }, [data.yNoteDocument, data.content, vimRemoteVersion, isEditing]);
@@ -826,7 +827,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
       xmlFragmentSyncTimeoutRef.current = null;
       const fragment = dataRef.current.yNoteDocument;
       if (fragment && pendingContentRef.current !== null) {
-        syncTextToXmlFragment(fragment, pendingContentRef.current);
+        syncMarkdownToXmlFragment(fragment, pendingContentRef.current);
       }
     }
   }, [isEditing]);
@@ -959,7 +960,7 @@ const NoteBlock = memo(({ data, selected, id }: NoteBlockProps) => {
           xmlFragmentSyncTimeoutRef.current = null;
           const fragment = dataRef.current.yNoteDocument;
           if (fragment) {
-            syncTextToXmlFragment(fragment, safeContent);
+            syncMarkdownToXmlFragment(fragment, safeContent);
           }
         }, 500);
       }

@@ -175,7 +175,7 @@ export function buildStarterProjectGraph({
       width: STANDARD_BLOCK.width,
       height: STANDARD_BLOCK.height,
       ownerId,
-      content: ideonSiteConfig.links.documentation,
+      content: new URL(ideonSiteConfig.links.website).toString(),
       metadata: JSON.stringify({}),
       data: createBlockData("link", linkTitle),
       createdAt: now,

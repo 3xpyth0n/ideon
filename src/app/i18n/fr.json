@@ -325,6 +325,7 @@
     "languageJson": "JSON",
     "languagePlainText": "Texte brut",
     "languagePython": "Python",
+    "languageSql": "SQL",
     "languageTypescript": "TypeScript",
     "taskList": "Liste de tâches",
     "videoUrlPlaceholder": "Collez une URL YouTube ou Loom...",

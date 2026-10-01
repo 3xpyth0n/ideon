@@ -10,6 +10,7 @@
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import packageJson from "../../../package.json";
 import type { LeveldbPersistence } from "y-leveldb";
 import { registerProjectTools } from "./tools/projects";
 import { registerBlockTools } from "./tools/blocks";
@@ -43,7 +44,7 @@ export function createMcpServer(ldb: LeveldbPersistence): McpServer {
   const server = new McpServer(
     {
       name: "ideon",
-      version: "1.0.0",
+      version: packageJson.version,
     },
     {
       instructions: INSTRUCTIONS,

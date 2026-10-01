@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added SQL syntax support to Snippet blocks so database queries and scripts can be written and highlighted more cleanly in the canvas ([#131](https://github.com/3xpyth0n/ideon/issues/131)).
 - Added official MCP skill documentation and examples for canvas automation so IDE and agent workflows can integrate with Ideon more easily ([#120](https://github.com/3xpyth0n/ideon/issues/120)).
 
 ## [0.9.7] - 2026-09-26

@@ -29,6 +29,7 @@ import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-css";
 import "prismjs/components/prism-python";
 import "prismjs/components/prism-json";
+import "prismjs/components/prism-sql";
 import "prismjs/themes/prism-tomorrow.css"; // Dark theme
 
 import { BlockData } from "./CanvasBlock";
@@ -55,7 +56,7 @@ type SnippetBlockProps = NodeProps<Node<BlockData>> & {
   isReadOnly?: boolean;
 };
 
-const getLanguageExtension = (lang: string) => {
+export const getLanguageExtension = (lang: string) => {
   switch (lang.toLowerCase()) {
     case "javascript":
     case "typescript":
@@ -85,34 +86,50 @@ const getLanguageExtension = (lang: string) => {
   }
 };
 
+export function getSnippetLanguageOptions(dict: {
+  blocks: {
+    languageJavascript: string;
+    languageTypescript: string;
+    languageCss: string;
+    languagePython: string;
+    languageJson: string;
+    languagePlainText: string;
+    languageSql: string;
+  };
+}): SelectOption[] {
+  return [
+    {
+      value: "javascript",
+      label: dict.blocks.languageJavascript,
+    },
+    {
+      value: "typescript",
+      label: dict.blocks.languageTypescript,
+    },
+    { value: "css", label: dict.blocks.languageCss },
+    { value: "python", label: dict.blocks.languagePython },
+    { value: "json", label: dict.blocks.languageJson },
+    { value: "sql", label: dict.blocks.languageSql },
+    {
+      value: "text",
+      label: dict.blocks.languagePlainText,
+    },
+  ];
+}
+
 const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
   const { dict, lang } = useI18n();
   const { setNodes, getEdges } = useReactFlow();
 
   const languageOptions = useMemo<SelectOption[]>(
-    () => [
-      {
-        value: "javascript",
-        label: dict.blocks.languageJavascript,
-      },
-      {
-        value: "typescript",
-        label: dict.blocks.languageTypescript,
-      },
-      { value: "css", label: dict.blocks.languageCss },
-      { value: "python", label: dict.blocks.languagePython },
-      { value: "json", label: dict.blocks.languageJson },
-      {
-        value: "text",
-        label: dict.blocks.languagePlainText,
-      },
-    ],
+    () => getSnippetLanguageOptions(dict),
     [
       dict.blocks.languageCss,
       dict.blocks.languageJavascript,
       dict.blocks.languageJson,
       dict.blocks.languagePlainText,
       dict.blocks.languagePython,
+      dict.blocks.languageSql,
       dict.blocks.languageTypescript,
     ],
   );
@@ -471,15 +488,18 @@ const SnippetBlock = memo(({ id, data, selected }: SnippetBlockProps) => {
               >
                 <Copy size={14} />
               </button>
-              {language !== "text" && language !== "python" && !isReadOnly && (
-                <button
-                  onClick={handleFormat}
-                  className="snippet-format-button"
-                  title={dict.blocks.formatCode || "Format code"}
-                >
-                  <Brush size={14} />
-                </button>
-              )}
+              {language !== "text" &&
+                language !== "python" &&
+                language !== "sql" &&
+                !isReadOnly && (
+                  <button
+                    onClick={handleFormat}
+                    className="snippet-format-button"
+                    title={dict.blocks.formatCode || "Format code"}
+                  >
+                    <Brush size={14} />
+                  </button>
+                )}
               <Select
                 value={language}
                 options={languageOptions}

@@ -82,6 +82,7 @@ export type BlockData = {
     | "webhook"
     | "cron"
     | "latex"
+    | "mermaid"
     | "calendar"
     | "subcanvas";
   label?: string;

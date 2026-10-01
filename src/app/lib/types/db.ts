@@ -153,6 +153,7 @@ export interface blocksTable {
     | "webhook"
     | "cron"
     | "latex"
+    | "mermaid"
     | "calendar"
     | "subcanvas";
   metadata: string; // JSON string

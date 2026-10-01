@@ -66,6 +66,7 @@ const BlockDataSchema = z
         "webhook",
         "cron",
         "latex",
+        "mermaid",
         "calendar",
         "subcanvas",
       ])
@@ -150,6 +151,7 @@ export function prepareBlockForDb(
       | "folder"
       | "vercel"
       | "frame"
+      | "mermaid"
       | "subcanvas") ||
     "text";
 

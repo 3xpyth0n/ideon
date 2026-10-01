@@ -10,6 +10,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Improved Markdown tables in canvas notes so comparison matrices remain readable and collaborative while editing ([#121](https://github.com/3xpyth0n/ideon/issues/121)).
+- Added Mermaid diagram blocks with collaborative source editing, canvas previews, and PNG export ([#118](https://github.com/3xpyth0n/ideon/issues/118)).
+
+### Fixed
+
+- Fixed login failures caused by Auth.js `UntrustedHost` errors.
 
 ## [0.9.8] - 2026-10-01
 

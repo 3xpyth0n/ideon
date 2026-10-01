@@ -1198,6 +1198,7 @@ export const useProjectCanvasGraph = ({
         | "frame"
         | "webhook"
         | "cron"
+        | "mermaid"
         | "subcanvas" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
@@ -1208,20 +1209,25 @@ export const useProjectCanvasGraph = ({
       const isSketch = blockType === "sketch";
       const isKanban = blockType === "kanban";
       const isFrame = blockType === "frame";
+      const isMermaid = blockType === "mermaid";
       const blockWidth = isSketch
         ? 600
         : isKanban
           ? DEFAULT_KANBAN_BLOCK_WIDTH
           : isFrame
             ? 600
-            : DEFAULT_BLOCK_WIDTH;
+            : isMermaid
+              ? 680
+              : DEFAULT_BLOCK_WIDTH;
       const blockHeight = isSketch
         ? 450
         : isKanban
           ? DEFAULT_KANBAN_BLOCK_HEIGHT
           : isFrame
             ? 400
-            : DEFAULT_BLOCK_HEIGHT;
+            : isMermaid
+              ? 480
+              : DEFAULT_BLOCK_HEIGHT;
 
       const screenPos = pos
         ? null

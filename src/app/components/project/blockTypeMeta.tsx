@@ -19,6 +19,7 @@ import {
   Sigma,
   Calendar,
   Layers,
+  Network,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -42,6 +43,7 @@ export type AddableBlockType =
   | "webhook"
   | "cron"
   | "latex"
+  | "mermaid"
   | "calendar"
   | "subcanvas";
 
@@ -67,6 +69,7 @@ export type BlockTypeLabelKey =
   | "blockTypeWebhook"
   | "blockTypeCron"
   | "blockTypeLatex"
+  | "blockTypeMermaid"
   | "blockTypeCalendar"
   | "blockTypeSubcanvas";
 
@@ -157,6 +160,12 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     type: "latex",
     icon: Sigma,
     labelKey: "blockTypeLatex",
+    section: "block",
+  },
+  {
+    type: "mermaid",
+    icon: Network,
+    labelKey: "blockTypeMermaid",
     section: "block",
   },
   {

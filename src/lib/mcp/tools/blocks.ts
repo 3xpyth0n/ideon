@@ -39,7 +39,7 @@ const MAX_LIST_BLOCKS = 200;
 const CONTENT_PREVIEW_LENGTH = 200;
 const MAX_BATCH_SIZE = 50;
 
-const VALID_BLOCK_TYPES = [
+export const VALID_BLOCK_TYPES = [
   "text",
   "link",
   "file",
@@ -59,6 +59,7 @@ const VALID_BLOCK_TYPES = [
   "webhook",
   "cron",
   "latex",
+  "mermaid",
   "calendar",
   "subcanvas",
 ] as const;

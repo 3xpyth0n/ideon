@@ -57,7 +57,7 @@ Ideon replaces abstract folders with spatial organization. Instead of navigating
 
 - **Spatial Canvas:** Place blocks anywhere. What is close is related.
 - **Live Integrations:** Embed repositories and issues directly on the canvas (GitHub, GitLab, Gitea, Forgejo).
-- **Rich Media:** Support for Markdown notes, images, links, and files.
+- **Rich Media:** Support for Markdown notes, rendered Mermaid diagrams, images, links, and files.
 - **Multiplayer:** Real-time collaboration with your team.
 - **Time Travel:** View historical snapshots of your workspace to trace decisions.
 - **Self-Hosted:** You own your data.

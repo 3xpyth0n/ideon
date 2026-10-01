@@ -283,6 +283,21 @@ describe("graph library", () => {
         "subcanvas",
       );
     });
+
+    it("should preserve Mermaid source when preparing a block", () => {
+      const source = "flowchart LR\\n  Source --> Canvas";
+      const node: Node = {
+        id: "mermaid-1",
+        type: "mermaid",
+        position: { x: 20, y: 30 },
+        data: { blockType: "mermaid", content: source },
+      };
+
+      const block = prepareBlockForDb(node, "project-1", "user-1");
+
+      expect(block.blockType).toBe("mermaid");
+      expect(block.content).toBe(source);
+    });
   });
 
   it("preserves nested canvas states when reconstructing snapshots", () => {

@@ -11,6 +11,7 @@ import { Download } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { useTheme } from "@providers/ThemeProvider";
 import { toast } from "sonner";
+import { applyMermaidExportContrast } from "./canvasExportStyles";
 
 function downloadImage(dataUrl: string) {
   const a = document.createElement("a");
@@ -27,7 +28,7 @@ export function DownloadButton() {
   const { dict } = useI18n();
   const { theme } = useTheme();
 
-  const onClick = useCallback(() => {
+  const onClick = useCallback(async () => {
     const nodesBounds = getNodesBounds(getNodes());
 
     if (nodesBounds.width === 0 || nodesBounds.height === 0) {
@@ -48,24 +49,28 @@ export function DownloadButton() {
     ) as HTMLElement;
 
     if (viewport) {
-      toPng(viewport, {
-        backgroundColor: theme === "dark" ? "#000" : "#fff",
-        width: imageWidth,
-        height: imageHeight,
-        skipFonts: true,
-        style: {
-          width: String(imageWidth),
-          height: String(imageHeight),
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
-        },
-      })
-        .then(downloadImage)
-        .catch((err) => {
-          console.error("Download failed", err);
-          toast.error(dict.blocks.downloadImageFailed);
+      const restoreMermaidStyles = applyMermaidExportContrast(viewport);
+      try {
+        const image = await toPng(viewport, {
+          backgroundColor: theme === "dark" ? "#000" : "#fff",
+          width: imageWidth,
+          height: imageHeight,
+          skipFonts: true,
+          style: {
+            width: String(imageWidth),
+            height: String(imageHeight),
+            transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+          },
         });
+        downloadImage(image);
+      } catch (err) {
+        console.error("Download failed", err);
+        toast.error(dict.blocks.downloadImageFailed);
+      } finally {
+        restoreMermaidStyles();
+      }
     }
-  }, [getNodes, theme]);
+  }, [dict.blocks.downloadImageFailed, getNodes, theme]);
 
   return (
     <ControlButton onClick={onClick} title={dict.common.export}>

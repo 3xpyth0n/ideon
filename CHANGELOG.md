@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.8] - 2026-09-XX
+
+### Added
+
+- Added official MCP skill documentation and examples for canvas automation so IDE and agent workflows can integrate with Ideon more easily ([#120](https://github.com/3xpyth0n/ideon/issues/120)).
+
 ## [0.9.7] - 2026-09-26
 
 > **Development is picking back up !** After a short break, Ideon is actively moving forward again. More updates and improvements are on the way.

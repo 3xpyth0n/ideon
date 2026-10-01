@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "ideon",
   "private": true,
-  "version": "0.9.7",
+  "version": "0.9.8-beta",
   "description": "The Visual Hub for Everything Your Project Needs",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -270,8 +270,8 @@
     "node-pty@1.1.0": true,
     "protobufjs@8.7.1": true,
     "esbuild@0.28.1": true,
-    "@swc/core@1.16.2": true,
     "argon2@0.45.1": true,
-    "better-sqlite3@13.0.3": true
+    "better-sqlite3@13.0.3": true,
+    "@swc/core@1.16.13": true
   }
 }

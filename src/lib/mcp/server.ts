@@ -17,6 +17,7 @@ import { registerBlockTools } from "./tools/blocks";
 import { registerLinkTools } from "./tools/links";
 import { registerKanbanTools } from "./tools/kanban";
 import { registerSearchTools } from "./tools/search";
+import { registerRepositorySyncTools } from "./tools/repository-sync";
 import { registerOverviewResource } from "./resources/overview";
 import { registerGraphResource } from "./resources/graph";
 import { registerHelpResource } from "./resources/help";
@@ -57,6 +58,7 @@ export function createMcpServer(ldb: LeveldbPersistence): McpServer {
   registerLinkTools(server, ldb);
   registerKanbanTools(server, ldb);
   registerSearchTools(server, ldb);
+  registerRepositorySyncTools(server);
 
   // Register resources
   registerOverviewResource(server, ldb);

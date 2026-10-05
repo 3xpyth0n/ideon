@@ -13,6 +13,8 @@ export type UserUpdate = Updateable<usersTable>;
 export type Project = Selectable<projectsTable>;
 export type NewProject = Insertable<projectsTable>;
 export type ProjectUpdate = Updateable<projectsTable>;
+export type ProjectRepositorySync = Selectable<projectRepositorySyncsTable>;
+export type NewProjectRepositorySync = Insertable<projectRepositorySyncsTable>;
 
 export type Folder = Selectable<foldersTable>;
 export type NewFolder = Insertable<foldersTable>;
@@ -128,6 +130,20 @@ export interface projectCollaboratorsTable {
   userId: string;
   role: "owner" | "editor" | "viewer";
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+export interface projectRepositorySyncsTable {
+  projectId: string;
+  remoteProjectId: string;
+  repositoryUrl: string | null;
+  repositoryUsername: string | null;
+  branch: string | null;
+  repositoryPath: string;
+  lastSyncedCommit: string | null;
+  baseManifest: string | null;
+  blockIdMap: string;
+  linkIdMap: string;
+  updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface blocksTable {
@@ -319,6 +335,7 @@ export interface database {
   folders: foldersTable;
   folderCollaborators: folderCollaboratorsTable;
   projects: projectsTable;
+  projectRepositorySyncs: projectRepositorySyncsTable;
   projectStars: projectStarsTable;
   projectCollaborators: projectCollaboratorsTable;
   blocks: blocksTable;

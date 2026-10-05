@@ -7,6 +7,7 @@ const externalPackages = [
   "pg-native",
   "classic-level",
   "node-pty",
+  "jsdom",
 ];
 
 export default defineConfig({

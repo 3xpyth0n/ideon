@@ -33,6 +33,16 @@ npx skills add 3xpyth0n/ideon --skill ideon-canvas
 
 Write tools require editor access. Ask before deleting blocks or making broad changes. Do not expose project content or API keys outside the user's requested workflow.
 
+## Git Repository Sync
+
+Repository sync tools require owner access:
+
+- Call `get_project_repository_sync` to inspect the configured remote and last synchronized revision. The tool does not return credentials.
+- Call `sync_project_repository` with `mode: "manual"` by default. A manual conflict reports affected items and makes no changes to either side.
+- Use `git-wins` or `ideon-wins` only when the user explicitly selects that source for conflicting items.
+- Keep managed files under `.ideon/`; do not modify the rest of the repository as part of a canvas sync.
+- See the [Git Repository Sync guide](https://www.theideon.com/docs/guides/repository-sync) for the file layout, server configuration, API, and CI workflow.
+
 ## Canvas Map Example
 
 Create a frame, then place notes inside its bounds using explicit positions. Frames are visual containers; MCP does not expose a parent-child grouping operation.

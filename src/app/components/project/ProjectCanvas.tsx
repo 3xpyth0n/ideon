@@ -85,6 +85,7 @@ import {
   Copy,
   Trash2,
   ScrollText,
+  GitBranch,
 } from "lucide-react";
 import { LuPencilOff } from "react-icons/lu";
 import { TbLocationOff } from "react-icons/tb";
@@ -130,6 +131,7 @@ import type { CursorPosition } from "./hooks/useProjectCanvasRealtime";
 import { DraftsProvider } from "./DraftsContext";
 import { AutomationStatesContext } from "./AutomationStatesContext";
 import { AutomationLogsModal } from "./AutomationLogsModal";
+import { RepositorySyncModal } from "./RepositorySyncModal";
 
 /**
  * Imperative remote cursors — bypasses React rendering entirely.
@@ -1549,6 +1551,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
     const [dontAskAgain, setDontAskAgain] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isRepoSyncModalOpen, setIsRepoSyncModalOpen] = useState(false);
 
     const handleEdgeLabelSubmit = useCallback(
       (edgeId: string, label: string) => {
@@ -2339,6 +2342,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                     </button>
                                   )}
 
+                                  {(currentUserRole === "owner" ||
+                                    currentUserRole === "creator") && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setIsRepoSyncModalOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                      disabled={isPreviewMode}
+                                    >
+                                      {dict.repositorySync.title}
+                                    </button>
+                                  )}
+
                                   {!isPreviewMode && (
                                     <button
                                       className="project-mobile-actions-item"
@@ -2381,6 +2398,17 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   title={dict.project.share || "Share"}
                                 >
                                   <Share2 size={16} />
+                                </Button>
+                              )}
+                              {(currentUserRole === "owner" ||
+                                currentUserRole === "creator") && (
+                                <Button
+                                  onClick={() => setIsRepoSyncModalOpen(true)}
+                                  className="btn-secondary px-3!"
+                                  disabled={isPreviewMode}
+                                  title={dict.repositorySync.title}
+                                >
+                                  <GitBranch size={16} />
                                 </Button>
                               )}
                               <DecisionHistory
@@ -2765,6 +2793,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   await handleSaveState("Share link regeneration");
                 }
               }}
+            />
+
+            <RepositorySyncModal
+              isOpen={isRepoSyncModalOpen}
+              onClose={() => setIsRepoSyncModalOpen(false)}
+              projectId={initialProjectId!}
             />
 
             {transferBlock && (

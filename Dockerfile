@@ -22,7 +22,7 @@ RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kyse
 # 3. Production image
 FROM base AS runner
 ENV NODE_ENV=production
-RUN apt-get update && apt-get install -y --no-install-recommends tini curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tini curl git && rm -rf /var/lib/apt/lists/*
 RUN useradd -u 1001 -m appuser \
     && mkdir -p /app/storage/avatars /app/storage/yjs /app/storage/uploads \
     && mkdir -p /app/.next/cache \

@@ -329,6 +329,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     null,
   );
   const lastNodeClickRef = useRef<{ id: string; time: number } | null>(null);
+  const lastFitViewCanvasRef = useRef<string>("");
   const [currentUser, setCurrentUser] = useState<UserPresence | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [isLocalSynced, setIsLocalSynced] = useState(false);
@@ -747,8 +748,29 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     );
     if (!stage) return null;
 
-    return captureSubCanvasThumbnail({ nodes: getNodes(), stage });
-  }, [getNodes]);
+    const savedViewport = getViewport();
+    fitView({ padding: 0.12, maxZoom: 1, duration: 0 });
+
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+
+    const result = await captureSubCanvasThumbnail({
+      nodes: getNodes(),
+      stage,
+    });
+
+    setViewport(
+      {
+        x: savedViewport.x,
+        y: savedViewport.y,
+        zoom: savedViewport.zoom,
+      },
+      { duration: 0 },
+    );
+
+    return result;
+  }, [getNodes, getViewport, setViewport, fitView]);
 
   return (
     <SubCanvasProvider
@@ -819,32 +841,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       clearPendingRestore,
       setPreviewMode,
     } = useSubCanvasNavigation();
-    // Apply a queued viewport restore (fitView or saved viewport) after a
-    // push/pop/jump changes the active canvas. Consumed once, then cleared.
-    // fitView is deferred one frame so ReactFlow can render the new canvas
-    // nodes before we compute the bounding box.
-    useEffect(() => {
-      if (!pendingRestore) return;
-      if (pendingRestore.type === "viewport") {
-        setViewport(
-          {
-            x: pendingRestore.viewport.x,
-            y: pendingRestore.viewport.y,
-            zoom: pendingRestore.viewport.zoom,
-          },
-          { duration: 0 },
-        );
-        clearPendingRestore();
-      } else {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            fitView({ padding: 0.2, duration: 0 });
-            clearPendingRestore();
-          });
-        });
-      }
-    }, [pendingRestore, setViewport, fitView, clearPendingRestore]);
-
     const yBlocks = useMemo(() => {
       if (!yDoc) return null;
       return yDoc.getMap(
@@ -976,6 +972,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       setActiveResizeSnap,
       automationStates,
       handleResetAutomationState,
+      isReady,
     } = useProjectCanvasState(
       initialProjectId,
       currentUser,
@@ -999,6 +996,39 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     useEffect(() => {
       handleSaveStateRef.current = handleSaveState;
     }, [handleSaveState]);
+
+    useEffect(() => {
+      if (!isReady) return;
+      if (lastFitViewCanvasRef.current === activeCanvasId) return;
+      lastFitViewCanvasRef.current = activeCanvasId;
+
+      if (pendingRestore && pendingRestore.type === "viewport") {
+        setViewport(
+          {
+            x: pendingRestore.viewport.x,
+            y: pendingRestore.viewport.y,
+            zoom: pendingRestore.viewport.zoom,
+          },
+          { duration: 0 },
+        );
+        clearPendingRestore();
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          fitView({ padding: 0.12, maxZoom: 1, duration: 800 });
+          clearPendingRestore();
+        });
+      });
+    }, [
+      activeCanvasId,
+      isReady,
+      pendingRestore,
+      fitView,
+      setViewport,
+      clearPendingRestore,
+    ]);
 
     const isReadOnly = isPreviewMode || currentUserRole === "viewer";
 

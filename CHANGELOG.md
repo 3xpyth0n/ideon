@@ -16,7 +16,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Fixed login failures caused by Auth.js `UntrustedHost` errors ([#133](https://github.com/3xpyth0n/ideon/issues/1353)).
+- Fixed login failures caused by Auth.js `UntrustedHost` errors ([#133](https://github.com/3xpyth0n/ideon/issues/133)).
 
 ## [0.9.8] - 2026-10-01
 

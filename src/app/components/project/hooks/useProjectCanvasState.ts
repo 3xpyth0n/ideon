@@ -951,13 +951,8 @@ export const useProjectCanvasState = (
     }
     setDraftsByBlock(initialDrafts);
 
-    if (initialBlocks.length > 0 || initialLinks.length > 0) {
-      isInitialized.current = true;
-      setIsReady(true);
-      setTimeout(() => {
-        handleFitView();
-      }, 100);
-    }
+    isInitialized.current = true;
+    setIsReady(true);
 
     return () => {
       yBlocks.unobserve(updateBlocksFromYjs);

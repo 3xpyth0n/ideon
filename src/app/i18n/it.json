@@ -378,6 +378,7 @@
     "blocksSection": "Blocchi",
     "automationSection": "Automazione",
     "navigate": "Naviga",
+    "subCanvasCenterMarker": "Centro del canvas",
     "noBlocksFound": "Nessun blocco trovato",
     "dropFolderFallback": "La ricorsione delle cartelle è limitata in questo browser; verranno importati solo i file disponibili.",
     "dropHoverTitle": "Rilascia per importare",

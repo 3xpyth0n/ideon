@@ -378,6 +378,7 @@
     "blocksSection": "Blocs",
     "automationSection": "Automatisation",
     "navigate": "Naviguer",
+    "subCanvasCenterMarker": "Centre du canevas",
     "noBlocksFound": "Aucun bloc trouvé",
     "dropFolderFallback": "L'import récursif des dossiers est limité dans ce navigateur ; import des fichiers disponibles uniquement.",
     "dropHoverTitle": "Déposez pour importer",

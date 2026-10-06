@@ -111,6 +111,11 @@ import SubCanvasBreadcrumb from "./SubCanvasBreadcrumb";
 import SubCanvasProvider, {
   useSubCanvasNavigation,
 } from "./subcanvas/SubCanvasProvider";
+import CanvasCenterAnchor, {
+  CENTER_ANCHOR_ID,
+  centerAnchorNode,
+  shouldShowCenterMarker,
+} from "./CanvasCenterAnchor";
 import { MAX_CANVAS_DEPTH } from "./subcanvas/subCanvasUtils";
 import {
   getSelectedNoteBlockIdForShortcut,
@@ -300,6 +305,7 @@ const blockTypes = {
   mermaid: MermaidBlock,
   subcanvas: SubCanvasBlock,
   core: ProjectCoreBlock,
+  canvasCenterAnchor: CanvasCenterAnchor,
 };
 
 const linkTypes = {
@@ -1760,10 +1766,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       );
     };
 
-    const visibleBlockIds = useMemo(
-      () => getVisibleBlockIds(blocks, links),
-      [blocks, links],
-    );
+    const visibleBlockIds = useMemo(() => {
+      const ids = getVisibleBlockIds(blocks, links);
+      // The center anchor is a virtual node; make it count as visible so edges
+      // to it are not filtered out (it is only injected when shown).
+      if (shouldShowCenterMarker(activeDepth, isPreviewMode)) {
+        ids.add(CENTER_ANCHOR_ID);
+      }
+      return ids;
+    }, [blocks, links, activeDepth, isPreviewMode]);
 
     const blocksWithPreview = useMemo(() => {
       return blocks
@@ -1964,7 +1975,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     }}
                   >
                     <ReactFlow
-                      nodes={blocksWithPreview}
+                      nodes={
+                        shouldShowCenterMarker(activeDepth, isPreviewMode)
+                          ? [centerAnchorNode, ...blocksWithPreview]
+                          : blocksWithPreview
+                      }
                       edges={links.filter(
                         (edge) =>
                           !blocks.find(
@@ -2019,7 +2034,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       edgeTypes={linkTypes}
                       defaultViewport={DEFAULT_VIEWPORT}
                       connectionMode={ConnectionMode.Loose}
-                      connectionRadius={30}
+                      connectionRadius={16}
                       translateExtent={FIXED_EXTENT}
                       minZoom={0.1}
                       maxZoom={4}

@@ -135,7 +135,7 @@ export default function CanvasEdge({
         <BaseEdge
           path={edgePath}
           markerEnd={markerEnd}
-          interactionWidth={30}
+          interactionWidth={10}
           style={{
             strokeWidth,
             opacity,

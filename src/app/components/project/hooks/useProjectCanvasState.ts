@@ -2674,10 +2674,8 @@ export const useProjectCanvasState = (
     const selectedBlocks = visibleBlocks.filter((n) => n.selected);
     if (selectedBlocks.length > 0)
       applyLongestSideFit(selectedBlocks, FIT_MAX_ZOOM_SELECTED);
-    else if (visibleBlocks.length === 0)
-      setViewport({ x: 0, y: 0, zoom: 1 }, { duration: FIT_DURATION });
     else applyLongestSideFit(visibleBlocks, FIT_MAX_ZOOM_ALL);
-  }, [blocks, setViewport, applyLongestSideFit]);
+  }, [blocks, applyLongestSideFit]);
 
   const handleZoomIn = useCallback(
     () =>

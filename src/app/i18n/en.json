@@ -378,6 +378,7 @@
     "blocksSection": "Blocks",
     "automationSection": "Automation",
     "navigate": "Navigate",
+    "subCanvasCenterMarker": "Canvas center",
     "noBlocksFound": "No blocks found",
     "dropFolderFallback": "Folder recursion is limited in this browser; importing available files only.",
     "dropHoverTitle": "Drop to import",

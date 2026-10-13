@@ -62,14 +62,6 @@ Ideon replaces abstract folders with spatial organization. Instead of navigating
 - **Time Travel:** View historical snapshots of your workspace to trace decisions.
 - **Self-Hosted:** You own your data.
 
-## Demo
-
-Try the hosted demo instantly (no setup required):
-
-- **URL:** https://demo.theideon.com
-- **User:** `ideon-demo`
-- **Pass:** `ideon-demo`
-
 ## Getting Started
 
 Requires **Docker** and **Docker Compose**.

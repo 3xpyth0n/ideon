@@ -84,7 +84,8 @@ export type BlockData = {
     | "latex"
     | "mermaid"
     | "calendar"
-    | "subcanvas";
+    | "subcanvas"
+    | "database";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;

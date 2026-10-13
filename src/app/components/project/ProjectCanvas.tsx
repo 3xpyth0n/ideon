@@ -36,6 +36,7 @@ import FrameBlock from "./FrameBlock";
 import WebhookBlock from "./WebhookBlock";
 import CronBlock from "./CronBlock";
 import MermaidBlock from "./MermaidBlock";
+import DatabaseBlock from "./DatabaseBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import CommandPalette from "./CommandPalette";
@@ -303,6 +304,7 @@ const blockTypes = {
   cron: CronBlock,
   latex: CanvasBlock,
   mermaid: MermaidBlock,
+  database: DatabaseBlock,
   subcanvas: SubCanvasBlock,
   core: ProjectCoreBlock,
   canvasCenterAnchor: CanvasCenterAnchor,
@@ -2997,7 +2999,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     | "webhook"
                     | "cron"
                     | "mermaid"
-                    | "subcanvas",
+                    | "subcanvas"
+                    | "database",
                   "",
                   initialMeta,
                 );

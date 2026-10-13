@@ -171,7 +171,8 @@ export interface blocksTable {
     | "latex"
     | "mermaid"
     | "calendar"
-    | "subcanvas";
+    | "subcanvas"
+    | "database";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;

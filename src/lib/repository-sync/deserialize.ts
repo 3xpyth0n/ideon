@@ -139,6 +139,30 @@ function validateMetadataReferences(
   if (blockType === "frame" && "childBlockIds" in metadata) {
     checkReferences(metadata.childBlockIds);
   }
+  if (blockType === "database" && "rows" in metadata) {
+    const rows = metadata.rows as unknown;
+    if (!Array.isArray(rows)) {
+      throw new RepositorySyncFormatError("invalid_reference");
+    }
+    for (const row of rows) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        throw new RepositorySyncFormatError("invalid_reference");
+      }
+      const cells = (row as Record<string, unknown>).cells;
+      if (!cells || typeof cells !== "object" || Array.isArray(cells)) continue;
+      for (const colId of Object.keys(cells)) {
+        const cell = (cells as Record<string, unknown>)[colId];
+        if (!cell || typeof cell !== "object" || Array.isArray(cell)) continue;
+        const relation = cell as Record<string, unknown>;
+        if (typeof relation.blockId === "string") {
+          if (!blockIds.has(relation.blockId)) {
+            throw new RepositorySyncFormatError("invalid_reference");
+          }
+        }
+      }
+    }
+    return;
+  }
   if (blockType !== "kanban" || !("columns" in metadata)) return;
   if (!Array.isArray(metadata.columns)) {
     throw new RepositorySyncFormatError("invalid_reference");

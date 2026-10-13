@@ -4,6 +4,7 @@ import type { CanvasStateSnapshot } from "../yjs-canvas-state";
 import { createRepositorySyncBundle } from "./manifest";
 import { prepareRepositorySyncImport } from "./deserialize";
 import { serializeRepositorySyncProject } from "./serialize";
+import { RepositorySyncFormatError } from "./manifest";
 
 const projectId = "10000000-0000-4000-8000-000000000001";
 const localNoteId = "20000000-0000-4000-8000-000000000001";
@@ -222,5 +223,196 @@ describe("repository sync import preparation", () => {
     expect(() => prepareRepositorySyncImport(bundle, "local-owner")).toThrow(
       expect.objectContaining({ code: "invalid_manifest" }),
     );
+  });
+});
+
+describe("database block repository sync round-trip", () => {
+  const dbStableId = "40000000-0000-4000-8000-000000000010";
+  const targetStableId = "40000000-0000-4000-8000-000000000011";
+  const dbLocalId = "20000000-0000-4000-8000-000000000010";
+  const targetLocalId = "20000000-0000-4000-8000-000000000011";
+
+  const databaseMetadata = {
+    columns: [
+      { id: "c1", name: "Name", type: "text", width: 200 },
+      {
+        id: "c2",
+        name: "Status",
+        type: "enum",
+        options: [{ id: "o1", label: "Active" }],
+      },
+      { id: "c3", name: "Ref", type: "relation" },
+    ],
+    rows: [
+      {
+        id: "r1",
+        cells: { c1: "Alpha", c2: "o1", c3: { blockId: targetStableId } },
+      },
+      { id: "r2", cells: { c1: "Beta", c2: null, c3: null } },
+    ],
+  };
+
+  function exportDatabase(relationTarget: string) {
+    const snapshots: CanvasStateSnapshot[] = [
+      {
+        canvasId: "root",
+        blocks: [
+          {
+            id: dbLocalId,
+            type: "database",
+            position: { x: 0, y: 0 },
+            width: 500,
+            height: 300,
+            data: { blockType: "database" },
+          } as Node<Record<string, unknown>>,
+          ...(relationTarget
+            ? [
+                {
+                  id: targetLocalId,
+                  type: "text",
+                  position: { x: 600, y: 0 },
+                  width: 360,
+                  height: 220,
+                  data: { blockType: "text", content: "Target note" },
+                } as Node<Record<string, unknown>>,
+              ]
+            : []),
+        ],
+        links: [],
+        contents: {},
+        noteDocuments: {},
+      },
+    ];
+    return serializeRepositorySyncProject({
+      project: { id: projectId, name: "Project", description: null },
+      blocks: [
+        {
+          id: dbLocalId,
+          blockType: "database",
+          metadata: JSON.stringify(databaseMetadata),
+          parentBlockId: null,
+          positionX: 0,
+          positionY: 0,
+          width: 500,
+          height: 300,
+          content: "",
+          data: '{"blockType":"database"}',
+        },
+        ...(relationTarget
+          ? [
+              {
+                id: targetLocalId,
+                blockType: "text",
+                metadata: "{}",
+                parentBlockId: null,
+                positionX: 600,
+                positionY: 0,
+                width: 360,
+                height: 220,
+                content: "Target note",
+                data: '{"blockType":"text"}',
+              },
+            ]
+          : []),
+      ],
+      links: [],
+      snapshots,
+      blockIdMap: {
+        [dbStableId]: dbLocalId,
+        ...(relationTarget ? { [targetStableId]: targetLocalId } : {}),
+      },
+      linkIdMap: {},
+    });
+  }
+
+  it("round-trips columns, rows, and cell values", () => {
+    const exported = exportDatabase(targetStableId);
+    const imported = prepareRepositorySyncImport(
+      exported.bundle,
+      "local-owner",
+    );
+
+    const importedDb = imported.blocks.find(
+      (block) => block.blockType === "database",
+    );
+    expect(importedDb).toBeDefined();
+
+    const metadata = JSON.parse(importedDb!.metadata);
+    expect(metadata.columns).toHaveLength(3);
+    expect(metadata.rows).toHaveLength(2);
+    expect(metadata.rows[0].cells.c1).toBe("Alpha");
+    expect(metadata.rows[0].cells.c2).toBe("o1");
+    expect(metadata.rows[1].cells.c1).toBe("Beta");
+    expect(metadata.rows[1].cells.c3).toBeNull();
+  });
+
+  it("remaps relation blockIds to the imported target block", () => {
+    const exported = exportDatabase(targetStableId);
+    const imported = prepareRepositorySyncImport(
+      exported.bundle,
+      "local-owner",
+    );
+
+    const importedDb = imported.blocks.find(
+      (block) => block.blockType === "database",
+    );
+    const importedTarget = imported.blocks.find(
+      (block) => block.blockType === "text",
+    );
+    expect(importedTarget).toBeDefined();
+
+    const metadata = JSON.parse(importedDb!.metadata);
+    expect(metadata.rows[0].cells.c3.blockId).toBe(importedTarget!.id);
+  });
+
+  it("rejects a relation pointing to a block missing from the bundle", () => {
+    const missingId = "00000000-0000-4000-8000-000000000099";
+    const brokenMetadata = {
+      columns: [{ id: "c1", name: "Ref", type: "relation" }],
+      rows: [{ id: "r1", cells: { c1: { blockId: missingId } } }],
+    };
+
+    const exported = serializeRepositorySyncProject({
+      project: { id: projectId, name: "Project", description: null },
+      blocks: [
+        {
+          id: dbLocalId,
+          blockType: "database",
+          metadata: JSON.stringify(brokenMetadata),
+          parentBlockId: null,
+          positionX: 0,
+          positionY: 0,
+          width: 500,
+          height: 300,
+          content: "",
+          data: '{"blockType":"database"}',
+        },
+      ],
+      links: [],
+      snapshots: [
+        {
+          canvasId: "root",
+          blocks: [
+            {
+              id: dbLocalId,
+              type: "database",
+              position: { x: 0, y: 0 },
+              width: 500,
+              height: 300,
+              data: { blockType: "database" },
+            } as Node<Record<string, unknown>>,
+          ],
+          links: [],
+          contents: {},
+          noteDocuments: {},
+        },
+      ],
+      blockIdMap: { [dbStableId]: dbLocalId },
+      linkIdMap: {},
+    });
+
+    expect(() =>
+      prepareRepositorySyncImport(exported.bundle, "local-owner"),
+    ).toThrow(RepositorySyncFormatError);
   });
 });

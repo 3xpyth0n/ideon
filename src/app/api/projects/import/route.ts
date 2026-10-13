@@ -33,7 +33,35 @@ function remapMetadataBlockIds(
       }
     }
 
-    if (blockType === "kanban") {
+    if (
+      blockType === "database" &&
+      Array.isArray((parsed as { rows?: unknown }).rows)
+    ) {
+      const meta = parsed as {
+        rows?: Array<{ cells?: Record<string, unknown> }>;
+      };
+      for (const row of meta.rows ?? []) {
+        if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+        const cells = row.cells;
+        if (!cells || typeof cells !== "object" || Array.isArray(cells))
+          continue;
+        for (const colId of Object.keys(cells)) {
+          const cell = cells[colId];
+          if (!cell || typeof cell !== "object" || Array.isArray(cell))
+            continue;
+          const relation = cell as Record<string, unknown>;
+          if (typeof relation.blockId === "string") {
+            relation.blockId = idMap.get(relation.blockId) ?? relation.blockId;
+          }
+        }
+      }
+      return JSON.stringify(meta);
+    }
+
+    if (
+      blockType === "kanban" &&
+      Array.isArray((parsed as { columns?: unknown }).columns)
+    ) {
       const meta = parsed as {
         columns?: Array<{
           tasks?: Array<{

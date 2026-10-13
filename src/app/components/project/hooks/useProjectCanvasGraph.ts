@@ -26,6 +26,8 @@ import {
   DEFAULT_BLOCK_HEIGHT,
   DEFAULT_KANBAN_BLOCK_WIDTH,
   DEFAULT_KANBAN_BLOCK_HEIGHT,
+  DEFAULT_DATABASE_BLOCK_WIDTH,
+  DEFAULT_DATABASE_BLOCK_HEIGHT,
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
   CORE_BLOCK_WIDTH,
@@ -1213,35 +1215,41 @@ export const useProjectCanvasGraph = ({
         | "webhook"
         | "cron"
         | "mermaid"
-        | "subcanvas" = "text",
+        | "subcanvas"
+        | "database" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
       if (isReadOnly) return null;
       if (!currentUser) return null;
 
+      const isDatabase = blockType === "database";
       const isSketch = blockType === "sketch";
       const isKanban = blockType === "kanban";
       const isFrame = blockType === "frame";
       const isMermaid = blockType === "mermaid";
-      const blockWidth = isSketch
-        ? 600
-        : isKanban
-          ? DEFAULT_KANBAN_BLOCK_WIDTH
-          : isFrame
-            ? 600
-            : isMermaid
-              ? 680
-              : DEFAULT_BLOCK_WIDTH;
-      const blockHeight = isSketch
-        ? 450
-        : isKanban
-          ? DEFAULT_KANBAN_BLOCK_HEIGHT
-          : isFrame
-            ? 400
-            : isMermaid
-              ? 480
-              : DEFAULT_BLOCK_HEIGHT;
+      const blockWidth = isDatabase
+        ? DEFAULT_DATABASE_BLOCK_WIDTH
+        : isSketch
+          ? 600
+          : isKanban
+            ? DEFAULT_KANBAN_BLOCK_WIDTH
+            : isFrame
+              ? 600
+              : isMermaid
+                ? 680
+                : DEFAULT_BLOCK_WIDTH;
+      const blockHeight = isDatabase
+        ? DEFAULT_DATABASE_BLOCK_HEIGHT
+        : isSketch
+          ? 450
+          : isKanban
+            ? DEFAULT_KANBAN_BLOCK_HEIGHT
+            : isFrame
+              ? 400
+              : isMermaid
+                ? 480
+                : DEFAULT_BLOCK_HEIGHT;
 
       const screenPos = pos
         ? null
@@ -1284,6 +1292,7 @@ export const useProjectCanvasGraph = ({
           action: "set_state",
           actionParams: { state: "success" },
         },
+        database: { columns: [], rows: [] },
       };
       const resolvedMetadata =
         initialMetadata || defaultMetadataByType[blockType];

@@ -54,5 +54,21 @@ export function remapMetadataBlockIds(
     }
   }
 
+  if (blockType === "database" && Array.isArray(metadata.rows)) {
+    for (const row of metadata.rows) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const cells = (row as Record<string, unknown>).cells;
+      if (!cells || typeof cells !== "object" || Array.isArray(cells)) continue;
+      for (const colId of Object.keys(cells)) {
+        const cell = (cells as Record<string, unknown>)[colId];
+        if (!cell || typeof cell !== "object" || Array.isArray(cell)) continue;
+        const relation = cell as Record<string, unknown>;
+        if (typeof relation.blockId === "string") {
+          relation.blockId = idMap.get(relation.blockId) ?? relation.blockId;
+        }
+      }
+    }
+  }
+
   return wasString ? JSON.stringify(metadata) : metadata;
 }

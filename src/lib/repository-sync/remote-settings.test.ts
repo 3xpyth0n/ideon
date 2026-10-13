@@ -26,7 +26,7 @@ describe("repository remote settings", () => {
 
     await expect(
       validateRepositoryRemoteSettings({
-        repositoryUrl: "https://user:token@example.com/team/project.git",
+        repositoryUrl: "https://user@example.com/team/project.git",
         branch: "main",
         repositoryPath: "",
       }),

@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added a project audit trail — lifecycle changes, saved states, rewinds, and rejected write attempts are recorded as chained and tamper-evident events.
 - Added database blocks — a spreadsheet-style block with columns, rows, sorting, filtering, and relation cells that link to other blocks ([#126](https://github.com/3xpyth0n/ideon/issues/126)).
 - Added a center anchor marker to sub-canvases so flows can be routed through the canvas center ([#135](https://github.com/3xpyth0n/ideon/issues/135)).
 - Added Git repository sync so canvas structure, positions, notes, and diagrams can be versioned and restored or synchronized safely ([#125](https://github.com/3xpyth0n/ideon/issues/125)).
@@ -18,6 +19,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fixed login failures caused by Auth.js `UntrustedHost` errors ([#133](https://github.com/3xpyth0n/ideon/issues/133)).
+- Server-enforced access control on the versioning API — collaborators can no longer restore, rename, or delete project history regardless of client state; only the project owner can rewind, rename, or remove states.
+- Atomic rewind — restoring a past state rewrites the project in a single transaction and propagates to every connected client, with a confirmation dialog that flags unsaved local changes before applying.
 
 ## [0.9.8] - 2026-10-01
 

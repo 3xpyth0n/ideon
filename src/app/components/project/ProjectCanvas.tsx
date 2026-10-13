@@ -39,10 +39,12 @@ import MermaidBlock from "./MermaidBlock";
 import DatabaseBlock from "./DatabaseBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
+import { AuditTrailModal } from "./AuditTrailModal";
 import CommandPalette from "./CommandPalette";
 import CanvasSearch from "./CanvasSearch";
 import CanvasSearchBar from "./CanvasSearchBar";
 import AddBlockModal from "./AddBlockModal";
+import { ApplyConfirmModal } from "./ApplyConfirmModal";
 import { TransferBlockModal } from "./TransferBlockModal";
 import { ProjectCanvasErrorBoundary } from "./ProjectCanvasErrorBoundary";
 import { useI18n } from "@providers/I18nProvider";
@@ -87,6 +89,7 @@ import {
   Trash2,
   ScrollText,
   GitBranch,
+  ShieldCheck,
 } from "lucide-react";
 import { LuPencilOff } from "react-icons/lu";
 import { TbLocationOff } from "react-icons/tb";
@@ -941,6 +944,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       mousePosRef,
       handlePreview,
       handleApplyState,
+      pendingApply,
+      clearPendingApply,
       onBlockContextMenu,
       onEdgeContextMenu,
       onPaneContextMenu,
@@ -1589,6 +1594,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
     const [dontAskAgain, setDontAskAgain] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
     const [isRepoSyncModalOpen, setIsRepoSyncModalOpen] = useState(false);
 
     const handleEdgeLabelSubmit = useCallback(
@@ -2458,6 +2464,16 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   <GitBranch size={16} />
                                 </Button>
                               )}
+                              {(currentUserRole === "owner" ||
+                                currentUserRole === "creator") && (
+                                <Button
+                                  onClick={() => setIsAuditModalOpen(true)}
+                                  className="btn-secondary px-3!"
+                                  title={dict.management.auditTrail}
+                                >
+                                  <ShieldCheck size={16} />
+                                </Button>
+                              )}
                               <DecisionHistory
                                 projectId={initialProjectId!}
                                 onPreview={handlePreview}
@@ -2830,6 +2846,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               currentUserRole={currentUserRole}
             />
 
+            <AuditTrailModal
+              isOpen={isAuditModalOpen}
+              onClose={() => setIsAuditModalOpen(false)}
+              projectId={initialProjectId!}
+            />
+
             <ShareModal
               isOpen={isShareModalOpen}
               onClose={() => setIsShareModalOpen(false)}
@@ -2846,6 +2868,24 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               isOpen={isRepoSyncModalOpen}
               onClose={() => setIsRepoSyncModalOpen(false)}
               projectId={initialProjectId!}
+            />
+
+            <ApplyConfirmModal
+              isOpen={!!pendingApply}
+              onSaveAndApply={async () => {
+                if (!pendingApply) return;
+                const result = await handleSaveState("Snapshot before rewind");
+                if (result.success) {
+                  await handleApplyState(pendingApply.stateId);
+                  clearPendingApply();
+                }
+              }}
+              onDiscardAndApply={() => {
+                if (!pendingApply) return;
+                handleApplyState(pendingApply.stateId, { force: true });
+                clearPendingApply();
+              }}
+              onCancel={clearPendingApply}
             />
 
             {transferBlock && (

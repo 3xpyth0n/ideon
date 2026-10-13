@@ -9,6 +9,7 @@ import type {
   ProjectRepositorySync,
 } from "@lib/types/db";
 import { getDb, runTransaction } from "@lib/db";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { getProjectYjsDoc } from "../projectYjsDoc";
 import {
   captureCanvasStateSnapshots,
@@ -132,6 +133,7 @@ export async function applyRepositorySyncPlan(
   manifest: RepositorySyncManifest,
   bundle: Readonly<Record<string, Uint8Array>>,
   plan: RepositorySyncImportPlan,
+  triggeredBy: string,
   lastSyncedCommit?: string | null,
 ): Promise<void> {
   if (
@@ -156,7 +158,7 @@ export async function applyRepositorySyncPlan(
   let applied = false;
 
   try {
-    await runTransaction(db, async (trx) => {
+    const syncCounts = await runTransaction(db, async (trx) => {
       if (currentState) {
         const updatedState = await trx
           .updateTable("projectRepositorySyncs")
@@ -249,6 +251,19 @@ export async function applyRepositorySyncPlan(
       const removedBlockIds = currentBlocks
         .filter((block) => !blockIds.has(block.id))
         .map((block) => block.id);
+
+      const currentBlockIds = new Set(currentBlocks.map((block) => block.id));
+      const currentLinkIds = new Set(currentLinks.map((link) => link.id));
+      const syncCountsResult = {
+        added:
+          plan.blocks.filter((block) => !currentBlockIds.has(block.id)).length +
+          plan.links.filter((link) => !currentLinkIds.has(link.id)).length,
+        updated:
+          plan.blocks.filter((block) => currentBlockIds.has(block.id)).length +
+          plan.links.filter((link) => currentLinkIds.has(link.id)).length,
+        deleted: removedLinkIds.length + removedBlockIds.length,
+      };
+
       for (const removedIds of batches(removedBlockIds, 500)) {
         await trx
           .deleteFrom("blocks")
@@ -343,8 +358,24 @@ export async function applyRepositorySyncPlan(
       yjsUpdated = true;
       restoreCanvasStateSnapshots(projectYjsDoc.doc, plan.snapshots);
       await projectYjsDoc.persist();
+      return syncCountsResult;
     });
     applied = true;
+
+    await appendAuditEvent({
+      projectId: project.id,
+      userId: triggeredBy,
+      action: "repository_sync.apply",
+      entityType: "project",
+      entityId: project.id,
+      summary: `Repository sync applied: ${syncCounts.added} added, ${syncCounts.updated} updated, ${syncCounts.deleted} deleted`,
+      metadata: {
+        remoteProjectId: manifest.project.id,
+        added: syncCounts.added,
+        updated: syncCounts.updated,
+        deleted: syncCounts.deleted,
+      },
+    });
   } catch (error) {
     const rollbackErrors: unknown[] = [];
     if (yjsUpdated) {

@@ -12,6 +12,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import packageJson from "../../../package.json";
 import type { LeveldbPersistence } from "y-leveldb";
+import { withToolAudit } from "./tool-audit";
 import { registerProjectTools } from "./tools/projects";
 import { registerBlockTools } from "./tools/blocks";
 import { registerLinkTools } from "./tools/links";
@@ -52,6 +53,8 @@ export function createMcpServer(ldb: LeveldbPersistence): McpServer {
       instructions: INSTRUCTIONS,
     },
   );
+
+  withToolAudit(server);
 
   // Register tools
   registerProjectTools(server, ldb);

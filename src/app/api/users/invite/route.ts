@@ -2,6 +2,7 @@ import { getDb } from "@lib/db";
 import { sendEmail, getInvitationEmailTemplate } from "@lib/email";
 import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { headers } from "next/headers";
 import { hashToken } from "@lib/crypto";
 import { v4 as uuidv4 } from "uuid";
@@ -98,6 +99,16 @@ export const POST = authenticatedAction(
     await logSecurityEvent("userInvite", "success", {
       userId: auth.id,
       ip,
+    });
+
+    await appendAuditEvent({
+      projectId: null,
+      userId: auth.id,
+      action: "collaborator.invite",
+      entityType: "invitation",
+      entityId: id,
+      summary: `Invitation sent to ${email}`,
+      metadata: { email, role, emailSent },
     });
 
     return { success: true, inviteUrl, emailSent };

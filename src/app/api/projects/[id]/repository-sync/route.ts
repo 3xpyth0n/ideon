@@ -182,7 +182,7 @@ async function readLimitedBody(request: Request): Promise<Uint8Array> {
 }
 
 export const POST = projectAction<unknown>(
-  async (request, { project }) => {
+  async (request, { user: auth, project }) => {
     const contentType = request.headers.get("content-type")?.split(";")[0];
     if (
       contentType !== "application/zip" &&
@@ -261,6 +261,7 @@ export const POST = projectAction<unknown>(
         mergedManifest,
         merge.bundle,
         plan,
+        auth.id,
       );
 
       return NextResponse.json({

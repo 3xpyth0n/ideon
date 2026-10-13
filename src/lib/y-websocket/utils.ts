@@ -10,6 +10,7 @@ import { IncomingMessage } from "http";
 import { RawData, WebSocket } from "ws";
 import { LeveldbPersistence } from "y-leveldb";
 import { logger } from "../../app/lib/logger";
+import { appendAuditEvent } from "../../app/lib/audit-trail";
 
 const CALLBACK_DEBOUNCE_WAIT = process.env.CALLBACK_DEBOUNCE_WAIT
   ? parseInt(process.env.CALLBACK_DEBOUNCE_WAIT)
@@ -389,6 +390,33 @@ export const getYDoc = (docname: string, gc = true): WSSharedDoc =>
     return doc;
   });
 
+function extractProjectId(docName: string): string | null {
+  if (!docName.startsWith("project-") || docName.endsWith("-access")) {
+    return null;
+  }
+  const projectId = docName.replace(/^project-/, "");
+  return projectId.length > 0 ? projectId : null;
+}
+
+export function auditRejectedWrite(
+  docName: string,
+  userId: string | null,
+  role: string | null,
+  reason: string,
+): void {
+  const projectId = extractProjectId(docName);
+  if (!projectId) return;
+  void appendAuditEvent({
+    projectId,
+    userId,
+    action: "graph.write_rejected",
+    entityType: "project",
+    entityId: projectId,
+    summary: `Canvas write rejected: ${reason}`,
+    metadata: { role, reason },
+  });
+}
+
 const messageListener = (
   conn: WebSocket,
   doc: WSSharedDoc,
@@ -425,6 +453,12 @@ const messageListener = (
               { doc: doc.name },
               "[YJS] Sync message from connection without userRole — closing",
             );
+            auditRejectedWrite(
+              doc.name,
+              (conn as WebSocket & { userId?: string }).userId ?? null,
+              null,
+              "missing role",
+            );
             try {
               conn.close(4001, "Missing user role");
             } catch {
@@ -442,6 +476,12 @@ const messageListener = (
             logger.info(
               { role: connRole },
               "[YJS] Ignoring sync message from read-only connection",
+            );
+            auditRejectedWrite(
+              doc.name,
+              (conn as WebSocket & { userId?: string }).userId ?? null,
+              connRole,
+              "read-only connection",
             );
             return;
           }

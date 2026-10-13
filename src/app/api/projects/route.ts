@@ -1,6 +1,7 @@
 import { getDb, runTransaction } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { loadDictionaries } from "@i18n/loader";
 import { cookies, headers } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
@@ -98,6 +99,19 @@ export const POST = authenticatedAction(
     await logSecurityEvent("projectCreate", "success", {
       userId: user.id,
       ip,
+    });
+
+    await appendAuditEvent({
+      projectId,
+      userId: user.id,
+      action: "project.create",
+      entityType: "project",
+      entityId: projectId,
+      summary: `Project created: ${name}`,
+      metadata: {
+        blocks: starterGraph.blocks.length,
+        links: starterGraph.links.length,
+      },
     });
 
     return {

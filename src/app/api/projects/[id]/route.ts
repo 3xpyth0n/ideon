@@ -1,6 +1,7 @@
 import { getDb, runTransaction } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { getClientIp } from "@lib/security-utils";
 import { headers } from "next/headers";
 
@@ -92,6 +93,16 @@ export const PATCH = projectAction(
         .set({ deletedAt: null })
         .where("id", "=", project.id)
         .execute();
+
+      await appendAuditEvent({
+        projectId: project.id,
+        userId: user.id,
+        action: "project.restore",
+        entityType: "project",
+        entityId: project.id,
+        summary: `Project restored from trash: ${project.name}`,
+        metadata: {},
+      });
     }
 
     // Handle Name/Description Update
@@ -125,6 +136,39 @@ export const PATCH = projectAction(
       await logSecurityEvent("projectUpdate", "success", {
         userId: user.id,
         ip,
+      });
+
+      const changes: string[] = [];
+      const changesMetadata: Record<
+        string,
+        { from: string | null; to: string | null }
+      > = {};
+      if (name && name !== project.name) {
+        changes.push(`renamed from "${project.name}" to "${name}"`);
+        changesMetadata.name = { from: project.name, to: name };
+      }
+      if (
+        description !== undefined &&
+        (description || null) !== (project.description ?? null)
+      ) {
+        changes.push("description updated");
+        changesMetadata.description = {
+          from: project.description ?? null,
+          to: description || null,
+        };
+      }
+
+      await appendAuditEvent({
+        projectId: project.id,
+        userId: user.id,
+        action: "project.update",
+        entityType: "project",
+        entityId: project.id,
+        summary:
+          changes.length > 0
+            ? `Project ${changes.join("; ")}`
+            : "Project details updated",
+        metadata: changesMetadata,
       });
     }
 
@@ -189,6 +233,16 @@ export const DELETE = projectAction(async (req, { project, user, role }) => {
       userId: user.id,
       ip,
     });
+
+    await appendAuditEvent({
+      projectId: project.id,
+      userId: user.id,
+      action: "project.delete",
+      entityType: "project",
+      entityId: project.id,
+      summary: `Project permanently deleted: ${project.name}`,
+      metadata: { permanent: true },
+    });
   } else {
     // Soft Delete
     await db
@@ -202,6 +256,16 @@ export const DELETE = projectAction(async (req, { project, user, role }) => {
     await logSecurityEvent("projectSoftDelete", "success", {
       userId: user.id,
       ip,
+    });
+
+    await appendAuditEvent({
+      projectId: project.id,
+      userId: user.id,
+      action: "project.delete",
+      entityType: "project",
+      entityId: project.id,
+      summary: `Project moved to trash: ${project.name}`,
+      metadata: { permanent: false },
     });
   }
 

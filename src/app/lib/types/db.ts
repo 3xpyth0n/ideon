@@ -249,7 +249,7 @@ export interface invitationsTable {
 export interface temporalStatesTable {
   id: Generated<string>;
   projectId: string;
-  parentId: string | null;
+  parentId: string | null; // Reserved: column kept in schema, reconstruction no longer walks the chain
   authorId: string;
   intent: string;
   diff: string; // JSON patch or similar
@@ -298,6 +298,20 @@ export interface auditLogsTable {
   status: string;
   metadata: ColumnType<string, string | undefined, string>;
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+export interface auditEventsTable {
+  id: string;
+  projectId: string | null;
+  userId: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  summary: string;
+  metadata: ColumnType<string, string | undefined, string>;
+  prevHash: string | null;
+  hash: string;
+  createdAt: string;
 }
 
 export interface accountsTable {
@@ -363,6 +377,7 @@ export interface database {
   automationLogs: automationLogsTable;
   blockAutomationStates: blockAutomationStatesTable;
   apiKeys: apiKeysTable;
+  auditEvents: auditEventsTable;
 }
 
 export interface projectRequestsTable {

@@ -96,6 +96,7 @@ export async function syncProjectRepository(
         manifest,
         merge.bundle,
         plan,
+        userId,
         commit,
       );
 

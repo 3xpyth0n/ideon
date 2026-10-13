@@ -1,5 +1,5 @@
 import { Node, Edge } from "@xyflow/react";
-import { getDb, TemporalState, runTransaction } from "@lib/db";
+import { getDb, runTransaction } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
 import {
   applyGraphMutation,
@@ -10,9 +10,15 @@ import {
 } from "@lib/graph";
 import { uniqueById } from "@lib/utils";
 import { validateFolderLinkRules } from "@lib/folder-link-rules";
+import { appendAuditEvent } from "@lib/audit-trail";
+import { logger } from "@lib/logger";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { canvasStateSnapshotsSchema } from "../../../../../lib/yjs-canvas-state";
+import {
+  canvasStateSnapshotsSchema,
+  restoreCanvasStateSnapshots,
+} from "../../../../../lib/yjs-canvas-state";
+import { docs } from "../../../../../lib/y-websocket/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -31,18 +37,40 @@ function parseTemporalDiff(diff: string): Mutation[] {
   return result.data as Mutation[];
 }
 
+async function auditTemporalRejection(
+  projectId: string,
+  userId: string,
+  action: string,
+  error: string,
+) {
+  await appendAuditEvent({
+    projectId,
+    userId,
+    action: `temporal.${action}`,
+    summary: `Temporal ${action} rejected: ${error}`,
+    metadata: { error, status: "failure" },
+  });
+}
+
 export const GET = projectAction(async (req, { project }) => {
   const db = getDb();
   const searchParams = req.nextUrl.searchParams;
   const action = searchParams.get("action") || "history";
 
   if (action === "history") {
-    const states = await db
+    const rawLimit = Number.parseInt(searchParams.get("limit") || "", 10);
+    const limit = Math.min(
+      Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 50,
+      200,
+    );
+    const beforeTimestamp = searchParams.get("before");
+    const beforeId = searchParams.get("beforeId");
+
+    let statesQuery = db
       .selectFrom("temporalStates")
       .innerJoin("users", "users.id", "temporalStates.authorId")
       .select([
         "temporalStates.id",
-        "temporalStates.parentId",
         "temporalStates.intent",
         "temporalStates.isSnapshot",
         "temporalStates.isAuto",
@@ -50,44 +78,49 @@ export const GET = projectAction(async (req, { project }) => {
         "users.username as authorName",
         "users.color as authorColor",
       ])
-      .where("projectId", "=", project.id)
+      .where("projectId", "=", project.id);
+
+    if (beforeTimestamp && beforeId) {
+      // Timestamps are stored as ISO strings (see the create action), so the
+      // cursor stays a raw string even though the column is typed as Date.
+      const beforeCursorTs = beforeTimestamp as unknown as Date;
+      statesQuery = statesQuery.where((eb) =>
+        eb.or([
+          eb("temporalStates.timestamp", "<", beforeCursorTs),
+          eb.and([
+            eb("temporalStates.timestamp", "=", beforeCursorTs),
+            eb("temporalStates.id", "<", beforeId),
+          ]),
+        ]),
+      );
+    }
+
+    const states = await statesQuery
       .orderBy("timestamp", "desc")
+      .orderBy("id", "desc")
+      .limit(limit + 1)
       .execute();
 
-    return { history: states };
+    const hasMore = states.length > limit;
+    const history = hasMore ? states.slice(0, limit) : states;
+
+    return { history, hasMore };
   }
 
   if (action === "reconstruct") {
     const stateId = searchParams.get("stateId");
     if (!stateId) throw { status: 400, message: "stateId required" };
 
-    // Fetch all states for this project in one query (N+1 fix)
-    const allStates = await db
+    const state = await db
       .selectFrom("temporalStates")
-      .select(["id", "parentId", "diff", "timestamp"])
+      .select(["id", "diff", "timestamp"])
+      .where("id", "=", stateId)
       .where("projectId", "=", project.id)
-      .execute();
-
-    const stateMap = new Map(allStates.map((s) => [s.id, s]));
-    const history: TemporalState[] = [];
-    let currentId: string | null = stateId;
-
-    // Max depth to prevent infinite loops in case of circular references (though unlikely)
-    let depth = 0;
-    const MAX_DEPTH = 1000;
-
-    while (currentId && depth < MAX_DEPTH) {
-      const state = stateMap.get(currentId);
-      if (!state) break;
-
-      history.unshift(state as TemporalState);
-      currentId = state.parentId;
-      depth++;
-    }
+      .executeTakeFirst();
 
     let graph: GraphState = { blocks: [], links: [] };
-    for (const step of history) {
-      const mutations = parseTemporalDiff(step.diff);
+    if (state) {
+      const mutations = parseTemporalDiff(state.diff);
       for (const mutation of mutations) {
         graph = applyGraphMutation(graph, mutation);
       }
@@ -111,7 +144,7 @@ const postSchema = z.object({
 });
 
 export const POST = projectAction(
-  async (_req, { user: auth, project, body }) => {
+  async (_req, { user: auth, project, role, body }) => {
     const projectId = project.id;
     const db = getDb();
     const {
@@ -203,6 +236,12 @@ export const POST = projectAction(
         for (const existing of existingBlocks) {
           if (!inputBlocksMap.has(existing.id)) {
             if (existing.ownerId !== auth.id) {
+              await auditTemporalRejection(
+                projectId,
+                auth.id,
+                "create",
+                "cannot delete blocks you don't own",
+              );
               throw {
                 status: 403,
                 message: "Forbidden: Cannot delete blocks you don't own",
@@ -218,6 +257,12 @@ export const POST = projectAction(
             const newOwnerId = inputBlock.data?.ownerId || existing.ownerId;
             if (newOwnerId !== existing.ownerId) {
               if (existing.ownerId !== auth.id) {
+                await auditTemporalRejection(
+                  projectId,
+                  auth.id,
+                  "create",
+                  "cannot transfer ownership of blocks you don't own",
+                );
                 throw {
                   status: 403,
                   message:
@@ -336,11 +381,44 @@ export const POST = projectAction(
         console.info(`[temporal] snapshot ${snapshotId} written successfully`);
       }
 
+      await appendAuditEvent({
+        projectId,
+        userId: auth.id,
+        action: "temporal.create",
+        entityType: "temporalState",
+        entityId: snapshotId,
+        summary: intent || "Snapshot created",
+        metadata: {
+          isAuto: Boolean(isAuto),
+          blocks: uniqueBlocks.length,
+          links: uniqueLinks.length,
+        },
+      });
+
       return { success: true, stateId: snapshotId };
     }
 
     if (action === "apply") {
+      if (role !== "owner" && role !== "creator") {
+        await auditTemporalRejection(
+          projectId,
+          auth.id,
+          "apply",
+          "insufficient role",
+        );
+        throw {
+          status: 403,
+          message: "Forbidden: Only project owner can apply past states",
+        };
+      }
+
       if (project.ownerId !== auth.id) {
+        await auditTemporalRejection(
+          projectId,
+          auth.id,
+          "apply",
+          "not project owner",
+        );
         throw {
           status: 403,
           message: "Forbidden: Only project owner can apply past states",
@@ -350,33 +428,21 @@ export const POST = projectAction(
       const { stateId } = body;
       if (!stateId) throw { status: 400, message: "stateId required" };
 
-      const history: TemporalState[] = [];
-      let currentId: string | null = stateId;
-      let targetTimestamp: string | Date | null = null;
+      const state = await db
+        .selectFrom("temporalStates")
+        .selectAll()
+        .where("id", "=", stateId)
+        .where("projectId", "=", projectId)
+        .executeTakeFirst();
 
-      while (currentId) {
-        const state = await db
-          .selectFrom("temporalStates")
-          .selectAll()
-          .where("id", "=", currentId)
-          .executeTakeFirst();
+      if (!state) throw { status: 404, message: "State not found" };
 
-        if (!state) break;
-
-        if (state.id === stateId) {
-          targetTimestamp = state.timestamp;
-        }
-
-        history.unshift(state);
-        currentId = state.parentId;
-      }
+      const targetTimestamp = state.timestamp;
 
       let graph: GraphState = { blocks: [], links: [] };
-      for (const step of history) {
-        const mutations = parseTemporalDiff(step.diff);
-        for (const mutation of mutations) {
-          graph = applyGraphMutation(graph, mutation);
-        }
+      const mutations = parseTemporalDiff(state.diff);
+      for (const mutation of mutations) {
+        graph = applyGraphMutation(graph, mutation);
       }
 
       let formattedIntent = `Restored state from ${stateId}`;
@@ -475,6 +541,37 @@ export const POST = projectAction(
         }
       });
 
+      let legacyRestore = false;
+      if (graph.canvasStates) {
+        try {
+          const liveDoc = docs.get(`project-${projectId}`);
+          if (liveDoc) {
+            restoreCanvasStateSnapshots(liveDoc, graph.canvasStates);
+          }
+        } catch (error) {
+          legacyRestore = true;
+          logger.warn(
+            { err: error, projectId },
+            "[temporal] Server-side restore failed, relying on client propagation",
+          );
+        }
+      }
+
+      await appendAuditEvent({
+        projectId,
+        userId: auth.id,
+        action: "temporal.apply",
+        entityType: "temporalState",
+        entityId: snapshotId,
+        summary: formattedIntent,
+        metadata: {
+          restoredFrom: stateId,
+          blocks: uniqueBlocks.length,
+          links: uniqueLinks.length,
+          legacyRestore,
+        },
+      });
+
       return {
         success: true,
         stateId: snapshotId,
@@ -483,7 +580,26 @@ export const POST = projectAction(
     }
 
     if (action === "update") {
+      if (role !== "owner" && role !== "creator") {
+        await auditTemporalRejection(
+          projectId,
+          auth.id,
+          "update",
+          "insufficient role",
+        );
+        throw {
+          status: 403,
+          message: "Forbidden: Only project owner can rename states",
+        };
+      }
+
       if (project.ownerId !== auth.id) {
+        await auditTemporalRejection(
+          projectId,
+          auth.id,
+          "update",
+          "not project owner",
+        );
         throw {
           status: 403,
           message: "Forbidden: Only project owner can rename states",
@@ -495,6 +611,13 @@ export const POST = projectAction(
       if (typeof intent !== "string")
         throw { status: 400, message: "intent required" };
 
+      const existingState = await db
+        .selectFrom("temporalStates")
+        .select("intent")
+        .where("id", "=", stateId)
+        .where("projectId", "=", projectId)
+        .executeTakeFirst();
+
       await db
         .updateTable("temporalStates")
         .set({ intent })
@@ -502,11 +625,44 @@ export const POST = projectAction(
         .where("projectId", "=", projectId)
         .execute();
 
+      await appendAuditEvent({
+        projectId,
+        userId: auth.id,
+        action: "temporal.rename",
+        entityType: "temporalState",
+        entityId: stateId,
+        summary: `Snapshot renamed to "${intent}"`,
+        metadata: {
+          stateId,
+          from: existingState?.intent ?? null,
+          to: intent,
+        },
+      });
+
       return { success: true };
     }
 
     if (action === "delete") {
+      if (role !== "owner" && role !== "creator") {
+        await auditTemporalRejection(
+          projectId,
+          auth.id,
+          "delete",
+          "insufficient role",
+        );
+        throw {
+          status: 403,
+          message: "Forbidden: Only project owner can delete states",
+        };
+      }
+
       if (project.ownerId !== auth.id) {
+        await auditTemporalRejection(
+          projectId,
+          auth.id,
+          "delete",
+          "not project owner",
+        );
         throw {
           status: 403,
           message: "Forbidden: Only project owner can delete states",
@@ -523,16 +679,33 @@ export const POST = projectAction(
         };
       }
 
+      const existingState = await db
+        .selectFrom("temporalStates")
+        .select("intent")
+        .where("id", "=", stateId)
+        .where("projectId", "=", projectId)
+        .executeTakeFirst();
+
       await db
         .deleteFrom("temporalStates")
         .where("id", "=", stateId)
         .where("projectId", "=", projectId)
         .execute();
 
+      await appendAuditEvent({
+        projectId,
+        userId: auth.id,
+        action: "temporal.delete",
+        entityType: "temporalState",
+        entityId: stateId,
+        summary: `Snapshot deleted: ${existingState?.intent ?? "unknown"}`,
+        metadata: { stateId, intent: existingState?.intent ?? null },
+      });
+
       return { success: true };
     }
 
     throw { status: 400, message: "Invalid action" };
   },
-  { schema: postSchema },
+  { schema: postSchema, minRole: "editor" },
 );

@@ -19,6 +19,7 @@ import {
   X,
   Save,
   ChevronDown,
+  Loader2,
   Trash2,
   Pencil,
   User,
@@ -81,7 +82,8 @@ export function DecisionHistory({
     }
   };
   const [isSaving, setIsSaving] = useState(false);
-  const [visibleHistoryCount, setVisibleHistoryCount] = useState(10);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showBottomGradient, setShowBottomGradient] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -189,35 +191,46 @@ export function DecisionHistory({
     setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
   };
 
-  const fetchHistory = useCallback(async () => {
-    if (!projectId || projectId === "undefined") return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(
-        `/api/projects/${projectId}/temporal?action=history`,
-      );
-      const data = await res.json();
+  const fetchHistory = useCallback(
+    async (before?: { timestamp: string; id: string }) => {
+      if (!projectId || projectId === "undefined") return;
+      if (before) setIsLoadingMore(true);
+      else setIsLoading(true);
+      try {
+        const params = new URLSearchParams({ action: "history" });
+        if (before) {
+          params.set("before", before.timestamp);
+          params.set("beforeId", before.id);
+        }
+        const res = await fetch(
+          `/api/projects/${projectId}/temporal?${params.toString()}`,
+        );
+        const data = await res.json();
 
-      if (!res.ok) {
+        if (!res.ok) {
+          toast.error(dict.common.error);
+          return;
+        }
+
+        setHistory((prev) =>
+          before ? [...prev, ...(data.history || [])] : data.history || [],
+        );
+        setHasMore(Boolean(data.hasMore));
+        // Reset scroll check after data load
+        setTimeout(checkScroll, 100);
+      } catch {
         toast.error(dict.common.error);
-        setIsLoading(false);
-        return;
+      } finally {
+        if (before) setIsLoadingMore(false);
+        else setIsLoading(false);
       }
-
-      setHistory(data.history || []);
-      // Reset scroll check after data load
-      setTimeout(checkScroll, 100);
-    } catch {
-      toast.error(dict.common.error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId, dict.common.error]);
+    },
+    [projectId, dict.common.error],
+  );
 
   useEffect(() => {
     if (isOpen) {
       fetchHistory();
-      setVisibleHistoryCount(10);
     }
   }, [isOpen, fetchHistory]);
 
@@ -283,8 +296,9 @@ export function DecisionHistory({
   };
 
   const handleLoadMore = () => {
-    setVisibleHistoryCount((prev) => prev + 10);
-    setTimeout(checkScroll, 100);
+    const last = history[history.length - 1];
+    if (!last || isLoadingMore) return;
+    fetchHistory({ timestamp: last.timestamp, id: last.id });
   };
 
   const formatDate = (isoString?: string) => {
@@ -339,9 +353,6 @@ export function DecisionHistory({
     }
   };
 
-  const displayedHistory = history.slice(0, visibleHistoryCount);
-  const hasMoreHistory = history.length > visibleHistoryCount;
-  // Activate overflow-y: auto only if more than 5 elements
   const shouldEnableScroll = history.length > 5;
 
   return (
@@ -410,7 +421,7 @@ export function DecisionHistory({
                 </div>
               ) : (
                 <>
-                  {displayedHistory.map((state) => (
+                  {history.map((state) => (
                     <div
                       key={state.id}
                       className="history-item-container relative group"
@@ -484,17 +495,22 @@ export function DecisionHistory({
                     </div>
                   ))}
 
-                  {hasMoreHistory && (
+                  {hasMore && (
                     <div className="pt-2 pb-4 flex justify-center">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleLoadMore}
+                        disabled={isLoadingMore}
                         noRipple
                         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 h-8 px-3"
                       >
                         <span>{dict.common.showMore}</span>
-                        <ChevronDown className="w-3 h-3" />
+                        {isLoadingMore ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        )}
                       </Button>
                     </div>
                   )}

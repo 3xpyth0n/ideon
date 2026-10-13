@@ -1,5 +1,6 @@
 import { authenticatedAction } from "@lib/server-utils";
 import { getDb, runTransaction } from "@lib/db";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { sanitizeFileName } from "@lib/file-utils";
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
@@ -373,6 +374,16 @@ export const POST = authenticatedAction(
         }
       }
     }
+
+    await appendAuditEvent({
+      projectId: newProjectId,
+      userId: user.id,
+      action: "import.apply",
+      entityType: "project",
+      entityId: newProjectId,
+      summary: `Project imported: ${projectMeta.name}`,
+      metadata: { blocks: blocks.length, links: links.length },
+    });
 
     return { projectId: newProjectId, name: projectMeta.name };
   },

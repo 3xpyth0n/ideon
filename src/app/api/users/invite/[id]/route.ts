@@ -2,6 +2,7 @@ import { authenticatedAction } from "@lib/server-utils";
 import { getDb } from "@lib/db";
 import { sendEmail, getInvitationEmailTemplate } from "@lib/email";
 import { logSecurityEvent } from "@lib/audit";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { getClientIp } from "@lib/security-utils";
 import { headers } from "next/headers";
 import { hashToken } from "@lib/crypto";
@@ -105,6 +106,16 @@ export const DELETE = authenticatedAction(
     await logSecurityEvent("userInviteDelete", "success", {
       userId: auth.id,
       ip,
+    });
+
+    await appendAuditEvent({
+      projectId: null,
+      userId: auth.id,
+      action: "collaborator.remove",
+      entityType: "invitation",
+      entityId: id,
+      summary: "Invitation revoked",
+      metadata: {},
     });
 
     return { success: true };

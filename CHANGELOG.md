@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-10-XX
+## [1.0.0] - 2026-10-15
 
 Ideon 1.0 makes the workspace trustworthy infrastructure: every project
 carries a complete, tamper-evident record, and any state can be sealed,

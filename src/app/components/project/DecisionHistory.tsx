@@ -357,14 +357,6 @@ export function DecisionHistory({
 
   return (
     <div className="temporal-navigation-container" ref={menuRef}>
-      <button
-        className={`temporal-trigger outline-none ${isOpen ? "active" : ""}`}
-        onClick={handleToggle}
-        title={dict.canvas.temporalHistory}
-      >
-        <History className="w-5 h-5 transition-transform duration-300" />
-      </button>
-
       {isOpen && (
         <div className="save-context-menu">
           {/* Header */}

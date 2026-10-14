@@ -82,10 +82,6 @@
     z-index: 9999 !important;
     transform: none !important;
   }
-
-  .temporal-trigger {
-    display: none !important;
-  }
 }
 
 @media (max-width: 440px) {

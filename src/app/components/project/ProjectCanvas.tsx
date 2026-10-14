@@ -90,6 +90,9 @@ import {
   ScrollText,
   GitBranch,
   ShieldCheck,
+  MousePointer2,
+  Command,
+  Search,
 } from "lucide-react";
 import { LuPencilOff } from "react-icons/lu";
 import { TbLocationOff } from "react-icons/tb";
@@ -1820,10 +1823,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         .map((block) => ({
           ...block,
           zIndex: block.type === "frame" ? 0 : 1,
-          className:
-            block.id === newBlockId
-              ? "block-just-created"
-              : block.className || "",
+          className: [
+            block.id === newBlockId ? "block-just-created" : "",
+            block.className || "",
+          ]
+            .filter(Boolean)
+            .join(" "),
           data: {
             ...block.data,
             isPreviewMode,
@@ -2289,191 +2294,186 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             </div>
                           )}
 
-                          {isMobileTopbar ? (
-                            <div
-                              className="project-mobile-actions"
-                              ref={mobileActionsRef}
+                          <div
+                            className="project-mobile-actions"
+                            ref={mobileActionsRef}
+                          >
+                            <button
+                              className={`project-mobile-actions-trigger ${
+                                isMobileActionsOpen ? "active" : ""
+                              }`}
+                              onClick={() =>
+                                setIsMobileActionsOpen((open) => !open)
+                              }
+                              title={dict.project.actions}
+                              aria-label={dict.project.actions}
                             >
-                              <button
-                                className={`project-mobile-actions-trigger ${
-                                  isMobileActionsOpen ? "active" : ""
-                                }`}
-                                onClick={() =>
-                                  setIsMobileActionsOpen((open) => !open)
-                                }
-                                title={dict.project.mobileActions}
-                                aria-label={dict.project.mobileActions}
-                              >
-                                <Menu size={18} />
-                              </button>
+                              <Menu size={18} />
+                            </button>
 
-                              {isMobileActionsOpen && (
-                                <div className="project-mobile-actions-menu">
-                                  {!isPreviewMode && (
-                                    <label className="project-mobile-actions-item project-mobile-actions-switch">
+                            {isMobileActionsOpen && (
+                              <div className="project-mobile-actions-menu">
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <label className="project-mobile-actions-item project-mobile-actions-switch">
+                                    <span className="project-mobile-actions-item-main">
+                                      <MousePointer2 size={14} />
                                       <span>{dict.project.shareCursor}</span>
-                                      <input
-                                        type="checkbox"
-                                        className="theme-checkbox"
-                                        checked={shareCursor}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          setShareCursor(e.target.checked);
-                                        }}
-                                      />
-                                    </label>
-                                  )}
-
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsAddBlockOpen(true);
-                                        setIsMobileActionsOpen(false);
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      className="theme-checkbox"
+                                      checked={shareCursor}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        setShareCursor(e.target.checked);
                                       }}
-                                    >
-                                      {dict.canvas.addBlock}
-                                    </button>
-                                  )}
+                                    />
+                                  </label>
+                                )}
 
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsPaletteOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                    >
-                                      {dict.canvas.commandPalette}
-                                    </button>
-                                  )}
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsAddBlockOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <Plus size={14} />
+                                      <span>{dict.canvas.addBlock}</span>
+                                    </span>
+                                  </button>
+                                )}
 
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsCanvasSearchOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                    >
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsPaletteOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <Command size={14} />
+                                      <span>{dict.canvas.commandPalette}</span>
+                                    </span>
+                                  </button>
+                                )}
+
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsCanvasSearchOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <Search size={14} />
                                       <span>
                                         {dict.canvas.canvasSearchLabel}
                                       </span>
-                                    </button>
-                                  )}
+                                    </span>
+                                  </button>
+                                )}
 
-                                  {currentUserRole !== "viewer" && (
-                                    <button
-                                      className="project-mobile-actions-item relative"
-                                      onClick={() => {
-                                        setIsInviteModalOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                      disabled={isPreviewMode}
-                                    >
+                                {currentUserRole !== "viewer" && (
+                                  <button
+                                    className="project-mobile-actions-item relative"
+                                    onClick={() => {
+                                      setIsInviteModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                    disabled={isPreviewMode}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <UserPlus size={14} />
                                       <span>
                                         {dict.project.access || "Access"}
                                       </span>
-                                      {pendingRequestsCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                          {pendingRequestsCount}
-                                        </span>
-                                      )}
-                                    </button>
-                                  )}
+                                    </span>
+                                    {pendingRequestsCount > 0 && (
+                                      <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                        {pendingRequestsCount}
+                                      </span>
+                                    )}
+                                  </button>
+                                )}
 
-                                  {currentUser?.id === projectOwnerId && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsShareModalOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                      disabled={isPreviewMode}
-                                    >
-                                      {dict.project.share || "Share"}
-                                    </button>
-                                  )}
-
-                                  {(currentUserRole === "owner" ||
-                                    currentUserRole === "creator") && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsRepoSyncModalOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                      disabled={isPreviewMode}
-                                    >
-                                      {dict.repositorySync.title}
-                                    </button>
-                                  )}
-
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsHistoryOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                    >
-                                      {dict.canvas.temporalHistory || "History"}
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {currentUserRole !== "viewer" && (
-                                <div className="relative">
-                                  <Button
-                                    onClick={() => setIsInviteModalOpen(true)}
-                                    className="btn-primary"
+                                {currentUser?.id === projectOwnerId && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsShareModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
                                     disabled={isPreviewMode}
                                   >
-                                    {(
-                                      dict.project.access || "Access"
-                                    ).toUpperCase()}
-                                  </Button>
-                                  {pendingRequestsCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                      {pendingRequestsCount}
+                                    <span className="project-mobile-actions-item-main">
+                                      <Share2 size={14} />
+                                      <span>
+                                        {dict.project.share || "Share"}
+                                      </span>
                                     </span>
-                                  )}
-                                </div>
-                              )}
-                              {currentUser?.id === projectOwnerId && (
-                                <Button
-                                  onClick={() => setIsShareModalOpen(true)}
-                                  className="btn-secondary px-3!"
-                                  disabled={isPreviewMode}
-                                  title={dict.project.share || "Share"}
-                                >
-                                  <Share2 size={16} />
-                                </Button>
-                              )}
-                              {(currentUserRole === "owner" ||
-                                currentUserRole === "creator") && (
-                                <Button
-                                  onClick={() => setIsRepoSyncModalOpen(true)}
-                                  className="btn-secondary px-3!"
-                                  disabled={isPreviewMode}
-                                  title={dict.repositorySync.title}
-                                >
-                                  <GitBranch size={16} />
-                                </Button>
-                              )}
-                              {(currentUserRole === "owner" ||
-                                currentUserRole === "creator") && (
-                                <Button
-                                  onClick={() => setIsAuditModalOpen(true)}
-                                  className="btn-secondary px-3!"
-                                  title={dict.management.auditTrail}
-                                >
-                                  <ShieldCheck size={16} />
-                                </Button>
-                              )}
+                                  </button>
+                                )}
+
+                                {(currentUserRole === "owner" ||
+                                  currentUserRole === "creator") && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsRepoSyncModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                    disabled={isPreviewMode}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <GitBranch size={14} />
+                                      <span>{dict.repositorySync.title}</span>
+                                    </span>
+                                  </button>
+                                )}
+
+                                {(currentUserRole === "owner" ||
+                                  currentUserRole === "creator") && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsAuditModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <ShieldCheck size={14} />
+                                      <span>{dict.management.auditTrail}</span>
+                                    </span>
+                                  </button>
+                                )}
+
+                                {!isPreviewMode && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsHistoryOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <ScrollText size={14} />
+                                      <span>
+                                        {dict.canvas.temporalHistory ||
+                                          "History"}
+                                      </span>
+                                    </span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {!isMobileTopbar && (
+                            <div className="project-history-host">
                               <DecisionHistory
                                 projectId={initialProjectId!}
                                 onPreview={handlePreview}
@@ -2494,20 +2494,22 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       </Panel>
 
                       {isMobileTopbar && (
-                        <DecisionHistory
-                          projectId={initialProjectId!}
-                          onPreview={handlePreview}
-                          onApply={handleApplyState}
-                          onSave={handleSaveState}
-                          onDelete={handleDeleteState}
-                          onRename={handleRenameState}
-                          isPreviewing={isPreviewMode}
-                          selectedStateId={selectedStateId}
-                          projectOwnerId={projectOwnerId}
-                          currentUserId={currentUser?.id}
-                          isHistoryOpen={isHistoryOpen}
-                          onHistoryOpenChange={setIsHistoryOpen}
-                        />
+                        <div className="project-history-host">
+                          <DecisionHistory
+                            projectId={initialProjectId!}
+                            onPreview={handlePreview}
+                            onApply={handleApplyState}
+                            onSave={handleSaveState}
+                            onDelete={handleDeleteState}
+                            onRename={handleRenameState}
+                            isPreviewing={isPreviewMode}
+                            selectedStateId={selectedStateId}
+                            projectOwnerId={projectOwnerId}
+                            currentUserId={currentUser?.id}
+                            isHistoryOpen={isHistoryOpen}
+                            onHistoryOpenChange={setIsHistoryOpen}
+                          />
+                        </div>
                       )}
 
                       <div className="zoom-indicator">

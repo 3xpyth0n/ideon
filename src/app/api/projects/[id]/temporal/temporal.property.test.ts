@@ -101,6 +101,7 @@ function getRequest(query: string) {
 describe("P2 — reconstruct fidelity (property)", () => {
   beforeEach(async () => {
     const db = getDb();
+    await db.deleteFrom("sealedStates").execute();
     await db.deleteFrom("temporalStates").execute();
     await db.deleteFrom("links").execute();
     await db.deleteFrom("blocks").execute();
@@ -177,6 +178,7 @@ describe("P2 — reconstruct fidelity (property)", () => {
 describe("P4 — temporal API roles", () => {
   beforeEach(async () => {
     const db = getDb();
+    await db.deleteFrom("sealedStates").execute();
     await db.deleteFrom("temporalStates").execute();
     await db.deleteFrom("links").execute();
     await db.deleteFrom("blocks").execute();
@@ -326,9 +328,124 @@ describe("P4 — temporal API roles", () => {
   });
 });
 
+describe("P4 — sealed state guard", () => {
+  beforeEach(async () => {
+    const db = getDb();
+    await db.deleteFrom("sealedStates").execute();
+    await db.deleteFrom("temporalStates").execute();
+    await db.deleteFrom("links").execute();
+    await db.deleteFrom("blocks").execute();
+    await db.deleteFrom("projectCollaborators").execute();
+    await db.deleteFrom("projects").execute();
+    await db.deleteFrom("auditEvents").execute();
+    await db.deleteFrom("users").execute();
+    await seedProject();
+    vi.clearAllMocks();
+  });
+
+  const sampleBlocks = [
+    {
+      id: "block-a",
+      type: "text",
+      position: { x: 0, y: 0 },
+      data: { blockType: "text", content: "hello" },
+    },
+  ];
+
+  it("refuses delete and rename of a sealed state (409) and journals the attempts", async () => {
+    (getAuthUser as Mock).mockResolvedValue({
+      id: EDITOR_ID,
+      email: "editor@example.com",
+      role: "member",
+    });
+    const createRes = await POST(
+      postRequest({ action: "create", blocks: sampleBlocks, links: [] }),
+      { params: Promise.resolve({ id: PROJECT_ID }) },
+    );
+    const created = await createRes.json();
+    const sealedStateId = created.stateId as string;
+
+    await POST(
+      postRequest({
+        action: "create",
+        blocks: [
+          {
+            id: "block-b",
+            type: "text",
+            position: { x: 1, y: 1 },
+            data: { blockType: "text", content: "second" },
+          },
+        ],
+        links: [],
+      }),
+      { params: Promise.resolve({ id: PROJECT_ID }) },
+    );
+
+    const db = getDb();
+    await db
+      .insertInto("sealedStates")
+      .values({
+        id: "seal-guard-test",
+        projectId: PROJECT_ID,
+        stateId: sealedStateId,
+        authorId: EDITOR_ID,
+        stateHash: "test-hash",
+        summary: "",
+        createdAt: new Date().toISOString(),
+      })
+      .execute();
+
+    (getAuthUser as Mock).mockResolvedValue({
+      id: OWNER_ID,
+      email: "owner@example.com",
+      role: "member",
+    });
+
+    const deleteRes = await POST(
+      postRequest({ action: "delete", stateId: sealedStateId }),
+      { params: Promise.resolve({ id: PROJECT_ID }) },
+    );
+    expect(deleteRes.status).toBe(409);
+
+    const updateRes = await POST(
+      postRequest({
+        action: "update",
+        stateId: sealedStateId,
+        intent: "renamed",
+      }),
+      { params: Promise.resolve({ id: PROJECT_ID }) },
+    );
+    expect(updateRes.status).toBe(409);
+
+    const guardEvents = await db
+      .selectFrom("auditEvents")
+      .select(["action", "metadata"])
+      .where("action", "=", "records.seal_guard")
+      .orderBy("createdAt", "asc")
+      .execute();
+    expect(guardEvents).toHaveLength(2);
+    expect(JSON.parse(guardEvents[0].metadata)).toMatchObject({
+      action: "delete",
+      stateId: sealedStateId,
+    });
+    expect(JSON.parse(guardEvents[1].metadata)).toMatchObject({
+      action: "update",
+      stateId: sealedStateId,
+    });
+
+    const stillThere = await db
+      .selectFrom("temporalStates")
+      .select("id")
+      .where("id", "=", sealedStateId)
+      .executeTakeFirst();
+    expect(stillThere).toBeDefined();
+  });
+});
+
 describe("P5 — apply convergence", () => {
   beforeEach(async () => {
     const db = getDb();
+    await db.deleteFrom("sealedStates").execute();
     await db.deleteFrom("temporalStates").execute();
     await db.deleteFrom("links").execute();
     await db.deleteFrom("blocks").execute();

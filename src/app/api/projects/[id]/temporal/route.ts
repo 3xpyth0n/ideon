@@ -52,6 +52,38 @@ async function auditTemporalRejection(
   });
 }
 
+async function guardSealedState(
+  projectId: string,
+  userId: string,
+  action: string,
+  stateId: string,
+) {
+  const db = getDb();
+  const sealed = await db
+    .selectFrom("sealedStates")
+    .select("id")
+    .where("stateId", "=", stateId)
+    .where("projectId", "=", projectId)
+    .executeTakeFirst();
+
+  if (!sealed) return;
+
+  await appendAuditEvent({
+    projectId,
+    userId,
+    action: "records.seal_guard",
+    entityType: "sealedState",
+    entityId: sealed.id,
+    summary: `Temporal ${action} rejected: state is sealed`,
+    metadata: { action, stateId },
+  });
+
+  throw {
+    status: 409,
+    message: "This state is sealed and cannot be modified",
+  };
+}
+
 export const GET = projectAction(async (req, { project }) => {
   const db = getDb();
   const searchParams = req.nextUrl.searchParams;
@@ -611,6 +643,8 @@ export const POST = projectAction(
       if (typeof intent !== "string")
         throw { status: 400, message: "intent required" };
 
+      await guardSealedState(projectId, auth.id, "update", stateId);
+
       const existingState = await db
         .selectFrom("temporalStates")
         .select("intent")
@@ -678,6 +712,8 @@ export const POST = projectAction(
           message: "Cannot delete the current state of the project",
         };
       }
+
+      await guardSealedState(projectId, auth.id, "delete", stateId);
 
       const existingState = await db
         .selectFrom("temporalStates")

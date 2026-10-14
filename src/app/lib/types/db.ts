@@ -314,6 +314,16 @@ export interface auditEventsTable {
   createdAt: string;
 }
 
+export interface sealedStatesTable {
+  id: string;
+  projectId: string;
+  stateId: string;
+  authorId: string;
+  stateHash: string;
+  summary: ColumnType<string, string | undefined, string>;
+  createdAt: string;
+}
+
 export interface accountsTable {
   id: Generated<string>;
   userId: string;
@@ -378,6 +388,7 @@ export interface database {
   blockAutomationStates: blockAutomationStatesTable;
   apiKeys: apiKeysTable;
   auditEvents: auditEventsTable;
+  sealedStates: sealedStatesTable;
 }
 
 export interface projectRequestsTable {

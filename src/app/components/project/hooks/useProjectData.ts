@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { Node, Edge, useReactFlow } from "@xyflow/react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { BlockData } from "@components/project/CanvasBlock";
 import { clientLogger } from "../../../../lib/clientLogger";
 import type { GraphState } from "@lib/graph";
 import {
+  CanvasStateSnapshot,
   parseCanvasStateSnapshots,
   restoreCanvasStateSnapshots,
 } from "../../../../lib/yjs-canvas-state";
@@ -53,6 +54,16 @@ interface UseProjectDataProps {
   isPreviewMode: boolean;
   setProjectOwnerId: (id: string | null) => void;
   handleExitPreview: () => void;
+  lastSnapshotHash: React.MutableRefObject<string | null>;
+  computeCurrentSnapshot: (
+    overrideBlocks?: Node<BlockData>[],
+    overrideLinks?: Edge[],
+  ) => Promise<{
+    hash: string;
+    blocks: Node<BlockData>[];
+    links: Edge[];
+    canvasStates?: CanvasStateSnapshot[];
+  } | null>;
 }
 
 interface BlockResponse {
@@ -77,6 +88,8 @@ export const useProjectData = ({
   isPreviewMode,
   setProjectOwnerId,
   handleExitPreview,
+  lastSnapshotHash,
+  computeCurrentSnapshot,
 }: UseProjectDataProps) => {
   const { dict } = useI18n();
   const router = useRouter();
@@ -87,6 +100,9 @@ export const useProjectData = ({
     links: Edge[];
   } | null>(null);
   const previewDocRef = useRef<Y.Doc | null>(null);
+  const [pendingApply, setPendingApply] = useState<{
+    stateId: string;
+  } | null>(null);
 
   const clearPreviewDoc = useCallback(() => {
     previewDocRef.current?.destroy();
@@ -413,8 +429,20 @@ export const useProjectData = ({
   );
 
   const handleApplyState = useCallback(
-    async (stateId: string) => {
+    async (stateId: string, options?: { force?: boolean }) => {
       try {
+        if (!options?.force) {
+          const currentSnapshot = await computeCurrentSnapshot();
+          if (
+            currentSnapshot &&
+            lastSnapshotHash.current &&
+            lastSnapshotHash.current !== currentSnapshot.hash
+          ) {
+            setPendingApply({ stateId });
+            return;
+          }
+        }
+
         if (isPreviewMode && yDoc && previewDocRef.current) {
           const presentCanvasStates = captureCanvasStateSnapshots(yDoc);
           const previewCanvasStates = captureCanvasStateSnapshots(
@@ -475,6 +503,26 @@ export const useProjectData = ({
         setSelectedStateId(null);
         toast.success(dict.modals.stateApplied);
 
+        // The canvas now matches the applied snapshot: refresh the baseline
+        // hash and the stored server state id so the next apply starts clean.
+        const rootCanvas = canvasStates?.find(
+          (canvas) => canvas.canvasId === "root",
+        );
+        if (rootCanvas) {
+          lastSnapshotHash.current = await generateStateHash(
+            rootCanvas.blocks as Node<BlockData>[],
+            rootCanvas.links,
+            canvasStates,
+          );
+        }
+        const applyStateId = (data as { stateId?: string }).stateId;
+        if (typeof window !== "undefined" && applyStateId) {
+          localStorage.setItem(
+            `ideon:yjs:lastServerState:${initialProjectId}`,
+            applyStateId,
+          );
+        }
+
         if (activeCanvas) {
           setBlocks(activeCanvas.blocks as Node<BlockData>[]);
           setLinks(
@@ -496,6 +544,8 @@ export const useProjectData = ({
       initialProjectId,
       activeCanvasId,
       isPreviewMode,
+      computeCurrentSnapshot,
+      lastSnapshotHash,
       dict.common,
       dict.modals.stateAlreadyApplied,
       setIsPreviewMode,
@@ -509,11 +559,15 @@ export const useProjectData = ({
     ],
   );
 
+  const clearPendingApply = useCallback(() => setPendingApply(null), []);
+
   return {
     fetchGraph,
     fetchProjectMetadata,
     handlePreview,
     handleApplyState,
     fetchBlockDetails,
+    pendingApply,
+    clearPendingApply,
   };
 };

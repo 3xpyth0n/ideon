@@ -8,9 +8,7 @@ import {
   wrappingInputRule,
 } from "@tiptap/react";
 import { Extension, type Extensions } from "@tiptap/core";
-import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useState, useRef } from "react";
 import * as Y from "yjs";
 import {
@@ -19,16 +17,7 @@ import {
   undoCommand as yUndoCommand,
   redoCommand as yRedoCommand,
 } from "y-prosemirror";
-import { Markdown } from "tiptap-markdown";
 import Placeholder from "@tiptap/extension-placeholder";
-import Link from "@tiptap/extension-link";
-import UnderlineExtension from "@tiptap/extension-underline";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import { Table } from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableCell from "@tiptap/extension-table-cell";
-import TableHeader from "@tiptap/extension-table-header";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import {
@@ -37,14 +26,13 @@ import {
 } from "@lib/projectContentSafety";
 
 import {
-  getTaskItemCheckedStates,
   normalizeMarkdownTaskList,
-  syncMarkdownTaskStates,
-  stripMarkdownTaskPlaceholder,
   toggleReadonlyTaskItem,
 } from "./markdownTaskList";
-import { CommentHighlight } from "./comments/CommentHighlightExtension";
+import { createNoteContentExtensions, getStableMarkdown } from "./noteMarkdown";
 import "./markdown-editor.css";
+
+export { getStableMarkdown } from "./noteMarkdown";
 
 // Caps inline code match processing to avoid expensive scans on large content; once exceeded, further inline code matches are skipped to keep the editor responsive.
 const MAX_INLINE_CODE_MATCHES = 5000;
@@ -253,106 +241,6 @@ interface MarkdownEditorProps {
   migrationContent?: string;
 }
 
-interface MarkdownStorage {
-  markdown: {
-    getMarkdown: () => string;
-  };
-}
-
-function escapeTableCell(text: string): string {
-  return text
-    .replace(/\n+/g, " <br> ")
-    .replace(/\|/g, "\\|")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function serializeTableNode(tableNode: ProseMirrorNode): string {
-  const rows: string[][] = [];
-  let maxColumns = 0;
-
-  tableNode.forEach((rowNode) => {
-    if (rowNode.type.name !== "tableRow") return;
-
-    const cells: string[] = [];
-    rowNode.forEach((cellNode) => {
-      if (
-        cellNode.type.name === "tableCell" ||
-        cellNode.type.name === "tableHeader"
-      ) {
-        cells.push(escapeTableCell(cellNode.textContent));
-      }
-    });
-
-    maxColumns = Math.max(maxColumns, cells.length);
-    rows.push(cells);
-  });
-
-  if (rows.length === 0 || maxColumns === 0) {
-    return "";
-  }
-
-  const normalizedRows = rows.map((row) => {
-    const padded = [...row];
-    while (padded.length < maxColumns) padded.push("");
-    return padded;
-  });
-
-  const headerRow = normalizedRows[0];
-  const separatorRow = Array.from({ length: maxColumns }, () => "---");
-  const markdownRows = [headerRow, separatorRow, ...normalizedRows.slice(1)];
-
-  return markdownRows.map((row) => `| ${row.join(" | ")} |`).join("\n");
-}
-
-function getTableMarkdownBlocks(doc: ProseMirrorNode): string[] {
-  const tables: string[] = [];
-
-  doc.descendants((node) => {
-    if (node.type.name !== "table") return true;
-
-    const tableMarkdown = serializeTableNode(node);
-    if (tableMarkdown) {
-      tables.push(tableMarkdown);
-    }
-    return true;
-  });
-
-  return tables;
-}
-
-export function getStableMarkdown(editor: Editor): string {
-  const rawMarkdown = stripMarkdownTaskPlaceholder(
-    (editor.storage as unknown as MarkdownStorage).markdown.getMarkdown(),
-  );
-  const taskItemCheckedStates = getTaskItemCheckedStates(editor);
-  const markdownWithSyncedTaskStates = syncMarkdownTaskStates(
-    rawMarkdown,
-    taskItemCheckedStates,
-  );
-  const normalizedTaskMarkdown = stripMarkdownTaskPlaceholder(
-    markdownWithSyncedTaskStates,
-  );
-
-  const tablePlaceholderPattern = /\[\s*table\s*\]/gi;
-
-  if (!tablePlaceholderPattern.test(normalizedTaskMarkdown)) {
-    return normalizedTaskMarkdown;
-  }
-
-  const tableBlocks = getTableMarkdownBlocks(editor.state.doc);
-  if (tableBlocks.length === 0) {
-    return normalizedTaskMarkdown;
-  }
-
-  let index = 0;
-  return normalizedTaskMarkdown.replace(tablePlaceholderPattern, () => {
-    const tableMarkdown = tableBlocks[index];
-    index += 1;
-    return tableMarkdown ?? "[Table]";
-  });
-}
-
 /**
  * Migrates persisted markdown content into an empty Y.XmlFragment.
  *
@@ -437,36 +325,9 @@ const MarkdownEditor = ({
     immediatelyRender: false,
     content: yNoteDocument ? undefined : editorContent,
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        link: false,
-        underline: false,
-        undoRedo: collaborativeExtension ? false : undefined,
-      }),
-      Markdown.configure({
-        html: false,
-        tightLists: true,
-        bulletListMarker: "-",
-        transformPastedText: true,
-        transformCopiedText: true,
-      }),
-      UnderlineExtension,
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-        onReadOnlyChecked: () => true,
-      }),
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      Link.configure({
-        openOnClick: isReadOnly,
-        HTMLAttributes: {
-          class: "cursor-pointer text-blue-500 hover:text-blue-600 underline",
-        },
+      ...createNoteContentExtensions({
+        isReadOnly,
+        collaborative: Boolean(collaborativeExtension),
       }),
       Placeholder.configure({
         placeholder: placeholder || "",
@@ -501,7 +362,6 @@ const MarkdownEditor = ({
       SmartCode,
       SmartTasks,
       SizeLimit,
-      CommentHighlight,
       ...(collaborativeExtension ? [collaborativeExtension] : []),
     ] as Extensions,
     editable: !isReadOnly,

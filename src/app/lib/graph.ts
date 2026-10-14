@@ -66,8 +66,10 @@ const BlockDataSchema = z
         "webhook",
         "cron",
         "latex",
+        "mermaid",
         "calendar",
         "subcanvas",
+        "database",
       ])
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -150,7 +152,9 @@ export function prepareBlockForDb(
       | "folder"
       | "vercel"
       | "frame"
-      | "subcanvas") ||
+      | "mermaid"
+      | "subcanvas"
+      | "database") ||
     "text";
 
   return {

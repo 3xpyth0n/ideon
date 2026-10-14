@@ -161,9 +161,15 @@
 .markdown-editor-container .ProseMirror table {
   border-collapse: collapse;
   margin: 0;
-  overflow: hidden;
+  min-width: 100%;
   table-layout: fixed;
-  width: 100%;
+  width: max-content;
+}
+
+.markdown-editor-container .tableWrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .markdown-editor-container .ProseMirror td,

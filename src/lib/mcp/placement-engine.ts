@@ -20,6 +20,8 @@ export const SKETCH_WIDTH = 600;
 export const SKETCH_HEIGHT = 450;
 export const FRAME_WIDTH = 600;
 export const FRAME_HEIGHT = 400;
+export const DATABASE_WIDTH = 900;
+export const DATABASE_HEIGHT = 560;
 export const MAX_GRID_COLUMNS = 5;
 export const MAX_COLLISION_ITERATIONS = 50;
 
@@ -64,6 +66,8 @@ export function getDefaultWidth(blockType: string): number {
       return SKETCH_WIDTH;
     case "frame":
       return FRAME_WIDTH;
+    case "database":
+      return DATABASE_WIDTH;
     default:
       return DEFAULT_WIDTH;
   }
@@ -77,6 +81,8 @@ export function getDefaultHeight(blockType: string): number {
       return SKETCH_HEIGHT;
     case "frame":
       return FRAME_HEIGHT;
+    case "database":
+      return DATABASE_HEIGHT;
     default:
       return DEFAULT_HEIGHT;
   }

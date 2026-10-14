@@ -16,13 +16,13 @@ RUN rm -rf .next/cache
 FROM base AS server-runtime
 RUN apt-get update && apt-get install -y --no-install-recommends python3 build-essential ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY package-lock.json ./
-RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kysely":"*","nanoid":"*","node-pty":"*"}}' > package.json \
+RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kysely":"*","nanoid":"*","node-pty":"*","pdfkit":"*"}}' > package.json \
     && npm install --no-audit --no-fund
 
 # 3. Production image
 FROM base AS runner
 ENV NODE_ENV=production
-RUN apt-get update && apt-get install -y --no-install-recommends tini curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tini curl git qpdf && rm -rf /var/lib/apt/lists/*
 RUN useradd -u 1001 -m appuser \
     && mkdir -p /app/storage/avatars /app/storage/yjs /app/storage/uploads \
     && mkdir -p /app/.next/cache \
@@ -33,6 +33,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=server-runtime /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/next ./node_modules/next
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/src/app/i18n ./src/app/i18n

@@ -12,11 +12,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import packageJson from "../../../package.json";
 import type { LeveldbPersistence } from "y-leveldb";
+import { withToolAudit } from "./tool-audit";
 import { registerProjectTools } from "./tools/projects";
 import { registerBlockTools } from "./tools/blocks";
 import { registerLinkTools } from "./tools/links";
 import { registerKanbanTools } from "./tools/kanban";
+import { registerTableTools } from "./tools/table";
 import { registerSearchTools } from "./tools/search";
+import { registerRepositorySyncTools } from "./tools/repository-sync";
 import { registerOverviewResource } from "./resources/overview";
 import { registerGraphResource } from "./resources/graph";
 import { registerHelpResource } from "./resources/help";
@@ -51,12 +54,16 @@ export function createMcpServer(ldb: LeveldbPersistence): McpServer {
     },
   );
 
+  withToolAudit(server);
+
   // Register tools
   registerProjectTools(server, ldb);
   registerBlockTools(server, ldb);
   registerLinkTools(server, ldb);
   registerKanbanTools(server, ldb);
+  registerTableTools(server, ldb);
   registerSearchTools(server, ldb);
+  registerRepositorySyncTools(server);
 
   // Register resources
   registerOverviewResource(server, ldb);

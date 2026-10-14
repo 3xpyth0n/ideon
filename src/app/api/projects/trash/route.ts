@@ -1,6 +1,7 @@
 import { getDb, runTransaction } from "@lib/db";
 import { authenticatedAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { logger } from "@lib/logger";
 import { headers } from "next/headers";
 
@@ -12,6 +13,13 @@ export const DELETE = authenticatedAction(
     const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
 
     try {
+      const trashedProjects = await db
+        .selectFrom("projects")
+        .select(["id", "name"])
+        .where("deletedAt", "is not", null)
+        .where("ownerId", "=", user.id)
+        .execute();
+
       await runTransaction(db, async (trx) => {
         // Delete Folders (cascades to projects inside, and folderCollaborators)
         await trx
@@ -32,6 +40,18 @@ export const DELETE = authenticatedAction(
         userId: user.id,
         ip,
       });
+
+      for (const project of trashedProjects) {
+        await appendAuditEvent({
+          projectId: project.id,
+          userId: user.id,
+          action: "project.delete",
+          entityType: "project",
+          entityId: project.id,
+          summary: `Project permanently deleted: ${project.name}`,
+          metadata: { scope: "trash" },
+        });
+      }
 
       return { success: true };
     } catch (error) {

@@ -4,6 +4,9 @@ export const DEFAULT_BLOCK_HEIGHT = 240;
 export const DEFAULT_KANBAN_BLOCK_WIDTH = 1165;
 export const DEFAULT_KANBAN_BLOCK_HEIGHT = 480;
 
+export const DEFAULT_DATABASE_BLOCK_WIDTH = 900;
+export const DEFAULT_DATABASE_BLOCK_HEIGHT = 560;
+
 export const CORE_BLOCK_WIDTH = 640;
 export const CORE_BLOCK_HEIGHT = 480;
 export const CORE_BLOCK_X = -320;

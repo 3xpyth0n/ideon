@@ -35,12 +35,18 @@ import ShellBlock from "./ShellBlock";
 import FrameBlock from "./FrameBlock";
 import WebhookBlock from "./WebhookBlock";
 import CronBlock from "./CronBlock";
+import MermaidBlock from "./MermaidBlock";
+import DatabaseBlock from "./DatabaseBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
+import { AuditTrailModal } from "./AuditTrailModal";
+import { ProvenanceModal } from "./ProvenanceModal";
+import { DossierFlow } from "./DossierFlow";
 import CommandPalette from "./CommandPalette";
 import CanvasSearch from "./CanvasSearch";
 import CanvasSearchBar from "./CanvasSearchBar";
 import AddBlockModal from "./AddBlockModal";
+import { ApplyConfirmModal } from "./ApplyConfirmModal";
 import { TransferBlockModal } from "./TransferBlockModal";
 import { ProjectCanvasErrorBoundary } from "./ProjectCanvasErrorBoundary";
 import { useI18n } from "@providers/I18nProvider";
@@ -84,6 +90,13 @@ import {
   Copy,
   Trash2,
   ScrollText,
+  GitBranch,
+  ShieldCheck,
+  MousePointer2,
+  Command,
+  Search,
+  History,
+  FileDown,
 } from "lucide-react";
 import { LuPencilOff } from "react-icons/lu";
 import { TbLocationOff } from "react-icons/tb";
@@ -109,6 +122,11 @@ import SubCanvasBreadcrumb from "./SubCanvasBreadcrumb";
 import SubCanvasProvider, {
   useSubCanvasNavigation,
 } from "./subcanvas/SubCanvasProvider";
+import CanvasCenterAnchor, {
+  CENTER_ANCHOR_ID,
+  centerAnchorNode,
+  shouldShowCenterMarker,
+} from "./CanvasCenterAnchor";
 import { MAX_CANVAS_DEPTH } from "./subcanvas/subCanvasUtils";
 import {
   getSelectedNoteBlockIdForShortcut,
@@ -129,6 +147,7 @@ import type { CursorPosition } from "./hooks/useProjectCanvasRealtime";
 import { DraftsProvider } from "./DraftsContext";
 import { AutomationStatesContext } from "./AutomationStatesContext";
 import { AutomationLogsModal } from "./AutomationLogsModal";
+import { RepositorySyncModal } from "./RepositorySyncModal";
 
 /**
  * Imperative remote cursors — bypasses React rendering entirely.
@@ -294,8 +313,11 @@ const blockTypes = {
   webhook: WebhookBlock,
   cron: CronBlock,
   latex: CanvasBlock,
+  mermaid: MermaidBlock,
+  database: DatabaseBlock,
   subcanvas: SubCanvasBlock,
   core: ProjectCoreBlock,
+  canvasCenterAnchor: CanvasCenterAnchor,
 };
 
 const linkTypes = {
@@ -319,6 +341,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     null,
   );
   const lastNodeClickRef = useRef<{ id: string; time: number } | null>(null);
+  const lastFitViewCanvasRef = useRef<string>("");
   const [currentUser, setCurrentUser] = useState<UserPresence | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [isLocalSynced, setIsLocalSynced] = useState(false);
@@ -737,8 +760,29 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     );
     if (!stage) return null;
 
-    return captureSubCanvasThumbnail({ nodes: getNodes(), stage });
-  }, [getNodes]);
+    const savedViewport = getViewport();
+    fitView({ padding: 0.12, maxZoom: 1, duration: 0 });
+
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+
+    const result = await captureSubCanvasThumbnail({
+      nodes: getNodes(),
+      stage,
+    });
+
+    setViewport(
+      {
+        x: savedViewport.x,
+        y: savedViewport.y,
+        zoom: savedViewport.zoom,
+      },
+      { duration: 0 },
+    );
+
+    return result;
+  }, [getNodes, getViewport, setViewport, fitView]);
 
   return (
     <SubCanvasProvider
@@ -809,32 +853,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       clearPendingRestore,
       setPreviewMode,
     } = useSubCanvasNavigation();
-    // Apply a queued viewport restore (fitView or saved viewport) after a
-    // push/pop/jump changes the active canvas. Consumed once, then cleared.
-    // fitView is deferred one frame so ReactFlow can render the new canvas
-    // nodes before we compute the bounding box.
-    useEffect(() => {
-      if (!pendingRestore) return;
-      if (pendingRestore.type === "viewport") {
-        setViewport(
-          {
-            x: pendingRestore.viewport.x,
-            y: pendingRestore.viewport.y,
-            zoom: pendingRestore.viewport.zoom,
-          },
-          { duration: 0 },
-        );
-        clearPendingRestore();
-      } else {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            fitView({ padding: 0.2, duration: 0 });
-            clearPendingRestore();
-          });
-        });
-      }
-    }, [pendingRestore, setViewport, fitView, clearPendingRestore]);
-
     const yBlocks = useMemo(() => {
       if (!yDoc) return null;
       return yDoc.getMap(
@@ -933,6 +951,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       mousePosRef,
       handlePreview,
       handleApplyState,
+      pendingApply,
+      clearPendingApply,
       onBlockContextMenu,
       onEdgeContextMenu,
       onPaneContextMenu,
@@ -966,6 +986,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       setActiveResizeSnap,
       automationStates,
       handleResetAutomationState,
+      isReady,
     } = useProjectCanvasState(
       initialProjectId,
       currentUser,
@@ -989,6 +1010,39 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     useEffect(() => {
       handleSaveStateRef.current = handleSaveState;
     }, [handleSaveState]);
+
+    useEffect(() => {
+      if (!isReady) return;
+      if (lastFitViewCanvasRef.current === activeCanvasId) return;
+      lastFitViewCanvasRef.current = activeCanvasId;
+
+      if (pendingRestore && pendingRestore.type === "viewport") {
+        setViewport(
+          {
+            x: pendingRestore.viewport.x,
+            y: pendingRestore.viewport.y,
+            zoom: pendingRestore.viewport.zoom,
+          },
+          { duration: 0 },
+        );
+        clearPendingRestore();
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          fitView({ padding: 0.12, maxZoom: 1, duration: 800 });
+          clearPendingRestore();
+        });
+      });
+    }, [
+      activeCanvasId,
+      isReady,
+      pendingRestore,
+      fitView,
+      setViewport,
+      clearPendingRestore,
+    ]);
 
     const isReadOnly = isPreviewMode || currentUserRole === "viewer";
 
@@ -1547,6 +1601,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
     const [dontAskAgain, setDontAskAgain] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [provenanceBlockId, setProvenanceBlockId] = useState<string | null>(
+      null,
+    );
+    const [dossierFlowOpen, setDossierFlowOpen] = useState(false);
+    const [isRepoSyncModalOpen, setIsRepoSyncModalOpen] = useState(false);
 
     const handleEdgeLabelSubmit = useCallback(
       (edgeId: string, label: string) => {
@@ -1755,10 +1815,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       );
     };
 
-    const visibleBlockIds = useMemo(
-      () => getVisibleBlockIds(blocks, links),
-      [blocks, links],
-    );
+    const visibleBlockIds = useMemo(() => {
+      const ids = getVisibleBlockIds(blocks, links);
+      // The center anchor is a virtual node; make it count as visible so edges
+      // to it are not filtered out (it is only injected when shown).
+      if (shouldShowCenterMarker(activeDepth, isPreviewMode)) {
+        ids.add(CENTER_ANCHOR_ID);
+      }
+      return ids;
+    }, [blocks, links, activeDepth, isPreviewMode]);
 
     const blocksWithPreview = useMemo(() => {
       return blocks
@@ -1766,10 +1831,12 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
         .map((block) => ({
           ...block,
           zIndex: block.type === "frame" ? 0 : 1,
-          className:
-            block.id === newBlockId
-              ? "block-just-created"
-              : block.className || "",
+          className: [
+            block.id === newBlockId ? "block-just-created" : "",
+            block.className || "",
+          ]
+            .filter(Boolean)
+            .join(" "),
           data: {
             ...block.data,
             isPreviewMode,
@@ -1815,12 +1882,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           }
 
           const isFreshNoteBlock =
-            (createdBlock?.type === "text" || createdBlock?.type === "latex") &&
+            (createdBlock?.type === "text" ||
+              createdBlock?.type === "latex" ||
+              createdBlock?.type === "mermaid") &&
             !(createdBlock.data?.content || "");
 
           if (isFreshNoteBlock && blockEl) {
             const editorEl = blockEl.querySelector(
-              ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor]",
+              ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor], textarea[data-mermaid-editor]",
             ) as HTMLElement | null;
 
             if (editorEl && typeof editorEl.focus === "function") {
@@ -1957,7 +2026,11 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     }}
                   >
                     <ReactFlow
-                      nodes={blocksWithPreview}
+                      nodes={
+                        shouldShowCenterMarker(activeDepth, isPreviewMode)
+                          ? [centerAnchorNode, ...blocksWithPreview]
+                          : blocksWithPreview
+                      }
                       edges={links.filter(
                         (edge) =>
                           !blocks.find(
@@ -2012,7 +2085,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       edgeTypes={linkTypes}
                       defaultViewport={DEFAULT_VIEWPORT}
                       connectionMode={ConnectionMode.Loose}
-                      connectionRadius={30}
+                      connectionRadius={16}
                       translateExtent={FIXED_EXTENT}
                       minZoom={0.1}
                       maxZoom={4}
@@ -2229,156 +2302,207 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             </div>
                           )}
 
-                          {isMobileTopbar ? (
-                            <div
-                              className="project-mobile-actions"
-                              ref={mobileActionsRef}
+                          <div
+                            className="project-mobile-actions"
+                            ref={mobileActionsRef}
+                          >
+                            <button
+                              className={`project-mobile-actions-trigger ${
+                                isMobileActionsOpen ? "active" : ""
+                              }`}
+                              onClick={() =>
+                                setIsMobileActionsOpen((open) => !open)
+                              }
+                              title={dict.project.actions}
+                              aria-label={dict.project.actions}
                             >
-                              <button
-                                className={`project-mobile-actions-trigger ${
-                                  isMobileActionsOpen ? "active" : ""
-                                }`}
-                                onClick={() =>
-                                  setIsMobileActionsOpen((open) => !open)
-                                }
-                                title={dict.project.mobileActions}
-                                aria-label={dict.project.mobileActions}
-                              >
-                                <Menu size={18} />
-                              </button>
+                              <Menu size={18} />
+                            </button>
 
-                              {isMobileActionsOpen && (
-                                <div className="project-mobile-actions-menu">
-                                  {!isPreviewMode && (
-                                    <label className="project-mobile-actions-item project-mobile-actions-switch">
+                            {isMobileActionsOpen && (
+                              <div className="project-mobile-actions-menu">
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <label className="project-mobile-actions-item project-mobile-actions-switch">
+                                    <span className="project-mobile-actions-item-main">
+                                      <MousePointer2 size={14} />
                                       <span>{dict.project.shareCursor}</span>
-                                      <input
-                                        type="checkbox"
-                                        className="theme-checkbox"
-                                        checked={shareCursor}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          setShareCursor(e.target.checked);
-                                        }}
-                                      />
-                                    </label>
-                                  )}
-
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsAddBlockOpen(true);
-                                        setIsMobileActionsOpen(false);
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      className="theme-checkbox"
+                                      checked={shareCursor}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        setShareCursor(e.target.checked);
                                       }}
-                                    >
-                                      {dict.canvas.addBlock}
-                                    </button>
-                                  )}
+                                    />
+                                  </label>
+                                )}
 
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsPaletteOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                    >
-                                      {dict.canvas.commandPalette}
-                                    </button>
-                                  )}
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsAddBlockOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <Plus size={14} />
+                                      <span>{dict.canvas.addBlock}</span>
+                                    </span>
+                                  </button>
+                                )}
 
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsCanvasSearchOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                    >
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsPaletteOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <Command size={14} />
+                                      <span>{dict.canvas.commandPalette}</span>
+                                    </span>
+                                  </button>
+                                )}
+
+                                {!isPreviewMode && isMobileTopbar && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsCanvasSearchOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <Search size={14} />
                                       <span>
                                         {dict.canvas.canvasSearchLabel}
                                       </span>
-                                    </button>
-                                  )}
+                                    </span>
+                                  </button>
+                                )}
 
-                                  {currentUserRole !== "viewer" && (
-                                    <button
-                                      className="project-mobile-actions-item relative"
-                                      onClick={() => {
-                                        setIsInviteModalOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                      disabled={isPreviewMode}
-                                    >
+                                {currentUserRole !== "viewer" && (
+                                  <button
+                                    className="project-mobile-actions-item relative"
+                                    onClick={() => {
+                                      setIsInviteModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                    disabled={isPreviewMode}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <UserPlus size={14} />
                                       <span>
                                         {dict.project.access || "Access"}
                                       </span>
-                                      {pendingRequestsCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                          {pendingRequestsCount}
-                                        </span>
-                                      )}
-                                    </button>
-                                  )}
+                                    </span>
+                                    {pendingRequestsCount > 0 && (
+                                      <span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
+                                        {pendingRequestsCount}
+                                      </span>
+                                    )}
+                                  </button>
+                                )}
 
-                                  {currentUser?.id === projectOwnerId && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsShareModalOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                      disabled={isPreviewMode}
-                                    >
-                                      {dict.project.share || "Share"}
-                                    </button>
-                                  )}
-
-                                  {!isPreviewMode && (
-                                    <button
-                                      className="project-mobile-actions-item"
-                                      onClick={() => {
-                                        setIsHistoryOpen(true);
-                                        setIsMobileActionsOpen(false);
-                                      }}
-                                    >
-                                      {dict.canvas.temporalHistory || "History"}
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {currentUserRole !== "viewer" && (
-                                <div className="relative">
-                                  <Button
-                                    onClick={() => setIsInviteModalOpen(true)}
-                                    className="btn-primary"
+                                {currentUser?.id === projectOwnerId && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsShareModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
                                     disabled={isPreviewMode}
                                   >
-                                    {(
-                                      dict.project.access || "Access"
-                                    ).toUpperCase()}
-                                  </Button>
-                                  {pendingRequestsCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black shadow-sm pointer-events-none">
-                                      {pendingRequestsCount}
+                                    <span className="project-mobile-actions-item-main">
+                                      <Share2 size={14} />
+                                      <span>
+                                        {dict.project.share || "Share"}
+                                      </span>
                                     </span>
+                                  </button>
+                                )}
+
+                                {(currentUserRole === "owner" ||
+                                  currentUserRole === "creator") && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsRepoSyncModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                    disabled={isPreviewMode}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <GitBranch size={14} />
+                                      <span>{dict.repositorySync.title}</span>
+                                    </span>
+                                  </button>
+                                )}
+
+                                {(currentUserRole === "owner" ||
+                                  currentUserRole === "creator") && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsAuditModalOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <ShieldCheck size={14} />
+                                      <span>{dict.management.auditTrail}</span>
+                                    </span>
+                                  </button>
+                                )}
+
+                                {!isPreviewMode &&
+                                  currentUserRole !== "viewer" && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setDossierFlowOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                    >
+                                      <span className="project-mobile-actions-item-main">
+                                        <FileDown size={14} />
+                                        <span>
+                                          {
+                                            dict.project.instrument
+                                              .generateDossier
+                                          }
+                                        </span>
+                                      </span>
+                                    </button>
                                   )}
-                                </div>
-                              )}
-                              {currentUser?.id === projectOwnerId && (
-                                <Button
-                                  onClick={() => setIsShareModalOpen(true)}
-                                  className="btn-secondary px-3!"
-                                  disabled={isPreviewMode}
-                                  title={dict.project.share || "Share"}
-                                >
-                                  <Share2 size={16} />
-                                </Button>
-                              )}
+
+                                {!isPreviewMode && (
+                                  <button
+                                    className="project-mobile-actions-item"
+                                    onClick={() => {
+                                      setIsHistoryOpen(true);
+                                      setIsMobileActionsOpen(false);
+                                    }}
+                                  >
+                                    <span className="project-mobile-actions-item-main">
+                                      <ScrollText size={14} />
+                                      <span>
+                                        {dict.canvas.temporalHistory ||
+                                          "History"}
+                                      </span>
+                                    </span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {!isMobileTopbar && (
+                            <div className="project-history-host">
                               <DecisionHistory
                                 projectId={initialProjectId!}
                                 onPreview={handlePreview}
@@ -2399,20 +2523,22 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       </Panel>
 
                       {isMobileTopbar && (
-                        <DecisionHistory
-                          projectId={initialProjectId!}
-                          onPreview={handlePreview}
-                          onApply={handleApplyState}
-                          onSave={handleSaveState}
-                          onDelete={handleDeleteState}
-                          onRename={handleRenameState}
-                          isPreviewing={isPreviewMode}
-                          selectedStateId={selectedStateId}
-                          projectOwnerId={projectOwnerId}
-                          currentUserId={currentUser?.id}
-                          isHistoryOpen={isHistoryOpen}
-                          onHistoryOpenChange={setIsHistoryOpen}
-                        />
+                        <div className="project-history-host">
+                          <DecisionHistory
+                            projectId={initialProjectId!}
+                            onPreview={handlePreview}
+                            onApply={handleApplyState}
+                            onSave={handleSaveState}
+                            onDelete={handleDeleteState}
+                            onRename={handleRenameState}
+                            isPreviewing={isPreviewMode}
+                            selectedStateId={selectedStateId}
+                            projectOwnerId={projectOwnerId}
+                            currentUserId={currentUser?.id}
+                            isHistoryOpen={isHistoryOpen}
+                            onHistoryOpenChange={setIsHistoryOpen}
+                          />
+                        </div>
                       )}
 
                       <div className="zoom-indicator">
@@ -2708,8 +2834,29 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   </button>
                                 </>
                               )}
+                              {!canManage && !isPreviewMode && (
+                                <div className="context-menu-divider" />
+                              )}
+
+                              {!isPreviewMode && (
+                                <button
+                                  onClick={() => {
+                                    setProvenanceBlockId(block.id);
+                                    setContextMenu(null);
+                                  }}
+                                  className="context-menu-item"
+                                >
+                                  <span className="context-menu-icon">
+                                    <History size={14} />
+                                  </span>
+                                  <span className="context-menu-label">
+                                    {dict.project.instrument.provenance}
+                                  </span>
+                                </button>
+                              )}
+
                               {!canManage && (
-                                <div className="px-3 py-2 text-xs text-gray-500">
+                                <div className="context-menu-view-only">
                                   {dict.blocks.viewOnly || "View Only"}
                                 </div>
                               )}
@@ -2751,6 +2898,25 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               currentUserRole={currentUserRole}
             />
 
+            <AuditTrailModal
+              isOpen={isAuditModalOpen}
+              onClose={() => setIsAuditModalOpen(false)}
+              projectId={initialProjectId!}
+            />
+
+            <ProvenanceModal
+              isOpen={provenanceBlockId !== null}
+              onClose={() => setProvenanceBlockId(null)}
+              projectId={initialProjectId!}
+              blockId={provenanceBlockId}
+            />
+
+            <DossierFlow
+              isOpen={dossierFlowOpen}
+              onClose={() => setDossierFlowOpen(false)}
+              projectId={initialProjectId!}
+            />
+
             <ShareModal
               isOpen={isShareModalOpen}
               onClose={() => setIsShareModalOpen(false)}
@@ -2761,6 +2927,30 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                   await handleSaveState("Share link regeneration");
                 }
               }}
+            />
+
+            <RepositorySyncModal
+              isOpen={isRepoSyncModalOpen}
+              onClose={() => setIsRepoSyncModalOpen(false)}
+              projectId={initialProjectId!}
+            />
+
+            <ApplyConfirmModal
+              isOpen={!!pendingApply}
+              onSaveAndApply={async () => {
+                if (!pendingApply) return;
+                const result = await handleSaveState("Snapshot before rewind");
+                if (result.success) {
+                  await handleApplyState(pendingApply.stateId);
+                  clearPendingApply();
+                }
+              }}
+              onDiscardAndApply={() => {
+                if (!pendingApply) return;
+                handleApplyState(pendingApply.stateId, { force: true });
+                clearPendingApply();
+              }}
+              onCancel={clearPendingApply}
             />
 
             {transferBlock && (
@@ -2913,7 +3103,9 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     | "folder"
                     | "webhook"
                     | "cron"
-                    | "subcanvas",
+                    | "mermaid"
+                    | "subcanvas"
+                    | "database",
                   "",
                   initialMeta,
                 );

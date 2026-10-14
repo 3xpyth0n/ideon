@@ -26,6 +26,8 @@ import {
   DEFAULT_BLOCK_HEIGHT,
   DEFAULT_KANBAN_BLOCK_WIDTH,
   DEFAULT_KANBAN_BLOCK_HEIGHT,
+  DEFAULT_DATABASE_BLOCK_WIDTH,
+  DEFAULT_DATABASE_BLOCK_HEIGHT,
   CORE_BLOCK_X,
   CORE_BLOCK_Y,
   CORE_BLOCK_WIDTH,
@@ -58,6 +60,11 @@ import {
   isBlockPositionLocked,
 } from "@components/project/utils/locks";
 import { cloneKanbanMetadataForDuplicate } from "@components/project/kanbanModel";
+import {
+  CENTER_ANCHOR_ID,
+  CENTER_ANCHOR_SIZE,
+  CENTER_ANCHOR_POSITION,
+} from "@components/project/CanvasCenterAnchor";
 
 const FIT_DURATION = 800;
 const FIT_PADDING = 0.12;
@@ -68,11 +75,20 @@ const SNAP_THRESHOLD_PX = 8;
 
 function getCoreRect(nodes: Node<BlockData>[]): Rect {
   const core = nodes.find((n) => n.type === "core");
-  const width = core?.measured?.width || core?.width || CORE_BLOCK_WIDTH;
-  const height = core?.measured?.height || core?.height || CORE_BLOCK_HEIGHT;
-  const x = core?.position.x ?? CORE_BLOCK_X;
-  const y = core?.position.y ?? CORE_BLOCK_Y;
-  return { x, y, width, height };
+  if (core) {
+    const width = core?.measured?.width || core?.width || CORE_BLOCK_WIDTH;
+    const height = core?.measured?.height || core?.height || CORE_BLOCK_HEIGHT;
+    const x = core?.position.x ?? CORE_BLOCK_X;
+    const y = core?.position.y ?? CORE_BLOCK_Y;
+    return { x, y, width, height };
+  }
+  // Sub-canvas: no core block — repel from the 56x56 anchor, not the 640x480 default.
+  return {
+    x: CENTER_ANCHOR_POSITION.x,
+    y: CENTER_ANCHOR_POSITION.y,
+    width: CENTER_ANCHOR_SIZE,
+    height: CENTER_ANCHOR_SIZE,
+  };
 }
 
 interface UseProjectCanvasGraphProps {
@@ -1198,30 +1214,42 @@ export const useProjectCanvasGraph = ({
         | "frame"
         | "webhook"
         | "cron"
-        | "subcanvas" = "text",
+        | "mermaid"
+        | "subcanvas"
+        | "database" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
       if (isReadOnly) return null;
       if (!currentUser) return null;
 
+      const isDatabase = blockType === "database";
       const isSketch = blockType === "sketch";
       const isKanban = blockType === "kanban";
       const isFrame = blockType === "frame";
-      const blockWidth = isSketch
-        ? 600
-        : isKanban
-          ? DEFAULT_KANBAN_BLOCK_WIDTH
-          : isFrame
-            ? 600
-            : DEFAULT_BLOCK_WIDTH;
-      const blockHeight = isSketch
-        ? 450
-        : isKanban
-          ? DEFAULT_KANBAN_BLOCK_HEIGHT
-          : isFrame
-            ? 400
-            : DEFAULT_BLOCK_HEIGHT;
+      const isMermaid = blockType === "mermaid";
+      const blockWidth = isDatabase
+        ? DEFAULT_DATABASE_BLOCK_WIDTH
+        : isSketch
+          ? 600
+          : isKanban
+            ? DEFAULT_KANBAN_BLOCK_WIDTH
+            : isFrame
+              ? 600
+              : isMermaid
+                ? 680
+                : DEFAULT_BLOCK_WIDTH;
+      const blockHeight = isDatabase
+        ? DEFAULT_DATABASE_BLOCK_HEIGHT
+        : isSketch
+          ? 450
+          : isKanban
+            ? DEFAULT_KANBAN_BLOCK_HEIGHT
+            : isFrame
+              ? 400
+              : isMermaid
+                ? 480
+                : DEFAULT_BLOCK_HEIGHT;
 
       const screenPos = pos
         ? null
@@ -1264,6 +1292,7 @@ export const useProjectCanvasGraph = ({
           action: "set_state",
           actionParams: { state: "success" },
         },
+        database: { columns: [], rows: [] },
       };
       const resolvedMetadata =
         initialMetadata || defaultMetadataByType[blockType];
@@ -1298,25 +1327,47 @@ export const useProjectCanvasGraph = ({
 
       if (connectFromId) {
         const fromBlock = blocks.find((b) => b.id === connectFromId);
-        if (fromBlock) {
-          const fromWidth = fromBlock.width || DEFAULT_BLOCK_WIDTH;
-          const fromHeight = fromBlock.height || DEFAULT_BLOCK_HEIGHT;
-          const fromCenterX = (fromBlock.position.x || 0) + fromWidth / 2;
+        const fromRect = fromBlock
+          ? {
+              position: fromBlock.position,
+              width: fromBlock.width || DEFAULT_BLOCK_WIDTH,
+              height: fromBlock.height || DEFAULT_BLOCK_HEIGHT,
+            }
+          : connectFromId === CENTER_ANCHOR_ID
+            ? {
+                position: CENTER_ANCHOR_POSITION,
+                width: CENTER_ANCHOR_SIZE,
+                height: CENTER_ANCHOR_SIZE,
+              }
+            : null;
+        if (fromRect) {
+          const fromWidth = fromRect.width;
+          const fromHeight = fromRect.height;
+          const fromCenterX = (fromRect.position.x || 0) + fromWidth / 2;
 
           const isRight = position.x > fromCenterX;
+          const isAnchor = connectFromId === CENTER_ANCHOR_ID;
 
           const sourceX =
-            (fromBlock.position.x || 0) + (isRight ? fromWidth : 0);
-          const sourceY = (fromBlock.position.y || 0) + fromHeight * 0.5;
+            (fromRect.position.x || 0) + (isRight ? fromWidth : 0);
+          const sourceY = (fromRect.position.y || 0) + fromHeight * 0.5;
           const targetX = position.x + (isRight ? 0 : blockWidth);
           const targetY = position.y + blockHeight * 0.5;
+
+          const sourceHandle = isRight
+            ? isAnchor
+              ? "e"
+              : "right"
+            : isAnchor
+              ? "w"
+              : "left";
 
           const newLink: Edge = {
             id: uuidv4(),
             source: connectFromId,
             target: newBlockId,
             type: "connection",
-            sourceHandle: isRight ? "right" : "left",
+            sourceHandle,
             targetHandle: isRight ? "left" : "right",
             markerEnd: "connection-arrow",
             data: {

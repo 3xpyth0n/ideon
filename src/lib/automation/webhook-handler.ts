@@ -11,6 +11,7 @@ import type { Node } from "@xyflow/react";
 import type { BlockData } from "../../app/components/project/CanvasBlock";
 import type { Column, Task } from "../../app/components/project/kanbanModel";
 import { logger } from "../../app/lib/logger";
+import { appendAuditEvent } from "../../app/lib/audit-trail";
 
 const MAX_PAYLOAD_BYTES = 512 * 1024;
 const MAX_LOG_PAYLOAD_BYTES = 4 * 1024;
@@ -134,6 +135,8 @@ async function applyAction(
   const { ydoc, isLive } = await getOrLoadYDoc(docName, ldb);
   const decayAt = Date.now() + rule.stateDecayMinutes * 60_000;
 
+  let applied = false;
+
   ydoc.transact(() => {
     const yBlocks = ydoc.getMap<Node<BlockData>>("blocks");
 
@@ -174,6 +177,7 @@ async function applyAction(
         decayAt: number;
       }>("automationStates");
       yAutomationStates.set(blockId, { state, label, decayAt });
+      applied = true;
     } else if (rule.action === "set_color") {
       const color = (expanded.color as string) ?? "#6366f1";
       const blockId = rule.targetBlockId;
@@ -195,6 +199,7 @@ async function applyAction(
               : { ...(block.data.metadata ?? {}), color },
         },
       });
+      applied = true;
     } else if (rule.action === "update_note") {
       const prefix = (expanded.text as string) ?? "";
       const blockId = rule.targetBlockId;
@@ -211,6 +216,7 @@ async function applyAction(
       }
 
       yText.insert(0, prefix + "\n");
+      applied = true;
     } else if (rule.action === "create_kanban_task") {
       const blockId = rule.targetBlockId;
       if (!blockId) return;
@@ -253,11 +259,24 @@ async function applyAction(
           metadata: JSON.stringify({ ...meta, columns: updatedColumns }),
         },
       });
+      applied = true;
     }
   });
 
   if (!isLive) {
     await ldb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
+  }
+
+  if (applied) {
+    await appendAuditEvent({
+      projectId: rule.projectId,
+      userId: null,
+      action: `automation.${rule.action}`,
+      entityType: "automationRule",
+      entityId: rule.id,
+      summary: `Automation rule ${rule.action} applied`,
+      metadata: { ruleId: rule.id, triggerEvent: rule.triggerEvent },
+    });
   }
 }
 

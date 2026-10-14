@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-10-15
+
+Ideon 1.0 makes the workspace trustworthy infrastructure: every project
+carries a complete, tamper-evident record, and any state can be sealed,
+exported, and verified independently — by anyone, without Ideon.
+
+### Added
+
+- Added official records — seal a project state as an immutable, hash-chained reference and download the formal dossier as a ZIP archive.
+- Added a Provenance action in the block context menu — right-click any block to see where it came from and what happened to it in the sealed record.
+- Added a project audit trail — lifecycle changes, saved states, rewinds, and rejected write attempts are recorded as chained and tamper-evident events.
+- Added database blocks — a spreadsheet-style block with columns, rows, sorting, filtering, and relation cells that link to other blocks ([#126](https://github.com/3xpyth0n/ideon/issues/126)).
+- Added a center anchor marker to sub-canvases so flows can be routed through the canvas center ([#135](https://github.com/3xpyth0n/ideon/issues/135)).
+- Added Git repository sync so canvas structure, positions, notes, and diagrams can be versioned and restored or synchronized safely ([#125](https://github.com/3xpyth0n/ideon/issues/125)).
+- Improved Markdown tables in canvas notes so comparison matrices remain readable and collaborative while editing ([#121](https://github.com/3xpyth0n/ideon/issues/121)).
+- Added Mermaid diagram blocks with collaborative source editing, canvas previews, and PNG export ([#118](https://github.com/3xpyth0n/ideon/issues/118)).
+
+### Security
+
+- Server-enforced access control on the versioning API — collaborators can no longer restore, rename, or delete project history regardless of client state; only the project owner can rewind, rename, or remove states.
+
+### Removed
+
+- Removed SAML SSO support — enterprise sign-in via SAML identity providers is no longer included; external identity providers remain available through OAuth providers and generic OIDC.
+
+### Fixed
+
+- Fixed login failures caused by Auth.js `UntrustedHost` errors ([#133](https://github.com/3xpyth0n/ideon/issues/133)).
+- Atomic rewind — restoring a past state rewrites the project in a single transaction and propagates to every connected client, with a confirmation dialog that flags unsaved local changes before applying.
+
 ## [0.9.8] - 2026-10-01
 
 ### Added

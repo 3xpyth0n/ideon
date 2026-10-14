@@ -600,6 +600,7 @@ body.sketch-modal-open
 .project-mobile-actions {
   position: relative;
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .project-mobile-actions-trigger {
@@ -647,6 +648,19 @@ body.sketch-modal-open
   color: var(--text-main);
   border: 1px solid var(--border);
   background: transparent;
+}
+
+.project-mobile-actions-item-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.project-history-host .save-context-menu {
+  position: fixed;
+  top: 5.5rem;
+  right: 1.5rem;
+  margin-top: 0;
 }
 
 @media (max-width: 870px) {

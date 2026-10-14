@@ -14,6 +14,7 @@ const nextConfig = {
     "classic-level",
     "nanoid",
     "uuid",
+    "jsdom",
   ],
   outputFileTracingIncludes: {
     "**": ["./src/app/db/migrations/**/*", "./src/app/i18n/**/*"],

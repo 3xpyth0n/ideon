@@ -159,7 +159,7 @@ describe("Projects API", () => {
     expect(linkBlock?.width).toBe(550);
     expect(linkBlock?.height).toBe(400);
     expect(JSON.parse(linkBlock?.data || "{}").title).toBe("Link");
-    expect(linkBlock?.content).toBe("https://www.theideon.com/docs/");
+    expect(linkBlock?.content).toBe("https://www.theideon.com/");
 
     expect(gitBlock?.positionX).toBe(450);
     expect(gitBlock?.positionY).toBe(-420);

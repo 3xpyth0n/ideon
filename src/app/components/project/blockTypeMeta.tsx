@@ -19,6 +19,8 @@ import {
   Sigma,
   Calendar,
   Layers,
+  Network,
+  Table,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -42,8 +44,10 @@ export type AddableBlockType =
   | "webhook"
   | "cron"
   | "latex"
+  | "mermaid"
   | "calendar"
-  | "subcanvas";
+  | "subcanvas"
+  | "database";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
@@ -67,8 +71,10 @@ export type BlockTypeLabelKey =
   | "blockTypeWebhook"
   | "blockTypeCron"
   | "blockTypeLatex"
+  | "blockTypeMermaid"
   | "blockTypeCalendar"
-  | "blockTypeSubcanvas";
+  | "blockTypeSubcanvas"
+  | "blockTypeDatabase";
 
 export type BlockTypeIconComponent = ComponentType<{
   className?: string;
@@ -160,9 +166,21 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     section: "block",
   },
   {
+    type: "mermaid",
+    icon: Network,
+    labelKey: "blockTypeMermaid",
+    section: "block",
+  },
+  {
     type: "vercel",
     icon: VercelIcon,
     labelKey: "blockTypeVercel",
+    section: "block",
+  },
+  {
+    type: "database",
+    icon: Table,
+    labelKey: "blockTypeDatabase",
     section: "block",
   },
   {

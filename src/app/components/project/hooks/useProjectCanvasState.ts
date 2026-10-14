@@ -29,7 +29,10 @@ import {
   DEFAULT_BLOCK_WIDTH,
 } from "@components/project/utils/constants";
 import { generateStateHash } from "@components/project/utils/hash";
-import { captureCanvasStateSnapshots } from "../../../../lib/yjs-canvas-state";
+import {
+  CanvasStateSnapshot,
+  captureCanvasStateSnapshots,
+} from "../../../../lib/yjs-canvas-state";
 import {
   buildMultiBlockCopyText,
   shouldOverrideMultiBlockCopy,
@@ -951,13 +954,8 @@ export const useProjectCanvasState = (
     }
     setDraftsByBlock(initialDrafts);
 
-    if (initialBlocks.length > 0 || initialLinks.length > 0) {
-      isInitialized.current = true;
-      setIsReady(true);
-      setTimeout(() => {
-        handleFitView();
-      }, 100);
-    }
+    isInitialized.current = true;
+    setIsReady(true);
 
     return () => {
       yBlocks.unobserve(updateBlocksFromYjs);
@@ -1563,15 +1561,17 @@ export const useProjectCanvasState = (
     setIsPreviewMode(false);
   }, [yBlocks, yLinks, yContents, noteDocumentsMap, awareness]);
 
-  const handleSaveState = useCallback(
+  const computeCurrentSnapshot = useCallback(
     async (
-      intent?: string,
       overrideBlocks?: Node<BlockData>[],
       overrideLinks?: Edge[],
-      options?: { isAuto?: boolean },
-    ): Promise<{ success: boolean; unchanged?: boolean }> => {
-      if (!initialProjectId || isReadOnly) return { success: false };
-      const isAuto = options?.isAuto ?? false;
+    ): Promise<{
+      hash: string;
+      blocks: Node<BlockData>[];
+      links: Edge[];
+      canvasStates?: CanvasStateSnapshot[];
+    } | null> => {
+      if (!initialProjectId) return null;
       try {
         const blocksToSave = (overrideBlocks || blocks).map((n) => {
           const resolvedContent =
@@ -1624,9 +1624,7 @@ export const useProjectCanvasState = (
         const rootCanvas = canvasStates?.find(
           (canvas) => canvas.canvasId === "root",
         );
-        if (activeCanvasId !== "root" && !rootCanvas) {
-          return { success: false };
-        }
+        if (activeCanvasId !== "root" && !rootCanvas) return null;
         const snapshotBlocks =
           activeCanvasId === "root" || !rootCanvas
             ? blocksToSave
@@ -1635,13 +1633,46 @@ export const useProjectCanvasState = (
           activeCanvasId === "root" || !rootCanvas
             ? overrideLinks || links
             : rootCanvas.links;
-        const currentHash = await generateStateHash(
+        const hash = await generateStateHash(
           snapshotBlocks,
           snapshotLinks,
           canvasStates,
         );
+        return {
+          hash,
+          blocks: snapshotBlocks,
+          links: snapshotLinks,
+          canvasStates,
+        };
+      } catch {
+        return null;
+      }
+    },
+    [initialProjectId, blocks, links, yContents, yDoc, activeCanvasId],
+  );
 
-        if (lastSnapshotHash.current === currentHash) {
+  const handleSaveState = useCallback(
+    async (
+      intent?: string,
+      overrideBlocks?: Node<BlockData>[],
+      overrideLinks?: Edge[],
+      options?: { isAuto?: boolean },
+    ): Promise<{ success: boolean; unchanged?: boolean }> => {
+      if (!initialProjectId || isReadOnly) return { success: false };
+      const isAuto = options?.isAuto ?? false;
+      try {
+        const snapshot = await computeCurrentSnapshot(
+          overrideBlocks,
+          overrideLinks,
+        );
+        if (snapshot === null) {
+          if (!isAuto) {
+            toast.error(dict.modals.saveError || "Failed to save changes");
+          }
+          return { success: false };
+        }
+
+        if (lastSnapshotHash.current === snapshot.hash) {
           if (!isAuto) {
             toast.info(dict.modals.noChanges || "No changes to save");
           }
@@ -1655,9 +1686,9 @@ export const useProjectCanvasState = (
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "create",
-            blocks: snapshotBlocks,
-            links: snapshotLinks,
-            canvasStates,
+            blocks: snapshot.blocks,
+            links: snapshot.links,
+            canvasStates: snapshot.canvasStates,
             intent,
             isAuto,
           }),
@@ -1677,14 +1708,14 @@ export const useProjectCanvasState = (
         try {
           const j = await res.json();
           if (j && j.unchanged) {
-            lastSnapshotHash.current = currentHash;
+            lastSnapshotHash.current = snapshot.hash;
             return { success: true, unchanged: true };
           }
         } catch {
           // ignore parse errors
         }
 
-        lastSnapshotHash.current = currentHash;
+        lastSnapshotHash.current = snapshot.hash;
         return { success: true };
       } catch {
         if (!isAuto) {
@@ -1693,7 +1724,15 @@ export const useProjectCanvasState = (
         return { success: false };
       }
     },
-    [initialProjectId, blocks, links, yContents, yDoc, activeCanvasId],
+    [
+      initialProjectId,
+      computeCurrentSnapshot,
+      blocks,
+      links,
+      yContents,
+      yDoc,
+      activeCanvasId,
+    ],
   );
 
   const handleDeleteState = useCallback(
@@ -2439,6 +2478,8 @@ export const useProjectCanvasState = (
     handleExitPreview,
     yDoc,
     activeCanvasId,
+    lastSnapshotHash,
+    computeCurrentSnapshot,
   });
 
   const checkVisibleBlocks = useCallback(
@@ -2674,10 +2715,8 @@ export const useProjectCanvasState = (
     const selectedBlocks = visibleBlocks.filter((n) => n.selected);
     if (selectedBlocks.length > 0)
       applyLongestSideFit(selectedBlocks, FIT_MAX_ZOOM_SELECTED);
-    else if (visibleBlocks.length === 0)
-      setViewport({ x: 0, y: 0, zoom: 1 }, { duration: FIT_DURATION });
     else applyLongestSideFit(visibleBlocks, FIT_MAX_ZOOM_ALL);
-  }, [blocks, setViewport, applyLongestSideFit]);
+  }, [blocks, applyLongestSideFit]);
 
   const handleZoomIn = useCallback(
     () =>
@@ -3100,6 +3139,8 @@ export const useProjectCanvasState = (
     setActiveResizeSnap: graph.setActiveResizeSnap,
     handlePreview: io.handlePreview,
     handleApplyState: io.handleApplyState,
+    pendingApply: io.pendingApply,
+    clearPendingApply: io.clearPendingApply,
     onBlockContextMenu: graph.onBlockContextMenu,
     onEdgeContextMenu: graph.onEdgeContextMenu,
     onPaneContextMenu: graph.onPaneContextMenu,

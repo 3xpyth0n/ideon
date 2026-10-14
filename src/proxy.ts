@@ -24,6 +24,7 @@ const { auth } = NextAuth({
     error: "/login",
   },
   secret,
+  trustHost: true,
   providers: [],
 });
 

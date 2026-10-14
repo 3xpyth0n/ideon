@@ -30,6 +30,11 @@
   --warning: #f2c94c;
   --danger: #eb5757;
   --toast-bg: #404040;
+  --card: var(--bg-island);
+  --foreground: var(--text-main);
+  --muted: var(--bg-sidebar);
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--danger);
 }
 
 @theme {
@@ -47,6 +52,11 @@
   --text-muted: #888888;
   --border: rgba(255, 255, 255, 0.3);
   --toast-bg: #1a1a1a;
+  --card: var(--bg-island);
+  --foreground: var(--text-main);
+  --muted: #1a1a1a;
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--danger);
 }
 
 * {

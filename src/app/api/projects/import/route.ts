@@ -1,5 +1,6 @@
 import { authenticatedAction } from "@lib/server-utils";
 import { getDb, runTransaction } from "@lib/db";
+import { appendAuditEvent } from "@lib/audit-trail";
 import { sanitizeFileName } from "@lib/file-utils";
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
@@ -33,7 +34,35 @@ function remapMetadataBlockIds(
       }
     }
 
-    if (blockType === "kanban") {
+    if (
+      blockType === "database" &&
+      Array.isArray((parsed as { rows?: unknown }).rows)
+    ) {
+      const meta = parsed as {
+        rows?: Array<{ cells?: Record<string, unknown> }>;
+      };
+      for (const row of meta.rows ?? []) {
+        if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+        const cells = row.cells;
+        if (!cells || typeof cells !== "object" || Array.isArray(cells))
+          continue;
+        for (const colId of Object.keys(cells)) {
+          const cell = cells[colId];
+          if (!cell || typeof cell !== "object" || Array.isArray(cell))
+            continue;
+          const relation = cell as Record<string, unknown>;
+          if (typeof relation.blockId === "string") {
+            relation.blockId = idMap.get(relation.blockId) ?? relation.blockId;
+          }
+        }
+      }
+      return JSON.stringify(meta);
+    }
+
+    if (
+      blockType === "kanban" &&
+      Array.isArray((parsed as { columns?: unknown }).columns)
+    ) {
       const meta = parsed as {
         columns?: Array<{
           tasks?: Array<{
@@ -345,6 +374,16 @@ export const POST = authenticatedAction(
         }
       }
     }
+
+    await appendAuditEvent({
+      projectId: newProjectId,
+      userId: user.id,
+      action: "import.apply",
+      entityType: "project",
+      entityId: newProjectId,
+      summary: `Project imported: ${projectMeta.name}`,
+      metadata: { blocks: blocks.length, links: links.length },
+    });
 
     return { projectId: newProjectId, name: projectMeta.name };
   },

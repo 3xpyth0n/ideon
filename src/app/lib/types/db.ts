@@ -13,6 +13,8 @@ export type UserUpdate = Updateable<usersTable>;
 export type Project = Selectable<projectsTable>;
 export type NewProject = Insertable<projectsTable>;
 export type ProjectUpdate = Updateable<projectsTable>;
+export type ProjectRepositorySync = Selectable<projectRepositorySyncsTable>;
+export type NewProjectRepositorySync = Insertable<projectRepositorySyncsTable>;
 
 export type Folder = Selectable<foldersTable>;
 export type NewFolder = Insertable<foldersTable>;
@@ -130,6 +132,20 @@ export interface projectCollaboratorsTable {
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+export interface projectRepositorySyncsTable {
+  projectId: string;
+  remoteProjectId: string;
+  repositoryUrl: string | null;
+  repositoryUsername: string | null;
+  branch: string | null;
+  repositoryPath: string;
+  lastSyncedCommit: string | null;
+  baseManifest: string | null;
+  blockIdMap: string;
+  linkIdMap: string;
+  updatedAt: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 export interface blocksTable {
   id: Generated<string>;
   projectId: string;
@@ -153,8 +169,10 @@ export interface blocksTable {
     | "webhook"
     | "cron"
     | "latex"
+    | "mermaid"
     | "calendar"
-    | "subcanvas";
+    | "subcanvas"
+    | "database";
   metadata: string; // JSON string
   parentBlockId: string | null;
   positionX: number;
@@ -231,7 +249,7 @@ export interface invitationsTable {
 export interface temporalStatesTable {
   id: Generated<string>;
   projectId: string;
-  parentId: string | null;
+  parentId: string | null; // Reserved: column kept in schema, reconstruction no longer walks the chain
   authorId: string;
   intent: string;
   diff: string; // JSON patch or similar
@@ -282,6 +300,30 @@ export interface auditLogsTable {
   createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+export interface auditEventsTable {
+  id: string;
+  projectId: string | null;
+  userId: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  summary: string;
+  metadata: ColumnType<string, string | undefined, string>;
+  prevHash: string | null;
+  hash: string;
+  createdAt: string;
+}
+
+export interface sealedStatesTable {
+  id: string;
+  projectId: string;
+  stateId: string;
+  authorId: string;
+  stateHash: string;
+  summary: ColumnType<string, string | undefined, string>;
+  createdAt: string;
+}
+
 export interface accountsTable {
   id: Generated<string>;
   userId: string;
@@ -318,6 +360,7 @@ export interface database {
   folders: foldersTable;
   folderCollaborators: folderCollaboratorsTable;
   projects: projectsTable;
+  projectRepositorySyncs: projectRepositorySyncsTable;
   projectStars: projectStarsTable;
   projectCollaborators: projectCollaboratorsTable;
   blocks: blocksTable;
@@ -344,6 +387,8 @@ export interface database {
   automationLogs: automationLogsTable;
   blockAutomationStates: blockAutomationStatesTable;
   apiKeys: apiKeysTable;
+  auditEvents: auditEventsTable;
+  sealedStates: sealedStatesTable;
 }
 
 export interface projectRequestsTable {

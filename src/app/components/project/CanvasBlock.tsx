@@ -82,8 +82,10 @@ export type BlockData = {
     | "webhook"
     | "cron"
     | "latex"
+    | "mermaid"
     | "calendar"
-    | "subcanvas";
+    | "subcanvas"
+    | "database";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;

@@ -26,6 +26,10 @@ exported, and verified independently — by anyone, without Ideon.
 
 - Server-enforced access control on the versioning API — collaborators can no longer restore, rename, or delete project history regardless of client state; only the project owner can rewind, rename, or remove states.
 
+### Removed
+
+- Removed SAML SSO support — enterprise sign-in via SAML identity providers is no longer included; external identity providers remain available through OAuth providers and generic OIDC.
+
 ### Fixed
 
 - Fixed login failures caused by Auth.js `UntrustedHost` errors ([#133](https://github.com/3xpyth0n/ideon/issues/133)).

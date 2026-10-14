@@ -3,15 +3,14 @@ import { useReactFlow } from "@xyflow/react";
 import { UserPresence } from "./useProjectCanvasState";
 
 import type { Awareness } from "y-protocols/awareness";
-import uniqBy from "lodash/uniqBy";
 
 /**
  * Deduplicates an array of objects by a specific property, keeping the last occurrence.
  */
 function dedupeById<T extends { id: string }>(items: T[]): T[] {
-  const reversed = items.slice().reverse();
-  const deduped = uniqBy(reversed, "id");
-  return deduped.reverse();
+  const lastIndexById = new Map<string, number>();
+  items.forEach((item, index) => lastIndexById.set(item.id, index));
+  return items.filter((item, index) => lastIndexById.get(item.id) === index);
 }
 
 const CURSOR_THROTTLE_MS = 33;

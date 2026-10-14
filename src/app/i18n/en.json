@@ -96,7 +96,6 @@
     "resetPassword": "Reset Password",
     "resetSuccess": "Password reset successfully",
     "resetSuccessDescription": "You can now login with your new password.",
-    "saml": "SAML",
     "sendResetLink": "Send Reset Link",
     "showPassword": "Show",
     "slack": "Slack",
@@ -654,7 +653,6 @@
     "securityAudit": "Security Audit",
     "securityAuditLog": "Security Audit Log",
     "auditTrail": "Audit trail",
-    "samlConfigSaveError": "Failed to save SAML configuration",
     "ssoDesc": "Configure enterprise authentication providers",
     "ssoProviders": "SSO Providers",
     "ssoRegistration": "SSO Auto-Provisioning",
@@ -1027,10 +1025,6 @@
     "magicLinkDurationPlaceholder": "Ex: 60",
     "magicLinkEnvNotice": "Note: SMTP configuration must be set in environment variables.",
     "redirectUri": "Redirect URI",
-    "samlIdpMetadataUrl": "IdP Metadata URL",
-    "samlRawMetadataXml": "Or Raw Metadata XML",
-    "samlSpConfig": "SP Configuration (ACS URL)",
-    "samlSpEntityId": "SP Entity ID",
     "tenantId": "Tenant ID"
   },
   "setup": {

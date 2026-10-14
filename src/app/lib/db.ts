@@ -83,35 +83,6 @@ export function getSqlitePath() {
     : path.resolve(storageDir, "dev.db");
 }
 
-export function getDatabaseUrl() {
-  if (shouldUseSqlite()) {
-    return {
-      type: "sqlite" as const,
-      url: `file://${getSqlitePath()}`,
-    };
-  }
-
-  const pgConfig = getPostgresConfig();
-  if (
-    pgConfig.host &&
-    pgConfig.database &&
-    pgConfig.user &&
-    pgConfig.password
-  ) {
-    const sslQuery = pgConfig.ssl ? "?ssl=true" : "";
-    return {
-      type: "postgres" as const,
-      url: `postgres://${pgConfig.user}:${pgConfig.password}@${pgConfig.host}:${pgConfig.port}/${pgConfig.database}${sslQuery}`,
-    };
-  }
-
-  // Fallback to SQLite
-  return {
-    type: "sqlite" as const,
-    url: `file://${getSqlitePath()}`,
-  };
-}
-
 export function shouldUseSqlite() {
   const nodeRaw = process.env.NODE_ENV;
   return typeof nodeRaw === "string" && ["test", "dev"].includes(nodeRaw);

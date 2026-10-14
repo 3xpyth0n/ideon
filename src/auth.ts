@@ -305,23 +305,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         issuer: `https://login.microsoftonline.com/${freshConfig.entra?.tenantId}/v2.0`,
         allowDangerousEmailAccountLinking: true,
       }),
-      ...(freshConfig.saml?.enabled
-        ? [
-            {
-              id: "saml",
-              name: "SAML SSO",
-              type: "oidc" as const,
-              issuer: process.env.APP_URL
-                ? `${process.env.APP_URL}/api/oauth`
-                : "http://localhost:3000/api/oauth",
-              clientId: "tenant=default&product=ideon",
-              clientSecret: "dummy",
-              authorization: { params: { scope: "openid email profile" } },
-              checks: ["pkce", "state"] as ("pkce" | "state")[],
-              allowDangerousEmailAccountLinking: true,
-            },
-          ]
-        : []),
       ...(freshConfig.oidc?.issuer
         ? [
             {

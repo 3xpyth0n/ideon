@@ -91,7 +91,7 @@ function blockSignature(fields: {
 
 // Defaults mirror the values prepareBlockForDb persists, so a block that never
 // changed still produces an identical signature on both sides of the comparison
-function sealedBlockSignature(node: Node): string {
+export function sealedBlockSignature(node: Node): string {
   const data = (node.data ?? {}) as Record<string, unknown>;
   const metadata =
     typeof data.metadata === "string"
@@ -134,7 +134,7 @@ function currentBlockSignature(block: {
   });
 }
 
-function sealedGraphFromDiff(diff: string): GraphState {
+export function sealedGraphFromDiff(diff: string): GraphState {
   let parsed: unknown;
   try {
     parsed = JSON.parse(diff);
@@ -358,6 +358,120 @@ export async function computeDelta(
   }
 
   return { added, modified, removed, removedBlocks };
+}
+
+export async function getProjectSeals(
+  projectId: string,
+): Promise<SealedState[]> {
+  const db = getDb();
+  return db
+    .selectFrom("sealedStates")
+    .leftJoin("users", "users.id", "sealedStates.authorId")
+    .select([
+      "sealedStates.id",
+      "sealedStates.projectId",
+      "sealedStates.stateId",
+      "sealedStates.authorId",
+      "sealedStates.stateHash",
+      "sealedStates.summary",
+      "sealedStates.createdAt",
+      "users.email as authorEmail",
+    ])
+    .where("sealedStates.projectId", "=", projectId)
+    .orderBy("sealedStates.createdAt", "asc")
+    .orderBy("sealedStates.id", "asc")
+    .execute();
+}
+
+export interface SealedBlockInfo {
+  id: string;
+  blockType: string;
+  title: string | null;
+}
+
+function describeSealedNode(node: Node): SealedBlockInfo {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  return {
+    id: node.id,
+    blockType:
+      node.type ||
+      (typeof data.blockType === "string" ? data.blockType : "text"),
+    title: typeof data.title === "string" ? data.title : null,
+  };
+}
+
+export async function getSealInventory(
+  projectId: string,
+  seal: SealedState,
+): Promise<SealedBlockInfo[]> {
+  const db = getDb();
+  const state = await db
+    .selectFrom("temporalStates")
+    .select("diff")
+    .where("id", "=", seal.stateId)
+    .where("projectId", "=", projectId)
+    .executeTakeFirst();
+
+  if (!state) return [];
+  return sealedGraphFromDiff(state.diff)
+    .blocks.map(describeSealedNode)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+export interface SealToSealDelta {
+  added: SealedBlockInfo[];
+  modified: SealedBlockInfo[];
+  removed: SealedBlockInfo[];
+}
+
+export async function computeSealToSealDelta(
+  projectId: string,
+  previousSeal: SealedState,
+  currentSeal: SealedState,
+): Promise<SealToSealDelta> {
+  const db = getDb();
+  const [previousState, currentState] = await Promise.all([
+    db
+      .selectFrom("temporalStates")
+      .select("diff")
+      .where("id", "=", previousSeal.stateId)
+      .where("projectId", "=", projectId)
+      .executeTakeFirst(),
+    db
+      .selectFrom("temporalStates")
+      .select("diff")
+      .where("id", "=", currentSeal.stateId)
+      .where("projectId", "=", projectId)
+      .executeTakeFirst(),
+  ]);
+
+  const previousBlocks = previousState
+    ? sealedGraphFromDiff(previousState.diff).blocks
+    : [];
+  const currentBlocks = currentState
+    ? sealedGraphFromDiff(currentState.diff).blocks
+    : [];
+
+  const previousById = new Map(previousBlocks.map((b) => [b.id, b]));
+  const currentById = new Map(currentBlocks.map((b) => [b.id, b]));
+
+  const added: SealedBlockInfo[] = [];
+  const modified: SealedBlockInfo[] = [];
+  const removed: SealedBlockInfo[] = [];
+
+  for (const [id, node] of currentById) {
+    const previous = previousById.get(id);
+    if (!previous) {
+      added.push(describeSealedNode(node));
+    } else if (sealedBlockSignature(previous) !== sealedBlockSignature(node)) {
+      modified.push(describeSealedNode(node));
+    }
+  }
+  for (const [id, node] of previousById) {
+    if (!currentById.has(id)) removed.push(describeSealedNode(node));
+  }
+
+  return { added, modified, removed };
 }
 
 export async function buildRecordBundle(

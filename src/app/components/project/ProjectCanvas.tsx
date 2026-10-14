@@ -40,6 +40,8 @@ import DatabaseBlock from "./DatabaseBlock";
 import CanvasEdge from "./CanvasEdge";
 import { ProjectAccessModal } from "./ProjectAccessModal";
 import { AuditTrailModal } from "./AuditTrailModal";
+import { ProvenanceModal } from "./ProvenanceModal";
+import { DossierFlow } from "./DossierFlow";
 import CommandPalette from "./CommandPalette";
 import CanvasSearch from "./CanvasSearch";
 import CanvasSearchBar from "./CanvasSearchBar";
@@ -93,6 +95,8 @@ import {
   MousePointer2,
   Command,
   Search,
+  History,
+  FileDown,
 } from "lucide-react";
 import { LuPencilOff } from "react-icons/lu";
 import { TbLocationOff } from "react-icons/tb";
@@ -1598,6 +1602,10 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     const [dontAskAgain, setDontAskAgain] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [provenanceBlockId, setProvenanceBlockId] = useState<string | null>(
+      null,
+    );
+    const [dossierFlowOpen, setDossierFlowOpen] = useState(false);
     const [isRepoSyncModalOpen, setIsRepoSyncModalOpen] = useState(false);
 
     const handleEdgeLabelSubmit = useCallback(
@@ -2452,6 +2460,27 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   </button>
                                 )}
 
+                                {!isPreviewMode &&
+                                  currentUserRole !== "viewer" && (
+                                    <button
+                                      className="project-mobile-actions-item"
+                                      onClick={() => {
+                                        setDossierFlowOpen(true);
+                                        setIsMobileActionsOpen(false);
+                                      }}
+                                    >
+                                      <span className="project-mobile-actions-item-main">
+                                        <FileDown size={14} />
+                                        <span>
+                                          {
+                                            dict.project.instrument
+                                              .generateDossier
+                                          }
+                                        </span>
+                                      </span>
+                                    </button>
+                                  )}
+
                                 {!isPreviewMode && (
                                   <button
                                     className="project-mobile-actions-item"
@@ -2805,8 +2834,29 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   </button>
                                 </>
                               )}
+                              {!canManage && !isPreviewMode && (
+                                <div className="context-menu-divider" />
+                              )}
+
+                              {!isPreviewMode && (
+                                <button
+                                  onClick={() => {
+                                    setProvenanceBlockId(block.id);
+                                    setContextMenu(null);
+                                  }}
+                                  className="context-menu-item"
+                                >
+                                  <span className="context-menu-icon">
+                                    <History size={14} />
+                                  </span>
+                                  <span className="context-menu-label">
+                                    {dict.project.instrument.provenance}
+                                  </span>
+                                </button>
+                              )}
+
                               {!canManage && (
-                                <div className="px-3 py-2 text-xs text-gray-500">
+                                <div className="context-menu-view-only">
                                   {dict.blocks.viewOnly || "View Only"}
                                 </div>
                               )}
@@ -2851,6 +2901,19 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             <AuditTrailModal
               isOpen={isAuditModalOpen}
               onClose={() => setIsAuditModalOpen(false)}
+              projectId={initialProjectId!}
+            />
+
+            <ProvenanceModal
+              isOpen={provenanceBlockId !== null}
+              onClose={() => setProvenanceBlockId(null)}
+              projectId={initialProjectId!}
+              blockId={provenanceBlockId}
+            />
+
+            <DossierFlow
+              isOpen={dossierFlowOpen}
+              onClose={() => setDossierFlowOpen(false)}
               projectId={initialProjectId!}
             />
 

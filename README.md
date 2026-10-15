@@ -60,6 +60,7 @@ Ideon replaces abstract folders with spatial organization. Instead of navigating
 - **Rich Media:** Support for Markdown notes, rendered Mermaid diagrams, images, links, and files.
 - **Multiplayer:** Real-time collaboration with your team.
 - **Time Travel:** View historical snapshots of your workspace to trace decisions.
+- **Git Versioning:** Sync a project canvas to a Git repository, with notes and structure as versioned files.
 - **Self-Hosted:** You own your data.
 
 ## Getting Started

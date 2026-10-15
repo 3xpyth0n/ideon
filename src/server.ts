@@ -484,6 +484,7 @@ function buildCleanDocFromCorrupted(corruptedDoc: Y.Doc): Y.Doc {
 
 // Configure Persistence correctly for y-websocket
 setPersistence({
+  provider: ldb,
   bindState: async (docName: string, ydoc: Doc) => {
     const persistedYdoc = await ldb.getYDoc(docName);
     let workingDoc = persistedYdoc;

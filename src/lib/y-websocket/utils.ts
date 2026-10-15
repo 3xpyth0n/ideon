@@ -250,7 +250,12 @@ export interface Persistence {
   provider?: unknown;
 }
 
-let persistence: Persistence | null = null;
+const globalWithPersistence = globalThis as unknown as {
+  __ideonYjsPersistence?: Persistence | null;
+};
+
+let persistence: Persistence | null =
+  globalWithPersistence.__ideonYjsPersistence ?? null;
 
 if (typeof persistenceDir === "string") {
   logger.info(
@@ -273,13 +278,16 @@ if (typeof persistenceDir === "string") {
       await ldb.writeState(docName, ydoc);
     },
   };
+  globalWithPersistence.__ideonYjsPersistence = persistence;
 }
 
 export const setPersistence = (persistence_: Persistence | null) => {
   persistence = persistence_;
+  globalWithPersistence.__ideonYjsPersistence = persistence_;
 };
 
-export const getPersistence = () => persistence;
+export const getPersistence = () =>
+  persistence ?? globalWithPersistence.__ideonYjsPersistence ?? null;
 
 export const docs = new Map<string, WSSharedDoc>();
 

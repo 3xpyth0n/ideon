@@ -67,10 +67,9 @@ export async function syncProjectRepository(
         project,
         remoteProjectId,
       );
-      const currentManifest = parseRepositorySyncBundle(current.bundle);
       const baseManifest = syncState.baseManifest
         ? parseRepositorySyncManifest(JSON.parse(syncState.baseManifest))
-        : currentManifest;
+        : remoteManifest;
       const merge = mergeRepositorySyncBundles(
         baseManifest,
         current.bundle,

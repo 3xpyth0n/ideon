@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-1X-XX
+
+### Added
+
+- Added OIDC authentication fully configurable through environment variables (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`): if all three are set at startup, the OIDC provider is enabled and the management UI card turns gray with a "Set by environment variables" badge ([#136](https://github.com/3xpyth0n/ideon/issues/136)).
+
 ## [1.0.0] - 2026-10-15
 
 Ideon 1.0 makes the workspace trustworthy infrastructure: every project

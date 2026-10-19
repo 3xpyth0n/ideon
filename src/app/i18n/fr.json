@@ -667,7 +667,8 @@
     "enablePat": "Activer les Jetons Personnels (PAT)",
     "oauthMode": "Flux OAuth (Connexion avec Vercel)",
     "patMode": "Jeton Manuel (PAT)",
-    "disableVercelAuthWarning": "Attention : La désactivation d'une méthode d'authentification déconnectera les utilisateurs qui l'utilisent actuellement. Voulez-vous continuer ?"
+    "disableVercelAuthWarning": "Attention : La désactivation d'une méthode d'authentification déconnectera les utilisateurs qui l'utilisent actuellement. Voulez-vous continuer ?",
+    "oidcSetByEnv": "Défini par les variables d'environnement"
   },
   "integrations": {
     "title": "Intégrations",

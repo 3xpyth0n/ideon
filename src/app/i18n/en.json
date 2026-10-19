@@ -667,7 +667,8 @@
     "enablePat": "Enable Personal Access Tokens (PAT)",
     "oauthMode": "OAuth Flow (Connect with Vercel)",
     "patMode": "Manual Token (PAT)",
-    "disableVercelAuthWarning": "Warning: Disabling an authentication method will disconnect users currently using it. Are you sure?"
+    "disableVercelAuthWarning": "Warning: Disabling an authentication method will disconnect users currently using it. Are you sure?",
+    "oidcSetByEnv": "Set by environment variables"
   },
   "integrations": {
     "title": "Integrations",

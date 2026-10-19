@@ -322,6 +322,46 @@ export async function getAuthProviders(): Promise<
 }
 
 /**
+ * Reads the OIDC configuration from environment variables.
+ *
+ * When all three variables are set, the OIDC provider is fully configured
+ * from the environment (IaC deployments). Returns null otherwise.
+ */
+export function getEnvAuthProviders(): AuthProviderConfig | null {
+  const issuer = process.env.OIDC_ISSUER;
+  const clientId = process.env.OIDC_CLIENT_ID;
+  const clientSecret = process.env.OIDC_CLIENT_SECRET;
+
+  if (!issuer || !clientId || !clientSecret) {
+    return null;
+  }
+
+  return {
+    issuer,
+    clientId,
+    clientSecret,
+    enabled: true,
+  };
+}
+
+/**
+ * Merges environment-configured OIDC values over the database config.
+ * Environment variables always win (IaC deployments).
+ */
+export function mergeAuthProviders(
+  dbConfig: Record<string, AuthProviderConfig>,
+  envConfig: AuthProviderConfig | null,
+): Record<string, AuthProviderConfig> {
+  if (!envConfig) {
+    return dbConfig;
+  }
+  return {
+    ...dbConfig,
+    oidc: { ...dbConfig["oidc"], ...envConfig },
+  };
+}
+
+/**
  * Checks if the system is installed by verifying if a superadmin exists.
  */
 export async function isSystemInstalled(): Promise<boolean> {

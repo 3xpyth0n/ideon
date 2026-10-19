@@ -667,7 +667,8 @@
     "enablePat": "Abilita Token Personali (PAT)",
     "oauthMode": "Flusso OAuth (Connettiti con Vercel)",
     "patMode": "Token Manuale (PAT)",
-    "disableVercelAuthWarning": "Attenzione: la disabilitazione di un metodo di autenticazione scollegherà gli utenti che lo utilizzano attualmente. Sei sicuro?"
+    "disableVercelAuthWarning": "Attenzione: la disabilitazione di un metodo di autenticazione scollegherà gli utenti che lo utilizzano attualmente. Sei sicuro?",
+    "oidcSetByEnv": "Impostato tramite variabili d'ambiente"
   },
   "integrations": {
     "title": "Integrazioni",

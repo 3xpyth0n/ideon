@@ -59,6 +59,7 @@ export function ManagementClient() {
   const [activeTab, setActiveTab] = useState("authentication");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [oidcEnvConfigured, setOidcEnvConfigured] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -153,6 +154,7 @@ export function ManagementClient() {
               ...(data.authProviders || {}),
             },
           }));
+          setOidcEnvConfigured(!!data.oidcEnvConfigured);
         }
       })
       .catch((err) => {
@@ -454,7 +456,14 @@ export function ManagementClient() {
                       enabled: false,
                     };
                     return (
-                      <div key={p.key} className="provider-card">
+                      <div
+                        key={p.key}
+                        className={`provider-card ${
+                          p.key === "oidc" && oidcEnvConfigured
+                            ? "opacity-60"
+                            : ""
+                        }`}
+                      >
                         <div className="provider-header">
                           <div
                             className="provider-icon-wrapper"
@@ -486,7 +495,9 @@ export function ManagementClient() {
                                   : ""
                             }`}
                             onClick={() => toggleProvider(p.key)}
-                            disabled={saving}
+                            disabled={
+                              saving || (p.key === "oidc" && oidcEnvConfigured)
+                            }
                           >
                             <div className="switch-thumb" />
                           </button>
@@ -513,11 +524,19 @@ export function ManagementClient() {
                             : config.enabled
                               ? dict.common.enabled
                               : dict.common.disabled}
+                          {p.key === "oidc" && oidcEnvConfigured && (
+                            <span className="text-xs text-muted bg-black/5 rounded px-1.5 py-0.5">
+                              {dict.management.oidcSetByEnv}
+                            </span>
+                          )}
                         </div>
                         <Button
                           className="btn-minimal w-full mt-4 justify-between group hover:text-text-main"
                           onClick={() => openProviderConfig(p.key)}
                           noRipple
+                          disabled={
+                            saving || (p.key === "oidc" && oidcEnvConfigured)
+                          }
                         >
                           <span className="btn-text group-hover:text-text-main">
                             {dict.management.configure}
@@ -706,6 +725,23 @@ function ProviderConfigModal({
                   : ""
               }`}
             >
+              <div
+                className={`border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2 transition-all duration-300 ${
+                  provider === "vercel" && !formData.oauthEnabled
+                    ? "opacity-30 pointer-events-none grayscale"
+                    : ""
+                }`}
+              >
+                <div className="flex items-center gap-2 font-bold tracking-wider">
+                  <Globe size={14} />
+                  <span>{dict.providers.callbackUrlNotice}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                    {`${appUrl}/api/auth/callback/oidc`}
+                  </code>
+                </div>
+              </div>
               <div className="form-group">
                 <label className="modal-label">{dict.providers.clientId}</label>
                 <input
@@ -777,7 +813,7 @@ function ProviderConfigModal({
                   />
                 </div>
               )}
-              {provider !== "vercel" && (
+              {provider !== "vercel" && provider !== "oidc" && (
                 <div className="form-group">
                   <label className="modal-label">
                     {dict.providers.redirectUri}

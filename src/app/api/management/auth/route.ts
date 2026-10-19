@@ -1,4 +1,4 @@
-import { getDb } from "@lib/db";
+import { getDb, getEnvAuthProviders } from "@lib/db";
 import { adminAction } from "@lib/server-utils";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
@@ -39,6 +39,7 @@ export const GET = adminAction(
       appUrl:
         process.env.APP_URL ||
         `http://localhost:${process.env.APP_PORT || "3000"}`,
+      oidcEnvConfigured: !!getEnvAuthProviders(),
     };
   },
   { requireUser: true },

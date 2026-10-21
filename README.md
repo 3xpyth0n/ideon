@@ -93,6 +93,12 @@ Once running, access the dashboard at: `http://localhost:3000`
 
 The template sets up the required PostgreSQL database and a persistent volume for `/app/storage` automatically.
 
+## RepoCloud
+
+One-click template, no other instructions required.
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/Ideon/)
+
 ## Contributing
 
 If you've ever wanted to contribute to open source, and a great cause, now is your chance!

@@ -9,7 +9,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Added OIDC authentication fully configurable through environment variables (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`): if all three are set at startup, the OIDC provider is enabled and the management UI card turns gray with a "Set by environment variables" badge ([#136](https://github.com/3xpyth0n/ideon/issues/136)).
+- 3D Scene block: a new block type for the canvas, supporting primitives, models, and hotspots ([#128](https://github.com/3xpyth0n/ideon/issues/128)).
+- OIDC authentication fully configurable through environment variables (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`): if all three are set at startup, the OIDC provider is enabled and the management UI card turns gray with a "Set by environment variables" badge ([#136](https://github.com/3xpyth0n/ideon/issues/136)).
 
 ## [1.0.0] - 2026-10-15
 

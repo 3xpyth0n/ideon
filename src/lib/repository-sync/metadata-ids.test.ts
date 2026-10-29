@@ -31,4 +31,27 @@ describe("repository sync metadata identity mapping", () => {
       }),
     );
   });
+
+  it("remaps A-Frame hotspot block ids in serialized metadata", () => {
+    const metadata = JSON.stringify({
+      hotspots: [{ blockId: "source" }, { blockId: "unknown" }],
+    });
+
+    expect(
+      remapMetadataBlockIds("aframe", metadata, new Map([["source", "local"]])),
+    ).toBe(
+      JSON.stringify({
+        hotspots: [{ blockId: "local" }, { blockId: "unknown" }],
+      }),
+    );
+  });
+
+  it("remaps A-Frame hotspot block ids in object metadata", () => {
+    const metadata = { hotspots: [{ blockId: "source" }] };
+
+    expect(
+      remapMetadataBlockIds("aframe", metadata, new Map([["source", "local"]])),
+    ).toEqual({ hotspots: [{ blockId: "local" }] });
+    expect(metadata.hotspots[0].blockId).toBe("source");
+  });
 });

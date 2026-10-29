@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSafeUrl } from "@lib/security-utils";
 
-
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
 

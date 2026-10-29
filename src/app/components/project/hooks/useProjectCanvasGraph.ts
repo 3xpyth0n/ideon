@@ -1216,7 +1216,8 @@ export const useProjectCanvasGraph = ({
         | "cron"
         | "mermaid"
         | "subcanvas"
-        | "database" = "text",
+        | "database"
+        | "aframe" = "text",
       initialContent: string = "",
       initialMetadata?: Record<string, unknown>,
     ) => {
@@ -1293,6 +1294,14 @@ export const useProjectCanvasGraph = ({
           actionParams: { state: "success" },
         },
         database: { columns: [], rows: [] },
+        aframe: {
+          preset: "none",
+          source: "",
+          primitives: [],
+          hotspots: [],
+          assets: [],
+          camera: { fov: 75, position: [0, 2, 2], lookAt: [0, 0.5, 0] },
+        },
       };
       const resolvedMetadata =
         initialMetadata || defaultMetadataByType[blockType];

@@ -17,6 +17,7 @@ import "@xyflow/react/dist/style.css";
 
 import { getAvatarUrl } from "@lib/utils";
 import CanvasBlock, { BlockData } from "./CanvasBlock";
+import dynamic from "next/dynamic";
 import { YDocContext } from "./YDocContext";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 import PaletteBlock from "./PaletteBlock";
@@ -293,6 +294,10 @@ const RemoteCursors = memo(function RemoteCursors({
   );
 });
 
+// A-Frame ships a large WebGL runtime (~600 KB minified); lazy-load the block
+// so projects without a 3D Scene block never download it.
+const AFrameBlock = dynamic(() => import("./AFrameBlock"), { ssr: false });
+
 const blockTypes = {
   text: CanvasBlock,
   link: CanvasBlock,
@@ -305,6 +310,7 @@ const blockTypes = {
   checklist: ChecklistBlock,
   kanban: KanbanBlock,
   calendar: CalendarBlock,
+  aframe: AFrameBlock,
   sketch: SketchBlock,
   folder: FolderBlock,
   vercel: VercelBlock,
@@ -3105,7 +3111,8 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     | "cron"
                     | "mermaid"
                     | "subcanvas"
-                    | "database",
+                    | "database"
+                    | "aframe",
                   "",
                   initialMeta,
                 );

@@ -21,6 +21,7 @@ import {
   Layers,
   Network,
   Table,
+  Box,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { VercelIcon } from "../icons/VercelIcon";
@@ -47,7 +48,8 @@ export type AddableBlockType =
   | "mermaid"
   | "calendar"
   | "subcanvas"
-  | "database";
+  | "database"
+  | "aframe";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
@@ -74,7 +76,8 @@ export type BlockTypeLabelKey =
   | "blockTypeMermaid"
   | "blockTypeCalendar"
   | "blockTypeSubcanvas"
-  | "blockTypeDatabase";
+  | "blockTypeDatabase"
+  | "blockType3DScene";
 
 export type BlockTypeIconComponent = ComponentType<{
   className?: string;
@@ -181,6 +184,12 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     type: "database",
     icon: Table,
     labelKey: "blockTypeDatabase",
+    section: "block",
+  },
+  {
+    type: "aframe",
+    icon: Box,
+    labelKey: "blockType3DScene",
     section: "block",
   },
   {

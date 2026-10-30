@@ -12,6 +12,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 3D Scene block: a new block type for the canvas, supporting primitives, models, and hotspots ([#128](https://github.com/3xpyth0n/ideon/issues/128)).
 - OIDC authentication fully configurable through environment variables (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`): if all three are set at startup, the OIDC provider is enabled and the management UI card turns gray with a "Set by environment variables" badge ([#136](https://github.com/3xpyth0n/ideon/issues/136)).
 
+### Fixed
+
+- Fixed MCP tools returning no projects when PostgreSQL runs under a non-superuser role with row-level security enabled; MCP requests now run inside `withAuthenticatedSession` and use `getDb()` so RLS evaluates against the API key's user ([#141](https://github.com/3xpyth0n/ideon/issues/141)).
+
 ### Security
 
 - The Docker image now runs on Node 24.22.2, which includes the fix for CVE-2026-111497 (remote code execution via Brotli decoding) along with V8 stability and performance backports, and the base image is pinned to that exact version so future builds no longer drift ([#140](https://github.com/3xpyth0n/ideon/issues/140)).

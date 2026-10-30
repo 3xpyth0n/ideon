@@ -9,7 +9,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LeveldbPersistence } from "y-leveldb";
-import { getGlobalDb } from "../../../app/lib/db";
+import { getDb } from "../../../app/lib/db";
 import { getMcpContext } from "../context";
 import { getProjectDoc, readBlocks, readLinks } from "../yjs-bridge";
 import { computeBoundingBox } from "../placement-engine";
@@ -45,7 +45,7 @@ export async function checkProjectAccess(
   projectId: string,
   requiredRole: ProjectRole = "viewer",
 ): Promise<ProjectRole> {
-  const db = getGlobalDb();
+  const db = getDb();
 
   const project = await db
     .selectFrom("projects")
@@ -105,7 +105,7 @@ export function registerProjectTools(
     {},
     async () => {
       const { userId } = getMcpContext();
-      const db = getGlobalDb();
+      const db = getDb();
 
       const projects = await db
         .selectFrom("projects")
@@ -172,7 +172,7 @@ export function registerProjectTools(
       // Validate access (any role is fine for reading)
       await checkProjectAccess(userId, projectId);
 
-      const db = getGlobalDb();
+      const db = getDb();
       const project = await db
         .selectFrom("projects")
         .select(["id", "name", "description"])

@@ -232,7 +232,7 @@ export function HomeSearch() {
                     onSelect={handleSelect}
                   />
                   <SearchResultGroup
-                    heading={dict.dashboard.homeSearchProjects}
+                    heading={dict.dashboard.projects}
                     items={results.projects}
                     query={trimmedQuery}
                     onSelect={handleSelect}

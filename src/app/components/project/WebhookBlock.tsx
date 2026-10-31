@@ -193,7 +193,7 @@ const WebhookBlock = memo(
                 className="block-type-icon shrink-0 opacity-60"
               />
               <span className="text-sm uppercase tracking-wider opacity-50 font-bold shrink-0">
-                {tr.webhookBlockLabel || "Webhook"}
+                {dict.blocks.blockTypeWebhook || "Webhook"}
               </span>
               {automationState ? (
                 <AutomationStateBadge

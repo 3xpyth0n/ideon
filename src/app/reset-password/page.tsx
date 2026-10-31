@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = dictionaries[lang] || dictionaries["en"];
 
   return {
-    title: dict.pages.resetPassword,
+    title: dict.auth.resetPassword,
   };
 }
 

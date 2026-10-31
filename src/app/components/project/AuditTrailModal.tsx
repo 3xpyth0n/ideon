@@ -191,7 +191,7 @@ export function AuditTrailModal({
 
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-xs uppercase tracking-widest opacity-50">
-            {dict.project.auditFilterAction}
+            {dict.management.action}
             <select
               className="bg-transparent border border-(--border) p-1 text-xs"
               value={actionFilter}
@@ -236,7 +236,7 @@ export function AuditTrailModal({
                   {dict.project.auditActor}
                 </th>
                 <th className="p-4 border-b border-(--border)">
-                  {dict.project.auditAction}
+                  {dict.management.action}
                 </th>
                 <th className="p-4 border-b border-(--border)">
                   {dict.project.auditSummary}

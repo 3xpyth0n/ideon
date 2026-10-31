@@ -100,9 +100,7 @@ export function TransferBlockModal({
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-bold">
-                    {user.displayName ||
-                      user.username ||
-                      dict.account.defaultUsername}
+                    {user.displayName || user.username || dict.auth.username}
                   </span>
                   <span className="text-2xs opacity-30 font-medium">
                     {user.email}

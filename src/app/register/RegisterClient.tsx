@@ -222,7 +222,7 @@ export function RegisterClient() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={dict.auth.passwordPlaceholder}
+                placeholder={dict.auth.confirmPasswordPlaceholder}
                 minLength={8}
                 required
               />

@@ -33,13 +33,13 @@ export function SetupForm() {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast.error(dict.auth.invalidEmail);
+      toast.error(dict.auth.emailError);
       setBusy(false);
       return;
     }
 
     if (!username.trim()) {
-      toast.error(dict.auth.usernameRequired);
+      toast.error(dict.auth.usernameError);
       setBusy(false);
       return;
     }
@@ -99,7 +99,7 @@ export function SetupForm() {
 
       <div className="auth-card">
         <div className="auth-header">
-          <h1 className="auth-title">{dict.setup.setupTitle}</h1>
+          <h1 className="auth-title">{dict.dashboard.welcomeTitle}</h1>
           <p className="auth-subtitle">{dict.setup.setupSubtitle}</p>
         </div>
 
@@ -110,7 +110,7 @@ export function SetupForm() {
               className="auth-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={dict.blocks.emailPlaceholder}
+              placeholder={dict.auth.emailPlaceholder}
               required
             />
           </div>

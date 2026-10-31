@@ -115,7 +115,7 @@ export function ManagementClient() {
     const titles: Record<string, string> = {
       authentication: dict.pages.management,
       sso: dict.pages.ssoProviders,
-      audit: dict.pages.securityAudit,
+      audit: dict.management.securityAudit,
     };
 
     if (activeTab && titles[activeTab]) {
@@ -295,10 +295,8 @@ export function ManagementClient() {
     <div className="management-container">
       <header className="management-header mt-6">
         <div>
-          <h1 className="management-title">{dict.management.management}</h1>
-          <p className="management-subtitle">
-            {dict.management.managementSubtitle}
-          </p>
+          <h1 className="management-title">{dict.pages.management}</h1>
+          <p className="management-subtitle">{dict.pages.managementSubtitle}</p>
         </div>
       </header>
 
@@ -319,7 +317,7 @@ export function ManagementClient() {
           onClick={() => (window.location.hash = "sso")}
         >
           <Globe size={16} />
-          {dict.management.ssoProviders}
+          {dict.pages.ssoProviders}
         </button>
         <button
           className={`management-tab-btn ${
@@ -445,9 +443,7 @@ export function ManagementClient() {
           {activeTab === "sso" && (
             <div className="auth-settings">
               <section className="settings-section">
-                <h2 className="section-title">
-                  {dict.management.ssoProviders}
-                </h2>
+                <h2 className="section-title">{dict.pages.ssoProviders}</h2>
                 <p className="section-subtitle">{dict.management.ssoDesc}</p>
 
                 <div className="provider-grid">
@@ -563,7 +559,7 @@ export function ManagementClient() {
                       {dict.management.securityAudit}
                     </h2>
                     <p className="section-subtitle">
-                      {dict.management.managementSubtitle}
+                      {dict.pages.managementSubtitle}
                     </p>
                   </div>
                   <Button
@@ -573,7 +569,7 @@ export function ManagementClient() {
                   >
                     <div className="flex items-center gap-2">
                       <Download size={14} />
-                      <span>{dict.common.export}</span>
+                      <span>{dict.blocks.export}</span>
                     </div>
                   </Button>
                 </div>

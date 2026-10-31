@@ -336,7 +336,7 @@ const ContactBlock = memo(({ id, data, selected }: ContactBlockProps) => {
 
           <div className="contact-field">
             <label className="contact-field-label">
-              {dict.blocks.contactNote || "Note"}
+              {dict.blocks.blockTypeText || "Note"}
             </label>
             <textarea
               className={`contact-input contact-textarea ${

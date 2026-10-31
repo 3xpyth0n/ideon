@@ -63,9 +63,7 @@ export function AccessRequestsList({
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold tracking-tight text-white/90">
-                  {req.username ||
-                    req.displayName ||
-                    dict.account.defaultUsername}
+                  {req.username || req.displayName || dict.auth.username}
                 </span>
               </div>
               <span className="text-xs opacity-40 font-medium">

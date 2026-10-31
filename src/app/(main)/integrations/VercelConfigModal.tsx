@@ -146,7 +146,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
       <div className="flex items-center gap-3 mb-6 pb-4 border-b border-(--border-color)">
         <VercelIcon size={24} />
         <h2 className="text-lg font-semibold tracking-wide m-0">
-          {integrations.vercelIntegration || "Vercel"}
+          {dict.blocks.blockTypeVercel || "Vercel"}
         </h2>
       </div>
 
@@ -159,7 +159,7 @@ export default function VercelConfigModal({ onClose }: VercelConfigModalProps) {
       {!loading && !connected && (
         <div className="flex flex-col gap-6 py-4">
           <p className="text-sm text-(--text-secondary) text-center leading-relaxed">
-            {integrations.vercelIntegrationDesc ||
+            {dict.blocks.blockTypeVercelDesc ||
               "Deploy and monitor your Vercel projects from the canvas"}
           </p>
 

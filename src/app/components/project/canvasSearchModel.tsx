@@ -66,6 +66,8 @@ function readMetadataTitle(metadata: unknown): string {
 
 function getBlockTypeLabel(dict: Dict, blockType: string | undefined) {
   const { labelKey } = getBlockTypeMeta(blockType);
+  if (labelKey === "blockTypeCalendar") return dict.blocks.blockTypeCalendar;
+  if (labelKey === "blockTypeVercel") return dict.auth.vercel;
   return dict.blocks[labelKey];
 }
 

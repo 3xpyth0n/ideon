@@ -360,7 +360,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 </button>
                 <button
                   onClick={() => editor.chain().focus().addColumnAfter().run()}
-                  title={dict.kanban.addColumn}
+                  title={dict.blocks.addColumn}
                 >
                   <Columns2 size={iconSize} className="text-green-500" />
                 </button>
@@ -373,7 +373,7 @@ const BubbleMenuComponent = forwardRef<HTMLDivElement, BubbleMenuProps>(
                 </button>
                 <button
                   onClick={() => editor.chain().focus().deleteColumn().run()}
-                  title={dict.kanban.deleteColumn}
+                  title={dict.blocks.deleteColumn}
                   className="delete-button"
                 >
                   <Columns2 size={iconSize} />

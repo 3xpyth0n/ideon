@@ -2187,7 +2187,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                 onClick={() => setIsAddBlockOpen(true)}
                               >
                                 <kbd>Ctrl + A</kbd>
-                                <span>{dict.canvas.addBlock}</span>
+                                <span>{dict.canvas.AddBlock}</span>
                               </button>
                               <button
                                 className="command-palette-hint"
@@ -2355,7 +2355,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   >
                                     <span className="project-mobile-actions-item-main">
                                       <Plus size={14} />
-                                      <span>{dict.canvas.addBlock}</span>
+                                      <span>{dict.canvas.AddBlock}</span>
                                     </span>
                                   </button>
                                 )}
@@ -2427,7 +2427,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                     <span className="project-mobile-actions-item-main">
                                       <Share2 size={14} />
                                       <span>
-                                        {dict.project.share || "Share"}
+                                        {dict.canvas.share || "Share"}
                                       </span>
                                     </span>
                                   </button>
@@ -2461,7 +2461,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   >
                                     <span className="project-mobile-actions-item-main">
                                       <ShieldCheck size={14} />
-                                      <span>{dict.management.auditTrail}</span>
+                                      <span>{dict.project.auditTitle}</span>
                                     </span>
                                   </button>
                                 )}
@@ -2564,14 +2564,14 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                         <ControlButton
                           onClick={undo}
                           disabled={!canUndo || isPreviewMode}
-                          title={dict.canvas.undo || "Undo"}
+                          title={dict.common.cancel || "Undo"}
                         >
                           <Undo2 />
                         </ControlButton>
                         <ControlButton
                           onClick={redo}
                           disabled={!canRedo || isPreviewMode}
-                          title={dict.canvas.redo || "Redo"}
+                          title={dict.common.restore || "Redo"}
                         >
                           <Redo2 />
                         </ControlButton>
@@ -2631,7 +2631,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                   <Plus size={14} />
                                 </span>
                                 <span className="context-menu-label">
-                                  {dict.canvas.addBlock || "Add Block"}
+                                  {dict.canvas.AddBlock || "Add Block"}
                                 </span>
                               </button>
                               <button
@@ -2738,7 +2738,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                                       <UserPlus size={14} />
                                     </span>
                                     <span className="context-menu-label">
-                                      {dict.project.transferOwnership ||
+                                      {dict.modals.transferTitle ||
                                         "Transfer Ownership"}
                                     </span>
                                   </button>

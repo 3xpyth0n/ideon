@@ -624,16 +624,16 @@ export function Sidebar({
               <Link
                 href="/home"
                 className="flex-1 flex items-center gap-3 px-3 py-2.5 text-inherit no-underline"
-                title={isCollapsed ? dict.dashboard.home : ""}
+                title={isCollapsed ? dict.project.rootFolder : ""}
               >
                 <House size={20} />
-                {!isCollapsed && <span>{dict.dashboard.home}</span>}
+                {!isCollapsed && <span>{dict.project.rootFolder}</span>}
               </Link>
             </div>
 
             {!isCollapsed && (
               <div className="nav-separator">
-                <span>{dict.dashboard.projectsManagement}</span>
+                <span>{dict.management.management}</span>
               </div>
             )}
 
@@ -1011,10 +1011,10 @@ export function Sidebar({
                       }
                     }}
                     className="flex-1 flex items-center gap-3 px-3 py-2.5 text-inherit no-underline"
-                    title={isCollapsed ? dict.management.management : ""}
+                    title={isCollapsed ? dict.pages.management : ""}
                   >
                     <Settings size={20} />
-                    {!isCollapsed && <span>{dict.management.management}</span>}
+                    {!isCollapsed && <span>{dict.pages.management}</span>}
                   </button>
                   {!isCollapsed && (
                     <button
@@ -1070,7 +1070,7 @@ export function Sidebar({
                         }
                       }}
                     >
-                      <span>{dict.management.ssoProviders}</span>
+                      <span>{dict.pages.ssoProviders}</span>
                     </a>
                     <a
                       href="/management#audit"
@@ -1162,9 +1162,7 @@ export function Sidebar({
             {!isCollapsed && (
               <div className="sidebar-profile-info">
                 <span className="sidebar-profile-name">
-                  {user?.displayName ||
-                    user?.username ||
-                    dict.account.defaultUsername}
+                  {user?.displayName || user?.username || dict.auth.username}
                 </span>
                 <span className="sidebar-profile-email">
                   {user?.username ? `@${user.username}` : "..."}
@@ -1182,8 +1180,8 @@ export function Sidebar({
             onClick={() => handleToggle(!isCollapsed)}
             title={
               isCollapsed
-                ? dict.layout.expand || "Expand"
-                : dict.layout.collapse || "Collapse"
+                ? dict.blocks.expandChildren || "Expand"
+                : dict.blocks.collapseChildren || "Collapse"
             }
           >
             {isCollapsed ? (

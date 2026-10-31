@@ -109,7 +109,7 @@ export function RepositorySyncModal({
         toast.success(dict.repositorySync.settingsSaved);
       } else {
         const data = await res.json();
-        toast.error(data.error || dict.repositorySync.settingsFailed);
+        toast.error(data.error || dict.modals.saveSettingsError);
       }
     } catch {
       toast.error(dict.common.error);
@@ -180,8 +180,8 @@ export function RepositorySyncModal({
     const parts = conflict.path.split("/");
     const entityMap: Record<string, string> = {
       block: dict.repositorySync.conflictEntityBlock,
-      link: dict.repositorySync.conflictEntityLink,
-      project: dict.repositorySync.conflictEntityProject,
+      link: dict.blocks.blockTypeLink,
+      project: dict.blocks.subCanvasProject,
     };
     const entity = entityMap[conflict.kind] ?? conflict.kind;
     const id =
@@ -239,7 +239,7 @@ export function RepositorySyncModal({
             }`}
           >
             {tab === "configure"
-              ? dict.repositorySync.configureTab
+              ? dict.management.configure
               : dict.repositorySync.statusTab}
             {tab === "status" && conflicts.length > 0 && (
               <span className="px-1.5 py-0.5 bg-yellow-500 text-[10px] rounded-full text-black font-bold leading-none">
@@ -324,7 +324,7 @@ export function RepositorySyncModal({
               className="btn-primary ml-auto"
               disabled={loading || !repositoryUrl.trim() || !branch.trim()}
             >
-              {dict.repositorySync.saveSettings}
+              {dict.common.save}
             </Button>
           </div>
         </div>
@@ -345,7 +345,7 @@ export function RepositorySyncModal({
                 onClick={() => setActiveTab("configure")}
                 className="btn-secondary mt-2"
               >
-                {dict.repositorySync.configureTab}
+                {dict.management.configure}
               </Button>
             </div>
           ) : (

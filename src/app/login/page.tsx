@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = dictionaries[lang] || dictionaries["en"];
 
   return {
-    title: dict.pages.login,
+    title: dict.auth.login,
   };
 }
 

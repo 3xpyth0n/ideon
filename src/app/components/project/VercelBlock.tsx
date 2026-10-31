@@ -433,7 +433,7 @@ const VercelBlock = (props: CanvasBlockProps) => {
       case "READY":
         return blocksDict.vercelDeploymentReady || "Ready";
       case "ERROR":
-        return blocksDict.vercelDeploymentError || "Error";
+        return dict.common.error || "Error";
       case "CANCELED":
         return blocksDict.vercelDeploymentCanceled || "Canceled";
       default:

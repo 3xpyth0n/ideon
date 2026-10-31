@@ -596,7 +596,7 @@ const GitBlock = (props: CanvasBlockProps) => {
           <ProviderIcon size={20} className="git-logo" />
           <div className="git-title-container">
             <h4 className="git-repo-name">
-              {repoName || dict.blocks.gitRepository}
+              {repoName || dict.blocks.blockTypeGit}
             </h4>
             <span className="git-repo-url">{repoUrl}</span>
           </div>

@@ -163,7 +163,7 @@ export function FolderAccessModal({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs font-bold">
-                      {user.username || dict.account.defaultUsername}
+                      {user.username || dict.auth.username}
                     </span>
                     <span className="text-2xs opacity-30 font-medium">
                       {user.email}
@@ -223,7 +223,7 @@ export function FolderAccessModal({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold tracking-tight">
-                        {user.username || dict.account.defaultUsername}
+                        {user.username || dict.auth.username}
                       </span>
                     </div>
                     <span className="text-2xs opacity-30 font-medium">

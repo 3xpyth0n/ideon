@@ -106,7 +106,7 @@ export default function KanbanSettingsModal({
                 ...(f.options || []),
                 {
                   id: `o-${Math.random().toString(36).slice(2, 9)}`,
-                  label: dict.kanban.optionLabel,
+                  label: dict.blocks.defaultEnumOption,
                   color: "#666666",
                   description: "",
                 },
@@ -344,7 +344,7 @@ export default function KanbanSettingsModal({
                                 id: `o-${Math.random()
                                   .toString(36)
                                   .slice(2, 9)}`,
-                                label: dict.kanban.optionLabel,
+                                label: dict.blocks.defaultEnumOption,
                                 color: "#666666",
                                 description: "",
                               },
@@ -354,12 +354,12 @@ export default function KanbanSettingsModal({
                   }}
                   className="px-2 py-1 rounded bg-transparent border border-white/6"
                 >
-                  <option value="text">{dict.kanban.fieldTypeText}</option>
+                  <option value="text">{dict.blocks.columnTypeText}</option>
                   <option value="date">{dict.kanban.fieldTypeDate}</option>
                   <option value="select">
                     {dict.kanban.fieldTypeSingleSelect}
                   </option>
-                  <option value="number">{dict.kanban.fieldTypeNumber}</option>
+                  <option value="number">{dict.blocks.columnTypeNumber}</option>
                 </select>
                 <button
                   className="p-1 rounded"
@@ -491,7 +491,7 @@ export default function KanbanSettingsModal({
                       className="mt-1 px-2 py-1 rounded bg-white/5 text-2xs"
                       type="button"
                     >
-                      {dict.kanban.addOption}
+                      {dict.blocks.addOption}
                     </button>
                   </div>
                 </div>

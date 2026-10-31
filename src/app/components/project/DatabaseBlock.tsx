@@ -980,7 +980,7 @@ function DatabaseBlock({ id, data, selected }: DatabaseBlockProps) {
       case "url":
         return tr("blocks.columnTypeUrl", "URL");
       case "relation":
-        return tr("blocks.columnTypeLink", "Link");
+        return tr("blocks.blockTypeLink", "Link");
       case "checkbox":
         return tr("blocks.columnTypeCheckbox", "Checkbox");
       default:
@@ -999,7 +999,7 @@ function DatabaseBlock({ id, data, selected }: DatabaseBlockProps) {
       case "url":
         return tr("blocks.columnTypeUrlDesc", "Web links with validation.");
       case "relation":
-        return tr("blocks.columnTypeLinkDesc", "Reference another block.");
+        return tr("blocks.blockTypeLinkDesc", "Reference another block.");
       case "checkbox":
         return tr("blocks.columnTypeCheckboxDesc", "Boolean true or false.");
       default:
@@ -1566,7 +1566,7 @@ function DatabaseBlock({ id, data, selected }: DatabaseBlockProps) {
                     type="button"
                     className="db-toolbar-btn"
                     onClick={() => setExportMenuOpen(!exportMenuOpen)}
-                    title={tr("blocks.export", "Export")}
+                    title={tr("common.export", "Export")}
                   >
                     <Download size={16} />
                     <ChevronDown size={14} />
@@ -1582,7 +1582,7 @@ function DatabaseBlock({ id, data, selected }: DatabaseBlockProps) {
                         }}
                       >
                         <Download size={14} />
-                        {tr("blocks.exportCsv", "Export CSV")}
+                        {tr("common.exportCsv", "Export CSV")}
                       </button>
                       <button
                         type="button"
@@ -1593,7 +1593,7 @@ function DatabaseBlock({ id, data, selected }: DatabaseBlockProps) {
                         }}
                       >
                         <Download size={14} />
-                        {tr("blocks.exportMarkdown", "Export Markdown")}
+                        {tr("common.exportMarkdown", "Export Markdown")}
                       </button>
                     </div>
                   )}

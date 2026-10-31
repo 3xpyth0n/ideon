@@ -28,7 +28,7 @@ export function ResetPasswordClient() {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      toast.error(dict.auth.passwordsDoNotMatch);
+      toast.error(dict.auth.passwordMismatch);
       return;
     }
 
@@ -129,7 +129,7 @@ export function ResetPasswordClient() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={dict.auth.passwordPlaceholder}
+                placeholder={dict.auth.confirmPasswordPlaceholder}
                 required
                 autoComplete="new-password"
               />
@@ -151,7 +151,7 @@ export function ResetPasswordClient() {
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={dict.auth.passwordPlaceholder}
+                placeholder={dict.auth.confirmPasswordPlaceholder}
                 required
                 autoComplete="new-password"
               />

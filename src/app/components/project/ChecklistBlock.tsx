@@ -829,7 +829,7 @@ const ChecklistBlock = memo(({ id, data, selected }: ChecklistBlockProps) => {
                 className={`checklist-progress-badge checklist-progress-${status}`}
               >
                 {status === "complete"
-                  ? dict.blocks.checklistComplete
+                  ? dict.common.done
                   : dict.blocks.checklistProgress
                       .replace("{completed}", completed.toString())
                       .replace("{total}", total.toString())}

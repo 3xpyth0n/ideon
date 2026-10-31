@@ -152,10 +152,10 @@ const getDefaultKanbanColumns = (
   },
   {
     id: `c-${Math.random().toString(36).slice(2, 9)}`,
-    title: tr("kanban.defaultColumn.inProgress", "In Progress"),
+    title: tr("automation.stateBadgeProcessing", "In Progress"),
     color: "#FF4D00",
     description: tr(
-      "kanban.defaultColumn.inProgressDesc",
+      "automation.stateBadgeProcessingDesc",
       "Tasks being worked on",
     ),
     tasks: [getDefaultPlaceholderTask(tr)],
@@ -164,9 +164,9 @@ const getDefaultKanbanColumns = (
   },
   {
     id: `c-${Math.random().toString(36).slice(2, 9)}`,
-    title: tr("kanban.defaultColumn.done", "Done"),
+    title: tr("common.done", "Done"),
     color: "#008000",
-    description: tr("kanban.defaultColumn.doneDesc", "Completed tasks"),
+    description: tr("common.doneDesc", "Completed tasks"),
     tasks: [getDefaultPlaceholderTask(tr)],
     widthPx: MIN_COLUMN_PX,
     workflowState: "done",
@@ -918,7 +918,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
 
   const createColumn = (): Column => ({
     id: `c-${Math.random().toString(36).slice(2, 9)}`,
-    title: tr("kanban.defaultColumnTitle", "Column"),
+    title: tr("blocks.title", "Column"),
     tasks: [],
     widthPx: MIN_COLUMN_PX,
   });
@@ -1030,7 +1030,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
         setDragColumnPreviewTitle(
           typeof parsed.column?.title === "string"
             ? parsed.column.title
-            : tr("kanban.defaultColumnTitle", "Column"),
+            : tr("blocks.title", "Column"),
         );
         setDragTaskPreview(null);
         return "column";
@@ -1042,7 +1042,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
           text:
             typeof parsed.text === "string"
               ? parsed.text
-              : tr("kanban.addTask", "Task"),
+              : tr("blocks.addTask", "Task"),
           checked: Boolean(parsed.checked),
         });
         setDragColumnPreviewTitle("");
@@ -1521,7 +1521,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     const kind = syncDragPreviewFromEvent(e) || "column";
     if (kind !== "column") return;
     if (!dragColumnPreviewTitle) {
-      setDragColumnPreviewTitle(tr("kanban.defaultColumnTitle", "Column"));
+      setDragColumnPreviewTitle(tr("blocks.title", "Column"));
     }
     setDragKind("column");
     setDropTargetColumnIndex(insertIndex);
@@ -1536,7 +1536,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
     const kind = syncDragPreviewFromEvent(e) || "column";
     if (kind !== "column") return;
     if (!dragColumnPreviewTitle) {
-      setDragColumnPreviewTitle(tr("kanban.defaultColumnTitle", "Column"));
+      setDragColumnPreviewTitle(tr("blocks.title", "Column"));
     }
     setDragKind("column");
     setDropTargetColumnIndex(insertIndex);
@@ -1717,7 +1717,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                   className="kb-btn-empty"
                 >
                   <Plus size={28} />
-                  <span>{tr("kanban.addColumn", "Add Column")}</span>
+                  <span>{tr("blocks.addColumn", "Add Column")}</span>
                 </button>
               )}
             </div>
@@ -2013,7 +2013,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                                   <Copy size={14} />
                                 </span>
                                 <span className="context-menu-label">
-                                  {tr("kanban.duplicateColumn", "Duplicate")}
+                                  {tr("blocks.duplicate", "Duplicate")}
                                 </span>
                               </button>
 
@@ -2028,7 +2028,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                                   <Trash2 size={14} />
                                 </span>
                                 <span className="context-menu-label">
-                                  {tr("kanban.deleteColumn", "Delete")}
+                                  {tr("blocks.deleteColumn", "Delete")}
                                 </span>
                               </button>
                             </FloatingMenu>
@@ -2087,7 +2087,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                                 </button>
                                 <div className="kb-task-placeholder-text">
                                   {dragTaskPreview?.text ||
-                                    tr("kanban.addTask", "Task")}
+                                    tr("blocks.addTask", "Task")}
                                 </div>
                               </div>
                             )}
@@ -2151,7 +2151,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                             </button>
                             <div className="kb-task-placeholder-text">
                               {dragTaskPreview?.text ||
-                                tr("kanban.addTask", "Task")}
+                                tr("blocks.addTask", "Task")}
                             </div>
                           </div>
                         )}
@@ -2181,7 +2181,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                         }}
                       >
                         <Plus size={14} />
-                        {tr("kanban.addTask", "Add Task")}
+                        {tr("blocks.addTask", "Add Task")}
                       </button>
                     )}
 
@@ -2249,7 +2249,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
                           dragSourceColumnIndex + 1 !== idx + 1)) ? (
                         <div className="kb-sep-preview-title">
                           {dragColumnPreviewTitle ||
-                            tr("kanban.defaultColumnTitle", "Column")}
+                            tr("blocks.title", "Column")}
                         </div>
                       ) : (
                         <Plus size={14} />

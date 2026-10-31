@@ -77,7 +77,10 @@ export function GitTokenManager() {
       if (!res.ok) {
         const err = await res.json();
         if (err.message === "TOKEN_EXISTS_FOR_HOST") {
-          toast.error(dict.gitTokens.tokenExists);
+          toast.error(
+            dict.integrations.patHint ||
+              "Create one in your Vercel Account Settings under Tokens",
+          );
           return;
         }
         throw new Error();
@@ -186,7 +189,7 @@ export function GitTokenManager() {
                     {t.host}
                     {t.enabled === 0 && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 font-medium">
-                        {dict.gitTokens.disabled}
+                        {dict.common.disabled}
                       </span>
                     )}
                   </div>
@@ -307,7 +310,7 @@ export function GitTokenManager() {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-muted uppercase tracking-wider">
-              {dict.gitTokens.token}
+              {dict.integrations.manualTokenLabel}
             </label>
             <input
               type="password"
@@ -319,7 +322,7 @@ export function GitTokenManager() {
               autoComplete="off"
             />
             <p className="text-[10px] text-muted opacity-60">
-              {dict.gitTokens.tokenHint}
+              {dict.integrations.patHint}
             </p>
           </div>
 

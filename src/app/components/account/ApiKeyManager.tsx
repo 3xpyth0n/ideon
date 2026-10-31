@@ -136,7 +136,8 @@ export function ApiKeyManager() {
                     ? `${tr.lastUsed} ${formatDate(k.lastUsedAt)}`
                     : tr.neverUsed}
                   {" · "}
-                  {tr.created} {formatDate(k.createdAt)}
+                  {dict.project.instrument.provenanceCreated}{" "}
+                  {formatDate(k.createdAt)}
                 </p>
               </div>
               <button
@@ -223,7 +224,7 @@ export function ApiKeyManager() {
               <button
                 onClick={() => setRevealed((r) => !r)}
                 className="p-1.5 opacity-40 hover:opacity-80 transition-opacity"
-                aria-label={revealed ? tr.hide : tr.reveal}
+                aria-label={revealed ? dict.auth.hidePassword : tr.reveal}
               >
                 {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
               </button>
@@ -251,7 +252,7 @@ export function ApiKeyManager() {
               setCopied(false);
             }}
           >
-            {tr.done}
+            {dict.common.done}
           </button>
         </div>
       </Modal>

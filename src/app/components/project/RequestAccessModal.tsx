@@ -144,7 +144,7 @@ export function RequestAccessModal({
           ) : status === "rejected" ? (
             <div className="flex flex-col gap-4">
               <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-sm">
-                <p className="font-medium">{dict.project.requestRejected}</p>
+                <p className="font-medium">{dict.common.requestRejected}</p>
                 <p className="opacity-80 mt-1 text-xs">
                   {dict.project.requestRejectedDesc}
                 </p>

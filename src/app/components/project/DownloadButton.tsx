@@ -34,7 +34,7 @@ export function DownloadButton() {
   }, [dict.blocks.downloadImageFailed, getNodes, getNodesBounds, theme]);
 
   return (
-    <ControlButton onClick={onClick} title={dict.common.export}>
+    <ControlButton onClick={onClick} title={dict.blocks.export}>
       <Download size={16} />
     </ControlButton>
   );

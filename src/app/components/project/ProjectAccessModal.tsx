@@ -331,7 +331,7 @@ export function ProjectAccessModal({
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs font-bold">
-                          {user.username || dict.account.defaultUsername}
+                          {user.username || dict.auth.username}
                         </span>
                         <span className="text-2xs opacity-30 font-medium">
                           {user.email}
@@ -424,7 +424,7 @@ export function ProjectAccessModal({
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs font-bold tracking-tight">
-                          {user.username || dict.account.defaultUsername}
+                          {user.username || dict.auth.username}
                         </span>
                         <span className="text-2xs opacity-30 font-medium">
                           {user.email}

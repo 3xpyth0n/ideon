@@ -432,7 +432,7 @@ export function ProjectModal({
 
               <div className="form-group w-full">
                 <label className="modal-label">
-                  {dict.project.targetFolder}
+                  {dict.blocks.blockType3DScenePosition}
                 </label>
                 <div className="w-full rounded-xl border border-white/18 bg-white/6 transition-colors hover:border-white/30 hover:bg-white/10">
                   <button
@@ -484,7 +484,7 @@ export function ProjectModal({
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1.5">
                     <h3 className="text-xl font-bold uppercase tracking-widest">
-                      {dict.project.targetFolder}
+                      {dict.blocks.blockType3DScenePosition}
                     </h3>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/60">
                       {renderLocationBreadcrumb(draftFolderId)}

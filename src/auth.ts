@@ -324,6 +324,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
               clientSecret: config.oidc?.clientSecret,
               issuer: config.oidc?.issuer,
               allowDangerousEmailAccountLinking: true,
+              checks: ["pkce", "state"] as ("pkce" | "state")[],
               authorization: { params: { scope: "openid email profile" } },
               profile(profile: {
                 sub: string;

@@ -15,6 +15,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fixed MCP tools returning no projects when PostgreSQL runs under a non-superuser role with row-level security enabled; MCP requests now run inside `withAuthenticatedSession` and use `getDb()` so RLS evaluates against the API key's user ([#141](https://github.com/3xpyth0n/ideon/issues/141)).
+- Fixed OIDC sign-in failing with `invalid_state` when the identity provider requires the state parameter, such as Pocket ID 2.10+; Auth.js now sends and validates `state` alongside PKCE on the authorization request and callback ([#142](https://github.com/3xpyth0n/ideon/issues/142)).
 
 ### Security
 

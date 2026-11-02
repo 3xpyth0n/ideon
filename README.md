@@ -135,6 +135,7 @@ Thanks go to these wonderful people:
       <td align="center" valign="top" width="14.28%"><a href="http://www.murlock.org/blog"><img src="https://avatars.githubusercontent.com/u/250625?v=4?s=100" width="100px;" alt="Michael Bonfils"/><br /><sub><b>Michael Bonfils</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/commits?author=murlock" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://www.tonghuaroot.com"><img src="https://avatars.githubusercontent.com/u/23011166?v=4?s=100" width="100px;" alt="tonghuaroot (童话)"/><br /><sub><b>tonghuaroot (童话)</b></sub></a><br /><a href="#security-tonghuaroot" title="Security">🛡️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/de3erve"><img src="https://avatars.githubusercontent.com/u/63722109?v=4?s=100" width="100px;" alt="de3erve"/><br /><sub><b>de3erve</b></sub></a><br /><a href="#security-de3erve" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.enricorenna.me/"><img src="https://avatars.githubusercontent.com/u/115326412?v=4?s=100" width="100px;" alt="Enrico Renna"/><br /><sub><b>Enrico Renna</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/issues?q=author%3A4nner" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>

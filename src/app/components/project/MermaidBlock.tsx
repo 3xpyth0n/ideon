@@ -285,8 +285,8 @@ const MermaidBlock = memo(({ id, data, selected }: MermaidBlockProps) => {
             <button
               type="button"
               className="mermaid-export-button"
-              title={dict.common.export}
-              aria-label={dict.common.export}
+              title={dict.blocks.export}
+              aria-label={dict.blocks.export}
               onClick={handleDownload}
               disabled={!svg || isEditing}
             >

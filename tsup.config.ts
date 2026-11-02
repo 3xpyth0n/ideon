@@ -8,6 +8,12 @@ const externalPackages = [
   "classic-level",
   "node-pty",
   "jsdom",
+  "yjs",
+  "y-prosemirror",
+  "y-websocket",
+  "y-leveldb",
+  "y-indexeddb",
+  "y-protocols",
 ];
 
 export default defineConfig({

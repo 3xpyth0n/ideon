@@ -513,7 +513,7 @@ export default function KanbanCard({
                 }}
                 role="button"
               >
-                {title || tr("kanban.addTask", "Task")}
+                {title || tr("blocks.addTask", "Task")}
               </div>
               <TaskStatusBadge status={dependencyState.status} tr={tr} />
             </div>
@@ -656,7 +656,7 @@ export default function KanbanCard({
                         <Edit3 size={14} />
                       </span>
                       <span className="context-menu-label">
-                        {tr("kanban.editTask", "Edit")}
+                        {tr("common.edit", "Edit")}
                       </span>
                     </button>
 
@@ -690,7 +690,7 @@ export default function KanbanCard({
                         <Copy size={14} />
                       </span>
                       <span className="context-menu-label">
-                        {tr("kanban.duplicateTask", "Duplicate")}
+                        {tr("blocks.duplicate", "Duplicate")}
                       </span>
                     </button>
 

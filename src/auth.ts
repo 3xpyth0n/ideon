@@ -9,7 +9,13 @@ import Google from "next-auth/providers/google";
 import Slack from "next-auth/providers/slack";
 import GitLab from "next-auth/providers/gitlab";
 import AzureAD from "next-auth/providers/azure-ad";
-import { getDb, getAuthProviders, getPool } from "@lib/db";
+import {
+  getDb,
+  getAuthProviders,
+  getPool,
+  getEnvAuthProviders,
+  mergeAuthProviders,
+} from "@lib/db";
 import { logSecurityEvent } from "@lib/audit";
 import { headers } from "next/headers";
 import * as argon2 from "argon2";
@@ -55,6 +61,9 @@ const getRateLimiter = () => {
 // Auth configuration
 export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
   const freshConfig = await getAuthProviders();
+  const envConfig = getEnvAuthProviders();
+  const config = mergeAuthProviders(freshConfig, envConfig);
+
   const db = getDb();
 
   return {
@@ -305,16 +314,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         issuer: `https://login.microsoftonline.com/${freshConfig.entra?.tenantId}/v2.0`,
         allowDangerousEmailAccountLinking: true,
       }),
-      ...(freshConfig.oidc?.issuer
+      ...(config.oidc?.issuer
         ? [
             {
               id: "oidc",
               name: "OIDC",
               type: "oidc" as const,
-              clientId: freshConfig.oidc?.clientId,
-              clientSecret: freshConfig.oidc?.clientSecret,
-              issuer: freshConfig.oidc?.issuer,
+              clientId: config.oidc?.clientId,
+              clientSecret: config.oidc?.clientSecret,
+              issuer: config.oidc?.issuer,
               allowDangerousEmailAccountLinking: true,
+              checks: ["pkce", "state"] as ("pkce" | "state")[],
               authorization: { params: { scope: "openid email profile" } },
               profile(profile: {
                 sub: string;

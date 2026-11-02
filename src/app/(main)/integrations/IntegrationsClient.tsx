@@ -37,7 +37,7 @@ export default function IntegrationsClient() {
     <div className="management-container">
       <header className="management-header mt-6">
         <div>
-          <h1 className="management-title">{dict.integrations.title}</h1>
+          <h1 className="management-title">{dict.management.integrations}</h1>
           <p className="management-subtitle">{dict.integrations.subtitle}</p>
         </div>
       </header>
@@ -69,9 +69,7 @@ export default function IntegrationsClient() {
                     releaseStatus={releaseStatus}
                     comingSoonText={dict.integrations.comingSoon}
                     betaText={dict.integrations.beta}
-                    actionLabel={
-                      canOpenImport ? dict.integrations.importAction : undefined
-                    }
+                    actionLabel={canOpenImport ? dict.common.import : undefined}
                     onAction={
                       canOpenImport
                         ? () => setSelectedIntegrationId(integration.id)
@@ -79,7 +77,7 @@ export default function IntegrationsClient() {
                     }
                     configureLabel={
                       integration.capabilities?.oauth
-                        ? dict.integrations.vercelConfigure || "Configure"
+                        ? dict.management.configure || "Configure"
                         : undefined
                     }
                     onConfigure={

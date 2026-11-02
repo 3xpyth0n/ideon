@@ -30,7 +30,7 @@ export default function AddBlockModal({
       className="add-block-modal"
       showCloseButton={false}
     >
-      <Command label={dict.canvas.addBlock}>
+      <Command label={dict.canvas.AddBlock}>
         <Command.Input
           placeholder={dict.canvas.addBlockPlaceholder}
           autoFocus

@@ -211,7 +211,7 @@ export function WebhookBlockConfigModal({
       onClose={onClose}
       title={
         blockTitle
-          ? `${tr.webhookBlockLabel || "Webhook"} — ${blockTitle}`
+          ? `${dict.blocks.blockTypeWebhook || "Webhook"} — ${blockTitle}`
           : tr.configure || "Configure"
       }
       className="w-full max-w-lg"
@@ -249,7 +249,7 @@ export function WebhookBlockConfigModal({
               className="flex items-center gap-1 text-[10px] opacity-40 hover:opacity-70 transition-opacity"
             >
               <Plus size={10} />
-              {tr.conditionsAdd || "Add"}
+              {dict.blocks.vercelEnvAdd || "Add"}
             </button>
           </div>
           {conditions.length === 0 ? (
@@ -456,7 +456,7 @@ export function WebhookBlockConfigModal({
               isDirty.current = true;
             }}
           >
-            <option value="">{tr.noTarget || "None"}</option>
+            <option value="">{dict.blocks.releaseNone || "None"}</option>
             {blocks.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.title || b.blockType} ({b.id.slice(0, 6)}…)
@@ -568,7 +568,7 @@ export function WebhookBlockConfigModal({
             }
           >
             {saving ? <RefreshCw size={13} className="animate-spin" /> : null}
-            {tr.save || "Save"}
+            {dict.common.save || "Save"}
           </button>
           {initialMeta.ruleCreated && endpointUrl && (
             <button

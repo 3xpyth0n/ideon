@@ -165,7 +165,7 @@ const CronBlock = memo(({ id, data, selected }: NodeProps<Node<BlockData>>) => {
           <div className="flex items-center gap-2 shrink-0">
             <Timer size={14} className="block-type-icon shrink-0 opacity-60" />
             <span className="text-sm uppercase tracking-wider opacity-50 font-bold shrink-0">
-              {tr.cronBlockLabel || "Cron"}
+              {dict.blocks.blockTypeCron || "Cron"}
             </span>
             {automationState ? (
               <AutomationStateBadge

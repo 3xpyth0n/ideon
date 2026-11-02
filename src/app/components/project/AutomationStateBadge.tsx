@@ -60,9 +60,9 @@ export function AutomationStateBadge({ state, customLabel, onReset }: Props) {
   const { Icon } = config;
   const fallbackLabels: Record<AutomationState, string> = {
     processing: tr.stateBadgeProcessing || "Processing",
-    success: tr.stateBadgeSuccess || "Success",
+    success: dict.common.success || "Success",
     warning: tr.stateBadgeWarning || "Warning",
-    error: tr.stateBadgeError || "Error",
+    error: dict.common.error || "Error",
   };
   const displayLabel = customLabel || fallbackLabels[state];
   const resetLabel = tr.resetState || "Reset state";

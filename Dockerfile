@@ -1,4 +1,4 @@
-FROM node:24-slim AS base
+FROM node:24.22.2-slim AS base
 WORKDIR /app
 
 # 1. Install dependencies and build app
@@ -16,7 +16,7 @@ RUN rm -rf .next/cache
 FROM base AS server-runtime
 RUN apt-get update && apt-get install -y --no-install-recommends python3 build-essential ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY package-lock.json ./
-RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","kysely":"*","nanoid":"*","node-pty":"*","pdfkit":"*"}}' > package.json \
+RUN echo '{"name":"runtime","private":true,"dependencies":{"y-leveldb":"*","yjs":"*","y-prosemirror":"*","y-websocket":"*","y-indexeddb":"*","y-protocols":"*","kysely":"*","nanoid":"*","node-pty":"*","pdfkit":"*"}}' > package.json \
     && npm install --no-audit --no-fund
 
 # 3. Production image

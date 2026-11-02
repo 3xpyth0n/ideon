@@ -46,7 +46,7 @@ export function AuditExportModal({
       } else if (format === "csv") {
         // Simple CSV generation
         const headers = [
-          dict.management.timestamp,
+          dict.project.auditTimestamp,
           dict.management.action,
           dict.management.status,
           dict.auth.email,
@@ -114,7 +114,7 @@ export function AuditExportModal({
             >
               <FileJson className="export-format-icon" />
               <span className="export-format-label">
-                {dict.providers.formatJson}
+                {dict.blocks.languageJson}
               </span>
               <span className="export-format-description">.json</span>
             </div>
@@ -147,7 +147,7 @@ export function AuditExportModal({
             disabled={exporting}
             className="btn-primary"
           >
-            {exporting ? dict.common.loading : dict.common.export}
+            {exporting ? dict.common.loading : dict.blocks.export}
           </Button>
         </div>
       </div>

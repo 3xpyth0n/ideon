@@ -85,7 +85,8 @@ export type BlockData = {
     | "mermaid"
     | "calendar"
     | "subcanvas"
-    | "database";
+    | "database"
+    | "aframe";
   label?: string;
   metadata?: string | Record<string, unknown>;
   isLocked?: boolean;

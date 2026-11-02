@@ -17,6 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import CanvasBlock, { BlockData } from "./CanvasBlock";
+import dynamic from "next/dynamic";
 import ProjectCoreBlock from "./ProjectCoreBlock";
 import PaletteBlock from "./PaletteBlock";
 import ContactBlock from "./ContactBlock";
@@ -50,6 +51,9 @@ const FIT_MIN_ZOOM = 0.1;
 const FIT_MAX_ZOOM_SELECTED = 2;
 const FIT_MAX_ZOOM_ALL = 1;
 
+// A-Frame ships a large WebGL runtime; lazy-load the block like ProjectCanvas.
+const AFrameBlock = dynamic(() => import("./AFrameBlock"), { ssr: false });
+
 const blockTypes = {
   text: CanvasBlock,
   link: CanvasBlock,
@@ -65,6 +69,7 @@ const blockTypes = {
   shell: ShellBlock,
   latex: CanvasBlock,
   mermaid: MermaidBlock,
+  aframe: AFrameBlock,
   core: ProjectCoreBlock,
 };
 

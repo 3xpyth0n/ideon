@@ -6,6 +6,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
 import { unzipSync, strFromU8 } from "fflate";
+import { remapAFrameHotspotsFromParsed } from "../../../lib/aframe-hotspot";
 import type { NewBlock, NewLink } from "@lib/types/db";
 import {
   parseCanvasStateSnapshots,
@@ -87,6 +88,11 @@ function remapMetadataBlockIds(
         }
         return JSON.stringify(meta);
       }
+    }
+
+    if (blockType === "aframe") {
+      const remapped = remapAFrameHotspotsFromParsed(parsed, idMap);
+      metadata = JSON.stringify(remapped);
     }
   } catch {
     // Return original on parse failure

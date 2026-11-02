@@ -58,7 +58,7 @@ export function ApplyConfirmModal({
           {dict.modals.applyConfirmDiscardAndApply}
         </Button>
         <Button variant="outline" onClick={onCancel} disabled={saving}>
-          {dict.modals.applyConfirmCancel}
+          {dict.common.cancel}
         </Button>
       </div>
     </Modal>

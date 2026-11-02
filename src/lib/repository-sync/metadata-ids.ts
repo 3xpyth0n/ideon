@@ -1,3 +1,5 @@
+import { remapAFrameHotspotsFromParsed } from "@lib/aframe-hotspot";
+
 export function remapMetadataBlockIds(
   blockType: string,
   value: unknown,
@@ -68,6 +70,10 @@ export function remapMetadataBlockIds(
         }
       }
     }
+  }
+
+  if (blockType === "aframe" && Array.isArray(metadata.hotspots)) {
+    remapAFrameHotspotsFromParsed(metadata, idMap);
   }
 
   return wasString ? JSON.stringify(metadata) : metadata;

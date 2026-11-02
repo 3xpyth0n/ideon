@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = dictionaries[lang] || dictionaries["en"];
 
   return {
-    title: dict.integrations.title,
+    title: dict.management.integrations,
   };
 }
 

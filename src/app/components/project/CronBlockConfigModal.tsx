@@ -176,7 +176,7 @@ export function CronBlockConfigModal({
       onClose={onClose}
       title={
         blockTitle
-          ? `${tr.cronBlockLabel || "Cron"} — ${blockTitle}`
+          ? `${dict.blocks.blockTypeCron || "Cron"} — ${blockTitle}`
           : tr.configure || "Configure"
       }
       className="w-full max-w-lg"
@@ -333,7 +333,7 @@ export function CronBlockConfigModal({
               isDirty.current = true;
             }}
           >
-            <option value="">{tr.noTarget || "None"}</option>
+            <option value="">{dict.blocks.releaseNone || "None"}</option>
             {blocks.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.title || b.blockType} ({b.id.slice(0, 6)}…)
@@ -362,7 +362,7 @@ export function CronBlockConfigModal({
             ) : (
               <Check size={13} />
             )}
-            {tr.save || "Save"}
+            {dict.common.save || "Save"}
           </button>
           {initialMeta.ruleCreated && (
             <button

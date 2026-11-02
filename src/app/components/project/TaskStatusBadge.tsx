@@ -22,7 +22,7 @@ const STATUS_COPY: Record<
     className: "kb-task-status-ready",
   },
   blocking: {
-    key: "kanban.statusBlocking",
+    key: "kanban.blocksOthers",
     fallback: "Blocking others",
     className: "kb-task-status-blocking",
   },

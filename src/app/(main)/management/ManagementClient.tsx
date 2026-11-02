@@ -59,6 +59,7 @@ export function ManagementClient() {
   const [activeTab, setActiveTab] = useState("authentication");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [oidcEnvConfigured, setOidcEnvConfigured] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -114,7 +115,7 @@ export function ManagementClient() {
     const titles: Record<string, string> = {
       authentication: dict.pages.management,
       sso: dict.pages.ssoProviders,
-      audit: dict.pages.securityAudit,
+      audit: dict.management.securityAudit,
     };
 
     if (activeTab && titles[activeTab]) {
@@ -153,6 +154,7 @@ export function ManagementClient() {
               ...(data.authProviders || {}),
             },
           }));
+          setOidcEnvConfigured(!!data.oidcEnvConfigured);
         }
       })
       .catch((err) => {
@@ -293,10 +295,8 @@ export function ManagementClient() {
     <div className="management-container">
       <header className="management-header mt-6">
         <div>
-          <h1 className="management-title">{dict.management.management}</h1>
-          <p className="management-subtitle">
-            {dict.management.managementSubtitle}
-          </p>
+          <h1 className="management-title">{dict.pages.management}</h1>
+          <p className="management-subtitle">{dict.pages.managementSubtitle}</p>
         </div>
       </header>
 
@@ -317,7 +317,7 @@ export function ManagementClient() {
           onClick={() => (window.location.hash = "sso")}
         >
           <Globe size={16} />
-          {dict.management.ssoProviders}
+          {dict.pages.ssoProviders}
         </button>
         <button
           className={`management-tab-btn ${
@@ -443,9 +443,7 @@ export function ManagementClient() {
           {activeTab === "sso" && (
             <div className="auth-settings">
               <section className="settings-section">
-                <h2 className="section-title">
-                  {dict.management.ssoProviders}
-                </h2>
+                <h2 className="section-title">{dict.pages.ssoProviders}</h2>
                 <p className="section-subtitle">{dict.management.ssoDesc}</p>
 
                 <div className="provider-grid">
@@ -454,7 +452,14 @@ export function ManagementClient() {
                       enabled: false,
                     };
                     return (
-                      <div key={p.key} className="provider-card">
+                      <div
+                        key={p.key}
+                        className={`provider-card ${
+                          p.key === "oidc" && oidcEnvConfigured
+                            ? "opacity-60"
+                            : ""
+                        }`}
+                      >
                         <div className="provider-header">
                           <div
                             className="provider-icon-wrapper"
@@ -486,7 +491,9 @@ export function ManagementClient() {
                                   : ""
                             }`}
                             onClick={() => toggleProvider(p.key)}
-                            disabled={saving}
+                            disabled={
+                              saving || (p.key === "oidc" && oidcEnvConfigured)
+                            }
                           >
                             <div className="switch-thumb" />
                           </button>
@@ -513,11 +520,19 @@ export function ManagementClient() {
                             : config.enabled
                               ? dict.common.enabled
                               : dict.common.disabled}
+                          {p.key === "oidc" && oidcEnvConfigured && (
+                            <span className="text-xs text-muted bg-black/5 rounded px-1.5 py-0.5">
+                              {dict.management.oidcSetByEnv}
+                            </span>
+                          )}
                         </div>
                         <Button
                           className="btn-minimal w-full mt-4 justify-between group hover:text-text-main"
                           onClick={() => openProviderConfig(p.key)}
                           noRipple
+                          disabled={
+                            saving || (p.key === "oidc" && oidcEnvConfigured)
+                          }
                         >
                           <span className="btn-text group-hover:text-text-main">
                             {dict.management.configure}
@@ -544,7 +559,7 @@ export function ManagementClient() {
                       {dict.management.securityAudit}
                     </h2>
                     <p className="section-subtitle">
-                      {dict.management.managementSubtitle}
+                      {dict.pages.managementSubtitle}
                     </p>
                   </div>
                   <Button
@@ -554,7 +569,7 @@ export function ManagementClient() {
                   >
                     <div className="flex items-center gap-2">
                       <Download size={14} />
-                      <span>{dict.common.export}</span>
+                      <span>{dict.blocks.export}</span>
                     </div>
                   </Button>
                 </div>
@@ -706,6 +721,23 @@ function ProviderConfigModal({
                   : ""
               }`}
             >
+              <div
+                className={`border border-blue-100/50 p-4 rounded-lg flex flex-col gap-2 transition-all duration-300 ${
+                  provider === "vercel" && !formData.oauthEnabled
+                    ? "opacity-30 pointer-events-none grayscale"
+                    : ""
+                }`}
+              >
+                <div className="flex items-center gap-2 font-bold tracking-wider">
+                  <Globe size={14} />
+                  <span>{dict.providers.callbackUrlNotice}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="px-2 py-1 rounded border border-blue-200/50 text-[11px] flex-1 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                    {`${appUrl}/api/auth/callback/oidc`}
+                  </code>
+                </div>
+              </div>
               <div className="form-group">
                 <label className="modal-label">{dict.providers.clientId}</label>
                 <input
@@ -777,7 +809,7 @@ function ProviderConfigModal({
                   />
                 </div>
               )}
-              {provider !== "vercel" && (
+              {provider !== "vercel" && provider !== "oidc" && (
                 <div className="form-group">
                   <label className="modal-label">
                     {dict.providers.redirectUri}

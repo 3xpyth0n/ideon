@@ -887,7 +887,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
       case "trash":
         return dict.dashboard.trash || "Trash";
       default:
-        return dict.dashboard.home || "Home";
+        return dict.project.rootFolder || "Home";
     }
   };
 
@@ -982,7 +982,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     onDragLeave={handleBreadcrumbDragLeave}
                     onDrop={(e) => handleBreadcrumbDrop(e, null)}
                     onClick={() => router.push("/home")}
-                    title={dict.dashboard.home}
+                    title={dict.project.rootFolder}
                   >
                     <Home size={14} />
                   </div>
@@ -1265,7 +1265,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     }`}
                   >
                     {folder.ownerId === currentUser?.id
-                      ? dict.dashboard.statusMine
+                      ? dict.common.me
                       : dict.dashboard.statusShared}
                   </span>
                 </div>
@@ -1521,7 +1521,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                     }`}
                   >
                     {project.ownerId === currentUser?.id
-                      ? dict.dashboard.statusMine
+                      ? dict.common.me
                       : dict.dashboard.statusShared}
                   </span>
                 </div>

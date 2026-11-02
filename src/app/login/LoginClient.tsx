@@ -172,7 +172,7 @@ export function LoginClient() {
   const onMagicLinkRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!magicEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(magicEmail)) {
-      toast.error(dict.auth.invalidEmail);
+      toast.error(dict.auth.emailError);
       return;
     }
 
@@ -266,7 +266,7 @@ export function LoginClient() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onAnimationStart={handleAutofill(setPassword)}
-                  placeholder={dict.auth.passwordPlaceholder}
+                  placeholder={dict.auth.confirmPasswordPlaceholder}
                   autoComplete="current-password"
                   required
                 />

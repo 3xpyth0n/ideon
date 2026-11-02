@@ -77,7 +77,7 @@ export default function IntegrationImportModal({
       };
 
       if (!res.ok) {
-        throw new Error(payload.error || dict.integrations.importError);
+        throw new Error(payload.error || dict.canvas.dropImportError);
       }
 
       toast.success(dict.integrations.importSuccess);
@@ -88,7 +88,7 @@ export default function IntegrationImportModal({
       }
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : dict.integrations.importError,
+        error instanceof Error ? error.message : dict.canvas.dropImportError,
       );
     } finally {
       setLoading(false);

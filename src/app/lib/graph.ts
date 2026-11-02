@@ -70,6 +70,7 @@ const BlockDataSchema = z
         "calendar",
         "subcanvas",
         "database",
+        "aframe",
       ])
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -154,7 +155,8 @@ export function prepareBlockForDb(
       | "frame"
       | "mermaid"
       | "subcanvas"
-      | "database") ||
+      | "database"
+      | "aframe") ||
     "text";
 
   return {

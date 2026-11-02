@@ -26,7 +26,7 @@ export function AuditTable({ logs, loading }: AuditTableProps) {
         <thead className="bg-(--bg-sidebar) uppercase tracking-wider text-[10px] font-bold text-(--text-muted)">
           <tr>
             <th className="p-4 border-b border-(--border)">
-              {dict.management.timestamp}
+              {dict.project.auditTimestamp}
             </th>
             <th className="p-4 border-b border-(--border)">
               {dict.management.action}

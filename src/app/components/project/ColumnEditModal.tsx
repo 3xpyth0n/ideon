@@ -63,7 +63,7 @@ export default function ColumnEditModal({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={dict.kanban.defaultColumnTitle}
+            placeholder={dict.blocks.title}
             className="w-full px-2 py-1 rounded bg-transparent border border-white/6 text-sm"
           />
         </div>
@@ -125,11 +125,11 @@ export default function ColumnEditModal({
             className="w-full px-2 py-1 rounded bg-transparent border border-white/6 text-sm"
           >
             <option value="">{dict.kanban.workflowStateNone}</option>
-            <option value="todo">{dict.kanban.workflowStateTodo}</option>
+            <option value="todo">{dict.kanban["defaultColumn.todo"]}</option>
             <option value="in-progress">
-              {dict.kanban.workflowStateInProgress}
+              {dict.automation.stateBadgeProcessing}
             </option>
-            <option value="done">{dict.kanban.workflowStateDone}</option>
+            <option value="done">{dict.common.done}</option>
           </select>
         </div>
 

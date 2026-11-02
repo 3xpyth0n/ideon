@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getGlobalDb, withAuthenticatedSession } from "../../../app/lib/db";
+import { getDb } from "../../../app/lib/db";
 import { getMcpContext } from "../context";
 import { checkProjectAccess } from "./projects";
 import { syncProjectRepository } from "../../repository-sync/sync";
@@ -21,7 +21,7 @@ export function registerRepositorySyncTools(server: McpServer): void {
     async ({ projectId }) => {
       const { userId } = getMcpContext();
       await checkProjectAccess(userId, projectId, "owner");
-      const state = await getGlobalDb()
+      const state = await getDb()
         .selectFrom("projectRepositorySyncs")
         .select([
           "repositoryUrl",
@@ -67,7 +67,7 @@ export function registerRepositorySyncTools(server: McpServer): void {
     async ({ projectId, mode }) => {
       const { userId } = getMcpContext();
       await checkProjectAccess(userId, projectId, "owner");
-      const project = await getGlobalDb()
+      const project = await getDb()
         .selectFrom("projects")
         .select(["id", "ownerId", "name", "description"])
         .where("id", "=", projectId)
@@ -81,12 +81,10 @@ export function registerRepositorySyncTools(server: McpServer): void {
       }
 
       try {
-        const result = await withAuthenticatedSession(userId, () =>
-          syncProjectRepository(
-            project,
-            userId,
-            mode as RepositorySyncConflictMode,
-          ),
+        const result = await syncProjectRepository(
+          project,
+          userId,
+          mode as RepositorySyncConflictMode,
         );
         return {
           content: [

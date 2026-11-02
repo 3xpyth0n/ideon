@@ -10,7 +10,12 @@ const i18nDir = __dirname;
 // Discover all JSON translation files and sort them
 const jsonFiles = fs
   .readdirSync(i18nDir)
-  .filter((file) => file.endsWith(".json") && file !== "loader.ts")
+  .filter(
+    (file) =>
+      file.endsWith(".json") &&
+      file !== "loader.ts" &&
+      file !== "i18n-dedup-map.json",
+  )
   .sort();
 
 if (jsonFiles.length < 2) {
@@ -138,6 +143,60 @@ for (const file of jsonFiles) {
   if (emptyValues.length > 0) {
     console.warn(`⚠️  Empty values in ${file}: ${emptyValues.join(", ")}`);
     hasEmptyValues = true;
+  }
+}
+
+// Check for duplicate values within each file
+function flattenKeyValues(
+  obj: unknown,
+  prefix = "",
+): { key: string; value: string }[] {
+  const entries: { key: string; value: string }[] = [];
+  if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
+    return entries;
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? prefix + "." + key : key;
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      entries.push(...flattenKeyValues(value, fullKey));
+    } else if (typeof value === "string") {
+      entries.push({ key: fullKey, value });
+    }
+  }
+  return entries;
+}
+
+for (const file of jsonFiles) {
+  const entries = flattenKeyValues(fileKeys[file]);
+  const valueCount = new Map<string, string[]>();
+  for (const entry of entries) {
+    const keys = valueCount.get(entry.value) || [];
+    keys.push(entry.key);
+    valueCount.set(entry.value, keys);
+  }
+
+  const duplicates = new Map<string, string[]>();
+  for (const [value, keys] of valueCount.entries()) {
+    if (keys.length <= 1) continue;
+    const sameNamespace = keys.every((key) => {
+      const top = key.split(".")[0];
+      return keys.every((other) => other.split(".")[0] === top);
+    });
+    if (sameNamespace) {
+      duplicates.set(value, keys);
+    }
+  }
+
+  if (duplicates.size > 0) {
+    console.error(`❌ Duplicate values in ${file}:`);
+    for (const [value, keys] of duplicates.entries()) {
+      console.error(`   ${JSON.stringify(value)}`);
+      for (const key of keys) {
+        console.error(`     - ${key}`);
+      }
+    }
+    failed = true;
   }
 }
 

@@ -172,8 +172,8 @@ export default function EventModal({
     }
   }, [isOpen, editingEvent, selectedDay]);
 
-  const completedLabel = tr("calendar.completed", "");
-  const completedByTemplate = tr("calendar.completedBy", "");
+  const completedLabel = tr("common.done", "");
+  const completedByTemplate = tr("common.doneBy", "");
   const formatCompletedBy = (user: string): string => {
     return completedByTemplate.replace("{user}", user);
   };
@@ -264,7 +264,7 @@ export default function EventModal({
                 ? completedBy && completedBy !== ""
                   ? formatCompletedBy(completedBy)
                   : completedLabel
-                : tr("calendar.completedQuestion", "Completed?")}
+                : tr("common.doneQuestion", "Completed?")}
             </div>
             <button
               type="button"
@@ -281,13 +281,13 @@ export default function EventModal({
         )}
         <div className="event-modal-field">
           <label className="event-modal-label">
-            {tr("calendar.eventTitle", "Title")}
+            {tr("blocks.title", "Title")}
           </label>
           <input
             value={title}
             onChange={(e) => !isReadOnly && setTitle(e.target.value)}
             className="event-modal-input"
-            placeholder={tr("calendar.eventTitlePlaceholder", "Event title")}
+            placeholder={tr("blocks.titlePlaceholder", "Event title")}
             autoFocus
             disabled={isReadOnly}
           />
@@ -295,14 +295,14 @@ export default function EventModal({
 
         <div className="event-modal-field">
           <label className="event-modal-label">
-            {tr("calendar.eventDescription", "Description")}
+            {tr("blocks.description", "Description")}
           </label>
           <textarea
             value={description}
             onChange={(e) => !isReadOnly && setDescription(e.target.value)}
             className="event-modal-textarea"
             placeholder={tr(
-              "calendar.eventDescriptionPlaceholder",
+              "blocks.descriptionPlaceholder",
               "Event description",
             )}
             rows={3}
@@ -312,7 +312,7 @@ export default function EventModal({
 
         <div className="event-modal-field">
           <label className="event-modal-label">
-            {tr("calendar.eventColor", "Color")}
+            {tr("automation.color", "Color")}
           </label>
           <div className="event-modal-color-picker flex gap-2">
             {DEFAULT_EVENT_COLORS.map((c) => (

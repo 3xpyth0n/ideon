@@ -538,7 +538,7 @@ export default function AccountPage() {
                     className="zen-input text-sm"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={dict.auth.passwordPlaceholder}
+                    placeholder={dict.auth.confirmPasswordPlaceholder}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -550,12 +550,12 @@ export default function AccountPage() {
                     className="zen-input text-sm"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder={dict.auth.passwordPlaceholder}
+                    placeholder={dict.auth.confirmPasswordPlaceholder}
                   />
                 </div>
                 <div className="pt-2">
                   <button type="submit" className="btn-primary">
-                    {dict.account.rotatePassword}
+                    {dict.common.refresh}
                   </button>
                 </div>
               </form>
@@ -659,7 +659,7 @@ export default function AccountPage() {
             <div className="about-meta-grid">
               <p className="about-meta-item">
                 <span className="about-meta-label">
-                  {dict.account.aboutAppNameLabel}
+                  {dict.account.aboutSectionInfo}
                 </span>
                 <span className="about-meta-value">{ideonSiteConfig.name}</span>
               </p>
@@ -695,9 +695,7 @@ export default function AccountPage() {
           </div>
 
           <div className="about-section">
-            <h3 className="about-section-title">
-              {dict.account.aboutSectionLinks}
-            </h3>
+            <h3 className="about-section-title">{dict.blocks.blockTypeLink}</h3>
             <div className="about-actions-grid">
               <a
                 className="btn-ghost about-action-link"

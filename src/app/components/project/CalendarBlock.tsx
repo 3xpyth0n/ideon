@@ -505,10 +505,7 @@ const CalendarBlock = memo(({ id, data, selected }: CalendarBlockProps) => {
           fileName.endsWith(".ics") || file.type === "text/calendar";
         if (!isIcs) {
           toast.error(
-            tr(
-              "calendar.importInvalidFile",
-              "Only .ics files can be imported.",
-            ),
+            tr("common.importInvalidFile", "Only .ics files can be imported."),
           );
           return;
         }
@@ -518,7 +515,7 @@ const CalendarBlock = memo(({ id, data, selected }: CalendarBlockProps) => {
         if (!importedEvents.length) {
           toast.error(
             tr(
-              "calendar.importFailed",
+              "common.importFailed",
               "No events were found in the imported file.",
             ),
           );
@@ -528,9 +525,7 @@ const CalendarBlock = memo(({ id, data, selected }: CalendarBlockProps) => {
         const nextEvents = [...events, ...importedEvents];
         setEvents(nextEvents);
         saveMetadata(nextEvents);
-        toast.success(
-          tr("calendar.importSuccess", "Imported calendar events."),
-        );
+        toast.success(tr("common.importSuccess", "Imported calendar events."));
       } finally {
         dragCounterRef.current = 0;
         setIsImportDragActive(false);
@@ -749,7 +744,7 @@ const CalendarBlock = memo(({ id, data, selected }: CalendarBlockProps) => {
           <div className="flex items-center gap-2">
             <CalendarIcon size={14} className="block-type-icon calendar" />
             <span className="text-sm uppercase tracking-wider opacity-50 font-bold">
-              {dict.common.blockTypeCalendar || "Calendar"}
+              {dict.blocks.blockTypeCalendar || "Calendar"}
             </span>
           </div>
 
@@ -810,7 +805,7 @@ const CalendarBlock = memo(({ id, data, selected }: CalendarBlockProps) => {
                 className="calendar-import-button px-3 py-1 text-sm rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Upload size={14} className="mr-1" />
-                {tr("calendar.import", "Import")}
+                {tr("common.import", "Import")}
               </button>
               <input
                 ref={fileInputRef}
@@ -1083,7 +1078,7 @@ const CalendarBlock = memo(({ id, data, selected }: CalendarBlockProps) => {
                 </div>
                 {hoverCard.event.completed && (
                   <div className="calendar-event-hovercard-badge">
-                    {tr("calendar.completed", "Completed")}
+                    {tr("common.done", "Completed")}
                   </div>
                 )}
               </div>

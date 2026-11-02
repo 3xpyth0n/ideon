@@ -228,7 +228,7 @@ export default function TaskDependencyPanel({
                 </span>
                 <span className="task-modal-add-pill">
                   <Plus size={12} />
-                  {tr("kanban.addLink", "Add")}
+                  {tr("blocks.vercelEnvAdd", "Add")}
                 </span>
               </button>
             ))
@@ -271,8 +271,8 @@ export default function TaskDependencyPanel({
                     <span className="task-modal-link-meta">
                       {record?.blockTitle || link.blockTitle} ·{" "}
                       {record?.isDone
-                        ? tr("kanban.completedState", "Done")
-                        : tr("kanban.waitingState", "In progress")}
+                        ? tr("common.done", "Done")
+                        : tr("automation.stateBadgeProcessing", "In progress")}
                     </span>
                   </div>
                   <div className="task-modal-row-actions">
@@ -291,7 +291,7 @@ export default function TaskDependencyPanel({
                           {tr("kanban.blockedBy", "Blocked by")}
                         </option>
                         <option value="related">
-                          {tr("kanban.relatedTasks", "Related")}
+                          {tr("kanban.linkedTasks", "Related")}
                         </option>
                       </select>
                     </div>
@@ -319,7 +319,7 @@ export default function TaskDependencyPanel({
 
         <div className="task-modal-group">
           <div className="task-modal-subtitle">
-            {tr("kanban.relatedTasks", "Related tasks")}
+            {tr("kanban.linkedTasks", "Related tasks")}
           </div>
           <div className="task-modal-list">
             {relatedLinks.length > 0 ? (
@@ -365,7 +365,7 @@ export default function TaskDependencyPanel({
                           {tr("kanban.blockedBy", "Blocked by")}
                         </option>
                         <option value="related">
-                          {tr("kanban.relatedTasks", "Related")}
+                          {tr("kanban.linkedTasks", "Related")}
                         </option>
                       </select>
                     </div>

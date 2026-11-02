@@ -14,6 +14,7 @@ import { authenticateApiKey } from "./auth";
 import { checkRateLimit, MAX_REQUESTS } from "./rate-limiter";
 import { createMcpServer } from "./server";
 import { mcpContextStorage } from "./context";
+import { withAuthenticatedSession } from "../../app/lib/db";
 
 /** Maximum request body size: 1 MB */
 const MAX_BODY_SIZE = 1024 * 1024;
@@ -168,13 +169,16 @@ export async function handleMcpRequest(
 
   await mcpServer.connect(transport);
 
-  // Run within AsyncLocalStorage context so tools can access userId
-  await mcpContextStorage.run(
-    { userId: authResult.userId, keyId: authResult.keyId },
-    async () => {
-      await transport.handleRequest(req, res, parsedBody);
-    },
-  );
+  // Run within AsyncLocalStorage contexts so tools can access userId and
+  // RLS session variables (app.current_user_id) are set for DB queries
+  await withAuthenticatedSession(authResult.userId, async () => {
+    await mcpContextStorage.run(
+      { userId: authResult.userId, keyId: authResult.keyId },
+      async () => {
+        await transport.handleRequest(req, res, parsedBody);
+      },
+    );
+  });
 
   // Close the transport after the request is handled
   await transport.close();

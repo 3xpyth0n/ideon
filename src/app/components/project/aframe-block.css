@@ -1,0 +1,301 @@
+/* AFrameBlock styles */
+
+/* Scene viewport: themed background shows through the transparent canvas. */
+.aframe-content {
+  background: var(--bg-sidebar);
+  touch-action: none;
+}
+
+/* Scene editor popover, anchored to the right side of the block card. */
+.aframe-editor {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  width: 20rem;
+  z-index: 120;
+  background: var(--bg-island);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-main);
+}
+
+.aframe-editor-header {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.aframe-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.625rem;
+}
+
+.aframe-editor-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-sidebar);
+  color: var(--text-main);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.aframe-editor-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.aframe-editor-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.aframe-editor-icon-btn:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.aframe-editor-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.aframe-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.375rem;
+}
+
+.aframe-editor-row:hover {
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+}
+
+/* A list item wraps its main row and its expandable detail area below. */
+.aframe-editor-item {
+  border-radius: 0.375rem;
+}
+
+/* Expanded per-item detail: Position (X/Y/Z) and, for primitives, Size. */
+.aframe-editor-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0.125rem 0.25rem 0.375rem 1.5rem;
+  padding: 0.375rem 0.5rem;
+  border-left: 2px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.aframe-editor-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.aframe-editor-expand-btn:hover,
+.aframe-editor-expand-btn[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+.aframe-editor-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.aframe-editor-detail-title {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.aframe-editor-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.aframe-editor-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.aframe-editor-axis {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.aframe-editor-number {
+  width: 3.5rem;
+  min-width: 0;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-sidebar);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.aframe-editor-number:focus {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+/* Hotspot label chips: overlay never captures pointers, only the chips are clickable. */
+.aframe-hotspot-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.aframe-hotspot-chip {
+  position: absolute;
+  display: none;
+  align-items: center;
+  gap: 0.375rem;
+  transform: translate(-50%, -100%);
+  max-width: 12rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-island);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  pointer-events: auto;
+  cursor: pointer;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+.aframe-hotspot-chip:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.aframe-hotspot-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent, #3b82f6);
+}
+
+.aframe-hotspot-chip-dangling {
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+.aframe-hotspot-chip-dangling .aframe-hotspot-dot {
+  background: var(--danger, #ef4444);
+}
+
+.aframe-hotspot-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aframe-editor-label {
+  min-width: 4.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.aframe-editor-asset-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.aframe-editor-input,
+.aframe-editor-color {
+  min-width: 0;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-sidebar);
+  color: var(--text-main);
+  font-size: 0.75rem;
+}
+
+.aframe-editor-input {
+  flex: 1;
+}
+
+.aframe-editor-color {
+  flex: none;
+  width: 5.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.aframe-editor-input:focus,
+.aframe-editor-color:focus {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.aframe-editor-scale {
+  flex: none;
+  width: 4.5rem;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-sidebar);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.aframe-editor-scale:focus {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.aframe-editor-error {
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+/* Placeholder shown when a hotspot's bound block no longer exists. */
+.aframe-editor-stale-option {
+  color: var(--danger);
+}

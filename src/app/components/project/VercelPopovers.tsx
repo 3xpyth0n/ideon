@@ -257,7 +257,7 @@ export function BypassPopover({ projectId, onClose }: BypassPopoverProps) {
         setError(message);
       }
     } catch {
-      setError(dict.blocks.vercelBypassError || "An error occurred");
+      setError(dict.common.canvasErrorTitle || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -301,7 +301,7 @@ export function BypassPopover({ projectId, onClose }: BypassPopoverProps) {
               className="btn-ghost py-1.5 text-[11px] font-medium"
               style={{ minWidth: 0 }}
             >
-              {dict.blocks.vercelCancel || "Cancel"}
+              {dict.common.cancel || "Cancel"}
             </button>
           </div>
           {error && (

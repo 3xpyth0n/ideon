@@ -35,8 +35,8 @@ export default function CommandPalette({
 
   const shortcuts: Record<string, ShortcutEntry[]> = {
     [dict.canvas.cheatGeneral]: [
-      { label: dict.canvas.undo, keys: ["Ctrl", "Z"] },
-      { label: dict.canvas.redo, keys: ["Ctrl", "Y"] },
+      { label: dict.common.cancel, keys: ["Ctrl", "Z"] },
+      { label: dict.common.restore, keys: ["Ctrl", "Y"] },
       { label: dict.canvas.cheatsheet, keys: ["Ctrl", "P"] },
       { label: dict.canvas.canvasSearchShortcut, keys: ["Ctrl", "K"] },
       { label: dict.canvas.temporalHistory, keys: ["Ctrl", "H"] },
@@ -61,15 +61,15 @@ export default function CommandPalette({
       { label: dict.canvas.cheatItalic, keys: ["Ctrl", "I"] },
       { label: dict.canvas.cheatUnderline, keys: ["Ctrl", "U"] },
       { label: dict.canvas.cheatStrike, keys: ["Ctrl", "⇧", "X"] },
-      { label: dict.canvas.cheatLink, keys: ["Ctrl", "K"] },
-      { label: dict.canvas.cheatCode, keys: ["Ctrl", "E"] },
+      { label: dict.blocks.blockTypeLink, keys: ["Ctrl", "K"] },
+      { label: dict.blocks.blockTypeSnippet, keys: ["Ctrl", "E"] },
     ],
-    [dict.canvas.cheatNote]: [
+    [dict.blocks.blockTypeText]: [
       { label: dict.canvas.cheatSwitchToEditMode, keys: ["Ctrl", "E"] },
       { label: dict.canvas.cheatSwitchToPreviewMode, keys: ["Ctrl", "P"] },
       { label: dict.canvas.cheatComment, keys: ["Ctrl", "Alt", "M"] },
     ],
-    [dict.canvas.cheatTasks]: [
+    [dict.canvas.canvasSearchTasks]: [
       { label: dict.canvas.cheatIndent, keys: ["Tab"] },
       { label: dict.canvas.cheatOutdent, keys: ["⇧", "Tab"] },
     ],

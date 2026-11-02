@@ -128,7 +128,7 @@ export default function TaskModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={tr("kanban.editTaskTitle", "Edit task")}
+      title={tr("common.editTitle", "Edit task")}
       className="task-modal-dashboard-modal"
       showCloseButton
     >
@@ -145,7 +145,7 @@ export default function TaskModal({
             <div className="task-modal-hero-head">
               <div className="task-modal-hero-title-wrap">
                 <div className="task-modal-hero-title">
-                  {localTitle || tr("kanban.addTask", "Task")}
+                  {localTitle || tr("blocks.addTask", "Task")}
                 </div>
                 <TaskStatusBadge status={dependencyState.status} tr={tr} />
               </div>
@@ -204,7 +204,7 @@ export default function TaskModal({
               <div className="task-modal-field">
                 <div className="task-modal-field-head">
                   <label className="task-modal-label">
-                    {tr("kanban.descriptionLabel", "Description")}
+                    {tr("blocks.description", "Description")}
                   </label>
                   <button
                     type="button"

@@ -314,6 +314,14 @@ export function exportTableToCsv(
 }
 
 /**
+ * Backslashes must be escaped before pipes, otherwise an existing backslash
+ * would neutralize the pipe escape and allow an unescaped literal pipe.
+ */
+function escapeMarkdownCell(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
+}
+
+/**
  * Export the table as a GitHub-flavored Markdown table.
  */
 export function exportTableToMarkdown(
@@ -321,15 +329,12 @@ export function exportTableToMarkdown(
   rows: TableRow[],
 ): string {
   const header = columns
-    .map((col) => (col.name || col.id).replace(/\|/g, "\\|"))
+    .map((col) => escapeMarkdownCell(col.name || col.id))
     .join(" | ");
   const separator = columns.map(() => "---").join(" | ");
   const lines = rows.map((row) =>
     columns
-      .map((col) => {
-        const cell = tableCellToCsv(row.cells[col.id], col);
-        return cell.replace(/\|/g, "\\|");
-      })
+      .map((col) => escapeMarkdownCell(tableCellToCsv(row.cells[col.id], col)))
       .join(" | "),
   );
   return [header, separator, ...lines].join("\n");

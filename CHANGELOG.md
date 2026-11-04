@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-11-04
+
+### Fixed
+
+- Fixed the OIDC sign-in button not appearing on the login page when the provider is configured only through environment variables (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`); `/api/auth/settings` now merges the environment config over the database config, matching the Auth.js setup ([#146](https://github.com/3xpyth0n/ideon/issues/146)).
+
 ## [1.1.0] - 2026-11-02
 
 ### Added

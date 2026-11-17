@@ -391,6 +391,8 @@
     "cheatMarkdown": "Markdown",
     "cheatMultiSelect": "Sélection multiple",
     "cheatNavigation": "Navigation",
+    "cheatSubCanvasParent": "Revenir au canevas parent",
+    "cheatSubCanvasRoot": "Revenir au canevas racine",
     "cheatOutdent": "Désindenter la tâche",
     "commandPalette": "Palette de commandes",
     "cheatsheet": "Raccourcis clavier",

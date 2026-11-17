@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-XX
+
+### Added
+
+- Added keyboard shortcuts for sub-canvas navigation: `Ctrl + ↑` returns to the parent canvas, while `Ctrl + Alt + ↑` jumps directly to the root canvas. Both shortcuts are listed in the keyboard shortcuts palette ([#134](https://github.com/3xpyth0n/ideon/issues/134)).
+
 ## [1.1.1] - 2026-11-04
 
 ### Fixed

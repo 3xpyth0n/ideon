@@ -855,6 +855,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       activeCanvasId,
       activeDepth,
       popCanvas,
+      jumpToIndex,
       pendingRestore,
       clearPendingRestore,
       setPreviewMode,
@@ -1191,6 +1192,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               activeElement.isContentEditable);
 
           if (!isEditing) {
+            if (shortcutKey === "arrowup" && e.altKey && activeDepth > 0) {
+              e.preventDefault();
+              e.stopPropagation();
+              void jumpToIndex(0);
+              return;
+            }
+
+            if (shortcutKey === "arrowup" && !e.altKey && activeDepth > 0) {
+              e.preventDefault();
+              e.stopPropagation();
+              void popCanvas();
+              return;
+            }
+
             if (shortcutKey === "z" && !e.shiftKey) {
               e.preventDefault();
               e.stopPropagation();
@@ -1254,6 +1269,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       pendingConnection,
       activeDepth,
       popCanvas,
+      jumpToIndex,
       redo,
       screenToFlowPosition,
       setPendingBlockPosition,

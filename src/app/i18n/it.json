@@ -391,6 +391,8 @@
     "cheatMarkdown": "Markdown",
     "cheatMultiSelect": "Selezione multipla",
     "cheatNavigation": "Navigazione",
+    "cheatSubCanvasParent": "Torna al canvas genitore",
+    "cheatSubCanvasRoot": "Torna al canvas principale",
     "cheatOutdent": "Rimuovi indentazione attività",
     "commandPalette": "Tavolozza dei comandi",
     "cheatsheet": "Scorciatoie da tastiera",

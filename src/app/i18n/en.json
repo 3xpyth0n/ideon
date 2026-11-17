@@ -391,6 +391,8 @@
     "cheatMarkdown": "Markdown",
     "cheatMultiSelect": "Multi-select",
     "cheatNavigation": "Navigation",
+    "cheatSubCanvasParent": "Go to parent canvas",
+    "cheatSubCanvasRoot": "Go to root canvas",
     "cheatOutdent": "Outdent task",
     "commandPalette": "Command Palette",
     "cheatsheet": "Keyboard Shortcuts",

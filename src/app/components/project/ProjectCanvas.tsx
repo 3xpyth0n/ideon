@@ -36,6 +36,7 @@ import ShellBlock from "./ShellBlock";
 import FrameBlock from "./FrameBlock";
 import WebhookBlock from "./WebhookBlock";
 import CronBlock from "./CronBlock";
+import PlantUMLBlock from "./PlantUMLBlock";
 import MermaidBlock from "./MermaidBlock";
 import DatabaseBlock from "./DatabaseBlock";
 import CanvasEdge from "./CanvasEdge";
@@ -320,6 +321,7 @@ const blockTypes = {
   cron: CronBlock,
   latex: CanvasBlock,
   mermaid: MermaidBlock,
+  plantuml: PlantUMLBlock,
   database: DatabaseBlock,
   subcanvas: SubCanvasBlock,
   core: ProjectCoreBlock,
@@ -1906,12 +1908,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           const isFreshNoteBlock =
             (createdBlock?.type === "text" ||
               createdBlock?.type === "latex" ||
-              createdBlock?.type === "mermaid") &&
+              createdBlock?.type === "mermaid" ||
+              createdBlock?.type === "plantuml") &&
             !(createdBlock.data?.content || "");
 
           if (isFreshNoteBlock && blockEl) {
             const editorEl = blockEl.querySelector(
-              ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor], textarea[data-mermaid-editor]",
+              ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor], textarea[data-mermaid-editor], textarea[data-plantuml-editor]",
             ) as HTMLElement | null;
 
             if (editorEl && typeof editorEl.focus === "function") {
@@ -3126,6 +3129,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     | "webhook"
                     | "cron"
                     | "mermaid"
+                    | "plantuml"
                     | "subcanvas"
                     | "database"
                     | "aframe",

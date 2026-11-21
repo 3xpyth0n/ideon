@@ -22,6 +22,8 @@ export const FRAME_WIDTH = 600;
 export const FRAME_HEIGHT = 400;
 export const DATABASE_WIDTH = 900;
 export const DATABASE_HEIGHT = 560;
+export const DIAGRAM_WIDTH = 680;
+export const DIAGRAM_HEIGHT = 480;
 export const MAX_GRID_COLUMNS = 5;
 export const MAX_COLLISION_ITERATIONS = 50;
 
@@ -68,6 +70,9 @@ export function getDefaultWidth(blockType: string): number {
       return FRAME_WIDTH;
     case "database":
       return DATABASE_WIDTH;
+    case "mermaid":
+    case "plantuml":
+      return DIAGRAM_WIDTH;
     default:
       return DEFAULT_WIDTH;
   }
@@ -83,6 +88,9 @@ export function getDefaultHeight(blockType: string): number {
       return FRAME_HEIGHT;
     case "database":
       return DATABASE_HEIGHT;
+    case "mermaid":
+    case "plantuml":
+      return DIAGRAM_HEIGHT;
     default:
       return DEFAULT_HEIGHT;
   }

@@ -30,6 +30,8 @@ const HELP_CONTENT = `# Ideon Canvas — AI Guide
 | vercel | Vercel deployment link | 320×240 |
 | webhook | Webhook endpoint | 320×240 |
 | cron | Scheduled task | 320×240 |
+| mermaid | Mermaid diagram (source in content) | 680×480 |
+| plantuml | PlantUML diagram (source in content, rendered by the configured server) | 680×480 |
 | core | System block (read-only position) | 320×240 |
 
 ## Data Structures

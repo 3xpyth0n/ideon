@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added PlantUML diagram blocks with collaborative source editing and PNG export. Diagrams are rendered by a PlantUML server configured through the `PLANTUML_SERVER_URL` environment variable ([#119](https://github.com/3xpyth0n/ideon/issues/119)).
 - Added keyboard shortcuts for sub-canvas navigation: `Ctrl + ↑` returns to the parent canvas, while `Ctrl + Alt + ↑` jumps directly to the root canvas. Both shortcuts are listed in the keyboard shortcuts palette ([#134](https://github.com/3xpyth0n/ideon/issues/134)).
 
 ### Fixed

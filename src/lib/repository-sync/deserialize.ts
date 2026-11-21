@@ -283,7 +283,10 @@ function readBlockPayload(
       !block.contentPath.endsWith(".md")) ||
     (block.blockType === "mermaid" &&
       block.contentPath &&
-      !block.contentPath.endsWith(".mmd"))
+      !block.contentPath.endsWith(".mmd")) ||
+    (block.blockType === "plantuml" &&
+      block.contentPath &&
+      !block.contentPath.endsWith(".puml"))
   ) {
     throw new RepositorySyncFormatError("invalid_reference");
   }

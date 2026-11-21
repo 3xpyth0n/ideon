@@ -25,6 +25,7 @@ import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
 import MermaidBlock from "./MermaidBlock";
+import PlantUMLBlock from "./PlantUMLBlock";
 import SketchBlock from "./SketchBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
@@ -69,6 +70,7 @@ const blockTypes = {
   shell: ShellBlock,
   latex: CanvasBlock,
   mermaid: MermaidBlock,
+  plantuml: PlantUMLBlock,
   aframe: AFrameBlock,
   core: ProjectCoreBlock,
 };

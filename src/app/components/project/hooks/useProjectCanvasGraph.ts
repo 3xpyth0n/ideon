@@ -1215,6 +1215,7 @@ export const useProjectCanvasGraph = ({
         | "webhook"
         | "cron"
         | "mermaid"
+        | "plantuml"
         | "subcanvas"
         | "database"
         | "aframe" = "text",
@@ -1228,7 +1229,7 @@ export const useProjectCanvasGraph = ({
       const isSketch = blockType === "sketch";
       const isKanban = blockType === "kanban";
       const isFrame = blockType === "frame";
-      const isMermaid = blockType === "mermaid";
+      const isDiagram = blockType === "mermaid" || blockType === "plantuml";
       const blockWidth = isDatabase
         ? DEFAULT_DATABASE_BLOCK_WIDTH
         : isSketch
@@ -1237,7 +1238,7 @@ export const useProjectCanvasGraph = ({
             ? DEFAULT_KANBAN_BLOCK_WIDTH
             : isFrame
               ? 600
-              : isMermaid
+              : isDiagram
                 ? 680
                 : DEFAULT_BLOCK_WIDTH;
       const blockHeight = isDatabase
@@ -1248,7 +1249,7 @@ export const useProjectCanvasGraph = ({
             ? DEFAULT_KANBAN_BLOCK_HEIGHT
             : isFrame
               ? 400
-              : isMermaid
+              : isDiagram
                 ? 480
                 : DEFAULT_BLOCK_HEIGHT;
 

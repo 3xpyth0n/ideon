@@ -284,6 +284,21 @@ describe("graph library", () => {
       );
     });
 
+    it("should preserve PlantUML source when preparing a block", () => {
+      const source = "@startuml\nAlice -> Bob: Hello\n@enduml";
+      const node: Node = {
+        id: "plantuml-1",
+        type: "plantuml",
+        position: { x: 20, y: 30 },
+        data: { blockType: "plantuml", content: source },
+      };
+
+      const block = prepareBlockForDb(node, "project-1", "user-1");
+
+      expect(block.blockType).toBe("plantuml");
+      expect(block.content).toBe(source);
+    });
+
     it("should preserve Mermaid source when preparing a block", () => {
       const source = "flowchart LR\\n  Source --> Canvas";
       const node: Node = {

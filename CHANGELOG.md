@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed official record PDF locking failing intermittently when the generated owner password started with a dash.
 - Fixed link previews with relative or unsafe `og:image` URLs, non-UTF-8 pages, and unbounded response bodies by switching metadata parsing to `linkpeek` ([#148](https://github.com/3xpyth0n/ideon/pull/148), thanks to [@thegruber](https://github.com/thegruber)).
 
 ## [1.1.1] - 2026-11-04

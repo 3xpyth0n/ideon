@@ -784,7 +784,7 @@
       "dossierGenerating": "Génération du PDF…",
       "dossierDone": "Dossier téléchargé — le ZIP contient le PDF, le bundle et le vérificateur.",
       "dossierError": "La génération du dossier a échoué. Réessaie.",
-      "dossierVerifyHint": "Dézippe le dossier, puis vérifie le bundle avec : node verify-record.mjs idon-record-*.json",
+      "dossierVerifyHint": "Dézippe le dossier, puis vérifie le bundle avec : node verify-record.mjs ideon-record-*.json",
       "provenance": "Provenance",
       "provenanceTitle": "Provenance du bloc",
       "provenanceModified": "Modifié",

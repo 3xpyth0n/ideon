@@ -784,7 +784,7 @@
       "dossierGenerating": "Generating the PDF…",
       "dossierDone": "Dossier downloaded — the ZIP contains the PDF, the bundle and the verifier.",
       "dossierError": "Dossier generation failed. Please try again.",
-      "dossierVerifyHint": "Unzip the dossier, then verify the bundle with: node verify-record.mjs idon-record-*.json",
+      "dossierVerifyHint": "Unzip the dossier, then verify the bundle with: node verify-record.mjs ideon-record-*.json",
       "provenance": "Provenance",
       "provenanceTitle": "Block provenance",
       "provenanceModified": "Modified",

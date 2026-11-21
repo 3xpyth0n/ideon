@@ -784,7 +784,7 @@
       "dossierGenerating": "Generazione del PDF…",
       "dossierDone": "Dossier scaricato — lo ZIP contiene il PDF, il bundle e il verificatore.",
       "dossierError": "Generazione del dossier non riuscita. Riprova.",
-      "dossierVerifyHint": "Decomprimi il dossier, poi verifica il bundle con: node verify-record.mjs idon-record-*.json",
+      "dossierVerifyHint": "Decomprimi il dossier, poi verifica il bundle con: node verify-record.mjs ideon-record-*.json",
       "provenance": "Provenienza",
       "provenanceTitle": "Provenienza del blocco",
       "provenanceModified": "Modificato",

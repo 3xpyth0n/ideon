@@ -5,7 +5,6 @@ const nextConfig = {
   reactStrictMode: true,
   turbopack: {},
   serverExternalPackages: [
-    "@boxyhq/saml-jackson",
     "typeorm",
     "kysely",
     "pg",
@@ -15,6 +14,7 @@ const nextConfig = {
     "nanoid",
     "uuid",
     "jsdom",
+    "pdfkit",
     "yjs",
   ],
   outputFileTracingIncludes: {
@@ -35,10 +35,7 @@ const nextConfig = {
     };
 
     if (isServer) {
-      config.ignoreWarnings = [
-        { module: /node_modules\/typeorm/ },
-        { module: /node_modules\/@boxyhq\/saml-jackson/ },
-      ];
+      config.ignoreWarnings = [{ module: /node_modules\/typeorm/ }];
     }
 
     return config;

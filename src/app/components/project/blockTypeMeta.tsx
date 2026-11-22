@@ -20,6 +20,7 @@ import {
   Calendar,
   Layers,
   Network,
+  Workflow,
   Table,
   Box,
 } from "lucide-react";
@@ -49,7 +50,8 @@ export type AddableBlockType =
   | "calendar"
   | "subcanvas"
   | "database"
-  | "aframe";
+  | "aframe"
+  | "plantuml";
 
 export type SearchableBlockType = AddableBlockType | "core";
 
@@ -77,7 +79,8 @@ export type BlockTypeLabelKey =
   | "blockTypeCalendar"
   | "blockTypeSubcanvas"
   | "blockTypeDatabase"
-  | "blockType3DScene";
+  | "blockType3DScene"
+  | "blockTypePlantUML";
 
 export type BlockTypeIconComponent = ComponentType<{
   className?: string;
@@ -172,6 +175,12 @@ const ADD_BLOCK_ENTRIES: AddBlockEntry[] = [
     type: "mermaid",
     icon: Network,
     labelKey: "blockTypeMermaid",
+    section: "block",
+  },
+  {
+    type: "plantuml",
+    icon: Workflow,
+    labelKey: "blockTypePlantUML",
     section: "block",
   },
   {

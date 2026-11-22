@@ -36,6 +36,7 @@ import ShellBlock from "./ShellBlock";
 import FrameBlock from "./FrameBlock";
 import WebhookBlock from "./WebhookBlock";
 import CronBlock from "./CronBlock";
+import PlantUMLBlock from "./PlantUMLBlock";
 import MermaidBlock from "./MermaidBlock";
 import DatabaseBlock from "./DatabaseBlock";
 import CanvasEdge from "./CanvasEdge";
@@ -118,6 +119,7 @@ import {
 } from "./hooks/useProjectCanvasState";
 import { focusProjectCanvas } from "./utils/focusCanvas";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
+import { toFlowPadding } from "./utils/fitViewport";
 import SubCanvasBlock from "./SubCanvasBlock";
 import SubCanvasBreadcrumb from "./SubCanvasBreadcrumb";
 import SubCanvasProvider, {
@@ -137,6 +139,7 @@ import {
 } from "./utils/interaction";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useCanvasTouchViewport } from "./hooks/useCanvasTouchViewport";
+import { useCanvasGrid } from "./hooks/useCanvasGrid";
 import { isBlockContentLocked, isBlockPositionLocked } from "./utils/locks";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
   [-5000, -4000],
@@ -320,6 +323,7 @@ const blockTypes = {
   cron: CronBlock,
   latex: CanvasBlock,
   mermaid: MermaidBlock,
+  plantuml: PlantUMLBlock,
   database: DatabaseBlock,
   subcanvas: SubCanvasBlock,
   core: ProjectCoreBlock,
@@ -767,7 +771,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     if (!stage) return null;
 
     const savedViewport = getViewport();
-    fitView({ padding: 0.12, maxZoom: 1, duration: 0 });
+    fitView({ padding: toFlowPadding(0.12), maxZoom: 1, duration: 0 });
 
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
@@ -855,6 +859,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       activeCanvasId,
       activeDepth,
       popCanvas,
+      jumpToIndex,
       pendingRestore,
       clearPendingRestore,
       setPreviewMode,
@@ -1037,7 +1042,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          fitView({ padding: 0.12, maxZoom: 1, duration: 800 });
+          fitView({ padding: toFlowPadding(0.12), maxZoom: 1, duration: 800 });
           clearPendingRestore();
         });
       });
@@ -1191,6 +1196,20 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
               activeElement.isContentEditable);
 
           if (!isEditing) {
+            if (shortcutKey === "arrowup" && e.altKey && activeDepth > 0) {
+              e.preventDefault();
+              e.stopPropagation();
+              void jumpToIndex(0);
+              return;
+            }
+
+            if (shortcutKey === "arrowup" && !e.altKey && activeDepth > 0) {
+              e.preventDefault();
+              e.stopPropagation();
+              void popCanvas();
+              return;
+            }
+
             if (shortcutKey === "z" && !e.shiftKey) {
               e.preventDefault();
               e.stopPropagation();
@@ -1254,6 +1273,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       pendingConnection,
       activeDepth,
       popCanvas,
+      jumpToIndex,
       redo,
       screenToFlowPosition,
       setPendingBlockPosition,
@@ -1554,6 +1574,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       },
       allowLongPress: false,
     });
+
+    const syncCanvasGrid = useCanvasGrid(flowContainerRef);
+    const handleViewportChange = useCallback(
+      (viewport: { x: number; y: number; zoom: number }) => {
+        syncCanvasGrid(viewport);
+        onViewportChange(viewport);
+      },
+      [syncCanvasGrid, onViewportChange],
+    );
 
     const canvasTouchViewportHandlers = useCanvasTouchViewport({
       disabled: isReadOnly,
@@ -1890,12 +1919,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
           const isFreshNoteBlock =
             (createdBlock?.type === "text" ||
               createdBlock?.type === "latex" ||
-              createdBlock?.type === "mermaid") &&
+              createdBlock?.type === "mermaid" ||
+              createdBlock?.type === "plantuml") &&
             !(createdBlock.data?.content || "");
 
           if (isFreshNoteBlock && blockEl) {
             const editorEl = blockEl.querySelector(
-              ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor], textarea[data-mermaid-editor]",
+              ".ProseMirror, .cm-content, [contenteditable='true'], textarea[data-latex-editor], textarea[data-mermaid-editor], textarea[data-plantuml-editor]",
             ) as HTMLElement | null;
 
             if (editorEl && typeof editorEl.focus === "function") {
@@ -1940,7 +1970,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             </defs>
           </svg>
           <div
-            className={`project-canvas-container ${
+            className={`project-canvas-container canvas-grid ${
               isPreviewMode ? "preview-mode" : ""
             } ${isExternalDropActive ? "drop-active" : ""}`}
             onKeyDown={onKeyDown}
@@ -2084,7 +2114,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       onEdgeClick={onLinkClick}
                       onEdgeDoubleClick={onLinkDoubleClick}
                       onMove={onMove}
-                      onViewportChange={onViewportChange}
+                      onViewportChange={handleViewportChange}
                       zoomOnPinch={true}
                       zoomOnDoubleClick={false}
                       nodeTypes={blockTypes}
@@ -3110,6 +3140,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                     | "webhook"
                     | "cron"
                     | "mermaid"
+                    | "plantuml"
                     | "subcanvas"
                     | "database"
                     | "aframe",

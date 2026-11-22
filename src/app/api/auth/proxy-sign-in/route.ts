@@ -28,7 +28,15 @@ export async function GET(req: NextRequest) {
   const headersList = await headers();
   const incomingSecret = headersList.get("x-proxy-secret") ?? "";
 
-  if (!config.secret || incomingSecret !== config.secret) {
+  const secretValid =
+    config.secret.length > 0 &&
+    incomingSecret.length === config.secret.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(incomingSecret),
+      Buffer.from(config.secret),
+    );
+
+  if (!secretValid) {
     await logSecurityEvent("loginProxy", "failure", {
       reason: "invalid_secret",
     });

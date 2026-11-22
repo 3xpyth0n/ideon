@@ -114,7 +114,6 @@ export async function proxy(req: NextRequest) {
     "/register",
     "/reset-password",
     "/api/auth",
-    "/api/config",
     "/api/health",
     "/webhooks/",
     "/auth/",

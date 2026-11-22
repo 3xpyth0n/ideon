@@ -5,4 +5,8 @@ describe("MCP block types", () => {
   it("allows Mermaid blocks through the shared create schemas", () => {
     expect(VALID_BLOCK_TYPES).toContain("mermaid");
   });
+
+  it("allows PlantUML blocks through the shared create schemas", () => {
+    expect(VALID_BLOCK_TYPES).toContain("plantuml");
+  });
 });

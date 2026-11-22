@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-22
+
+### Added
+
+- Added PlantUML diagram blocks with collaborative source editing and PNG export. Diagrams are rendered by a PlantUML server configured through the `PLANTUML_SERVER_URL` environment variable ([#119](https://github.com/3xpyth0n/ideon/issues/119)).
+- Added keyboard shortcuts for sub-canvas navigation: `Ctrl + ↑` returns to the parent canvas, while `Ctrl + Alt + ↑` jumps directly to the root canvas. Both shortcuts are listed in the keyboard shortcuts palette ([#134](https://github.com/3xpyth0n/ideon/issues/134)).
+
+### Fixed
+
+- Fixed official record PDF locking failing intermittently when the generated owner password started with a dash.
+- Fixed link previews with relative or unsafe `og:image` URLs, non-UTF-8 pages, and unbounded response bodies by switching metadata parsing to `linkpeek` ([#148](https://github.com/3xpyth0n/ideon/pull/148), thanks to [@thegruber](https://github.com/thegruber)).
+
 ## [1.1.1] - 2026-11-04
 
 ### Fixed

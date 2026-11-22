@@ -71,6 +71,7 @@ const BlockDataSchema = z
         "subcanvas",
         "database",
         "aframe",
+        "plantuml",
       ])
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -156,7 +157,8 @@ export function prepareBlockForDb(
       | "mermaid"
       | "subcanvas"
       | "database"
-      | "aframe") ||
+      | "aframe"
+      | "plantuml") ||
     "text";
 
   return {

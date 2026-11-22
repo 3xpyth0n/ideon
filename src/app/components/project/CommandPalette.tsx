@@ -45,6 +45,8 @@ export default function CommandPalette({
     [dict.canvas.cheatNavigation]: [
       { label: dict.canvas.navigate, keys: ["←", "→", "↑", "↓"] },
       { label: dict.canvas.cheatVimNav, keys: ["H", "J", "K", "L"] },
+      { label: dict.canvas.cheatSubCanvasParent, keys: ["Ctrl", "↑"] },
+      { label: dict.canvas.cheatSubCanvasRoot, keys: ["Ctrl", "Alt", "↑"] },
       { label: dict.canvas.cheatEditBlock, keys: ["Enter"] },
       { label: dict.canvas.cheatChildBlock, keys: ["Tab"] },
     ],

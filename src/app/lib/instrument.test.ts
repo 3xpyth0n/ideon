@@ -358,7 +358,7 @@ describe("verify-record script", () => {
     const bundle = await buildRecordBundle(seal);
 
     const dir = mkdtempSync(join(tmpdir(), "ideon-verify-"));
-    const file = join(dir, "idon-record.json");
+    const file = join(dir, "ideon-record.json");
     writeFileSync(file, JSON.stringify(bundle));
 
     const result = runVerifier(file);
@@ -380,7 +380,7 @@ describe("verify-record script", () => {
     const bundle = await buildRecordBundle(seal);
 
     const dir = mkdtempSync(join(tmpdir(), "ideon-verify-"));
-    const file = join(dir, "idon-record.json");
+    const file = join(dir, "ideon-record.json");
     writeFileSync(
       file,
       JSON.stringify({ ...bundle, state: `${bundle.state} tampered` }),
@@ -412,7 +412,7 @@ describe("verify-record script", () => {
     );
 
     const dir = mkdtempSync(join(tmpdir(), "idon-verify-"));
-    const file = join(dir, "idon-record.json");
+    const file = join(dir, "ideon-record.json");
     writeFileSync(file, JSON.stringify({ ...bundle, audit }));
 
     const result = runVerifier(file);
@@ -435,7 +435,7 @@ describe("verify-record script", () => {
     const bundle = await buildRecordBundle(seal);
 
     const dir = mkdtempSync(join(tmpdir(), "idon-verify-"));
-    const file = join(dir, "idon-record.json");
+    const file = join(dir, "ideon-record.json");
     writeFileSync(
       file,
       JSON.stringify({

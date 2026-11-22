@@ -53,6 +53,7 @@ import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "./utils/fitViewport";
 
 function serializeMeta(next: TableMetadataState): string {
@@ -752,7 +753,7 @@ function DatabaseBlock({ id, data, selected }: DatabaseBlockProps) {
           nodes: [targetNode],
           duration: 800,
           maxZoom: 2,
-          padding: 0.12,
+          padding: toFlowPadding(0.12),
         });
       } else {
         const nextViewport = computeLongestSideViewport(bounds, viewportSize, {

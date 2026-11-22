@@ -1,4 +1,4 @@
-import { parse } from "node-html-parser";
+import { preview } from "linkpeek";
 import { safeFetch } from "@lib/ssrf";
 import { getDb } from "@lib/db";
 import { nanoid } from "nanoid";
@@ -19,53 +19,22 @@ export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
   const targetUrl = url.startsWith("http") ? url : `https://${url}`;
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-    const response = await safeFetch(targetUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "IdeonBot/1.0",
-      },
+    // linkpeek resolves relative URLs, keeps only http(s) links, detects the
+    // charset and caps the body; safeFetch still checks every hop for SSRF.
+    const metadata = await preview(targetUrl, {
+      timeout: 10000,
+      userAgent: "IdeonBot/1.0",
+      fetch: (input, init) => safeFetch(String(input), init),
     });
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${targetUrl}: ${response.status}`);
+    if (metadata.statusCode < 200 || metadata.statusCode >= 300) {
+      throw new Error(`Failed to fetch ${targetUrl}: ${metadata.statusCode}`);
     }
 
-    const html = await response.text();
-    const root = parse(html);
-
-    const getMeta = (prop: string) => {
-      return (
-        root
-          .querySelector(`meta[property="${prop}"]`)
-          ?.getAttribute("content") ||
-        root.querySelector(`meta[name="${prop}"]`)?.getAttribute("content")
-      );
-    };
-
-    const title =
-      getMeta("og:title") ||
-      getMeta("twitter:title") ||
-      root.querySelector("title")?.textContent ||
-      "";
-
-    const description =
-      getMeta("og:description") ||
-      getMeta("twitter:description") ||
-      getMeta("description") ||
-      "";
-
-    const image =
-      getMeta("og:image") || getMeta("twitter:image") || getMeta("image") || "";
-
     return {
-      title,
-      description,
-      image,
+      title: metadata.title || "",
+      description: metadata.description || "",
+      image: metadata.image || "",
       favicon: `https://www.google.com/s2/favicons?domain=${
         new URL(targetUrl).hostname
       }&sz=64`,

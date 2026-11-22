@@ -43,6 +43,7 @@ import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "./utils/fitViewport";
 import KanbanCard from "./KanbanCard";
 import TaskModal from "./TaskModal";
@@ -551,7 +552,7 @@ const KanbanBlock = memo(({ id, data, selected }: KanbanBlockProps) => {
           nodes: [targetNode],
           duration: TASK_NAV_FIT_DURATION,
           maxZoom: TASK_NAV_FIT_MAX_ZOOM_SELECTED,
-          padding: TASK_NAV_FIT_PADDING,
+          padding: toFlowPadding(TASK_NAV_FIT_PADDING),
         });
       } else {
         const nextViewport = computeLongestSideViewport(bounds, viewportSize, {

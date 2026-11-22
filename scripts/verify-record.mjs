@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Verifies an Ideon record bundle (format idon-record-v1) without Ideon:
+// Verifies an Ideon record bundle (format ideon-record-v1) without Ideon:
 // recomputes the state hash and re-walks the audit hash chain.
 // Zero dependencies: node:crypto + node:fs only.
 //
-//   node scripts/verify-record.mjs idon-record-<sealId>.json
+//   node scripts/verify-record.mjs ideon-record-<sealId>.json
 //
 // Prints VALID or INVALID with a precise reason; exits 0 or 1.
 import { createHash } from "node:crypto";

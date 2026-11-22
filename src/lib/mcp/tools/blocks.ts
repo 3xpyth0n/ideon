@@ -64,6 +64,7 @@ export const VALID_BLOCK_TYPES = [
   "subcanvas",
   "database",
   "aframe",
+  "plantuml",
 ] as const;
 
 const VALID_DIRECTIONS = ["up", "down", "left", "right"] as const;

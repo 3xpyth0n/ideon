@@ -37,6 +37,11 @@ const MIN_AXIS_FACTOR = 0.1;
 const MOBILE_PORTRAIT_MAX_WIDTH = 768;
 const MOBILE_PORTRAIT_SIDE_MARGIN_PX = 10;
 
+export function toFlowPadding(ratio: number): `${number}%` {
+  const percent = (ratio / (2 * (1 + ratio))) * 100;
+  return `${Number(percent.toFixed(2))}%`;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }

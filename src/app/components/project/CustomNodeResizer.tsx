@@ -6,7 +6,7 @@ import {
   NodeResizerProps,
   NodeResizeControl,
   useViewport,
-  useStore,
+  useNodesStore,
   useNodeId,
 } from "@xyflow/react";
 import type { Node } from "@xyflow/react";
@@ -218,13 +218,13 @@ const CustomNodeResizer = memo((props: NodeResizerProps) => {
   const contextNodeId = useNodeId();
   const effectiveNodeId = props.nodeId ?? contextNodeId;
 
-  const resizingNode = useStore((state) =>
+  const resizingNode = useNodesStore((state) =>
     effectiveNodeId ? state.nodes.find((n) => n.id === effectiveNodeId) : null,
   );
   const resizingNodeRef = useRef(resizingNode);
   resizingNodeRef.current = resizingNode;
 
-  const allNodes = useStore((state) => state.nodes as Node<BlockData>[]);
+  const allNodes = useNodesStore((state) => state.nodes as Node<BlockData>[]);
   const allNodesRef = useRef(allNodes);
   allNodesRef.current = allNodes;
 

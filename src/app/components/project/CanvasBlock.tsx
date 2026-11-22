@@ -83,6 +83,7 @@ export type BlockData = {
     | "cron"
     | "latex"
     | "mermaid"
+    | "plantuml"
     | "calendar"
     | "subcanvas"
     | "database"

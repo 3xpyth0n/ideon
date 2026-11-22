@@ -141,4 +141,4 @@ Then call `create_kanban_task` with the kanban block ID, a column ID, and a titl
 
 ## Diagram Blocks
 
-Do not assume Mermaid or PlantUML block types are available. Check the deployed server's `canvas://help` resource and the `create_block` input schema first. Once a diagram type is listed, use that exact block type and follow its documented content or metadata format; otherwise, represent the diagram with supported text blocks and links.
+Use the `mermaid` block type for Mermaid diagrams and the `plantuml` block type for PlantUML diagrams, passing the diagram source as `content`. PlantUML blocks are rendered by the server configured through `PLANTUML_SERVER_URL`; when it is not set, the source is stored and shown without a rendered preview. Check the deployed server's `canvas://help` resource and the `create_block` input schema if a type is rejected.

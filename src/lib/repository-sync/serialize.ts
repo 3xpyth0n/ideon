@@ -184,11 +184,15 @@ export function serializeRepositorySyncProject(
           snapshot.contents[node.id] ??
           (typeof data.content === "string" ? data.content : row?.content) ??
           "";
-        const externalizedContent =
-          blockType === "text" || blockType === "mermaid";
+        const isDiagram = blockType === "mermaid" || blockType === "plantuml";
+        const externalizedContent = blockType === "text" || isDiagram;
         const contentPath = externalizedContent
-          ? `${blockType === "mermaid" ? "diagrams" : "notes"}/${stableId}.${
-              blockType === "mermaid" ? "mmd" : "md"
+          ? `${isDiagram ? "diagrams" : "notes"}/${stableId}.${
+              blockType === "mermaid"
+                ? "mmd"
+                : blockType === "plantuml"
+                  ? "puml"
+                  : "md"
             }`
           : null;
         const blockData = {
@@ -247,7 +251,7 @@ export function serializeRepositorySyncProject(
         if (contentPath) {
           files.push({
             path: contentPath,
-            kind: blockType === "mermaid" ? "diagram" : "note",
+            kind: isDiagram ? "diagram" : "note",
             content: new TextEncoder().encode(markdown),
           });
         }

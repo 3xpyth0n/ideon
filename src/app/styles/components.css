@@ -1781,11 +1781,13 @@
 }
 
 /* Read-only Canvas Cursors & Interaction */
-.project-canvas.read-only .react-flow__pane {
+.project-canvas.read-only .react-flow__pane,
+.project-canvas.read-only .react-flow__pane::before {
   cursor: default !important;
 }
 
 .project-canvas.read-only .react-flow__pane.dragging,
+.project-canvas.read-only .react-flow__pane.dragging::before,
 .project-canvas.read-only .react-flow__pane:active {
   cursor: grabbing !important;
 }

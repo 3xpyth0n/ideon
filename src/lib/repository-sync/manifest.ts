@@ -201,7 +201,9 @@ export function parseRepositorySyncManifest(
         ? `notes/${block.id}.md`
         : block.blockType === "mermaid"
           ? `diagrams/${block.id}.mmd`
-          : null;
+          : block.blockType === "plantuml"
+            ? `diagrams/${block.id}.puml`
+            : null;
     const expectedNoteDocumentPath =
       block.blockType === "text" ? `notes/${block.id}.yjs.json` : null;
     if (

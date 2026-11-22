@@ -25,6 +25,7 @@ import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "@components/project/utils/fitViewport";
 
 const FIT_DURATION = 800;
@@ -140,7 +141,7 @@ export const useProjectData = ({
           nodes: targetBlocks,
           duration: FIT_DURATION,
           maxZoom: FIT_MAX_ZOOM_ALL,
-          padding: FIT_PADDING,
+          padding: toFlowPadding(FIT_PADDING),
         });
         return;
       }

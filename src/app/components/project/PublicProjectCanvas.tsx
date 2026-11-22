@@ -25,6 +25,7 @@ import VideoBlock from "./VideoBlock";
 import SnippetBlock from "./SnippetBlock";
 import ChecklistBlock from "./ChecklistBlock";
 import MermaidBlock from "./MermaidBlock";
+import PlantUMLBlock from "./PlantUMLBlock";
 import SketchBlock from "./SketchBlock";
 import GitBlock from "./GitBlock";
 import FileBlock from "./FileBlock";
@@ -42,6 +43,7 @@ import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "./utils/fitViewport";
 import { focusProjectCanvas } from "./utils/focusCanvas";
 
@@ -69,6 +71,7 @@ const blockTypes = {
   shell: ShellBlock,
   latex: CanvasBlock,
   mermaid: MermaidBlock,
+  plantuml: PlantUMLBlock,
   aframe: AFrameBlock,
   core: ProjectCoreBlock,
 };
@@ -103,7 +106,11 @@ function PublicProjectCanvasContent({
   const applyLongestSideFit = useCallback(
     (targetNodes: Node<BlockData>[], maxZoom: number) => {
       if (targetNodes.length === 0) {
-        fitView({ duration: FIT_DURATION, maxZoom, padding: FIT_PADDING });
+        fitView({
+          duration: FIT_DURATION,
+          maxZoom,
+          padding: toFlowPadding(FIT_PADDING),
+        });
         return;
       }
       const bounds = getNodesBoundsWithFallback(targetNodes);
@@ -113,7 +120,7 @@ function PublicProjectCanvasContent({
           nodes: targetNodes,
           duration: FIT_DURATION,
           maxZoom,
-          padding: FIT_PADDING,
+          padding: toFlowPadding(FIT_PADDING),
         });
         return;
       }

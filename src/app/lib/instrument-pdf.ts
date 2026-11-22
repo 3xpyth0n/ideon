@@ -293,14 +293,14 @@ export async function renderDossierPdf(
   return finished;
 }
 
-// Locks the PDF with AES-256 and a random owner password that is never stored: openable and printable by everyone, editable by no one.
+// Locks the PDF with AES-256 and a random hex owner password (never dash-leading, so qpdf cannot read it as an option) that is never stored: openable and printable by everyone, editable by no one.
 export async function lockPdf(pdfBytes: Buffer): Promise<Buffer> {
   const dir = await mkdtemp(join(tmpdir(), "ideon-lock-"));
   const inputPath = join(dir, "in.pdf");
   const outputPath = join(dir, "out.pdf");
   await writeFile(inputPath, pdfBytes);
   try {
-    const ownerPassword = randomBytes(32).toString("base64url");
+    const ownerPassword = randomBytes(32).toString("hex");
     await new Promise<void>((resolve, reject) => {
       execFile(
         "qpdf",

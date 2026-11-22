@@ -43,6 +43,7 @@ import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "./utils/fitViewport";
 import { focusProjectCanvas } from "./utils/focusCanvas";
 
@@ -105,7 +106,11 @@ function PublicProjectCanvasContent({
   const applyLongestSideFit = useCallback(
     (targetNodes: Node<BlockData>[], maxZoom: number) => {
       if (targetNodes.length === 0) {
-        fitView({ duration: FIT_DURATION, maxZoom, padding: FIT_PADDING });
+        fitView({
+          duration: FIT_DURATION,
+          maxZoom,
+          padding: toFlowPadding(FIT_PADDING),
+        });
         return;
       }
       const bounds = getNodesBoundsWithFallback(targetNodes);
@@ -115,7 +120,7 @@ function PublicProjectCanvasContent({
           nodes: targetNodes,
           duration: FIT_DURATION,
           maxZoom,
-          padding: FIT_PADDING,
+          padding: toFlowPadding(FIT_PADDING),
         });
         return;
       }

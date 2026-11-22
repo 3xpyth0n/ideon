@@ -8,7 +8,7 @@ import {
   type Node,
   ResizeParams,
   useReactFlow,
-  useStore,
+  useNodesStore,
 } from "@xyflow/react";
 import { useI18n } from "@providers/I18nProvider";
 import { safeReadYText, syncYTextValue } from "@lib/projectContentSafety";
@@ -146,8 +146,8 @@ const ProjectCoreBlock = memo(
     const isTopConnected = isHandleConnected("top");
     const isBottomConnected = isHandleConnected("bottom");
 
-    const nodeCount = useStore((s) => s.nodeLookup.size);
-    const nodes = useStore((s) => s.nodes as Node<BlockData>[]);
+    const nodeCount = useNodesStore((s) => s.nodeLookup.size);
+    const nodes = useNodesStore((s) => s.nodes as Node<BlockData>[]);
     const placeholder =
       description === "" && nodeCount === 1
         ? dict.canvas.coreBlockPlaceholder

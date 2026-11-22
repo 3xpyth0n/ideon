@@ -14,8 +14,8 @@ import "aframe-extras/loaders/animation-mixer";
 import "./aframe-block.css";
 import {
   useReactFlow,
-  useStore,
-  useStoreApi,
+  useNodesStore,
+  useReactFlowStoreApi,
   type Node,
   type NodeProps,
 } from "@xyflow/react";
@@ -833,7 +833,7 @@ const AFrameBlock = memo((props: AFrameBlockProps) => {
   const camera = metadata.camera ?? {};
 
   // Subscribed only while the editor is open: idle 3D blocks must not re-render on canvas churn.
-  const activeCanvasNodes = useStore((state) =>
+  const activeCanvasNodes = useNodesStore((state) =>
     isEditorOpen ? state.nodes : EMPTY_NODE_LIST,
   );
   const hotspotTargetBlocks = useMemo(
@@ -873,14 +873,14 @@ const AFrameBlock = memo((props: AFrameBlockProps) => {
   }, [hotspots, focusHotspotTarget]);
 
   // Imperative store subscription: no re-render on canvas churn, only on dangling flips.
-  const flowStore = useStoreApi();
+  const { nodesStore } = useReactFlowStoreApi();
   const [danglingHotspots, setDanglingHotspots] = useState<ReadonlySet<number>>(
     () => new Set(),
   );
   useEffect(() => {
     let lastNodes: Node[] | undefined;
     const recompute = () => {
-      const { nodes } = flowStore.getState();
+      const { nodes } = nodesStore.getState();
       // Comparisons anchor on the nodes-array reference (replaced on every write) so drag frames stay free.
       if (nodes === lastNodes) return;
       lastNodes = nodes;
@@ -906,11 +906,11 @@ const AFrameBlock = memo((props: AFrameBlockProps) => {
       });
     };
     recompute();
-    const unsubscribe = flowStore.subscribe(recompute);
+    const unsubscribe = nodesStore.subscribe(recompute);
     return () => {
       unsubscribe();
     };
-  }, [flowStore, hotspots]);
+  }, [nodesStore, hotspots]);
 
   // Global dismiss (KanbanBlock pattern); card-internal interactions keep it open.
   const cardRef = useRef<HTMLDivElement | null>(null);

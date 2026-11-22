@@ -114,12 +114,17 @@
   height: 100%;
   position: relative;
   background-color: white;
+  --grid-size: 25px;
+  --grid-x: 0px;
+  --grid-y: 0px;
+  --grid-dot: 0.75px;
   user-select: none;
   -webkit-touch-callout: none;
   overscroll-behavior: contain;
 }
 
 .project-canvas {
+  --xy-background-color: transparent;
 }
 
 .project-canvas .react-flow__pane {
@@ -165,6 +170,16 @@
 
 [data-theme="dark"] .project-canvas-container {
   background-color: #0d0d0d;
+}
+
+.project-canvas-container.canvas-grid {
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--text-muted) 20%, transparent) var(--grid-dot),
+    transparent calc(var(--grid-dot) + 0.5px)
+  );
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: var(--grid-x) var(--grid-y);
 }
 
 /* Disable global canvas blur when modal classes are present — causes unwanted blurriness */
@@ -1687,11 +1702,13 @@ body.sketch-modal-open
   opacity: 0 !important;
 }
 
-.preview-mode .react-flow__pane {
+.preview-mode .react-flow__pane,
+.preview-mode .react-flow__pane::before {
   cursor: default !important;
 }
 
 .preview-mode .react-flow__pane.dragging,
+.preview-mode .react-flow__pane.dragging::before,
 .preview-mode .react-flow__pane:active {
   cursor: grabbing !important;
   cursor: -webkit-grabbing !important;

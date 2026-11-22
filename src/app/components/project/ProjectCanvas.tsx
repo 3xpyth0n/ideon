@@ -119,6 +119,7 @@ import {
 } from "./hooks/useProjectCanvasState";
 import { focusProjectCanvas } from "./utils/focusCanvas";
 import { DEFAULT_VIEWPORT } from "./utils/constants";
+import { toFlowPadding } from "./utils/fitViewport";
 import SubCanvasBlock from "./SubCanvasBlock";
 import SubCanvasBreadcrumb from "./SubCanvasBreadcrumb";
 import SubCanvasProvider, {
@@ -138,6 +139,7 @@ import {
 } from "./utils/interaction";
 import { useTouchGestures } from "./hooks/useTouchGestures";
 import { useCanvasTouchViewport } from "./hooks/useCanvasTouchViewport";
+import { useCanvasGrid } from "./hooks/useCanvasGrid";
 import { isBlockContentLocked, isBlockPositionLocked } from "./utils/locks";
 const FIXED_EXTENT: [[number, number], [number, number]] = [
   [-5000, -4000],
@@ -769,7 +771,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
     if (!stage) return null;
 
     const savedViewport = getViewport();
-    fitView({ padding: 0.12, maxZoom: 1, duration: 0 });
+    fitView({ padding: toFlowPadding(0.12), maxZoom: 1, duration: 0 });
 
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
@@ -1040,7 +1042,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          fitView({ padding: 0.12, maxZoom: 1, duration: 800 });
+          fitView({ padding: toFlowPadding(0.12), maxZoom: 1, duration: 800 });
           clearPendingRestore();
         });
       });
@@ -1573,6 +1575,15 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
       allowLongPress: false,
     });
 
+    const syncCanvasGrid = useCanvasGrid(flowContainerRef);
+    const handleViewportChange = useCallback(
+      (viewport: { x: number; y: number; zoom: number }) => {
+        syncCanvasGrid(viewport);
+        onViewportChange(viewport);
+      },
+      [syncCanvasGrid, onViewportChange],
+    );
+
     const canvasTouchViewportHandlers = useCanvasTouchViewport({
       disabled: isReadOnly,
       minZoom: 0.1,
@@ -1959,7 +1970,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             </defs>
           </svg>
           <div
-            className={`project-canvas-container ${
+            className={`project-canvas-container canvas-grid ${
               isPreviewMode ? "preview-mode" : ""
             } ${isExternalDropActive ? "drop-active" : ""}`}
             onKeyDown={onKeyDown}
@@ -2103,7 +2114,7 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       onEdgeClick={onLinkClick}
                       onEdgeDoubleClick={onLinkDoubleClick}
                       onMove={onMove}
-                      onViewportChange={onViewportChange}
+                      onViewportChange={handleViewportChange}
                       zoomOnPinch={true}
                       zoomOnDoubleClick={false}
                       nodeTypes={blockTypes}

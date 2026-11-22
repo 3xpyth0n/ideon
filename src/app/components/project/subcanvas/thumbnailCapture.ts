@@ -1,5 +1,6 @@
 import { getNodesBounds, getViewportForBounds, type Node } from "@xyflow/react";
 import { toPng } from "html-to-image";
+import { toFlowPadding } from "../utils/fitViewport";
 
 export const THUMBNAIL_MAX_WIDTH = 800;
 export const THUMBNAIL_MAX_HEIGHT = 500;
@@ -34,7 +35,7 @@ export async function captureSubCanvasThumbnail({
       THUMBNAIL_MAX_HEIGHT,
       0.5,
       2,
-      0.2,
+      toFlowPadding(0.2),
     );
 
     const captureForTheme = async (theme: "light" | "dark") => {

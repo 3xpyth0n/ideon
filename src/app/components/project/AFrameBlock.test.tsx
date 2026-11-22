@@ -37,15 +37,17 @@ vi.mock("@xyflow/react", () => ({
     getViewport: () => ({ zoom: 1 }),
   }),
   // Feed the shared flow state so selector re-reads see node changes between renders.
-  useStore: (selector: (state: unknown) => unknown) =>
-    selector({ nodes: flowState.nodes, edges: [] }),
-  useStoreApi: () => ({
-    getState: () => ({ nodes: flowState.nodes, edges: [] }),
-    subscribe: (listener: () => void) => {
-      flowState.subscriptions.add(listener);
-      return () => {
-        flowState.subscriptions.delete(listener);
-      };
+  useNodesStore: (selector: (state: unknown) => unknown) =>
+    selector({ nodes: flowState.nodes }),
+  useReactFlowStoreApi: () => ({
+    nodesStore: {
+      getState: () => ({ nodes: flowState.nodes }),
+      subscribe: (listener: () => void) => {
+        flowState.subscriptions.add(listener);
+        return () => {
+          flowState.subscriptions.delete(listener);
+        };
+      },
     },
   }),
   useViewport: () => ({ zoom: 1 }),

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect, useMemo } from "react";
-import { Node, Edge, useReactFlow } from "@xyflow/react";
+import { Node, Edge, EdgeChangeset, useReactFlow } from "@xyflow/react";
 import { toast } from "sonner";
 import { useI18n } from "@providers/I18nProvider";
 import {
@@ -43,6 +43,7 @@ import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "@components/project/utils/fitViewport";
 import { computeHiddenNodeIds } from "@components/project/utils/visibility";
 import {
@@ -509,7 +510,7 @@ export const useProjectCanvasState = (
         fitView({
           duration: FIT_DURATION,
           maxZoom,
-          padding: FIT_PADDING,
+          padding: toFlowPadding(FIT_PADDING),
         });
         return;
       }
@@ -522,7 +523,7 @@ export const useProjectCanvasState = (
           nodes: targetBlocks,
           duration: FIT_DURATION,
           maxZoom,
-          padding: FIT_PADDING,
+          padding: toFlowPadding(FIT_PADDING),
         });
         return;
       }
@@ -2856,7 +2857,9 @@ export const useProjectCanvasState = (
           }
         } else if (selectedLinks.length > 0) {
           graph.onLinksChange(
-            selectedLinks.map((l) => ({ id: l.id, type: "remove" })),
+            new EdgeChangeset(
+              selectedLinks.map((l) => ({ id: l.id, type: "remove" as const })),
+            ),
           );
         }
       }

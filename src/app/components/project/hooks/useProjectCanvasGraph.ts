@@ -5,16 +5,16 @@ import {
   Edge,
   useReactFlow,
   NodeChange,
-  EdgeChange,
+  NodeChangeset,
+  EdgeChangeset,
   Connection,
   addEdge,
-  applyNodeChanges,
-  applyEdgeChanges,
 } from "@xyflow/react";
 import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "@components/project/utils/fitViewport";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -188,7 +188,7 @@ export const useProjectCanvasGraph = ({
           nodes: targetBlocks,
           duration: FIT_DURATION,
           maxZoom,
-          padding: FIT_PADDING,
+          padding: toFlowPadding(FIT_PADDING),
         });
         return;
       }
@@ -336,8 +336,9 @@ export const useProjectCanvasGraph = ({
   );
 
   const onBlocksChange = useCallback(
-    (changes: NodeChange[]) => {
+    (changeset: NodeChangeset) => {
       if (isReadOnly) return;
+      const changes = changeset.toArray();
       const toRemove = changes
         .filter((c): c is { id: string; type: "remove" } => c.type === "remove")
         .map((c) => c.id);
@@ -373,8 +374,7 @@ export const useProjectCanvasGraph = ({
             .filter(Boolean) as NodeChange[];
 
           setBlocks((nds) => {
-            const next = applyNodeChanges(
-              processedChanges,
+            const next = new NodeChangeset(processedChanges).applyTo(
               nds,
             ) as Node<BlockData>[];
             const core = next.find((n) => n.type === "core");
@@ -505,10 +505,10 @@ export const useProjectCanvasGraph = ({
       if (resolvedChanges.length > 0 || descendantChanges.length > 0) {
         setBlocks(
           (blocks) =>
-            applyNodeChanges(
-              [...resolvedChanges, ...descendantChanges],
-              blocks,
-            ) as Node<BlockData>[],
+            new NodeChangeset([
+              ...resolvedChanges,
+              ...descendantChanges,
+            ]).applyTo(blocks) as Node<BlockData>[],
         );
       }
     },
@@ -516,8 +516,9 @@ export const useProjectCanvasGraph = ({
   );
 
   const onLinksChange = useCallback(
-    (changes: EdgeChange[]) => {
+    (changeset: EdgeChangeset) => {
       if (isReadOnly) return;
+      const changes = changeset.toArray();
       const toRemove = changes
         .filter((c): c is { id: string; type: "remove" } => c.type === "remove")
         .map((c) => c.id);
@@ -533,14 +534,14 @@ export const useProjectCanvasGraph = ({
         (change) => change.type !== "select",
       );
       if (!hasUndoableChanges) {
-        setLinks((lks) => applyEdgeChanges(changes, lks || []), {
+        setLinks((lks) => changeset.applyTo(lks || []), {
           recordInUndo: false,
         });
         return;
       }
 
       applyWithUndoBoundary(() => {
-        setLinks((lks) => applyEdgeChanges(changes, lks || []), {
+        setLinks((lks) => changeset.applyTo(lks || []), {
           recordInUndo: true,
         });
       });

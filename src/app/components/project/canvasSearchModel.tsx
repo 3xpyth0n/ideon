@@ -12,6 +12,7 @@ import {
   computeLongestSideViewport,
   getNodesBoundsWithFallback,
   getReactFlowViewportSize,
+  toFlowPadding,
 } from "./utils/fitViewport";
 
 type Dict = ReturnType<typeof useI18n>["dict"];
@@ -225,7 +226,7 @@ export function useCanvasSearch(query: string) {
           nodes: [targetNode],
           duration: FIT_DURATION,
           maxZoom: FIT_MAX_ZOOM_SELECTED,
-          padding: FIT_PADDING,
+          padding: toFlowPadding(FIT_PADDING),
         });
         return;
       }

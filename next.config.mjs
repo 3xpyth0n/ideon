@@ -14,6 +14,7 @@ const nextConfig = {
     "nanoid",
     "uuid",
     "jsdom",
+    "pdfkit",
     "yjs",
   ],
   outputFileTracingIncludes: {

@@ -98,6 +98,7 @@
     "sonner": "^2.0.8",
     "textarea-caret": "^3.1.0",
     "tiptap-markdown": "^0.9.0",
+    "undici": "^8.13.1",
     "uuid": "^14.0.3",
     "ws": "^8.23.0",
     "y-indexeddb": "^9.0.12",

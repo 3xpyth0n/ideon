@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Fixed a path traversal that let any signed-in user delete arbitrary files on the server through avatar deletion; `PATCH /api/account` no longer accepts `avatarUrl`, and only uploaded avatar files can be deleted (GHSA-9ggj-h54p-9q58, GHSA-rc8j-9r3w-4qmm).
 - Fixed an account takeover through SSO: an unverified email can no longer be linked to an existing account. Users whose provider reports their email as unverified must verify it there unless that provider is already linked to their account (GHSA-xf42-572m-g8jv).
+- Fixed a server-side request forgery through DNS rebinding in link previews: connections are now pinned to the validated IP address, every resolved address is checked, and CGNAT and other reserved ranges are blocked (GHSA-rh5m-xrfm-3h9v).
 
 ## [1.2.0] - 2026-11-22
 

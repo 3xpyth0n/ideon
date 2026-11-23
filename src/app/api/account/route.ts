@@ -16,7 +16,6 @@ const updateAccountSchema = z.object({
     }),
   displayName: z.string().optional(),
   email: z.string().email().optional(),
-  avatarUrl: z.string().optional(),
   password: z.string().min(8).optional(),
   vimMode: z.boolean().optional(),
 });
@@ -67,7 +66,6 @@ export const PATCH = authenticatedAction(
       username?: string;
       displayName?: string;
       email?: string;
-      avatarUrl?: string;
       passwordHash?: string;
       vimMode?: number;
     } = {};
@@ -105,7 +103,6 @@ export const PATCH = authenticatedAction(
     if (body.displayName !== undefined)
       updateData.displayName = body.displayName;
     if (body.email !== undefined) updateData.email = body.email;
-    if (body.avatarUrl !== undefined) updateData.avatarUrl = body.avatarUrl;
     if (body.password) {
       updateData.passwordHash = await argon2.hash(body.password);
     }
@@ -130,12 +127,7 @@ export const PATCH = authenticatedAction(
         });
       }
 
-      if (
-        updateData.username ||
-        updateData.displayName ||
-        updateData.email ||
-        updateData.avatarUrl
-      ) {
+      if (updateData.username || updateData.displayName || updateData.email) {
         await logSecurityEvent("profileUpdate", "success", {
           userId: auth.id,
           ip,

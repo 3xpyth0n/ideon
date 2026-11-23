@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-XX
+
+### Security
+
+- Fixed a path traversal that let any signed-in user delete arbitrary files on the server through avatar deletion; `PATCH /api/account` no longer accepts `avatarUrl`, and only uploaded avatar files can be deleted (GHSA-9ggj-h54p-9q58, GHSA-rc8j-9r3w-4qmm).
+
 ## [1.2.0] - 2026-11-22
 
 ### Added

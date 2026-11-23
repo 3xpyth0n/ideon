@@ -8,6 +8,7 @@ export interface ResolveSsoEmailVerificationInput {
   provider?: string | null;
   profile?: Record<string, unknown> | null;
   hasExistingUser: boolean;
+  hasLinkedAccount: boolean;
   hasValidInvitation: boolean;
   idToken?: string | null;
 }
@@ -20,11 +21,44 @@ export interface ResolveSsoEmailVerificationResult {
 
 const SSO_ACCOUNT_TYPES = new Set(["oauth", "oidc"]);
 
+// Some identity providers send boolean claims as strings
+const isFalseClaim = (value: unknown) => value === false || value === "false";
+const isTrueClaim = (value: unknown) => value === true || value === "true";
+
+function resolveUnverifiedEmail({
+  hasExistingUser,
+  hasLinkedAccount,
+  hasValidInvitation,
+}: Pick<
+  ResolveSsoEmailVerificationInput,
+  "hasExistingUser" | "hasLinkedAccount" | "hasValidInvitation"
+>): ResolveSsoEmailVerificationResult {
+  if (hasLinkedAccount) {
+    return {
+      hasUnverifiedClaim: true,
+      shouldBlock: false,
+      bypassReason: "existing_user",
+    };
+  }
+
+  // An email match alone must never grant access to an existing account
+  if (!hasExistingUser && hasValidInvitation) {
+    return {
+      hasUnverifiedClaim: true,
+      shouldBlock: false,
+      bypassReason: "pending_invitation",
+    };
+  }
+
+  return { hasUnverifiedClaim: true, shouldBlock: true };
+}
+
 export async function resolveSsoEmailVerificationPolicy({
   accountType,
   provider,
   profile,
   hasExistingUser,
+  hasLinkedAccount,
   hasValidInvitation,
   idToken,
 }: ResolveSsoEmailVerificationInput): Promise<ResolveSsoEmailVerificationResult> {
@@ -40,26 +74,15 @@ export async function resolveSsoEmailVerificationPolicy({
     try {
       const claims = await verifyIdToken(idToken);
       if (claims && "email_verified" in claims) {
-        const emailVerified = claims.email_verified as boolean;
-        if (emailVerified === true) {
+        if (isTrueClaim(claims.email_verified)) {
           return { hasUnverifiedClaim: false, shouldBlock: false };
         }
-        if (emailVerified === false) {
-          if (hasExistingUser) {
-            return {
-              hasUnverifiedClaim: true,
-              shouldBlock: false,
-              bypassReason: "existing_user",
-            };
-          }
-          if (hasValidInvitation) {
-            return {
-              hasUnverifiedClaim: true,
-              shouldBlock: false,
-              bypassReason: "pending_invitation",
-            };
-          }
-          return { hasUnverifiedClaim: true, shouldBlock: true };
+        if (isFalseClaim(claims.email_verified)) {
+          return resolveUnverifiedEmail({
+            hasExistingUser,
+            hasLinkedAccount,
+            hasValidInvitation,
+          });
         }
       }
     } catch (err: unknown) {
@@ -78,31 +101,19 @@ export async function resolveSsoEmailVerificationPolicy({
   }
 
   const hasUnverifiedEmailClaim =
-    "email_verified" in profile && profile.email_verified === false;
+    "email_verified" in profile && isFalseClaim(profile.email_verified);
   const hasUnverifiedDiscordClaim =
     provider === "discord" &&
     "verified" in profile &&
-    profile.verified === false;
+    isFalseClaim(profile.verified);
 
   if (!hasUnverifiedEmailClaim && !hasUnverifiedDiscordClaim) {
     return { hasUnverifiedClaim: false, shouldBlock: false };
   }
 
-  if (hasExistingUser) {
-    return {
-      hasUnverifiedClaim: true,
-      shouldBlock: false,
-      bypassReason: "existing_user",
-    };
-  }
-
-  if (hasValidInvitation) {
-    return {
-      hasUnverifiedClaim: true,
-      shouldBlock: false,
-      bypassReason: "pending_invitation",
-    };
-  }
-
-  return { hasUnverifiedClaim: true, shouldBlock: true };
+  return resolveUnverifiedEmail({
+    hasExistingUser,
+    hasLinkedAccount,
+    hasValidInvitation,
+  });
 }

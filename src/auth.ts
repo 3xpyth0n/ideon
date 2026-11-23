@@ -373,6 +373,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
 
           // Prefer exact provider->user mapping via accounts table when present
           let existingUser = null;
+          let hasLinkedAccount = false;
           if (account?.provider && account?.providerAccountId) {
             const accountRow = await db
               .selectFrom("accounts")
@@ -387,6 +388,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
                 .selectAll()
                 .where("id", "=", accountRow.userId)
                 .executeTakeFirst();
+              hasLinkedAccount = !!existingUser;
             }
           }
 
@@ -413,7 +415,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
             .executeTakeFirst();
 
           // Mitigate allowDangerousEmailAccountLinking:
-          // keep blocking unknown unverified SSO users, but allow trusted users.
+          // an unverified email only passes for an already linked account or a new invitee.
           const acct = account as unknown as
             | Record<string, unknown>
             | undefined;
@@ -431,6 +433,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
               provider: account?.provider,
               profile: profile as Record<string, unknown> | null,
               hasExistingUser: !!existingUser,
+              hasLinkedAccount,
               hasValidInvitation: !!invitation,
               idToken: idTokenVal,
             });

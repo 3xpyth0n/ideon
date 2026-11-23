@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSafeUrl } from "@lib/security-utils";
+import { safeFetch } from "@lib/ssrf";
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-    const response = await fetch(decodedUrl, {
+    const response = await safeFetch(decodedUrl, {
       signal: controller.signal,
       headers: {
         "User-Agent":

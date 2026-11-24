@@ -24,6 +24,7 @@ import {
   getUserProjectRole,
 } from "./app/lib/ws-auth";
 import * as pty from "node-pty";
+import { canUseShell } from "./app/lib/shell-access";
 
 import {
   setupWSConnection,
@@ -149,6 +150,20 @@ async function validateShellAccess(
     if (pool) {
       const db = getDb();
 
+      const userQuery = db
+        .selectFrom("users")
+        .select("role")
+        .where("id", "=", userId)
+        .compile();
+
+      const userResult = await pool.query(
+        userQuery.sql,
+        userQuery.parameters as unknown[],
+      );
+
+      const user = (userResult.rows[0] ?? null) as { role: string } | null;
+      if (!canUseShell(user?.role)) return false;
+
       const projectQuery = db
         .selectFrom("projects")
         .select(["id", "ownerId"])
@@ -189,6 +204,14 @@ async function validateShellAccess(
 
     // SQLite fallback (no RLS)
     const db = getDb();
+
+    const user = await db
+      .selectFrom("users")
+      .select("role")
+      .where("id", "=", userId)
+      .executeTakeFirst();
+
+    if (!canUseShell(user?.role)) return false;
 
     const project = await db
       .selectFrom("projects")
@@ -241,22 +264,6 @@ function handleShellConnection(
     if (msg.type === "shell:start" && msg.blockId) {
       const blockId = msg.blockId;
 
-      // Kill existing session for this block if any
-      killShellSession(blockId);
-
-      // Check max sessions per project
-      if (getProjectShellCount(projectId) >= SHELL_MAX_SESSIONS) {
-        ws.send(
-          JSON.stringify({
-            type: "shell:error",
-            blockId,
-            message: "Maximum concurrent shell sessions reached",
-          }),
-        );
-        ws.close(4029, "Max sessions");
-        return;
-      }
-
       // Verify permission
       const hasAccess = await validateShellAccess(userId, projectId);
       if (!hasAccess) {
@@ -268,6 +275,35 @@ function handleShellConnection(
           }),
         );
         ws.close(4003, "Permission denied");
+        return;
+      }
+
+      // Only replace a session this user started for the block
+      const existingSession = shellSessions.get(blockId);
+      if (existingSession) {
+        if (existingSession.userId !== userId) {
+          ws.send(
+            JSON.stringify({
+              type: "shell:error",
+              blockId,
+              message: "Shell session already in use",
+            }),
+          );
+          return;
+        }
+        killShellSession(blockId);
+      }
+
+      // Check max sessions per project
+      if (getProjectShellCount(projectId) >= SHELL_MAX_SESSIONS) {
+        ws.send(
+          JSON.stringify({
+            type: "shell:error",
+            blockId,
+            message: "Maximum concurrent shell sessions reached",
+          }),
+        );
+        ws.close(4029, "Max sessions");
         return;
       }
 

@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed an account takeover through SSO: an unverified email can no longer be linked to an existing account. Users whose provider reports their email as unverified must verify it there unless that provider is already linked to their account (GHSA-xf42-572m-g8jv).
 - Fixed a server-side request forgery through DNS rebinding in link previews: connections are now pinned to the validated IP address, every resolved address is checked, and CGNAT and other reserved ranges are blocked (GHSA-rh5m-xrfm-3h9v).
 - Fixed a server-side request forgery in the image proxy: DNS names resolving to internal addresses and redirects to internal hosts are now rejected (GHSA-v826-5x76-5wmj).
+- Restricted the shell block to system administrators (superadmin and admin). The shell runs on the server with its privileges, so any member could previously gain control of the instance by creating a project and starting a shell. The shell block is hidden from the Add Block menu for other users, and a user can no longer stop another user's shell session.
 
 ## [1.2.0] - 2026-11-22
 

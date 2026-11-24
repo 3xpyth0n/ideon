@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { getDb } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
+import { toRuleResponse } from "@lib/automation-rules";
 import { z } from "zod";
 
 const createRuleSchema = z.object({
@@ -38,7 +39,7 @@ const createRuleSchema = z.object({
   sourceBlockId: z.string().nullable().optional(),
 });
 
-export const GET = projectAction(async (_req, { project }) => {
+export const GET = projectAction(async (_req, { project, role }) => {
   const db = getDb();
   const rules = await db
     .selectFrom("automationRules")
@@ -46,7 +47,7 @@ export const GET = projectAction(async (_req, { project }) => {
     .where("projectId", "=", project.id)
     .orderBy("createdAt", "desc")
     .execute();
-  return rules;
+  return rules.map((rule) => toRuleResponse(rule, role));
 });
 
 export const POST = projectAction(

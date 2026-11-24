@@ -22,7 +22,6 @@ import {
 
 export type WebhookMeta = {
   ruleCreated?: boolean;
-  webhookSecret?: string;
   projectId?: string;
   source?: string;
   triggerEvent?: string;
@@ -140,7 +139,6 @@ export function WebhookBlockConfigModal({
         },
       );
       if (!res.ok) throw new Error();
-      const saved = (await res.json()) as { webhookSecret?: string };
       onMetaUpdate({
         triggerEvent,
         conditions,
@@ -149,7 +147,6 @@ export function WebhookBlockConfigModal({
         targetBlockId: targetBlockId || null,
         stateDecayMinutes: parseInt(stateDecayMinutes, 10) || 1440,
         ruleCreated: true,
-        ...(saved.webhookSecret ? { webhookSecret: saved.webhookSecret } : {}),
       });
       isDirty.current = false;
       toast.success(tr.ruleSaved || "Saved");

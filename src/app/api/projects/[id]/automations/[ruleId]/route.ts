@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { getDb } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
+import { toRuleResponse } from "@lib/automation-rules";
 import { z } from "zod";
 
 const updateRuleSchema = z.object({
@@ -47,8 +48,8 @@ async function getRule(projectId: string, ruleId: string) {
   return rule;
 }
 
-export const GET = projectAction(async (_req, { project, params }) => {
-  return getRule(project.id, params.ruleId);
+export const GET = projectAction(async (_req, { project, params, role }) => {
+  return toRuleResponse(await getRule(project.id, params.ruleId), role);
 });
 
 export const PUT = projectAction(

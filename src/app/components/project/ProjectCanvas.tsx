@@ -3169,9 +3169,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                       },
                     ).then(async (res) => {
                       if (res.ok) {
-                        const rule = (await res.json()) as {
-                          webhookSecret: string;
-                        };
                         const node = blocks.find((b) => b.id === id);
                         if (node) {
                           const existingMeta =
@@ -3190,7 +3187,6 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
                             {
                               ...existingMeta,
                               ruleCreated: true,
-                              webhookSecret: rule.webhookSecret,
                               projectId: initialProjectId,
                             },
                           );

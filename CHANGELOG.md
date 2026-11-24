@@ -14,6 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed a server-side request forgery through DNS rebinding in link previews: connections are now pinned to the validated IP address, every resolved address is checked, and CGNAT and other reserved ranges are blocked (GHSA-rh5m-xrfm-3h9v).
 - Fixed a server-side request forgery in the image proxy: DNS names resolving to internal addresses and redirects to internal hosts are now rejected (GHSA-v826-5x76-5wmj).
 - Restricted the shell block to system administrators (superadmin and admin). The shell runs on the server with its privileges, so any member could previously gain control of the instance by creating a project and starting a shell. The shell block is hidden from the Add Block menu for other users, and a user can no longer stop another user's shell session.
+- Fixed automation webhook secrets being readable by project viewers and by anyone with a share link: secrets are no longer copied into block metadata, only project owners can read them through the API, and existing secrets are rotated on upgrade. Integrations that used a webhook secret must use the new value.
 
 ## [1.2.0] - 2026-11-22
 

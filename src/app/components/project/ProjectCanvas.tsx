@@ -530,6 +530,13 @@ function ProjectCanvasContent({ initialProjectId }: ProjectCanvasProps) {
             return;
           }
 
+          if (event?.code === 4005) {
+            wsProvider?.disconnect();
+            toast(dictRef.current.common.roleChanged);
+            window.location.reload();
+            return;
+          }
+
           if (event?.code === 4003) {
             wsProvider?.disconnect();
             toast.error(

@@ -465,6 +465,7 @@
     "approve": "Approve",
     "dragToReorder": "Drag to reorder",
     "accessRevoked": "Access revoked",
+    "roleChanged": "Your role on this project has changed",
     "backToHome": "Back to Home",
     "blockTypeGithub": "GitHub",
     "canvasErrorDescription": "We encountered an error while rendering the canvas. This might be due to a temporary glitch or a corrupted block.",

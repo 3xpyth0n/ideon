@@ -36,6 +36,7 @@ import { LeveldbPersistence } from "y-leveldb";
 // Global helper to kick user from project
 declare global {
   var kickUser: (projectId: string, userId: string) => void;
+  var refreshUserAccess: (projectId: string, userId: string) => void;
   var updateProjectRequests: (projectId: string) => Promise<void>;
   var notifyAccessGranted: (projectId: string, userId: string) => Promise<void>;
   var rescheduleCronBlocks: () => Promise<void>;
@@ -87,17 +88,28 @@ global.updateProjectRequests = async (projectId: string) => {
   }
 };
 
-global.kickUser = (projectId: string, userId: string) => {
-  const docName = `project-${projectId}`;
-  const doc = docs.get(docName);
-  if (doc) {
-    // doc.conns is a Map<WebSocket, any>
-    for (const [ws] of doc.conns) {
-      if ((ws as WebSocket & { userId: string }).userId === userId) {
-        ws.close(4003, "Access Revoked");
-      }
+function closeUserProjectConnections(
+  projectId: string,
+  userId: string,
+  code: number,
+  reason: string,
+) {
+  const doc = docs.get(`project-${projectId}`);
+  if (!doc) return;
+  for (const [ws] of doc.conns) {
+    if ((ws as WebSocket & { userId: string }).userId === userId) {
+      ws.close(code, reason);
     }
   }
+}
+
+global.kickUser = (projectId: string, userId: string) => {
+  closeUserProjectConnections(projectId, userId, 4003, "Access Revoked");
+};
+
+// Connections keep the role resolved at handshake, so force a reconnect to apply the new one
+global.refreshUserAccess = (projectId: string, userId: string) => {
+  closeUserProjectConnections(projectId, userId, 4005, "Role Changed");
 };
 
 // Shell PTY session management

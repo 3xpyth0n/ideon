@@ -465,6 +465,7 @@
     "approve": "Approuver",
     "dragToReorder": "Glisser pour réorganiser",
     "accessRevoked": "Accès révoqué",
+    "roleChanged": "Votre rôle sur ce projet a changé",
     "backToHome": "Retour à l'accueil",
     "blockTypeGithub": "GitHub",
     "canvasErrorDescription": "Nous avons rencontré une erreur lors du rendu du canevas. Cela peut être dû à un problème temporaire ou à un bloc corrompu.",

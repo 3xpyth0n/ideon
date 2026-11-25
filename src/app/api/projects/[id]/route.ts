@@ -23,11 +23,11 @@ export const PATCH = projectAction(
 
     // Handle Folder Move
     if (folderId !== undefined) {
-      // Only Creator or Owner can move project
-      if (role !== "creator" && role !== "owner") {
+      // Folder placement is shared and folder owners inherit access to contained projects
+      if (role !== "creator") {
         throw {
           status: 403,
-          message: "Forbidden: Only creator or owner can move project",
+          message: "Forbidden: Only the creator can move the project",
         };
       }
 

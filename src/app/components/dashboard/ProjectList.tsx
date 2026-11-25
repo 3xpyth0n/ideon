@@ -1373,7 +1373,7 @@ export function ProjectList({ view, folderId }: ProjectListProps) {
                   );
                 }
               }}
-              draggable={!isTrash}
+              draggable={!isTrash && project.role === "creator"}
               onDragStart={(e) => handleDragStart(e, project.id)}
               data-project-id={project.id}
               {...touchHandlers}

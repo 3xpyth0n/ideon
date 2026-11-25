@@ -3,6 +3,7 @@ import { getDb } from "@lib/db";
 import * as argon2 from "argon2";
 import { stringToColor } from "@lib/utils";
 import { logSecurityEvent } from "@lib/audit";
+import { assertCredentialChangeAllowed } from "@lib/account-credentials";
 import { headers } from "next/headers";
 import { z } from "zod";
 
@@ -17,6 +18,7 @@ const updateAccountSchema = z.object({
   displayName: z.string().optional(),
   email: z.string().email().optional(),
   password: z.string().min(8).optional(),
+  currentPassword: z.string().optional(),
   vimMode: z.boolean().optional(),
 });
 
@@ -24,7 +26,7 @@ export const GET = authenticatedAction(
   async (_req, { user: auth }) => {
     if (!auth) throw new Error("Unauthorized");
     const db = getDb();
-    let user = await db
+    const row = await db
       .selectFrom("users")
       .select([
         "id as id",
@@ -35,11 +37,19 @@ export const GET = authenticatedAction(
         "color as color",
         "role as role",
         "vimMode as vimMode",
+        "passwordHash as passwordHash",
       ])
       .where("id", "=", auth.id)
       .executeTakeFirst();
 
-    if (user && !user.color) {
+    if (!row) {
+      throw { status: 401, message: "User not found" };
+    }
+
+    const { passwordHash, ...profile } = row;
+    let user = { ...profile, hasPassword: passwordHash !== null };
+
+    if (!user.color) {
       const newColor = stringToColor(user.username || user.email);
       await db
         .updateTable("users")
@@ -47,10 +57,6 @@ export const GET = authenticatedAction(
         .where("id", "=", auth.id)
         .execute();
       user = { ...user, color: newColor };
-    }
-
-    if (!user) {
-      throw { status: 401, message: "User not found" };
     }
 
     return user;
@@ -102,7 +108,53 @@ export const PATCH = authenticatedAction(
     }
     if (body.displayName !== undefined)
       updateData.displayName = body.displayName;
-    if (body.email !== undefined) updateData.email = body.email;
+
+    const current = await db
+      .selectFrom("users")
+      .select(["email", "passwordHash"])
+      .where("id", "=", auth.id)
+      .executeTakeFirst();
+
+    if (!current) {
+      throw { status: 401, message: "User not found" };
+    }
+
+    const normalizedEmail = body.email?.trim().toLowerCase();
+    const emailChanged =
+      normalizedEmail !== undefined &&
+      normalizedEmail !== current.email.toLowerCase();
+
+    try {
+      await assertCredentialChangeAllowed({
+        passwordHash: current.passwordHash,
+        emailChanged,
+        passwordChanged: Boolean(body.password),
+        currentPassword: body.currentPassword,
+      });
+    } catch (err) {
+      const reqHeaders = await headers();
+      await logSecurityEvent("credentialChange", "failure", {
+        userId: auth.id,
+        ip: reqHeaders.get("x-forwarded-for") || "127.0.0.1",
+      });
+      throw err;
+    }
+
+    if (emailChanged && normalizedEmail) {
+      const emailOwner = await db
+        .selectFrom("users")
+        .select("id")
+        .where("email", "=", normalizedEmail)
+        .where("id", "!=", auth.id)
+        .executeTakeFirst();
+
+      if (emailOwner) {
+        throw { status: 400, message: "Email already in use" };
+      }
+
+      updateData.email = normalizedEmail;
+    }
+
     if (body.password) {
       updateData.passwordHash = await argon2.hash(body.password);
     }

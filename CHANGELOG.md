@@ -17,7 +17,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed automation webhook secrets being readable by project viewers and by anyone with a share link: secrets are no longer copied into block metadata, only project owners can read them through the API, and existing secrets are rotated on upgrade. Integrations that used a webhook secret must use the new value.
 - Fixed webhooks accepting the API key of any user: a request authenticated with an API key now runs only if the key owner is an editor or owner of the project. Keys of users removed from the project, or who are only viewers, no longer trigger its webhooks.
 - Enforced the "password login" setting on the server: when an administrator disables it, signing in with a password is now rejected instead of only being hidden from the login page.
-- Hardened access control following an internal security audit: account settings, project folders, project roles.
+- Hardened access control following an internal security audit: account settings, project folders, project roles, outbound requests.
 
 ## [1.2.0] - 2026-11-22
 

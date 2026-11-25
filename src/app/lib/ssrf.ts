@@ -133,6 +133,7 @@ export async function safeFetch(
   options: RequestInit = {},
 ): Promise<Response> {
   let currentUrl = url;
+  let requestOptions = options;
   const maxRedirects = 5;
   let redirectCount = 0;
 
@@ -150,7 +151,7 @@ export async function safeFetch(
     try {
       // The global fetch and the undici package types differ nominally only
       response = (await undiciFetch(currentUrl, {
-        ...(options as UndiciInit),
+        ...(requestOptions as UndiciInit),
         redirect: "manual",
         dispatcher,
       })) as unknown as Response;
@@ -166,8 +167,16 @@ export async function safeFetch(
         throw new Error("Redirect response missing Location header");
       }
 
-      // Resolve relative URLs against the current URL
-      currentUrl = new URL(location, currentUrl).toString();
+      const nextUrl = new URL(location, currentUrl);
+      // Matches native fetch: credentials never follow a redirect to another origin
+      if (nextUrl.origin !== new URL(currentUrl).origin) {
+        const headers = new Headers(requestOptions.headers);
+        headers.delete("authorization");
+        headers.delete("proxy-authorization");
+        headers.delete("cookie");
+        requestOptions = { ...requestOptions, headers };
+      }
+      currentUrl = nextUrl.toString();
       redirectCount++;
       continue;
     }

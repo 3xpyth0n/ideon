@@ -99,3 +99,37 @@ describe("safeFetch", () => {
     expect(undiciFetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("safeFetch credentials on redirect", () => {
+  const redirectTo = (location: string) =>
+    new Response(null, { status: 302, headers: { location } });
+  const authHeaderOfCall = (index: number) =>
+    new Headers(undiciFetch.mock.calls[index][1].headers).get("authorization");
+
+  it("drops the Authorization header when the redirect changes origin", async () => {
+    lookup.mockResolvedValue(PUBLIC);
+    undiciFetch
+      .mockResolvedValueOnce(redirectTo("https://other.example/target"))
+      .mockResolvedValueOnce(new Response("ok"));
+
+    await safeFetch("https://api.example/repo", {
+      headers: { Authorization: "Bearer secret" },
+    });
+
+    expect(authHeaderOfCall(0)).toBe("Bearer secret");
+    expect(authHeaderOfCall(1)).toBeNull();
+  });
+
+  it("keeps the Authorization header on a same-origin redirect", async () => {
+    lookup.mockResolvedValue(PUBLIC);
+    undiciFetch
+      .mockResolvedValueOnce(redirectTo("/moved"))
+      .mockResolvedValueOnce(new Response("ok"));
+
+    await safeFetch("https://api.example/repo", {
+      headers: { Authorization: "Bearer secret" },
+    });
+
+    expect(authHeaderOfCall(1)).toBe("Bearer secret");
+  });
+});

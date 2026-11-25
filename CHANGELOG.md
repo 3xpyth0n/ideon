@@ -16,6 +16,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Restricted the shell block to system administrators (superadmin and admin). The shell runs on the server with its privileges, so any member could previously gain control of the instance by creating a project and starting a shell. The shell block is hidden from the Add Block menu for other users, and a user can no longer stop another user's shell session.
 - Fixed automation webhook secrets being readable by project viewers and by anyone with a share link: secrets are no longer copied into block metadata, only project owners can read them through the API, and existing secrets are rotated on upgrade. Integrations that used a webhook secret must use the new value.
 - Fixed webhooks accepting the API key of any user: a request authenticated with an API key now runs only if the key owner is an editor or owner of the project. Keys of users removed from the project, or who are only viewers, no longer trigger its webhooks.
+- Enforced the "password login" setting on the server: when an administrator disables it, signing in with a password is now rejected instead of only being hidden from the login page.
 - Hardened access control following an internal security audit: account settings.
 
 ## [1.2.0] - 2026-11-22

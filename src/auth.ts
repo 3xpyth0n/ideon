@@ -21,6 +21,7 @@ import { headers } from "next/headers";
 import * as argon2 from "argon2";
 import { z } from "zod";
 import { KyselyAdapter } from "@lib/authAdapter";
+import { isPasswordLoginEnabled } from "@lib/auth/passwordLoginPolicy";
 import { render } from "@react-email/components";
 import MagicLinkEmail from "@emails/MagicLinkEmail";
 import { sendEmail } from "@lib/email";
@@ -169,6 +170,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           const { identifier, password } = parsed.data;
 
           if (!identifier || !password) return null;
+
+          if (!(await isPasswordLoginEnabled(db))) {
+            await logSecurityEvent("loginPassword", "failure", {
+              ip,
+              reason: "password_login_disabled",
+            });
+            throw new CredentialsSignin();
+          }
 
           const rateLimiter = getRateLimiter();
           try {

@@ -46,7 +46,7 @@ interface WebhookBlockConfigModalProps {
   projectId: string;
   initialMeta: WebhookMeta;
   blockTitle?: string;
-  canManageSecret: boolean;
+  canManageRule: boolean;
   onMetaUpdate: (patch: Partial<WebhookMeta>) => void;
 }
 
@@ -57,7 +57,7 @@ export function WebhookBlockConfigModal({
   projectId,
   initialMeta,
   blockTitle,
-  canManageSecret,
+  canManageRule,
   onMetaUpdate,
 }: WebhookBlockConfigModalProps) {
   const { dict } = useI18n();
@@ -255,21 +255,21 @@ export function WebhookBlockConfigModal({
   }, [endpointUrl]);
 
   const sendTest = useCallback(async () => {
-    if (!endpointUrl) return;
+    if (!projectId) return;
     setTesting(true);
     try {
-      await fetch(endpointUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Ideon-Test": "true" },
-        body: JSON.stringify({ event: "test" }),
-      });
+      const res = await fetch(
+        `/api/projects/${projectId}/automations/${blockId}/trigger`,
+        { method: "POST" },
+      );
+      if (!res.ok) throw new Error();
       toast.success(tr.testSent || "Test event sent");
     } catch {
       toast.error(tr.testError || "Failed to send test event");
     } finally {
       setTesting(false);
     }
-  }, [endpointUrl, tr]);
+  }, [projectId, blockId, tr]);
 
   return (
     <Modal
@@ -620,7 +620,7 @@ export function WebhookBlockConfigModal({
               </a>
             </div>
 
-            {canManageSecret && initialMeta.ruleCreated && (
+            {canManageRule && initialMeta.ruleCreated && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-semibold uppercase tracking-widest opacity-40">
@@ -693,7 +693,7 @@ export function WebhookBlockConfigModal({
             {saving ? <RefreshCw size={13} className="animate-spin" /> : null}
             {dict.common.save || "Save"}
           </button>
-          {initialMeta.ruleCreated && endpointUrl && (
+          {canManageRule && initialMeta.ruleCreated && endpointUrl && (
             <button
               onClick={() => void sendTest()}
               disabled={testing}

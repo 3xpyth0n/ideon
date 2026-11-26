@@ -7,6 +7,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.2.1] - 2026-11-XX
 
+### Added
+
+- Project owners can now reveal, copy, and regenerate the signing secret of a webhook block from its configuration, to authenticate requests with the `x-ideon-secret` header or a GitHub-compatible HMAC signature. The secret only applies to that webhook, unlike an API key, and is no longer included in automation rule responses.
+
 ### Security
 
 - Fixed a path traversal that let any signed-in user delete arbitrary files on the server through avatar deletion; `PATCH /api/account` no longer accepts `avatarUrl`, and only uploaded avatar files can be deleted (GHSA-9ggj-h54p-9q58, GHSA-rc8j-9r3w-4qmm).

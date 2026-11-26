@@ -1,4 +1,3 @@
-import { randomBytes } from "crypto";
 import { getDb } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
 import { toRuleResponse } from "@lib/automation-rules";
@@ -33,7 +32,6 @@ const updateRuleSchema = z.object({
     .optional(),
   actionParams: z.record(z.string(), z.unknown()).nullable().optional(),
   stateDecayMinutes: z.number().int().min(1).max(525600).optional(),
-  regenerateSecret: z.boolean().optional(),
 });
 
 async function getRule(projectId: string, ruleId: string) {
@@ -48,8 +46,8 @@ async function getRule(projectId: string, ruleId: string) {
   return rule;
 }
 
-export const GET = projectAction(async (_req, { project, params, role }) => {
-  return toRuleResponse(await getRule(project.id, params.ruleId), role);
+export const GET = projectAction(async (_req, { project, params }) => {
+  return toRuleResponse(await getRule(project.id, params.ruleId));
 });
 
 export const PUT = projectAction(
@@ -84,11 +82,9 @@ export const PUT = projectAction(
         : null;
     if (parsed.stateDecayMinutes !== undefined)
       updates.stateDecayMinutes = parsed.stateDecayMinutes;
-    if (parsed.regenerateSecret)
-      updates.webhookSecret = randomBytes(32).toString("hex");
 
     if (Object.keys(updates).length === 0) {
-      return getRule(project.id, params.ruleId);
+      return toRuleResponse(await getRule(project.id, params.ruleId));
     }
 
     const rule = await db
@@ -102,7 +98,7 @@ export const PUT = projectAction(
     void (
       global as { rescheduleCronBlocks?: () => Promise<void> }
     ).rescheduleCronBlocks?.();
-    return rule;
+    return toRuleResponse(rule);
   },
   { schema: updateRuleSchema },
 );

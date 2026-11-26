@@ -39,7 +39,7 @@ const createRuleSchema = z.object({
   sourceBlockId: z.string().nullable().optional(),
 });
 
-export const GET = projectAction(async (_req, { project, role }) => {
+export const GET = projectAction(async (_req, { project }) => {
   const db = getDb();
   const rules = await db
     .selectFrom("automationRules")
@@ -47,7 +47,7 @@ export const GET = projectAction(async (_req, { project, role }) => {
     .where("projectId", "=", project.id)
     .orderBy("createdAt", "desc")
     .execute();
-  return rules.map((rule) => toRuleResponse(rule, role));
+  return rules.map(toRuleResponse);
 });
 
 export const POST = projectAction(
@@ -96,7 +96,7 @@ export const POST = projectAction(
         global as { rescheduleCronBlocks?: () => Promise<void> }
       ).rescheduleCronBlocks?.();
     }
-    return rule;
+    return toRuleResponse(rule);
   },
   { schema: createRuleSchema },
 );

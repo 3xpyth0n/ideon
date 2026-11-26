@@ -356,6 +356,9 @@ const WebhookBlock = memo(
           projectId={projectId}
           initialMeta={meta}
           blockTitle={title}
+          canManageSecret={
+            data.userRole === "creator" || data.userRole === "owner"
+          }
           onMetaUpdate={updateMetadata}
         />
       </div>

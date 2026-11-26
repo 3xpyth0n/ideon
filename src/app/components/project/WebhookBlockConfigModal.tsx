@@ -10,6 +10,9 @@ import {
   Trash2,
   RefreshCw,
   Play,
+  Eye,
+  EyeOff,
+  RotateCcw,
 } from "lucide-react";
 import { useI18n } from "@providers/I18nProvider";
 import { toast } from "sonner";
@@ -43,6 +46,7 @@ interface WebhookBlockConfigModalProps {
   projectId: string;
   initialMeta: WebhookMeta;
   blockTitle?: string;
+  canManageSecret: boolean;
   onMetaUpdate: (patch: Partial<WebhookMeta>) => void;
 }
 
@@ -53,6 +57,7 @@ export function WebhookBlockConfigModal({
   projectId,
   initialMeta,
   blockTitle,
+  canManageSecret,
   onMetaUpdate,
 }: WebhookBlockConfigModalProps) {
   const { dict } = useI18n();
@@ -88,6 +93,70 @@ export function WebhookBlockConfigModal({
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const isDirty = useRef(false);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [secretVisible, setSecretVisible] = useState(false);
+  const [secretCopied, setSecretCopied] = useState(false);
+  const [secretBusy, setSecretBusy] = useState(false);
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSecret(null);
+      setSecretVisible(false);
+      setConfirmRegenerate(false);
+    }
+  }, [isOpen]);
+
+  const secretUrl = `/api/projects/${projectId}/automations/${blockId}/secret`;
+
+  const requestSecret = useCallback(
+    async (method: "GET" | "POST") => {
+      setSecretBusy(true);
+      try {
+        const res = await fetch(secretUrl, { method });
+        if (!res.ok) throw new Error();
+        const { webhookSecret } = (await res.json()) as {
+          webhookSecret: string;
+        };
+        setSecret(webhookSecret);
+        return webhookSecret;
+      } catch {
+        toast.error(tr.secretLoadError || "Failed to load the secret");
+        return null;
+      } finally {
+        setSecretBusy(false);
+      }
+    },
+    [secretUrl, tr],
+  );
+
+  const toggleSecret = useCallback(async () => {
+    if (secretVisible) {
+      setSecretVisible(false);
+      return;
+    }
+    if (secret || (await requestSecret("GET"))) setSecretVisible(true);
+  }, [secret, secretVisible, requestSecret]);
+
+  const copySecret = useCallback(async () => {
+    const value = secret ?? (await requestSecret("GET"));
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    setSecretCopied(true);
+    setTimeout(() => setSecretCopied(false), 1500);
+  }, [secret, requestSecret]);
+
+  const regenerateSecret = useCallback(async () => {
+    if (!confirmRegenerate) {
+      setConfirmRegenerate(true);
+      return;
+    }
+    setConfirmRegenerate(false);
+    if (await requestSecret("POST")) {
+      setSecretVisible(true);
+      toast.success(tr.secretRegenerated || "Secret regenerated");
+    }
+  }, [confirmRegenerate, requestSecret, tr]);
 
   useEffect(() => {
     if (isOpen && projectId) {
@@ -550,6 +619,63 @@ export function WebhookBlockConfigModal({
                 {tr.getApiKey || "Get an API key in Settings → Developers"}
               </a>
             </div>
+
+            {canManageSecret && initialMeta.ruleCreated && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-semibold uppercase tracking-widest opacity-40">
+                    {tr.secret || "Secret"}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void regenerateSecret()}
+                    disabled={secretBusy}
+                    className="flex items-center gap-1 text-[10px] opacity-40 hover:opacity-70 transition-opacity"
+                  >
+                    <RotateCcw size={10} />
+                    {confirmRegenerate
+                      ? tr.regenerateSecretConfirm ||
+                        "Confirm: existing integrations will stop working"
+                      : tr.regenerateSecret || "Regenerate"}
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-md ring-1 ring-border/50">
+                  <span className="text-[11px] font-mono opacity-60 truncate flex-1">
+                    {secretVisible && secret ? secret : "•".repeat(32)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void toggleSecret()}
+                    disabled={secretBusy}
+                    className="shrink-0 opacity-40 hover:opacity-70"
+                    title={
+                      secretVisible
+                        ? tr.hideSecret || "Hide"
+                        : tr.revealSecret || "Reveal"
+                    }
+                  >
+                    {secretVisible ? <EyeOff size={11} /> : <Eye size={11} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void copySecret()}
+                    disabled={secretBusy}
+                    className="shrink-0 opacity-40 hover:opacity-70"
+                    title={dict.common.copy || "Copy"}
+                  >
+                    {secretCopied ? (
+                      <Check size={11} className="text-green-500" />
+                    ) : (
+                      <Copy size={11} />
+                    )}
+                  </button>
+                </div>
+                <p className="text-[10px] opacity-30 leading-relaxed">
+                  {tr.secretHint ||
+                    "Send it in the x-ideon-secret header, or use it as the HMAC key for x-hub-signature-256 (GitHub-compatible). Only use it over HTTPS."}
+                </p>
+              </div>
+            )}
           </>
         )}
 

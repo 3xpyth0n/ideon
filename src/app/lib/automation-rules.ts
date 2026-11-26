@@ -8,12 +8,10 @@ export function canManageAutomationRules(role: RuleRole): boolean {
   return !!role && RULE_MANAGER_ROLES.has(role);
 }
 
-// The webhook secret authenticates writes to the canvas, so only rule managers may read it
+// The webhook secret is only served on explicit request by the dedicated secret endpoint
 export function toRuleResponse(
   rule: AutomationRule,
-  role: RuleRole,
-): AutomationRule | Omit<AutomationRule, "webhookSecret"> {
-  if (canManageAutomationRules(role)) return rule;
+): Omit<AutomationRule, "webhookSecret"> {
   const publicRule: Partial<AutomationRule> = { ...rule };
   delete publicRule.webhookSecret;
   return publicRule as Omit<AutomationRule, "webhookSecret">;

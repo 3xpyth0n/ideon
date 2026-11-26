@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { getDb } from "@lib/db";
 import { projectAction } from "@lib/server-utils";
+import { toRuleResponse } from "@lib/automation-rules";
 import { z } from "zod";
 
 const createRuleSchema = z.object({
@@ -46,7 +47,7 @@ export const GET = projectAction(async (_req, { project }) => {
     .where("projectId", "=", project.id)
     .orderBy("createdAt", "desc")
     .execute();
-  return rules;
+  return rules.map(toRuleResponse);
 });
 
 export const POST = projectAction(
@@ -95,7 +96,7 @@ export const POST = projectAction(
         global as { rescheduleCronBlocks?: () => Promise<void> }
       ).rescheduleCronBlocks?.();
     }
-    return rule;
+    return toRuleResponse(rule);
   },
   { schema: createRuleSchema },
 );

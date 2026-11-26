@@ -3,6 +3,8 @@
 import { Command } from "cmdk";
 import { Modal } from "@components/ui/Modal";
 import { useI18n } from "@providers/I18nProvider";
+import { useUser } from "@providers/UserProvider";
+import { canUseShell } from "@lib/shell-access";
 import {
   AUTOMATION_BLOCK_TYPES,
   CANVAS_BLOCK_TYPES,
@@ -22,6 +24,10 @@ export default function AddBlockModal({
   onAddBlock,
 }: AddBlockModalProps) {
   const { dict } = useI18n();
+  const { user } = useUser();
+  const canvasBlockTypes = canUseShell(user?.role)
+    ? CANVAS_BLOCK_TYPES
+    : CANVAS_BLOCK_TYPES.filter(({ type }) => type !== "shell");
 
   return (
     <Modal
@@ -54,7 +60,7 @@ export default function AddBlockModal({
             ))}
           </Command.Group>
           <Command.Group heading={dict.canvas.blocksSection || "Blocks"}>
-            {CANVAS_BLOCK_TYPES.map(({ type, icon: Icon, labelKey }) => (
+            {canvasBlockTypes.map(({ type, icon: Icon, labelKey }) => (
               <Command.Item
                 key={type}
                 value={

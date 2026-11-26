@@ -1,53 +1,52 @@
-import dns from "dns";
-import { promisify } from "util";
-
-const lookup = promisify(dns.lookup);
+import dns, { type LookupAddress } from "dns";
+import type { LookupFunction } from "net";
+import {
+  Agent,
+  fetch as undiciFetch,
+  type RequestInit as UndiciInit,
+} from "undici";
 
 /**
- * Validates if a URL is safe to fetch (SSRF Protection).
- * Blocks private/internal IP ranges and localhost.
+ * Resolves a URL to its addresses (SSRF Protection).
+ * Returns null if the URL or any resolved address is private/internal.
  */
-export async function validateSafeUrl(url: string): Promise<boolean> {
+export async function resolveSafeAddresses(
+  url: string,
+): Promise<LookupAddress[] | null> {
   try {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname;
+    const { protocol, hostname } = new URL(url);
 
-    // 1. Block common local hostnames immediately
-    if (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "0.0.0.0" ||
-      hostname === "::" ||
-      hostname === "::0" ||
-      hostname === "::1" ||
-      hostname.startsWith("192.168.") ||
-      hostname.startsWith("10.") ||
-      hostname.endsWith(".local")
-    ) {
-      return false;
-    }
+    if (protocol !== "http:" && protocol !== "https:") return null;
+    if (hostname === "localhost" || hostname.endsWith(".local")) return null;
 
-    // 2. Resolve DNS to get the actual IP
-    // family: 4 means IPv4, 6 means IPv6. 0 means both.
-    const { address } = await lookup(hostname, { family: 0 });
+    const addresses = await dns.promises.lookup(hostname, { all: true });
 
-    // 3. Check against private IP ranges
-    if (isPrivateIP(address)) {
-      return false;
-    }
+    if (addresses.length === 0) return null;
+    if (addresses.some(({ address }) => isPrivateIP(address))) return null;
 
-    return true;
+    return addresses;
   } catch {
     // If DNS resolution fails or URL is invalid, treat as unsafe
-    return false;
+    return null;
   }
+}
+
+// Connects only to the validated addresses so DNS cannot rebind between check and use
+export function createPinnedLookup(addresses: LookupAddress[]): LookupFunction {
+  return (_hostname, options, callback) => {
+    if (options.all) {
+      callback(null, addresses);
+      return;
+    }
+    callback(null, addresses[0].address, addresses[0].family);
+  };
 }
 
 /**
  * Checks if an IP address is private/internal.
  * Supports IPv4 and all IPv6 transition mechanisms (mapped, NAT64, 6to4, Teredo).
  */
-function isPrivateIP(ip: string): boolean {
+export function isPrivateIP(ip: string): boolean {
   // IPv4 private ranges — pure IPv4 only (no colon)
   if (ip.includes(".") && !ip.includes(":")) {
     const parts = ip.split(".").map(Number);
@@ -59,6 +58,11 @@ function isPrivateIP(ip: string): boolean {
     if (parts[0] === 169 && parts[1] === 254) return true;
     if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
     if (parts[0] === 192 && parts[1] === 168) return true;
+    // CGNAT (RFC 6598), IETF assignments, benchmarking, multicast and reserved
+    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true;
+    if (parts[0] === 192 && parts[1] === 0 && parts[2] === 0) return true;
+    if (parts[0] === 198 && (parts[1] === 18 || parts[1] === 19)) return true;
+    if (parts[0] >= 224) return true;
     return false;
   }
 
@@ -70,7 +74,7 @@ function isPrivateIP(ip: string): boolean {
 
     // ULA (fc00::/7) and link-local (fe80::/10)
     if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
-    if (lower.startsWith("fe80")) return true;
+    if (/^fe[89ab]/.test(lower)) return true;
 
     // Multicast (ff00::/8)
     if (lower.startsWith("ff")) return true;
@@ -121,36 +125,58 @@ function isPrivateIP(ip: string): boolean {
 }
 
 /**
- * Performs a fetch request with SSRF protection by manually handling redirects
- * and validating the URL at each step.
+ * Performs a fetch request with SSRF protection by manually handling redirects,
+ * validating the URL at each step and pinning the connection to the checked IP.
  */
 export async function safeFetch(
   url: string,
   options: RequestInit = {},
 ): Promise<Response> {
   let currentUrl = url;
+  let requestOptions = options;
   const maxRedirects = 5;
   let redirectCount = 0;
 
   while (redirectCount < maxRedirects) {
-    const isSafe = await validateSafeUrl(currentUrl);
-    if (!isSafe) {
+    const addresses = await resolveSafeAddresses(currentUrl);
+    if (!addresses) {
       throw new Error("Invalid or restricted URL detected");
     }
 
-    const response = await fetch(currentUrl, {
-      ...options,
-      redirect: "manual",
+    const dispatcher = new Agent({
+      connect: { lookup: createPinnedLookup(addresses) },
     });
 
+    let response: Response;
+    try {
+      // The global fetch and the undici package types differ nominally only
+      response = (await undiciFetch(currentUrl, {
+        ...(requestOptions as UndiciInit),
+        redirect: "manual",
+        dispatcher,
+      })) as unknown as Response;
+    } finally {
+      // Graceful close: waits for the response body before releasing sockets
+      void dispatcher.close();
+    }
+
     if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel();
       const location = response.headers.get("location");
       if (!location) {
         throw new Error("Redirect response missing Location header");
       }
 
-      // Resolve relative URLs against the current URL
-      currentUrl = new URL(location, currentUrl).toString();
+      const nextUrl = new URL(location, currentUrl);
+      // Matches native fetch: credentials never follow a redirect to another origin
+      if (nextUrl.origin !== new URL(currentUrl).origin) {
+        const headers = new Headers(requestOptions.headers);
+        headers.delete("authorization");
+        headers.delete("proxy-authorization");
+        headers.delete("cookie");
+        requestOptions = { ...requestOptions, headers };
+      }
+      currentUrl = nextUrl.toString();
       redirectCount++;
       continue;
     }

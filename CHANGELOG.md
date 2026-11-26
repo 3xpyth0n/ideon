@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The Ideon project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-26
+
+### Added
+
+- Project owners can now reveal, copy, and regenerate the signing secret of a webhook block from its configuration, to authenticate requests with the `x-ideon-secret` header or a GitHub-compatible HMAC signature. The secret only applies to that webhook, unlike an API key, and is no longer included in automation rule responses.
+
+### Security
+
+- Fixed a path traversal that let any signed-in user delete arbitrary files on the server through avatar deletion; `PATCH /api/account` no longer accepts `avatarUrl`, and only uploaded avatar files can be deleted (GHSA-9ggj-h54p-9q58, GHSA-rc8j-9r3w-4qmm).
+- Fixed an account takeover through SSO: an unverified email can no longer be linked to an existing account. Users whose provider reports their email as unverified must verify it there unless that provider is already linked to their account (GHSA-xf42-572m-g8jv).
+- Fixed a server-side request forgery through DNS rebinding in link previews: connections are now pinned to the validated IP address, every resolved address is checked, and CGNAT and other reserved ranges are blocked (GHSA-rh5m-xrfm-3h9v).
+- Fixed a server-side request forgery in the image proxy: DNS names resolving to internal addresses and redirects to internal hosts are now rejected (GHSA-v826-5x76-5wmj).
+- Restricted the shell block to system administrators (superadmin and admin). The shell runs on the server with its privileges, so any member could previously gain control of the instance by creating a project and starting a shell. The shell block is hidden from the Add Block menu for other users, and a user can no longer stop another user's shell session.
+- Fixed automation webhook secrets being readable by project viewers and by anyone with a share link: secrets are no longer copied into block metadata, only project owners can read them through the API, and existing secrets are rotated on upgrade. Integrations that used a webhook secret must use the new value.
+- Fixed webhooks accepting the API key of any user: a request authenticated with an API key now runs only if the key owner is an editor or owner of the project. Keys of users removed from the project, or who are only viewers, no longer trigger its webhooks.
+- Enforced the "password login" setting on the server: when an administrator disables it, signing in with a password is now rejected instead of only being hidden from the login page.
+- Hardened access control following an internal security audit: account settings, project folders, project roles, outbound requests, automation logs.
+
 ## [1.2.0] - 2026-11-22
 
 ### Added

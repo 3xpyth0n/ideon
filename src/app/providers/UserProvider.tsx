@@ -19,6 +19,7 @@ export interface UserProfile {
   role?: string | null;
   email?: string | null;
   vimMode?: boolean | null;
+  hasPassword?: boolean;
   updatedAt?: string | Date | null;
 }
 

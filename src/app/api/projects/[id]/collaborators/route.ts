@@ -1,6 +1,10 @@
 import { getDb } from "@lib/db";
 import { sql } from "kysely";
 import { projectAction } from "@lib/server-utils";
+import {
+  refreshRealtimeAccess,
+  revokeRealtimeAccess,
+} from "@lib/realtime-access";
 
 export const GET = projectAction(async (_req, { project }) => {
   const db = getDb();
@@ -77,7 +81,25 @@ export const POST = projectAction(
       throw { status: 400, message: "Invalid role" };
     }
 
+    if (userId === project.ownerId) {
+      throw { status: 400, message: "The creator's role cannot be changed" };
+    }
+
     const db = getDb();
+
+    const existing = await db
+      .selectFrom("projectCollaborators")
+      .select("role")
+      .where("projectId", "=", project.id)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
+
+    if (existing?.role === "owner" && currentRole !== "creator") {
+      throw {
+        status: 403,
+        message: "Forbidden: Only creator can change an owner's role",
+      };
+    }
 
     await db
       .insertInto("projectCollaborators")
@@ -93,6 +115,10 @@ export const POST = projectAction(
         }),
       )
       .execute();
+
+    if (existing?.role !== targetRole) {
+      refreshRealtimeAccess(project.id, userId);
+    }
 
     return { success: true };
   },
@@ -143,13 +169,7 @@ export const DELETE = projectAction(
       .where("userId", "=", userId)
       .execute();
 
-    // Kick user from WebSocket
-    const globalWithKick = global as unknown as {
-      kickUser?: (pid: string, uid: string) => void;
-    };
-    if (globalWithKick && typeof globalWithKick.kickUser === "function") {
-      globalWithKick.kickUser(project.id, userId);
-    }
+    revokeRealtimeAccess(project.id, userId);
 
     return { success: true };
   },

@@ -90,6 +90,33 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "KoseceMehmet",
+      "name": "Mehmet",
+      "avatar_url": "https://avatars.githubusercontent.com/u/101359750?v=4",
+      "profile": "https://github.com/KoseceMehmet",
+      "contributions": [
+        "security"
+      ]
+    },
+    {
+      "login": "N3st1c",
+      "name": "N3st1c",
+      "avatar_url": "https://avatars.githubusercontent.com/u/128566394?v=4",
+      "profile": "https://github.com/N3st1c",
+      "contributions": [
+        "security"
+      ]
+    },
+    {
+      "login": "lml20000827",
+      "name": "lml20000827",
+      "avatar_url": "https://avatars.githubusercontent.com/u/50837611?v=4",
+      "profile": "https://github.com/lml20000827",
+      "contributions": [
+        "security"
+      ]
     }
   ],
   "commitConvention": "angular"

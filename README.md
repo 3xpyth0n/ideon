@@ -140,6 +140,9 @@ Thanks go to these wonderful people:
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/cosark"><img src="https://avatars.githubusercontent.com/u/121065588?v=4&size=100" width="100px" height="100px" alt="cosark"/><br /><sub><b>cosark</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/commits?author=cosark" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/thegruber"><img src="https://avatars.githubusercontent.com/u/64529218?v=4&size=100" width="100px" height="100px" alt="Adrian Gruber"/><br /><sub><b>Adrian Gruber</b></sub></a><br /><a href="https://github.com/3xpyth0n/ideon/issues?q=author%3Athegruber" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/KoseceMehmet"><img src="https://avatars.githubusercontent.com/u/101359750?v=4&size=100" width="100px" height="100px" alt="Mehmet"/><br /><sub><b>Mehmet</b></sub></a><br /><a href="#security-KoseceMehmet" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/N3st1c"><img src="https://avatars.githubusercontent.com/u/128566394?v=4&size=100" width="100px" height="100px" alt="N3st1c"/><br /><sub><b>N3st1c</b></sub></a><br /><a href="#security-N3st1c" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/lml20000827"><img src="https://avatars.githubusercontent.com/u/50837611?v=4&size=100" width="100px" height="100px" alt="lml20000827"/><br /><sub><b>lml20000827</b></sub></a><br /><a href="#security-lml20000827" title="Security">🛡️</a></td>
     </tr>
   </tbody>
 </table>

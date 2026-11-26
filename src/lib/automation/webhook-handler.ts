@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import type { IncomingMessage, ServerResponse } from "http";
 import * as Y from "yjs";
 import type { LeveldbPersistence } from "y-leveldb";
@@ -6,6 +6,7 @@ import { getDb, getGlobalDb } from "../../app/lib/db";
 import { docs } from "../y-websocket/utils";
 import { expandTemplateRecord } from "./template";
 import { evaluateConditionsDetailed } from "./conditions";
+import { authorizeWebhookApiKey } from "./api-key-access";
 import type { AutomationRule } from "../../app/lib/types/db";
 import type { Node } from "@xyflow/react";
 import type { BlockData } from "../../app/components/project/CanvasBlock";
@@ -323,17 +324,26 @@ async function syncAutomationStateToSql(
     .execute();
 }
 
+export function buildRunPayload(
+  triggerEvent: string,
+  triggerType: "scheduled" | "manual",
+) {
+  const origin = triggerEvent.startsWith("cron:")
+    ? { cron: true, schedule: triggerEvent }
+    : { event: "test" };
+  return {
+    ...origin,
+    triggeredAt: Date.now(),
+    manual: triggerType === "manual",
+  };
+}
+
 export async function executeCronRule(
   rule: AutomationRule,
   ldb: LeveldbPersistence,
   triggerType: "scheduled" | "manual" = "scheduled",
 ): Promise<void> {
-  const payload = {
-    cron: true,
-    schedule: rule.triggerEvent,
-    triggeredAt: Date.now(),
-    manual: triggerType === "manual",
-  };
+  const payload = buildRunPayload(rule.triggerEvent, triggerType);
   try {
     await applyAction(rule, payload, ldb);
     await syncAutomationStateToSql(rule, payload);
@@ -404,22 +414,8 @@ export async function handleWebhookRequest(
     } catch {
       authenticated = false;
     }
-  } else if (authHeader?.startsWith("Bearer sk-ideon-")) {
-    const rawKey = authHeader.slice(7);
-    const keyHash = createHash("sha256").update(rawKey).digest("hex");
-    const apiKey = await db
-      .selectFrom("apiKeys")
-      .select("id")
-      .where("keyHash", "=", keyHash)
-      .executeTakeFirst();
-    if (apiKey) {
-      authenticated = true;
-      void db
-        .updateTable("apiKeys")
-        .set({ lastUsedAt: Date.now() })
-        .where("id", "=", apiKey.id)
-        .execute();
-    }
+  } else if (authHeader) {
+    authenticated = await authorizeWebhookApiKey(authHeader, rule.projectId);
   }
 
   if (!authenticated) {

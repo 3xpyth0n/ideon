@@ -4,6 +4,7 @@ import { join } from "path";
 import crypto from "crypto";
 import { authenticatedAction } from "@lib/server-utils";
 import { logger } from "@lib/logger";
+import { resolveAvatarFilePath } from "@lib/avatar-path";
 
 export const POST = authenticatedAction(
   async (req, { user: auth }) => {
@@ -87,16 +88,11 @@ export const DELETE = authenticatedAction(
       .where("id", "=", userId)
       .executeTakeFirst();
 
-    if (user?.avatarUrl) {
-      // Handle both old /uploads/avatars and new /api/avatar paths
-      let filePath;
-      if (user.avatarUrl.startsWith("/api/avatar/")) {
-        const fileName = user.avatarUrl.replace("/api/avatar/", "");
-        filePath = join(process.cwd(), "storage", "avatars", fileName);
-      } else {
-        filePath = join(process.cwd(), "public", user.avatarUrl);
-      }
+    const filePath = user?.avatarUrl
+      ? resolveAvatarFilePath(user.avatarUrl)
+      : null;
 
+    if (filePath) {
       try {
         await unlink(filePath);
       } catch {

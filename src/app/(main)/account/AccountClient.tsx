@@ -30,6 +30,8 @@ export default function AccountPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [profileCurrentPassword, setProfileCurrentPassword] = useState("");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [vimMode, setVimMode] = useState(false);
@@ -237,14 +239,27 @@ export default function AccountPage() {
     }
   };
 
+  const hasPassword = user?.hasPassword ?? false;
+  const emailChanged =
+    email.trim().toLowerCase() !== (user?.email || "").toLowerCase();
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await fetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, displayName, email }),
+        body: JSON.stringify({
+          username,
+          displayName,
+          email,
+          currentPassword: emailChanged ? profileCurrentPassword : undefined,
+        }),
       });
+
+      if (res.status === 403) {
+        throw new Error(dict.account.currentPasswordIncorrect);
+      }
 
       if (!res.ok) {
         const data = await res.json();
@@ -252,6 +267,8 @@ export default function AccountPage() {
       }
 
       toast(dict.common.success);
+      setProfileCurrentPassword("");
+      await refreshUser();
       window.dispatchEvent(new CustomEvent("user-data-updated"));
     } catch (error) {
       toast(
@@ -270,12 +287,21 @@ export default function AccountPage() {
       const res = await fetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({
+          password,
+          currentPassword: hasPassword ? currentPassword : undefined,
+        }),
       });
+      if (res.status === 403) {
+        toast(dict.account.currentPasswordIncorrect);
+        return;
+      }
       if (!res.ok) throw new Error();
       toast(dict.common.success);
       setPassword("");
       setConfirmPassword("");
+      setCurrentPassword("");
+      await refreshUser();
     } catch {
       toast(dict.common.error);
     }
@@ -498,8 +524,31 @@ export default function AccountPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={dict.blocks.emailPlaceholder}
+                      disabled={!hasPassword}
                     />
+                    {!hasPassword && (
+                      <p className="text-xs text-muted">
+                        {dict.account.emailRequiresPassword}
+                      </p>
+                    )}
                   </div>
+                  {hasPassword && emailChanged && (
+                    <div className="flex flex-col gap-2">
+                      <label className="zen-label ml-0">
+                        {dict.account.currentPassword}
+                      </label>
+                      <input
+                        type="password"
+                        className="zen-input text-sm"
+                        value={profileCurrentPassword}
+                        onChange={(e) =>
+                          setProfileCurrentPassword(e.target.value)
+                        }
+                        autoComplete="current-password"
+                        required
+                      />
+                    </div>
+                  )}
                   <div className="pt-2">
                     <button
                       type="submit"
@@ -529,6 +578,21 @@ export default function AccountPage() {
                 onSubmit={handlePasswordUpdate}
                 className="flex flex-col gap-6 w-full"
               >
+                {hasPassword && (
+                  <div className="flex flex-col gap-2">
+                    <label className="zen-label ml-0">
+                      {dict.account.currentPassword}
+                    </label>
+                    <input
+                      type="password"
+                      className="zen-input text-sm"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                )}
                 <div className="flex flex-col gap-2">
                   <label className="zen-label ml-0">
                     {dict.account.newPassword}
